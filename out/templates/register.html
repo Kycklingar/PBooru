@@ -1,0 +1,15 @@
+{{template "base" }}
+<div class="text-panel">
+<form method="post">
+    <label for="username">Username</label><br>
+    <input type="text" name="username"><br>
+    <label for="password">Password</label><br>
+    <input type="password" name="password"><br>
+    <label for="captcha">Captcha</label><br>
+    <img style="background-color:white;" src="/captcha/{{ . }}.png"><br>
+    <input type="hidden" name="key" value="{{ . }}"><br>
+    <input id="captcha" type="text" name="code"><br>
+    <input type="submit" value="Register">
+</form>
+</div>
+{{template "baseEnd"}}

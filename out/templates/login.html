@@ -1,0 +1,36 @@
+{{template "base" }}
+<div class="text-panel">
+
+{{if .Username}}
+<h1>{{.Username}}</h1>
+<table>
+    <caption>Sessions</caption>
+    <tr>
+        <th>Key</th>
+        <th>Expires</th>
+    </tr>
+    {{range .Sessions}}
+        <tr>
+            <td>{{.Key}}</td>
+            <td>{{.Expire}}</td>
+        </tr>
+    {{end}}
+</table>
+<form action="/logout/">
+    <input type="submit" value="Logout">
+</form>
+{{else}}
+<form method="post">
+        <label for="username">Username</label><br>
+        <input id="username" type="text" name="username"><br>
+        <label for="password">Password</label><br>
+        <input id="password" type="password" name="password"><br>
+        <label for="captcha">Captcha</label><br>
+        <img style="background-color:white;" src="/captcha/{{ .Key }}.png"><br>
+        <input type="hidden" name="key" value="{{ .Key }}"><br>
+        <input id="captcha" type="text" name="code"><br>
+        <input type="submit" value="Login">
+    </form>
+{{end}}
+</div>
+{{template "baseEnd"}}

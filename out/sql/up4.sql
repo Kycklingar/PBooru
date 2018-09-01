@@ -1,0 +1,1 @@
+CREATE INDEX postid ON post_tag_mappings(post_id);

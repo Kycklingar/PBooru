@@ -1,0 +1,656 @@
+{{template "base"}}
+{{if eq .User.Flag 1}}
+<form id="searchinput" onsubmit="newSearch(this);return false">
+    <input id="inputtags" class="stinput" type="text" name="tags">
+    <input id="inputbltags" class="stinput" type="text" name="filter">
+    <input type="submit">
+</form>
+<style>
+    h4{
+        margin:4px;
+    }
+</style>
+<style id="stylesheet">
+    .thumbnail{
+        width:{{.UserInfo.ImageSize}};
+        height:{{.UserInfo.ImageSize}};
+    }
+    .thumbnail img{
+        max-width:{{.UserInfo.ImageSize}};
+        max-height:{{.UserInfo.ImageSize}};
+    }
+</style>
+<h4>Dups</h4>
+<button onclick="postDupChanges()">Submit Duplicates</button>
+<br>
+<h4>Tags</h4>
+<form id="newtagsform" onsubmit="postTags(); return false">
+    <textarea class="stinput" name="addtags"></textarea>
+    <textarea class="stinput" name="remtags"></textarea>
+    <input type="submit" value="Submit Tags">
+</form>
+<h4>Comic</h4>
+<form id="comicpageform" onsubmit="postComicPages(); return false">
+    <label>ComicID</label>
+    <input type="number" id="comicidinput" name="comicid">
+    <label>ChapterID</label>
+    <input type="number" id="chapteridinput" name="chapterid">
+    <input type="submit">
+</form>
+<div>
+    <div style="border:dotted; display:flex; flex-flow:row wrap;" id="postlist">
+    </div>
+    <button onclick="refreshPage()">Refresh</button>
+    <button onclick="prevPage()">Prev</button>
+    <span class="offsetspan">0</span>
+    <button onclick="nextPage()">Next</button>
+    <div id="posts-container">
+        <div contextmenu="postmenu" style="border:dotted;" class="nolink" id="posts">
+        </div>
+    </div>
+    <button onclick="refreshPage()">Refresh</button>
+    <button onclick="prevPage()">Prev</button>
+    <span class="offsetspan">0</span>
+    <button onclick="nextPage()">Next</button>
+</div>
+
+<div style="position:fixed; right:0px;bottom:10px;background-color:#2228">
+    <span id="sizeslidertext">{{.UserInfo.ImageSize}}</span>
+    <input id="sizeslider" type="range" min="50" max="1024" value="{{.UserInfo.ImageSize}}">
+</div>
+<menu type="context" id="postmenu">
+    <menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)"></menuitem>
+</menu>
+<script type="text/javascript" src="/static/suggestions.js"></script>
+
+<script>
+    var UserInfo = {
+        "Daemon": "{{.UserInfo.IpfsDaemon}}",
+        "ThumbSize": "{{.UserInfo.ImageSize}}"
+    }
+
+    var offset = 0
+
+    document.getElementById("sizeslider").oninput = function(){
+        var ss = document.getElementById("stylesheet")
+        ss.innerHTML = ".thumbnail{width:" + this.value +
+         "px;height:" + this.value +
+          "px;}.thumbnail img{max-width:"+
+           this.value +
+            "px;max-height:" +
+             this.value +
+              "px;}"
+        document.getElementById("sizeslidertext").innerText = this.value
+    }
+
+    function updateOffset() {
+        var e = document.getElementsByClassName("offsetspan")
+        for(let i = 0; i < e.length; i++){
+            e[i].innerText = offset
+        }
+    }
+
+    function nextPage() {
+        offset++
+        updateOffset()
+        let c = document.getElementById("searchinput")
+        fetchPosts(c)
+    }
+
+    function refreshPage(){
+        let c = document.getElementById("searchinput")
+        fetchPosts(c)
+    }
+
+    function prevPage() {
+        offset--
+        if (offset < 0) {
+            offset = 0
+        }
+        updateOffset()
+
+        let c = document.getElementById("searchinput")
+        fetchPosts(c)
+    }
+
+    function newSearch(c) {
+        offset = 0
+        updateOffset()
+        fetchPosts(c)
+    }
+
+    function fetchPosts(caller) {
+        var req = new XMLHttpRequest
+        req.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                try {
+                    generatePosts(JSON.parse(this.response))
+                }
+                catch (e) {
+                    console.log(e)
+                }
+            }
+        }
+        var fd = new FormData(caller)
+        req.open("POST", "/api/v1/posts?offset=" + offset, true)
+        req.send(fd)
+    }
+
+    function pageNum(perRequest, total) {
+        return Math.round((Number(total) / Number(perRequest)) + 0.5)
+    }
+
+    function createPost(post) {
+        //var a = document.createElement("a")
+        //a.href = "/post/" + post.ID + "/" + post.Hash
+        var div = document.createElement("div")
+        //div.id = post.ID
+        div.setAttribute("postid", post.ID)
+        div.className = "thumbnail " + post.Mime.split("/")[0]
+        // div.style.width = UserInfo.ThumbSize
+        // div.style.height = UserInfo.ThumbSize
+        div.style.cursor = "pointer"
+        div.title = function(){
+            let ret = ""
+            for(let i = 0; i < post.Tags.length; i++)
+            {
+                ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
+            }
+            return ret
+        }()
+        if (post.Deleted == "1") {
+            div.style.border = "solid red"
+        }
+
+        if (post.ThumbHash == "NT") {
+            var d = document.createElement("div")
+            d.style = "background-color:grey;"
+            d.className = "centered"
+            d.innerText = post.Mime
+            div.appendChild(d)
+        }
+        else {
+            var img = new Image()
+            img.src = UserInfo.Daemon + "/ipfs/" + post.ThumbHash
+            img.alt = post.Hash
+            // img.style.maxWidth = UserInfo.ThumbSize
+            // img.style.maxHeight = UserInfo.ThumbSize
+            div.appendChild(img)
+        }
+
+        //a.appendChild(div)
+        return div
+    }
+
+    var fetchedPosts = []
+
+    function cleanDiv(div) {
+        while (div.hasChildNodes()) {
+            div.removeChild(div.lastChild)
+        }
+    }
+
+    function generatePosts(res) {
+        var pdiv = document.getElementById("posts")
+        cleanDiv(pdiv)
+
+        fetchedPosts = res.Posts
+
+        for (var i = 0; i < fetchedPosts.length; i++) {
+            let p = createPost(fetchedPosts[i])
+            p.setAttribute("index", i)
+            p.onmousedown = function (caller) {
+                if (caller.button != 0) {
+                    return
+                }
+                // console.log(caller.button)
+                var t = caller.target
+                while (!t.className.includes("thumbnail")) {
+                    t = t.parentElement
+                }
+
+                let tmp = fetchedPosts[Number(t.getAttribute("index"))]
+                appendToSelectionList(constructSelectionPost(tmp))
+            }
+
+            pdiv.appendChild(p)
+        }
+
+        var pages = pageNum(res.Posts.length, res.TotalPosts)
+
+    }
+
+    function getDupInfo(postID, callback) {
+        let res = new XMLHttpRequest()
+        res.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                let js = JSON.parse(this.responseText)
+                callback.value = js.Level
+                callback.setAttribute("dupid", js.ID)
+                //console.log(js.Level)
+            }
+        }
+        res.open("GET", "/api/v1/duplicate?id=" + postID, true)
+        res.send()
+    }
+
+    var selectedPosts = []
+    var selectionDiv = document.getElementById("postlist")
+
+    function constructSelectionPost(post) {
+        var div = document.createElement("div")
+        div.setAttribute("postid", post.ID)
+        div.className = "thumbnail " + post.Mime.split("/")[0]
+        // div.style.width = UserInfo.ThumbSize
+        // div.style.height = UserInfo.ThumbSize
+        div.title = function(){
+            let ret = ""
+            for(let i = 0; i < post.Tags.length; i++)
+            {
+                ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
+            }
+            return ret
+        }()
+        
+        if (post.ThumbHash == "NT") {
+            var d = document.createElement("div")
+            d.style = "background-color:grey;"
+            d.className = "centered"
+            d.innerText = post.Mime
+            let a = document.createElement("a")
+            a.href = "/post/" + post.ID
+            a.appendChild(d)
+            div.appendChild(a)
+        }
+        else {
+            var img = new Image()
+            img.src = UserInfo.Daemon + "/ipfs/" + post.ThumbHash
+            img.alt = post.Hash
+            // img.style.maxWidth = UserInfo.ThumbSize
+            // img.style.maxHeight = UserInfo.ThumbSize
+            let a = document.createElement("a")
+            a.href = "/post/" + post.ID
+            a.appendChild(img)
+            div.appendChild(a)
+        }
+        //a.appendChild(div)
+
+        let xdiv = document.createElement("div")
+        xdiv.style.position = "absolute"
+        xdiv.style.right = "0px"
+        xdiv.style.top = "0px"
+        xdiv.style.backgroundColor = "#832"
+        xdiv.innerText = "X"
+        xdiv.style.cursor = "pointer"
+
+        xdiv.onmousedown = function (c) {
+            var t = c.target
+            while (!t.className.includes("thumbContainer")) {
+                t = t.parentElement
+            }
+            removeFromSelectionList(t)
+        }
+        div.appendChild(xdiv)
+
+        let ldiv = document.createElement("div")
+        ldiv.style.position = "absolute"
+        ldiv.style.left = "0px"
+        ldiv.style.top = "40px"
+        ldiv.style.bottom = "0px"
+        ldiv.style.width = "20px"
+        ldiv.style.backgroundColor = "#222"
+        ldiv.innerText = "<"
+        ldiv.style.cursor = "pointer"
+
+        ldiv.onmousedown = function (c) {
+            var t = c.target
+            while (!t.className.includes("thumbContainer")) {
+                t = t.parentElement
+            }
+            moveInSelection(t, "left")
+        }
+        div.appendChild(ldiv)
+
+        let rdiv = document.createElement("div")
+        rdiv.style.position = "absolute"
+        rdiv.style.right = "0px"
+        rdiv.style.top = "40px"
+        rdiv.style.bottom = "0px"
+        rdiv.style.width = "20px"
+        rdiv.style.backgroundColor = "#222"
+        rdiv.innerText = ">"
+        rdiv.style.cursor = "pointer"
+
+        rdiv.onmousedown = function (c) {
+            var t = c.target
+            while (!t.className.contains("thumbContainer")) {
+                t = t.parentElement
+            }
+            moveInSelection(t, "right")
+        }
+        div.appendChild(rdiv)
+
+        let e = document.createElement("div")
+        e.setAttribute("postid", div.getAttribute("postid"))
+        e.className = "thumbContainer"
+        let label = document.createElement("p")
+        label.innerText = post.ID
+        let inp = document.createElement("input")
+        inp.type = "text"
+        getDupInfo(e.getAttribute("postid"), inp)
+
+        e.appendChild(div)
+        e.appendChild(label)
+        e.appendChild(inp)
+        return e
+    }
+
+    function appendToSelectionList(e) {
+        for (var i = 0; i < selectedPosts.length; i++) {
+            //console.log(selectedPosts[i], e.getAttribute("postid"))
+            if (selectedPosts[i].getAttribute("postid") == e.getAttribute("postid")) {
+                return
+            }
+        }
+
+        selectionDiv.appendChild(e)
+        selectedPosts.push(e)
+    }
+
+    function removeFromSelectionList(child) {
+        document.getElementById("postlist").removeChild(child)
+        for (var i = 0; i < selectedPosts.length; i++) {
+            if (selectedPosts[i].getAttribute("postid") == child.getAttribute("postid")) {
+                selectedPosts.splice(i, 1)
+                break
+            }
+        }
+    }
+
+    function moveInSelection(child, direction) {
+        if (selectedPosts.length <= 1) {
+            return
+        }
+        var i = 0
+        for (; i < selectedPosts.length; i++) {
+            if (selectedPosts[i] == child) {
+                break
+            }
+        }
+
+        switch (direction) {
+            case "left":
+                {
+                    if (i <= 0) {
+                        return
+                    }
+                    let tmp = selectedPosts[i - 1]
+                    selectedPosts[i - 1] = child
+                    selectedPosts[i] = tmp
+                }
+                break
+            case "right":
+                {
+                    if (i >= selectedPosts.length - 1) {
+                        return
+                    }
+                    let tmp = selectedPosts[i + 1]
+                    selectedPosts[i + 1] = child
+                    selectedPosts[i] = tmp
+                }
+                break
+            default:
+                return
+        }
+
+        cleanDiv(selectionDiv)
+        for (i = 0; i < selectedPosts.length; i++) {
+            selectionDiv.appendChild(selectedPosts[i])
+        }
+    }
+
+    function postTags(){
+        let tagInput = document.getElementById("newtagsform")
+
+        function t(form, arr, index){
+            if(index >= arr.length)
+            {
+                alert("Finished")
+                return
+            }
+
+            let req = new XMLHttpRequest()
+            req.onreadystatechange = function(){
+                if(this.readyState == 4){
+                    if(this.status != 200){
+                        console.log(this.status, this.responseText)
+                    }else{
+                        console.log(this.status)
+                    }
+                    t(form, arr, index + 1)
+                }
+            }
+            console.log(arr[index].getAttribute("postid"))
+            let fd = new FormData(form)
+            req.open("POST", "/post/" + arr[index].getAttribute("postid"), true)
+            req.send(fd)
+        }
+
+        t(tagInput, selectedPosts, 0)
+    }
+
+    function postDupChanges() {
+        function getInput(e) {
+            //console.log("getInput->", e)
+            for (let i = 0; i < e.children.length; i++) {
+                if (e.children[i].tagName == "INPUT") {
+                    return e.children[i]
+                }
+            }
+            return null
+        }
+
+        // Find if there already are some some posts with dupid's
+        let kingPosts = []
+        for (let i = 0; i < selectedPosts.length; i++) {
+            let inp = getInput(selectedPosts[i])
+
+            if (inp.getAttribute("dupid") != "0") {
+                kingPosts.push(selectedPosts[i])
+            }
+        }
+
+        //console.log("kingposts:", kingPosts)
+
+        if (kingPosts.length >= 2) {
+            let dupID = getInput(kingPosts[0]).getAttribute("dupid")
+            //console.log(dupID)
+            for (let i = 1; i < kingPosts.length; i++) {
+                //console.log(getInput(kingPosts[i]).getAttribute("dupid"))
+                if (getInput(kingPosts[i]).getAttribute("dupid") != dupID) {
+                    //console.log("More than 2 posts with different dupid's", "Aborting")
+                    return
+                }
+            }
+        }
+
+        let firstAppend = "0"
+
+        if (kingPosts.length == 1) {
+            firstAppend = kingPosts[0].getAttribute("postid")
+        }
+
+        function t(duppostID, arr, index, callback) {
+            //console.log(duppostID, arr[index])
+
+            if (callback == null) {
+                return
+            }
+
+            if (index >= arr.length) {
+                alert("Finished")
+                return
+            }
+
+            let postID = arr[index].getAttribute("postid")
+            if (postID == null || postID == 0) {
+                console.log("bad postID ", postID)
+                return
+            }
+
+            if (duppostID == postID) {
+                duppostID = 0
+                //return callback(postID, arr, index + 1, callback)
+            }
+
+            let inp = getInput(arr[index])
+            if (inp == null) {
+                console.log("inp is null", getInput)
+                return
+            }
+            if (inp.getAttribute("dupid") != 0) {
+                console.log("this is already a dup, skip")
+                duppostID = 0
+                //return callback(postID, arr, index + 1, t)
+            }
+            let level = inp.value
+
+            if (level == null) {
+                console.log("level is null: ", arr[index])
+                return
+            }
+
+            let req = new XMLHttpRequest()
+            req.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    console.log(this.status)
+                    t(postID, arr, index + 1, t)
+                }
+            }
+            req.open("POST", "/dups/add/?postid=" + postID + "&duppostid=" + duppostID + "&level=" + level, true)
+            req.send()
+        }
+
+        t(firstAppend, selectedPosts, 0, t)
+    }
+
+    document.getElementById("posts").onmousedown = function (caller) {
+        var t = caller.target
+        //console.log(t)
+        if (t.getAttribute("postid") == null) {
+            t = t.parentElement
+            //console.log(t)                
+            if (t.getAttribute("postid") == null) {
+                //console.log(t)
+                document.getElementById("postmenu").setAttribute("postid", null)
+                return
+            }
+        }
+        //console.log(t.getAttribute("postid"))
+        document.getElementById("postmenu").setAttribute("postid", t.getAttribute("postid"))
+    }
+
+    function gotoSimilar(caller) {
+        console.log("similar")
+        let id = caller.getAttribute("postid")
+        if (id == 0 || id == "null") {
+            return
+        }
+        fetchSimilarPosts(id)
+    }
+
+    function fetchSimilarPosts(id) {
+        var req = new XMLHttpRequest
+        req.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                try {
+                    generatePosts(JSON.parse(this.response))
+                }
+                catch (e) {
+                    console.log(e)
+                }
+            }
+        }
+        req.open("POST", "/api/v1/similar?id=" + id, true)
+        req.send()
+    }
+
+    function postComicPages(){
+        let comicID = document.getElementById("comicidinput").value
+        let chapterID = document.getElementById("chapteridinput").value
+        
+        if(Number(chapterID) == 0 || Number(comicID) == 0)
+        {
+            console.log("Want: comicID, chapterID. Got:", comicID, ", ", chapterID)
+            return
+        }
+
+        function getInput(e) {
+            //console.log("getInput->", e)
+            for (let i = 0; i < e.children.length; i++) {
+                if (e.children[i].tagName == "INPUT") {
+                    return e.children[i]
+                }
+            }
+            return null
+        }
+        
+        for(let i = 0; i < selectedPosts.length; i++){
+            if(getInput(selectedPosts[i]).value == "")
+            {
+                console.log("post have no page number")
+                return
+            }
+        }
+
+        function t(arr, index, comicID, chapterID) {
+            if (index >= arr.length) {
+                alert("Finished")
+                return
+            }
+
+            let postID = arr[index].getAttribute("postid")
+            if (postID == null || postID == 0) {
+                console.log("bad postID ", postID)
+                return
+            }
+
+            let inp = getInput(arr[index])
+            if (inp == null) {
+                console.log("inp is null", getInput)
+                return
+            }
+
+            let page = inp.value
+
+            if (page == null || page == "") {
+                console.log("page is null: ", arr[index])
+                return
+            }
+
+            let req = new XMLHttpRequest()
+            req.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    console.log(this.status)
+                    if(this.status == 200){
+                        t(arr, index + 1, comicID, chapterID)
+                    }
+                    else{
+                        console.log(arr[index])
+                        alert("Something went wrong")
+                    }
+                }
+            }
+            req.open("POST", "/comic/add?comicid=" + comicID + "&chapterid=" + chapterID + "&postid=" + postID + "&postorder=" + page, true)
+            req.send()
+        }
+
+        t(selectedPosts, 0, comicID, chapterID)
+    }
+</script>
+{{else}}
+<div class="text-panel">
+    <p>Admin Only Area</p>
+</div>
+{{end}}
+{{template "baseEnd"}}

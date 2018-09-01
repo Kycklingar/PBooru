@@ -1,0 +1,83 @@
+{{template "base"}}
+<div >
+{{if eq .User.Flag 1}}
+    <form method="post">
+        <p>Create a new comic</p>
+        <label>Title</label>
+        <input type="text" name="title">
+        <input type="submit">
+    </form>
+{{end}}
+{{range .Comics}}
+<div class="comics-container">
+        <a href="/comic/{{.ID}}">
+            <h2>{{.Title}}</h2>
+        </a>
+        <p>Pages:{{.PageCount}}<br>Chapters:{{.ChapterCount}}</p>
+        {{if .Chapters}}
+            {{range .ChaptersLimit 1}}
+            <h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
+            <div class="cpage-container">
+                {{range .PostsLimit 5}}
+                    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+                        <div class="comic-thumb">
+                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                        </div>
+                    </a>
+                {{end}}
+            </div>
+            {{end}}
+        {{end}}
+        <!-- {{/*else}}
+            <div class="cpage-container">
+                {{range .Posts}}
+                    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+                        <div class="thumbnail">
+                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                        </div>
+                    </a>
+                {{end}}
+            </div>
+        {{end*/}} -->
+</div>
+{{end}}
+</div>
+
+<div class="nolink" id="pageinator">
+    {{ if ne 0 $.Pageinator.Prev}}
+        <a href="/comics/{{.Pageinator.First}}/">
+            First
+        </a>
+    
+        <a href="/comics/{{$.Pageinator.Prev}}/" id="prev">
+            Previous
+        </a>
+    {{ end }}
+    {{ range .Pageinator.Pages }}
+        <span>
+            {{ if eq $.Pageinator.Current . }}
+            <span style="font-size:25px;">
+                {{.}}
+            </span>
+            {{ else }}
+            <a href="/comics/{{.}}/">
+                {{.}}
+            </a>
+            {{ end }}
+        </span>
+    {{ end }}
+    {{ if ne 0 $.Pageinator.Next}}
+        <a href="/comics/{{.Pageinator.Next}}/">
+            Next
+        </a>
+        <a href="/comics/{{.Pageinator.Last}}/">
+            Last
+        </a>
+    {{ end }}
+</div>
+
+{{template "userSettings" .UserInfo}}
+
+{{template "benchmark" .Time}}
+
+{{template "baseEnd"}}

@@ -1,0 +1,155 @@
+{{ template "base" .Base}}
+
+<div id="content">
+    <div id="sidebar">
+        {{ template "inner sidebar" .Sidebar}}
+        
+        {{if ne .User.Flag -1}}
+        <script>
+            function toggleEdit()
+            {
+                document.getElementById("editPostForm").style.display = "inline"
+                
+                input = document.getElementById("remtagsinput")
+            }
+        </script>
+        <div onclick="toggleEdit()">
+            Edit Post
+        </div>
+        <div id="editPostForm" style="display:none">
+            <form method="POST">
+                <p>Add tags</p>
+                <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
+                <p>Remove tags</p>
+                <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
+                <input type="submit" value="Submit edit">
+            </form>
+            <script type="text/javascript" src="/static/suggestions.js"></script>
+            {{if eq .User.Flag 1}}
+            <form method="POST" action="/deletepost">
+                <h3>Delete Post</h3>
+                <input type="hidden" name="postid" value="{{.Post.ID}}">
+                <input type="submit">
+            </form>
+            <form method="POST" action="/dups/add/">
+                <p>New Duplicate</p>
+                <input type="hidden" name="postid" value="{{.Post.ID}}">
+                <p>Dup post id</p>
+                <input type="text" name="duppostid">
+                <p>Level {{if ge .Dups.Level 1}}({{.Dups.Level}}){{end}}</p>
+                <input type="text" name="level">
+                <input type="submit">
+            </form>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+    <div id="post">
+        {{if eq .Post.Mime.Type "video"}}
+        <div>
+            <video loop controls>
+                <source src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+            </video>
+        </div>
+        {{else}}
+        <div id="image">
+            <script>
+                function resize(caller)
+                {
+                    if (caller.style.maxWidth == ""){
+                        caller.style.maxWidth = "100%";
+                        caller.style.maxHeight = "100%";
+                    }else{
+                        caller.style.maxWidth = null;
+                        caller.style.maxHeight = null;
+                    }
+                    
+                }
+            </script>
+            <img onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+        </div>
+        {{end}}
+        <div style="padding-left: 4px;">
+            <a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>
+                <h3>Download</h3>
+            </a>
+            <h4>ID:{{ .Post.ID }}</h4>
+            <h4>{{ .Post.Hash }}</h4>
+            <p>{{ .Post.Mime.Str }}</p>
+            {{ if .Post.Deleted }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
+            <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
+
+            <div>
+                {{if .User.ID}}
+                <form method="POST">
+                    <input type="hidden" name="comment" value="true">
+                    <textarea cols="20" rows="1" name="text"></textarea>
+                    <br>
+                    <input type="submit" value="Post Comment">
+                </form>
+                {{end}}
+                <ul id="commentlist">
+                    {{ range .Comments }}
+                    <li>
+                        <div class="">
+                            <b>
+                            <span class="comment-username">{{if .User.ID}}{{.User.Name}}{{else}}Anonymous{{end}}</span>
+                            <span> | </span>
+                            <span class="comment-time">{{.Time}}</span>
+                            </b>
+                            <p>{{noescape .Text}}<p>
+                        </div>
+                    </li>
+                    {{ end}}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+{{if .Dups.Posts}}
+<div class="comics-container">
+    <h3>Duplicates</h3>
+    <div class="cpage-container">
+        {{range .Dups.Posts}}
+            <a href="/post/{{.ID}}/{{.Hash}}">
+                <div class="comic-thumb" {{if eq .ID $.Post.ID}}style="border:solid yellow"{{else if .Deleted}}style="border:solid red;"{{end}}>
+                    <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}">
+                </div>
+            </a>
+        {{end}}
+    </div>
+</div>
+{{end}}
+
+{{if .Comics}}
+<div>
+    {{range .Comics}}
+    <div class="comics-container">
+            <a href="/comic/{{.ID}}">
+                <p>{{.Title}}</p>
+            </a>
+            Pages:{{.PageCount}}        
+            <div class="cpage-container">
+                {{range .ChaptersLimit 1}}
+                    {{range .PostsLimit 5}}
+                        <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+                            <div class="comic-thumb" {{if eq .Post.ID $.Post.ID}}style="border-style:solid;border-color:yellow;"{{end}}>
+                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                            </div>
+                        </a>
+                    {{end}}
+                {{end}}
+            </div>
+    </div>
+    {{end}}
+</div>
+{{end}}
+
+{{ template "userSettings" .UserInfo}}
+
+<p>Page generated in {{.Time}}s</p>
+{{ template "baseEnd" }}

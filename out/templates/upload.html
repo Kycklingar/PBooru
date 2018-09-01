@@ -1,0 +1,38 @@
+{{ template "base" }}
+<div class="text-panel">
+    {{if eq .ID 0}}
+    <h3>You must login in order to upload</h3>
+    {{else}}
+    <form enctype="multipart/form-data" method="POST">
+        <label for="file">File</label>
+        <br>
+        <input id="file" type="file" name="file">
+        <br>
+        <br>
+        <label for="tagsform">Tags</label>
+        <br>
+        <textarea id="tagsform" name="tags"></textarea>
+        <br>
+        <br>
+        <input type="submit" value="Submit">
+    </form>
+        <h3>Tagging Guide</h3>
+        <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>yawg"</span>.</p>
+        <p>The default supported namespaces are:
+            <ul style="width:100px;">
+                <li class="namespace-creator">creator</li>
+                <li class="namespace-character">character</li>
+                <li class="namespace-species">species</li>
+                <li class="namespace-series">series</li>
+                <li class="namespace-gender">gender</li>
+            </ul>
+        </p>
+        <p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
+        <p>Tags and namespaces may not be longer than 64 characters respectively</p>
+        <p>Use comma "," as delimiter</p>
+        <p>Tags may have spaces</p>
+        <p>Example tag string: "gender:female, creator:nightfaux, species:renamon, ass, my super tag, pussy"</p>
+        <p>DO NOT FORGET THE COMMAS!</p>
+    {{end}}
+</div>
+{{ template "baseEnd" }}

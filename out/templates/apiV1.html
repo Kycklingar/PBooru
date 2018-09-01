@@ -1,0 +1,183 @@
+{{template "base"}}
+
+<div>
+    <div class="text-panel" style="float:right;min-width:50%;">
+        <h2>Structures</h2>
+        <ul>
+            <div class="panel">
+                <table>
+                    <b>Post</b>
+                    <tr>
+                        <td>ID</td>
+                        <td>Integer</td>
+                    </tr>
+                    <tr>
+                        <td>Hash</td>
+                        <td>String</td>
+                    </tr>
+                    <tr>
+                        <td>ThumbHash</td>
+                        <td>String</td>
+                    </tr>
+                    <tr>
+                        <td>Mime</td>
+                        <td>String</td>
+                    </tr>
+                    <tr>
+                        <td>Deleted</td>
+                        <td>Boolean</td>
+                    </tr>
+                    <tr>
+                        <td>Tags</td>
+                        <td>Tag [ ]</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="panel">
+                <table>
+                    <b>Tag</b>
+                    <tr>
+                        <td>Tag</td>
+                        <td>String</td>
+                    </tr>
+                    <tr>
+                        <td>Namespace</td>
+                        <td>String</td>
+                    </tr>
+                </table>
+            </div>
+        </ul>
+    </div>
+    <div class="text-panel" style="float:left;">
+        <ul>
+            <li>
+                <div class="panel">
+                    <b>
+                        <a href="post">
+                            /api/v1/post
+                        </a>
+                    </b>
+                    <ul>
+                        Arguments:
+                        <table>
+                            <th>Arg</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <tr>
+                                <td>
+                                    <b>id</b>
+                                </td>
+                                <td>Integer</td>
+                                <td>Yes</td>
+                            </tr>
+                        </table>
+                        <br> Returns:
+                        <table>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <tr>
+                                <td>
+                                    <b>ID</b>
+                                </td>
+                                <td>Integer</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>Hash</b>
+                                </td>
+                                <td>String</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>ThumbHash</b>
+                                </td>
+                                <td>String</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>Mime</b>
+                                </td>
+                                <td>String</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>Deleted</b>
+                                </td>
+                                <td>Boolean</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>Tags</b>
+                                </td>
+                                <td>Array</td>
+                            </tr>
+                        </TABLE>
+                        <p>Example query:</p>
+                        <p>/api/v1/post?id=10</p>
+                    </ul>
+                </div>
+            </li>
+            <li>
+                <div class="panel">
+                    <b>
+                        <a href="posts">/api/v1/posts</a>
+                    </b>
+                    <ul>
+                        Arguments:
+                        <table>
+                            <th>Arg</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <tr>
+                                <td>
+                                    <b>tags</b>
+                                </td>
+                                <td>String</td>
+                                <td>No</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>offset</b>
+                                    <td>Integer</td>
+                                    <td>No</td>
+                                </td>
+                            </tr>
+                        </table>
+                        <br> Returns:
+                        <table>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <tr>
+                                <td>
+                                    <b>TotalPosts</b>
+                                </td>
+                                <td>Integer</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>Posts</b>
+                                </td>
+                                <td>Array</td>
+                            </tr>
+                        </table>
+                        <br>
+                        <p>Example queries:</p>
+                        <ul>
+                            <li>
+                                /api/v1/posts
+                            </li>
+                            <li>
+                                /api/v1/posts?offset=4
+                            </li>
+                            <li>
+                                /api/v1/posts?tags=example:tag,another:tag&offset=2
+                            </li>
+                        </ul>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{{template "baseEnd"}}

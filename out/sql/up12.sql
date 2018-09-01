@@ -1,0 +1,1 @@
+CREATE INDEX post_deleted ON posts(deleted);

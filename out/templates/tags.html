@@ -1,0 +1,100 @@
+{{ template "base" }}
+
+<div id="content" class="nolink">
+    <div id="sidebar">
+        <ul>
+        {{ range .Tags }}
+            <a href="/tags/{{$.Paginator.Current}}/{{.ID}}">
+                <li>
+                    {{template "tag" .}}
+                </li>
+            </a>
+        {{ end }}
+        </ul>
+    </div>
+    <div class="text-panel">
+        {{ if .Tag}}
+        <h2>
+            <a href="/tags/{{.Paginator.Current}}/{{.Tag.ID}}">
+                {{template "tag" .Tag}}
+            </a>
+        </h2>
+        <p>
+            Aliased from: 
+            {{ if .From }}
+            <ul>
+                {{ range .From }}
+                <li>
+                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}">
+                        {{ template "tag" .}}
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </p>
+        <p>
+            Aliased to: 
+            {{ if ne .To.ID 0}}
+                <a href="/tags/{{.Paginator.Current}}/{{.To.ID}}">
+                    {{ template "tag" .To}}
+                </a>
+            {{ end }}
+        </p>
+        {{ end }}
+
+        <form method="POST">
+            <input type="hidden" name="action" value="alias">
+            <p>Alias from</p>
+            <input type="text" class="stinput" name="from">
+            <p>Alias to</p>
+            <input type="text" class="stinput" name="to">
+            <input type="submit">
+        </form>
+        <form method="POST">
+                <input type="hidden" name="action" value="parent">
+                <p>Child</p>
+                <input type="text" class="stinput" name="child">
+                <p>Parent</p>
+                <input type="text" class="stinput" name="parent">
+                <input type="submit">
+            </form>
+            <script type="text/javascript" src="/static/suggestions.js"></script>
+    </div>
+</div>
+
+<div class="nolink" id="pageinator">
+        
+    {{ if ne 0 .Paginator.Prev}}
+        <a href="/tags/{{.Paginator.First}}">
+            First
+        </a>
+    
+        <a href="/tags/{{.Paginator.Prev}}" id="prev">
+            Previous
+        </a>
+    {{ end }}
+    {{ range .Paginator.Pages }}
+        <span>
+            {{ if eq $.Paginator.Current . }}
+            <span style="font-size:25px;">
+                {{.}}
+            </span>
+            {{ else }}
+            <a href="/tags/{{.}}">
+                {{.}}
+            </a>
+            {{ end }}
+        </span>
+    {{ end }}
+    {{ if ne 0 .Paginator.Next}}
+        <a href="/tags/{{.Paginator.Next}}">
+            Next
+        </a>
+        <a href="/tags/{{.Paginator.Last}}">
+            Last
+        </a>
+    {{ end }}
+</div>
+
+{{ template "baseEnd" }}

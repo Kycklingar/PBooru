@@ -1,0 +1,8 @@
+PBooru.exe
+PBooru
+debug
+PBDB.db-shm
+PBDB.db
+PBDB.db-wal
+*.test
+*.db

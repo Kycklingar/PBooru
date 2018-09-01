@@ -1,0 +1,19 @@
+{{ template "base" .Base}}
+
+<div class="text-panel">
+    <h3>Tag History</h3>
+        {{range .History}}
+            <h4>{{.User.Name}} - {{.Timestamp}}</h4>
+            <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+                <img style="max-width:100px;max-height:100px;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}">
+            </a>
+            <table>    
+            {{range .ETags}}
+                <tr>
+                    <td>{{if .Direction}}+{{else}}-{{end}}{{template "tagSpan" .Tag}}</td>
+                </tr>
+            {{end}}
+            </table>
+        {{end}}
+</div>
+{{ template "baseEnd"}}

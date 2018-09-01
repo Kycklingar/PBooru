@@ -1,0 +1,377 @@
+body
+{
+    background-color:#35353F;
+    margin-bottom: 2em;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#AAA;
+}
+
+#comic-container h1, #comic-container h2
+{
+    text-shadow: 3px 3px #213;
+}
+
+ul
+{
+    padding:10px;
+    margin:0px;
+}
+
+li
+{
+    list-style-type:none;
+}
+
+.nolink a:visited, .nolink a:link
+{
+    text-decoration: none;
+    color: black;
+}
+
+/*.text-panel a:visited
+{
+    text-decoration: underline;
+    color: purple;
+}
+
+.text-panel a:link
+{
+    text-decoration: underline;
+    color: blue;
+}
+*/
+
+#header
+{
+    /* background-color:#400A5E; */
+    background-color:#400A5E;
+    padding-bottom:2em;
+    padding-top:1em;
+    margin-bottom: 1em;
+    box-shadow: 3px 3px #213;
+}
+
+#header a
+{
+    /* display:inline; */
+    /* padding-right:40px; */
+    margin:1em;
+    padding:1em;
+    color:#98A;
+    font-size:1em;
+    /* text-shadow: 1px 1px #213; */
+    border-bottom-style:solid;
+    /* border-radius: 2px; */
+}
+
+#content img
+{
+}
+
+.thumbnail
+{
+    position: relative;
+    margin:3px;
+    width:250px;
+    height:250px;
+    word-wrap: break-word;
+    /*border: 1px solid red;*/
+}
+
+.thumbnail img
+{
+    position: absolute;
+    max-width:250px;
+    max-height:250px;
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.centered
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.centHorizont
+{
+    position: relative;
+    display: inline-block;
+    left:50%;
+    transform: translate(-50%);
+}
+
+.thumbnail .full{
+    display:none;
+}
+
+#content
+{
+    position: relative;
+    /* background-color:red; */
+    /* background-color:#33343E; */
+    display:flex;
+}
+
+#posts
+{
+    position: relative;
+    display:flex;
+    flex-flow: wrap;
+    margin: 0px;
+}
+
+#post
+{
+    background-color:#667;
+    box-shadow: 3px 3px #213;
+    color:#000;
+}
+
+#posts-container
+{
+    /* background-color:green; */
+}
+
+#pageinator, #pageinator a:link, #pageinator a:visited
+{
+    color:#AAA;
+    font-size:18px;
+}
+
+#sidebar
+{
+    /* background-color:yellowgreen; */
+    /* color:#AAA; */
+    font-size: 18px;
+    margin-right:0.5em;
+    
+}
+
+#sidebar input
+{
+    width:100%;
+    box-shadow: 3px 3px #213;
+    
+}
+
+#stbox
+{
+    position: absolute;
+    background-color:white;
+    border:2px solid;
+    z-index: 10;
+    box-shadow: 4px 4px #213;
+    padding: 3px;
+}
+
+#tags
+{
+    width: 100%;
+    background-color:#667;
+    border-spacing: 5px 0px;
+    box-shadow: 3px 3px #213;
+    color:#000;
+    
+}
+
+.tag
+{
+    white-space: nowrap;
+}
+
+#tags .tag
+{
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#tags td
+{
+    padding-bottom:0px;
+    padding-top:0px;
+}
+
+#tags:hover .tag
+{
+    max-width: 100%;
+}
+
+#tags .counter
+{
+    float: right;
+}
+
+.tag
+{
+    background-color:darkorange;
+}
+
+.namespace-none
+{
+    background-color: initial;
+}
+
+.namespace-series
+{
+    background-color: #A030A0;
+}
+
+.namespace-gender
+{
+    background-color: pink;
+}
+
+.namespace-species
+{
+    background-color: green;
+}
+
+.namespace-creator
+{
+    background-color: red;
+}
+.namespace-character
+{
+    background-color:yellow;
+}
+.namespace-none
+{
+
+}
+
+#suggestedtags
+{
+    background-color:#667;
+}
+
+#suggestedtags li
+{
+    display:inline;
+    margin:5px;
+}
+
+.text-panel
+{
+    background-color:#667;
+    padding-left:1em;
+    margin-top: 1em;
+    padding-top:10px;
+    padding-bottom:10px;
+    box-shadow: 3px 3px #213;
+    color:#000;
+    
+}
+
+.text-panel table, .text-panel td, .text-panel th
+{
+    border: solid 1px grey;
+    padding: 0.5em;
+    color: #000;
+    border-collapse: collapse;
+}
+
+
+.panel {
+    background-color: #667;
+    margin:1em;
+    box-shadow: 3px 3px #213;
+    
+}
+
+.comment
+{
+    background-color:#667;
+    color:#000;
+    box-shadow: 3px 3px #213;
+    word-wrap: break-word;
+    padding-left: 3px;
+}
+
+.comment p
+{
+    margin-left: 3px;
+}
+
+.comics-container
+{
+    background-color:#667;
+    box-shadow: 3px 3px #213;
+    color:#000;
+    margin-bottom:1em;
+}
+
+.cpage-container
+{
+    /* background-color: #556; */
+    display: flex;
+    margin:1em;
+    
+}
+
+.comic-page
+{
+    background-color:#778;
+    padding:1em;
+    margin:1em;
+    color:#000;
+}
+
+.comic-thumb
+{
+    margin:3px;
+    word-break: break-all;
+}
+
+.comic-thumb img
+{
+    max-width:250px;
+    max-height:250px;
+}
+
+.cpage
+{
+    position: relative;
+    /*background-color: purple;*/
+    width: 200px;
+    height: 250px;
+    margin:1em;
+    display: inline-flex;
+}
+
+.cpage img
+{
+    position: absolute;
+    max-width:200px;
+    max-height:250px;
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes struggle
+{
+    0%
+    {
+        transform:rotate(1deg);
+    }
+    100%
+    {    
+        transform:rotate(-1deg);
+    }
+}
+
+@keyframes fade
+{
+    100%
+    {
+        opacity: 0.9;
+    };
+}

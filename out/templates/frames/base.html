@@ -1,0 +1,30 @@
+{{define "base"}}
+<html>
+    <head>
+        {{if .Title}}
+        <title>{{.Title}}</title>
+        {{else}}
+        <title>The Permanent Booru</title>        
+        {{end}}
+        <link rel="stylesheet" type="text/css" href="/static/stylesheet.css">
+    </head>
+    <body>
+        <div class="nolink" id="header">
+            <a href="/">Home</a>
+            <a href="/posts/">Posts</a>
+            <a href="/comics/">Comics</a>
+            <a href="/upload/">Upload</a>
+            <a href="/wall/">Wall</a>
+        </div>
+{{end}}
+
+{{ define "baseEnd" }}
+
+    </body>
+</html>
+
+{{end}}
+
+{{define "benchmark"}}
+    <p>Page generated in {{.}}s</p>
+{{end}}

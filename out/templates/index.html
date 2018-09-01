@@ -1,0 +1,51 @@
+{{ template "base" }}
+<div class="text-panel">
+    <h2>The Permanent Booru / 
+            kycklingar.i2p
+            <span style="font-size:12px;font-weight:normal;">
+                <a href="http://kycklingar.i2p?i2paddresshelper=PKCCiiEU7vT5Q8vWm7sI5-B~mWbsBTCIo06y-WVqIE4uDsz9w1kLVRKYa0Y9XwuhZ95AsgT81nXE2ugCN9fjeG0-IiMbPgQaUdmh2TXbxAvuwkHfA6Fcc7SIs9qAo1wxC43pWdPpRJLV0h1-Z2RmeYYpOr~9ra47a-z8zT-BSuQWbb~R0tcGddlG~dIUKQAA-gW8aX8xOQSltsZxPAveb1QiydCjA8pE7z3SLOeo3PU7YAUIkP7Ehunmej~Sqf0-vB15k9c9T3IE7-ngkwUEVaYsXnfiYFHceu2hIQOorU6cfXB~a1FfwdgCmFBh0ITG13x5OWvtKExVkeGop5pRoapJRV-wEYJeuCbz7SbFNVkTtUMR~KRz9x-evG48B--ENKBTdka0dO5F3iuNCzSznBfeIKv4OTbdWu1xQ5OthPdl0DAOG3TuVdfEJA3yq8w62Hd3KArMfRQ8UJ9CGYFchqice9TPLj3RYFbWdwCUlc8XsE-IE2YyRVH7BbR3VP7dBQAEAAcAAA==">
+                    [a]
+                </a>
+                <a href="http://gctswdhp4447yibxfbqg3uq2bvx63qjeqnaoaux75zw73leakyva.b32.i2p">
+                    [b]
+                </a>
+            </span>
+         / vsdfdtkr5mh6y33p.onion</h2>
+    <h3>Here there be furry content</h3>
+    <p>The Permanent Booru uses IPFS for distributing its content.</p>
+    <p>
+        You will need to run an ipfs daemon OR use a public gateway like 
+        <a href="http://ipfs.kycklingar.i2p">
+            http://ipfs.kycklingar.i2p
+        </a>
+        <span style="font-size:12px;font-weight:normal;">
+            <a href="http://ipfs.kycklingar.i2p?i2paddresshelper=9V7dNvkBiolE9VN4lbfI~n86lmrEMPT6ckXpCkN9Oxh9mwHsJ5DwnNDJ9yjAXStbyEEdamdxBuMKvMVrKbxvfEDuCqlbAwbX0NdLxl3mjg9QuEGX17GyEewM-Ez~cRg-nhnGTfem7gF2w1dwQTD7SaRAZ3CWlUyUlaOQCVBFSoO3lqPDT9YhMk3XMHbvVOefqoZLE2g086FRQbEaJTN9piskN1rRSGFJ5lPPGPGHgdQblXLlwFwoqWvExRoWBRvkCQ7tmgk91CGEGvUXUtQxf4kZTId7G1dPHYEiRHQf-drORDwdKnE3-2dg5C0DTIqa9zkbmJtGFNmRKuDpnt7to1gNjjO1og8VP2VIlVOQoO2jP8cEsw9I9jnpZuAs0sIRyjrvesJOZygLbskRK4DBJSk1ukyE9x~1F7Cd5eIl9wk4jnncxg5a8EPdtkb4~HT~GjkyRstcugloJuRJv07-ID6rzcFf3Blhl7Ti3y91pmbLTTAtzX3CsLQ78z36rGpkBQAEAAcAAA==">
+                [a]
+            </a>
+            <a href="http://trlr7pylub7xl7lolfv3adslni5yld5njquni2kk5b3etspirzhq.b32.i2p">
+                [b]
+            </a>
+        </span>
+        or 
+        <a href="http://54sdi3p2kf4intp7.onion">
+            http://54sdi3p2kf4intp7.onion            
+        </a>.
+    </p>
+    <p>Set the gateway to your liking at <a href="/options">/options/</a> or at the bottom of the posts page. For example "http://ipfs.kycklingar.i2p" or "http://127.0.0.1:8080"</p>
+    <p>Ipfs is NOT anonymous if you use your local daemon! Continue with caution.</p>
+    <p>Visit <a href="https://ipfs.io">https://ipfs.io</a> for more info</p>
+    <br>
+    <br>
+    <br>
+    <h3>Hits: {{.Hits}}</h3>
+    <h3>Total Posts: {{.TotalPosts}}</h3>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <!-- <p>Ignore the horrible design please. I'll work on it soon</p> -->
+</div>
+{{ template "baseEnd" }}

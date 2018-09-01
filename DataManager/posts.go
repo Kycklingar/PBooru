@@ -1,0 +1,1152 @@
+package DataManager
+
+import (
+	"database/sql"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+
+	"github.com/Nr90/imgsim"
+	"github.com/frustra/bbcode"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+)
+
+func NewPost() *Post {
+	var p Post
+	p.Mime = NewMime()
+	p.Deleted = -1
+	return &p
+}
+
+type Post struct {
+	ID      int
+	Hash    string
+	Thumb   string
+	Mime    *Mime
+	Deleted int
+}
+
+func (p *Post) QID(q querier) int {
+	if p.ID != 0 {
+		return p.ID
+	}
+
+	if p.Hash != "" {
+		err := q.QueryRow("SELECT id FROM posts WHERE multihash=$1", p.Hash).Scan(&p.ID)
+		if err != nil && err != sql.ErrNoRows {
+			log.Print(err)
+			return 0
+		}
+	}
+
+	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+
+	return p.ID
+}
+
+func (p *Post) SetID(q querier, id int) error {
+	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
+}
+
+func (p *Post) QHash(q querier) string {
+	if p.Hash != "" {
+		return p.Hash
+	}
+
+	if p.ID != 0 {
+		// if t := C.Cache.Get(p.ID); t != nil {
+		// 	p = t.(*Post)
+		// 	return p.Hash
+		// }
+		if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
+			switch cp := c.(type) {
+			case *Post:
+				*p = *cp
+				if p.Hash != "" {
+					return p.Hash
+				}
+			}
+		}
+
+		err := q.QueryRow("SELECT multihash FROM posts WHERE id=$1", p.ID).Scan(&p.Hash)
+		if err != nil {
+			log.Print(err)
+			return ""
+		}
+		C.Cache.Set("PST", strconv.Itoa(p.ID), p)
+	}
+
+	return p.Hash
+}
+
+func (p *Post) QThumb(q querier) string {
+	if p.Thumb != "" {
+		return p.Thumb
+	}
+	if p.QID(q) == 0 {
+		return ""
+	}
+
+	err := q.QueryRow("SELECT thumbhash FROM posts WHERE id=$1", p.ID).Scan(&p.Thumb)
+	if err != nil {
+		log.Print(err)
+	}
+
+	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+
+	return p.Thumb
+}
+
+func (p *Post) QMime(q querier) *Mime {
+	if p.Mime.QID(q) != 0 {
+		return p.Mime
+	}
+	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=$1", p.QID(q)).Scan(&p.Mime.ID)
+	if err != nil {
+		log.Print(err)
+	}
+
+	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+
+	return p.Mime
+}
+
+func (p *Post) QDeleted(q querier) int {
+	if p.Deleted != -1 {
+		return p.Deleted
+	}
+	if p.QID(q) == 0 {
+		return -1
+	}
+	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&p.Deleted)
+	if err != nil {
+		log.Print(err)
+		return -1
+	}
+
+	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+
+	return p.Deleted
+}
+
+func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
+	var err error
+	p.Hash, err = ipfsAdd(file)
+	if err != nil {
+		log.Println("Error pinning file to ipfs: ", err)
+		return err
+	}
+	file.Seek(0, 0)
+
+	var tx *sql.Tx
+
+	if p.QID(DB) == 0 {
+
+		p.Thumb, err = makeThumbnail(file, mime)
+		if err != nil {
+			return err
+		}
+
+		tx, err = DB.Begin()
+		if err != nil {
+			log.Println("Error creating transaction: ", err)
+			return err
+		}
+		//p.setQ(tx)
+
+		err = p.Mime.Parse(mime)
+		if err != nil {
+			return txError(tx, err)
+		}
+
+		if p.Mime.QID(tx) == 0 {
+			err := p.Mime.Save(tx)
+			if err != nil {
+				return txError(tx, err)
+			}
+		}
+
+		err = p.Save(tx, user)
+		if err != nil {
+			return txError(tx, err)
+		}
+
+		if p.Thumb != "NT" {
+			f := ipfsCat(p.Thumb)
+			u := dHash(f)
+			f.Close()
+
+			type PHS struct {
+				id int
+				h1 uint16
+				h2 uint16
+				h3 uint16
+				h4 uint16
+			}
+			var ph PHS
+
+			ph.id = p.QID(tx)
+
+			b := make([]byte, 8)
+			binary.BigEndian.PutUint64(b, u)
+			ph.h1 = uint16(b[1]) | uint16(b[0])<<8
+			ph.h2 = uint16(b[3]) | uint16(b[2])<<8
+			ph.h3 = uint16(b[5]) | uint16(b[4])<<8
+			ph.h4 = uint16(b[7]) | uint16(b[6])<<8
+
+			_, err = tx.Exec("INSERT INTO phash(post_id, h1, h2, h3, h4) VALUES($1, $2, $3, $4, $5)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
+			if err != nil {
+				return txError(tx, err)
+			}
+		}
+	} else {
+		tx, err = DB.Begin()
+		if err != nil {
+			log.Println("Error creating transaction: ", err)
+			return err
+		}
+
+		err = p.EditTagsQ(tx, user, tagString, "")
+		if err != nil && err.Error() != "no tags in edit" {
+			//log.Println(err)
+			return txError(tx, err)
+		}
+
+		err = tx.Commit()
+		return err
+
+		//p.setQ(tx)
+
+		// Get the best post and add the tags to it
+		// d := NewDuplicate()
+		// d.setQ(tx)
+		// d.Post = p
+		// post = d.BestPost()
+	}
+
+	var tc TagCollector
+
+	err = tc.Parse(tagString)
+	if err != nil && err.Error() != "error decoding any tags" {
+		return txError(tx, err)
+	}
+
+	err = tc.AddToPost(tx, p)
+	if err != nil {
+		return txError(tx, err)
+	}
+
+	err = tx.Commit()
+
+	//p.setQ(nil)
+
+	return err
+}
+
+func (p *Post) Save(q querier, user *User) error {
+	if p.QID(q) != 0 {
+		return errors.New("post already exist")
+	}
+
+	if p.Mime.QID(q) == 0 {
+		err := p.Mime.Save(q)
+		if err != nil {
+			return err
+		}
+	}
+
+	if p.Hash == "" || p.Thumb == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
+		return fmt.Errorf("post missing argument. Want Hash, Thumb and Mime.ID, Have: %s, %s, %d, %d", p.Hash, p.Thumb, p.Mime.ID, user.ID)
+	}
+
+	_, err := q.Exec("INSERT INTO posts(multihash, thumbhash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Thumb, p.Mime.QID(q), user.QID(q))
+	if err != nil {
+		log.Print(err)
+	} else {
+		totalPosts = 0
+	}
+	return err
+}
+
+func (p *Post) Delete(q querier) error {
+	if p.QID(q) == 0 {
+		return errors.New("post:delete: invalid post")
+	}
+	_, err := q.Exec("UPDATE posts SET deleted=1 WHERE id=$1", p.QID(q))
+	if err != nil {
+		log.Print(err)
+		return err
+
+	}
+	totalPosts = 0
+
+	tc := TagCollector{}
+	if err = tc.GetFromPost(q, *p); err != nil {
+		log.Print(err)
+		return err
+	}
+	for _, t := range tc.Tags {
+		resetCacheTag(t.QID(q))
+	}
+	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
+
+	return nil
+}
+
+func (p *Post) UnDelete(q querier) error {
+	if p.QID(q) == 0 {
+		return errors.New("post:undelete: invalid post id")
+	}
+	_, err := q.Exec("UPDATE posts SET deleted=0 WHERE id=$1", p.QID(q))
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+	totalPosts = 0
+
+	tc := TagCollector{}
+	if err = tc.GetFromPost(q, *p); err != nil {
+		log.Print(err)
+		return err
+	}
+	for _, t := range tc.Tags {
+		resetCacheTag(t.QID(q))
+	}
+	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
+
+	return nil
+}
+
+func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) error {
+	var addTags TagCollector
+	err := addTags.Parse(tagStrAdd)
+	if err != nil {
+		//log.Print(err)
+	}
+	var remTags TagCollector
+	err = remTags.Parse(tagStrRem)
+	if err != nil {
+		//log.Print(err)
+	}
+
+	if len(addTags.Tags) < 1 && len(remTags.Tags) < 1 {
+		return errors.New("no tags in edit")
+	}
+
+	var at []*Tag
+	for _, t := range addTags.Tags {
+		a := NewAlias()
+		a.Tag = t
+		//a.setQ(tx)
+		b := a.QTo(q)
+		if b.QID(q) == 0 {
+			b = t
+		}
+
+		if b.QID(q) == 0 {
+			err = b.Save(q)
+			if err != nil {
+				log.Print(err)
+				return err
+			}
+		}
+
+		var tmp int
+		err = q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		if err == nil && tmp > 0 {
+			continue // Tag is already on this post
+		}
+
+		at = append(at, b)
+
+	}
+
+	var rt []*Tag
+	for _, t := range remTags.Tags {
+		a := NewAlias()
+		a.Tag = t
+		b := a.QTo(q)
+		if b.QID(q) == 0 {
+			b = t
+		}
+
+		if b.QID(q) == 0 {
+			continue
+		}
+
+		var exist int
+		err := q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		if err != nil || exist == 0 {
+			// Tag does not exist on this post
+			continue
+		}
+
+		rt = append(rt, b)
+	}
+
+	if len(at) < 1 && len(rt) < 1 {
+		return errors.New("no tags in edit")
+	}
+
+	addTags.Tags = at
+	remTags.Tags = rt
+
+	res, err := q.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	if err != nil {
+		return err
+	}
+	id64, err := res.LastInsertId()
+
+	historyID := int(id64)
+
+	for _, tag := range at {
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
+		if err != nil {
+			return err
+		}
+	}
+	addTags.AddToPost(q, p)
+
+	for _, tag := range rt {
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
+		if err != nil {
+			return err
+		}
+	}
+	err = remTags.RemoveFromPost(q, p)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	// p.setQ(nil)
+
+	C.Cache.Purge("TC", strconv.Itoa(p.QID(DB)))
+
+	return err
+}
+
+func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
+	var addTags TagCollector
+	err := addTags.Parse(tagStrAdd)
+	if err != nil {
+		//log.Print(err)
+	}
+	var remTags TagCollector
+	err = remTags.Parse(tagStrRem)
+	if err != nil {
+		//log.Print(err)
+	}
+
+	if len(addTags.Tags) < 1 && len(remTags.Tags) < 1 {
+		return errors.New("no tags in edit")
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	q := tx
+	//p.setQ(tx)
+
+	var at []*Tag
+	for _, t := range addTags.Tags {
+		a := NewAlias()
+		a.Tag = t
+		//a.setQ(tx)
+		b := a.QTo(tx)
+		if b.QID(tx) == 0 {
+			b = t
+		}
+
+		if b.QID(tx) == 0 {
+			err = b.Save(tx)
+			if err != nil {
+				log.Print(err)
+				return txError(tx, err)
+			}
+		}
+
+		var tmp int
+		err = tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		if err == nil && tmp > 0 {
+			continue // Tag is already on this post
+		}
+
+		at = append(at, b)
+
+	}
+
+	var rt []*Tag
+	for _, t := range remTags.Tags {
+		a := NewAlias()
+		a.Tag = t
+		b := a.QTo(tx)
+		if b.QID(tx) == 0 {
+			b = t
+		}
+
+		if b.QID(tx) == 0 {
+			continue
+		}
+
+		var exist int
+		err := tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		if err != nil || exist == 0 {
+			// Tag does not exist on this post
+			continue
+		}
+
+		rt = append(rt, b)
+	}
+
+	if len(at) < 1 && len(rt) < 1 {
+		return txError(tx, errors.New("no tags in edit"))
+	}
+
+	addTags.Tags = at
+	remTags.Tags = rt
+
+	res, err := tx.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	if err != nil {
+		return txError(tx, err)
+	}
+	id64, err := res.LastInsertId()
+
+	historyID := int(id64)
+
+	for _, tag := range at {
+		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
+		if err != nil {
+			return txError(tx, err)
+		}
+	}
+	addTags.AddToPost(tx, p)
+
+	for _, tag := range rt {
+		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
+		if err != nil {
+			return txError(tx, err)
+		}
+	}
+	err = remTags.RemoveFromPost(tx, p)
+	if err != nil {
+		log.Print(err)
+		return txError(tx, err)
+	}
+
+	err = tx.Commit()
+
+	// p.setQ(nil)
+
+	C.Cache.Purge("TC", strconv.Itoa(p.QID(DB)))
+
+	return err
+}
+
+func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
+	if p.QID(q) == 0 {
+		return nil, errors.New("id = 0")
+	}
+
+	type phash struct {
+		post_id int
+		h1      uint16
+		h2      uint16
+		h3      uint16
+		h4      uint16
+	}
+
+	var ph phash
+
+	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.QID(q)).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := q.Query("SELECT * FROM phash WHERE h1=$1 OR h2=$2 OR h3=$3 OR h4=$4 ORDER BY post_id DESC", ph.h1, ph.h2, ph.h3, ph.h4)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var phs []phash
+
+	for rows.Next() {
+		var phn phash
+		if err = rows.Scan(&phn.post_id, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
+			return nil, err
+		}
+		phs = append(phs, phn)
+	}
+	f := func(a phash) imgsim.Hash {
+		return imgsim.Hash(uint64(a.h1)<<16 | uint64(a.h2)<<32 | uint64(a.h3)<<48 | uint64(a.h4)<<64)
+	}
+
+	var posts []*Post
+	hasha := f(ph)
+
+	for _, h := range phs {
+		hashb := f(h)
+		if imgsim.Distance(hasha, hashb) < dist {
+			pst := NewPost()
+			pst.ID = h.post_id
+			posts = append(posts, pst)
+		}
+	}
+
+	return posts, nil
+}
+
+func (p *Post) Comics(q querier) []*Comic {
+	if p.QID(q) == 0 {
+		return nil
+	}
+	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.QID(q))
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var comics []*Comic
+	for rows.Next() {
+		var c Comic
+		rows.Scan(&c.ID)
+		if rows.Err() != nil {
+			log.Print(err)
+			return nil
+		}
+		comics = append(comics, &c)
+	}
+	return comics
+}
+
+func (p *Post) Duplicate() *Duplicate {
+	d := NewDuplicate()
+	d.Post = p
+
+	return d
+}
+
+func (p *Post) NewComment() *PostComment {
+	pc := newPostComment()
+	pc.Post = p
+	return pc
+}
+
+func (p *Post) Comments(q querier) []*PostComment {
+	if p.QID(q) <= 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT id, user_id, text, DATETIME(timestamp, 'localtime') FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.QID(q))
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+
+	var pcs []*PostComment
+
+	for rows.Next() {
+		pc := p.NewComment()
+		var text string
+		err = rows.Scan(&pc.ID, &pc.User.ID, &text, &pc.Time)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+
+		cmp := bbcode.NewCompiler(true, true)
+		cmp.SetTag("img", nil)
+		pc.Text = cmp.Compile(text)
+
+		pcs = append(pcs, pc)
+	}
+	return pcs
+}
+
+type PostCollector struct {
+	posts    map[int][]*Post
+	id       []int
+	blackTag []int
+
+	tags       []*Tag //Sidebar
+	TotalPosts int
+
+	tagLock sync.Mutex
+}
+
+var perSlice = 500
+
+func (pc *PostCollector) Get(tagString, blackTagString string, asc bool, limit, offset int) error {
+	//var tagIDs []int
+
+	if len(tagString) >= 1 {
+		var tc TagCollector
+
+		err := tc.Parse(tagString)
+		if err != nil {
+			return err
+		}
+
+		for _, tag := range tc.Tags {
+			if tag.QID(DB) == 0 {
+				pc.id = []int{-1}
+				return nil
+			}
+			alias := NewAlias()
+			alias.Tag = tag
+			if alias.QTo(DB).QID(DB) != 0 {
+				tag = alias.QTo(DB)
+			}
+			pc.id = append(pc.id, tag.QID(DB))
+		}
+		sort.Ints(pc.id)
+		//fmt.Println(tagIDs)
+		if len(pc.id) <= 0 {
+			pc.id = []int{-1}
+		}
+	}
+
+	if len(blackTagString) >= 1 {
+		var tc TagCollector
+
+		err := tc.Parse(blackTagString)
+		if err != nil {
+			return err
+		}
+
+		for _, tag := range tc.Tags {
+			if tag.QID(DB) == 0 {
+				pc.id = []int{-1}
+				return nil
+			}
+			alias := NewAlias()
+			alias.Tag = tag
+			if alias.QTo(DB).QID(DB) != 0 {
+				tag = alias.QTo(DB)
+			}
+			pc.blackTag = append(pc.blackTag, tag.QID(DB))
+		}
+		sort.Ints(pc.blackTag)
+		//fmt.Println(tagIDs)
+		if len(pc.blackTag) <= 0 {
+			pc.blackTag = []int{-1}
+		}
+	}
+	//fmt.Println(tagIDs)
+	//pc.id = tagIDs //idStr
+
+	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+		tmp, ok := t.(*PostCollector)
+		if ok {
+			*pc = *tmp
+			// pc.posts = tmp.posts
+			// pc.id = tmp.ID
+			// pc.TotalPosts = tmp.TotalPosts
+			// pc.tags = tmp.tags
+			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+			// 	return nil
+			// }
+		}
+	} else {
+		C.Cache.Set("PC", pc.idStr(), pc)
+	}
+
+	return pc.search(asc, limit, offset)
+}
+
+func (pc *PostCollector) idStr() string {
+	// if len(pc.id) <= 0 {
+	// 	return "0"
+	// }
+	var str string
+	for _, i := range pc.id {
+		str = fmt.Sprint(str+" ", i)
+	}
+	if len(pc.blackTag) >= 1 {
+		str += " -"
+	}
+	for _, i := range pc.blackTag {
+		str = fmt.Sprint(str+" ", i)
+	}
+	str = strings.TrimSpace(str)
+	//fmt.Println("PCSTR", str)
+	return str
+}
+
+func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
+	order := "DESC"
+	if asc {
+		order = "ASC"
+	}
+
+	if pc.idStr() == "-1" {
+		return nil
+	}
+
+	//pc.id = tagString
+
+	//pc.Posts2.Get(ulimit, uoffset)
+
+	limit := perSlice
+	offset := ((uoffset + ulimit) / limit) * limit
+	//fmt.Println("Real Offset ", offset)
+	var rows *sql.Rows
+	var err error
+	//fmt.Println(pc.idStr())
+
+	// if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+	// 	tmp, ok := t.(*PostCollector)
+	// 	if ok {
+	// 		*pc = *tmp
+	// 		// pc.posts = tmp.posts
+	// 		// pc.id = tmp.ID
+	// 		// pc.TotalPosts = tmp.TotalPosts
+	// 		// pc.tags = tmp.tags
+	// 		if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+	// 			return nil
+	// 		}
+	// 	}
+	// }
+
+	if ok := pc.GetW(ulimit, uoffset); ok != nil {
+		return nil
+	}
+
+	//fmt.Println("Cache not accessed")
+
+	//pc.id = idStr
+	//fmt.Println(idStr)
+	if len(pc.id) > 0 {
+		var innerStr string
+		var blt string
+		if len(pc.blackTag) >= 1 {
+			var or string
+			for _, t := range pc.blackTag {
+				or += fmt.Sprint(" tag_id = ", t, " OR")
+			}
+			or = strings.TrimRight(or, " OR")
+			blt = fmt.Sprintf("AND t1.post_id NOT IN(SELECT post_id FROM post_tag_mappings WHERE %s)", or)
+		}
+		if len(pc.id) > 1 {
+			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 ")
+			for i, tagID := range pc.id {
+				var tstr string
+				if i+1 == len(pc.id) {
+					tstr = fmt.Sprintf("AND t1.tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", tagID, blt)
+				} else {
+					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id AND t%d.tag_id = %d ", i+2, i+1, i+2, i+2, tagID)
+				}
+				innerStr += tstr
+			}
+		} else {
+
+			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", pc.id[0], blt)
+		}
+		//fmt.Println(innerStr)
+		// str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) AND deleted=0 ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
+
+		if pc.TotalPosts <= 0 {
+			count := fmt.Sprintf("SELECT count() FROM posts WHERE id IN(%s)", innerStr)
+			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+			if err != nil {
+				log.Print(err)
+				return err
+			}
+		}
+
+		rows, err = DB.Query(str, limit, offset)
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+
+	} else if len(pc.blackTag) > 0 {
+		var innerStr string
+		var or string
+
+		for _, t := range pc.blackTag {
+			or += fmt.Sprint("t1.tag_id = ", t, " OR ")
+		}
+		or = strings.TrimRight(or, " OR ")
+
+		innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE %s", or)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = 0 ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+
+		//fmt.Println(str)
+
+		if pc.TotalPosts <= 0 {
+			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s)", innerStr)
+			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+			if err != nil {
+				log.Print(err)
+				return err
+			}
+		}
+
+		rows, err = DB.Query(str, limit, offset)
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+	} else {
+		pc.TotalPosts = GetTotalPosts()
+
+		var err error
+		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
+		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted=0 ORDER BY id %s LIMIT $1 OFFSET $2", order)
+		rows, err = DB.Query(query, limit, offset)
+		if err != nil {
+			return err
+		}
+	}
+	defer rows.Close()
+
+	var tmpPosts []*Post
+	for rows.Next() {
+		post := NewPost()
+		err := rows.Scan(&post.ID, &post.Hash, &post.Thumb, &post.Mime.ID)
+
+		if err != nil {
+			return err
+		}
+		tmpPosts = append(tmpPosts, post)
+	}
+
+	pc.set((uoffset+ulimit)/limit, tmpPosts)
+	//pc.Posts = pc.get(ulimit, uoffset)
+	err = rows.Err()
+
+	//C.Cache.Set("PC", pc.idStr(), pc)
+
+	return err
+}
+
+func (pc *PostCollector) Tags(maxTags int) []*Tag {
+	pc.tagLock.Lock()
+	defer pc.tagLock.Unlock()
+	if len(pc.tags) > 0 {
+		return pc.tags
+	}
+	//fmt.Println(pc.id)
+	var allTagIds [][]int
+
+	if pc.idStr() == "-1" {
+		return nil
+	}
+
+	// Get the first batch
+	pc.search(false, 10, 0)
+	//pc.GetW(10, 0)
+
+	// Get tags from all posts
+	for _, post := range pc.posts[0] {
+		var ptc TagCollector
+		err := ptc.GetFromPost(DB, *post)
+		if err != nil {
+			continue
+		}
+		var ids []int
+		for _, tag := range ptc.Tags {
+			ids = append(ids, tag.QID(DB))
+		}
+		allTagIds = append(allTagIds, ids)
+	}
+
+	type tagMap struct {
+		id    int
+		count int
+	}
+
+	// Count all tags
+	var tagIDArr []tagMap
+	for _, idSet := range allTagIds {
+		for _, id := range idSet {
+			newID := true
+			for i, id2 := range tagIDArr {
+				if id == id2.id {
+					tagIDArr[i].count++
+					newID = false
+					break
+				}
+			}
+			if newID {
+				tagIDArr = append(tagIDArr, tagMap{id, 1})
+			}
+		}
+	}
+
+	// Sort all tags
+	swapped := true
+	for swapped {
+		swapped = false
+		for i := 1; i < len(tagIDArr); i++ {
+			if tagIDArr[i-1].count < tagIDArr[i].count {
+				tmp := tagIDArr[i]
+				tagIDArr[i] = tagIDArr[i-1]
+				tagIDArr[i-1] = tmp
+				swapped = true
+			}
+		}
+	}
+
+	// Hotfix for when cache is gc'd and there are multiple calls for this search
+	pc.tags = nil
+	// Retrive and append the tags
+	arrLimit := maxTags
+	if len(tagIDArr) < arrLimit {
+		arrLimit = len(tagIDArr)
+	}
+	for i := 0; i < arrLimit; i++ {
+		t := NewTag()
+		t.SetID(tagIDArr[i].id)
+
+		pc.tags = append(pc.tags, t)
+		//p.Sidebar.Tags = append(p.Sidebar.Tags, tagstruct{Tag{t.Tag(), t.Namespace().Namespace()}, tagIDArr[i].count})
+	}
+
+	// err = tx.Commit()
+	// if err != nil {
+	// 	log.Print(err)
+	// }
+	// tx = nil
+
+	C.Cache.Set("PC", pc.idStr(), pc)
+
+	return pc.tags
+}
+
+var totalPosts int
+
+func GetTotalPosts() int {
+	if totalPosts != 0 {
+		return totalPosts
+	}
+	err := DB.QueryRow("SELECT count() FROM posts WHERE deleted=0").Scan(&totalPosts)
+	if err != nil {
+		log.Println(err)
+		return totalPosts
+	}
+	return totalPosts
+}
+
+func resetCacheTag(tagID int) {
+	C.Cache.Purge("PC", strconv.Itoa(tagID))
+	C.Cache.Purge("TAG", strconv.Itoa(tagID))
+	C.Cache.Purge("PC", "")
+}
+
+func (p *PostCollector) GetW(limit, offset int) []*Post {
+	if p.posts == nil {
+		p.posts = make(map[int][]*Post)
+	}
+	if limit <= 0 || offset < 0 {
+		return nil
+	}
+	//fmt.Println("begOff", offset/perSlice) // beginning offset
+	begOff := offset / perSlice
+
+	//fmt.Println("endOff ", (offset+limit)/perSlice) // end offset
+	endOff := (offset + limit) / perSlice
+
+	//fmt.Println("first offset ", offset%perSlice)
+	frstOff := offset % perSlice
+
+	//fmt.Println("seccond offset ", (offset+limit)%perSlice)
+	secOff := (offset + limit) % perSlice
+
+	var posts = []*Post{}
+
+	if begOff == endOff {
+		//fmt.Println("Single")
+		tmp, ok := p.posts[begOff]
+		if !ok {
+			//log.Print("FATAL ERROR")
+			return nil
+		}
+		//fmt.Println(len(tmp), frstOff, secOff)
+		if (len(tmp) - 1) < frstOff {
+			return nil
+		}
+		//fmt.Println(frstOff, secOff, len(tmp))
+		posts = append(posts, tmp[frstOff:max(len(tmp), secOff)]...)
+	} else {
+		//fmt.Println("Double")
+		tmp, ok := p.posts[begOff]
+		if !ok {
+			//fmt.Println("Not ok1")
+			p.search(false, limit, offset-limit)
+			tmp, ok = p.posts[begOff]
+			if !ok {
+				//log.Print("Fatal erorr")
+				return nil
+			}
+		}
+		if tmp == nil {
+			return nil
+		}
+		posts = append(posts, tmp[max(len(tmp)-1, frstOff):]...)
+
+		tmp, ok = p.posts[endOff]
+		if ok {
+			if len(tmp) > 0 {
+				posts = append(posts, tmp[:max(len(tmp), secOff)]...)
+			}
+		} else {
+			//log.Print("FATAL error")
+			return nil
+		}
+	}
+	return posts
+}
+
+// Returns whichever is smaller
+func Smal(x, y int) int {
+	return max(x, y)
+}
+
+// Returns whichever is larger
+func Larg(x, y int) int {
+	return min(x, y)
+}
+
+// Return the smallest of the 2
+func Max(x, y int) int {
+	return max(x, y)
+}
+
+// Return the largest of the 2
+func Min(x, y int) int {
+	return min(x, y)
+}
+
+func max(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+func min(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
+func (p *PostCollector) set(offset int, posts []*Post) {
+	if p.posts == nil {
+		p.posts = make(map[int][]*Post)
+	}
+	//fmt.Println("Setting Offset = ", offset)
+	p.posts[offset] = posts
+}

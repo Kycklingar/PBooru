@@ -1,0 +1,35 @@
+{{ template "base" }}
+
+<div class="postcomment" >
+    <h2>{{.Username}}</h2>
+    <form method="POST">
+        <textarea cols="60" rows="10" name="text"></textarea>
+        <br>
+        <input type="submit" value="Post Comment">    
+    </form>
+    <!-- <p>bbcodes</p>
+    <p>[b]text[/b] == <b>text</b></p>
+    <p>[url]https://ipfs.io[/url] == <a href="https://ipfs.io">https://ipfs.io</a></p>
+    <p>[url=https://ipfs.io]ipfs[/url] == <a href="https://ipfs.io">ipfs</a></p>
+    <p>[color=red]te[/color][color=#05F]xt[/color] == <span style="color:red">te</span><span style="color:#05F">xt</span></p>
+    <p>[code]code block[/code] == <pre>code block</pre></p> -->
+    <p><b>Server Time: {{ .ServerTime }}</b></p>
+</div>
+
+<ul id="commentlist">
+{{ range .Comments }}
+    <li>
+        <div class="comment">
+            <b>
+            <span class="comment-username">{{if .User.ID}}{{.User.Name}}{{else}}Anonymous{{end}}</span>
+            <span class="comment-id">#{{.ID}}</span>
+            <span class="comment-time">{{.Time}}</span>
+            </b>
+            <p>{{noescape .Text}}<p>
+        </div>
+    </li>
+{{ end}}
+</ul>
+
+{{ template "benchmark" .Time}}
+{{ template "baseEnd" }}

@@ -1,0 +1,298 @@
+{{template "base"}}
+
+<style>
+    #image img
+    {
+        position: fixed;
+        max-width: 100%;
+        max-height: 100%;
+
+        top: 50%;
+        /* left: 50%; */
+        /* transform: translate(-50%, -50%); */
+        transform: translateY(-50%);
+    }
+</style>
+
+<div style="position:fixed; z-index: 10; bottom: 0px; left: 0px;">
+    <form onsubmit="slider.search(this.children[0].value, this.children[2].value); return false">
+        <input class="stinput" type="text" id="searchinput" placeholder="Search">
+        <br>
+        <input class="stinput" type="text" id="filterinput" placeholder="Filter">
+        <br>
+        <input type="submit">
+    </form>
+    <script type="text/javascript" src="/static/suggestions.js"></script>
+    <button onclick="slider.stopSlideshow()">Stop</button>
+    <br>
+    <label>Tickrate</label>
+    <br>
+    1<input type="range" min="1" max="100" id="tickrate" value=25 oninput="slider.tickrate = this.value">100
+    <br>
+    <label>PixelsPerTick</label>
+    <br>
+    1<input type="range" min="1" max="10" id="pixelsPerTick" value="5" oninput="slider.pixelsPerTick = this.value">10
+</div>
+<div id="image" >
+</div>
+
+<script>
+    var im = document.getElementById("image")
+
+    var slider = new Slider()
+
+    window.addEventListener("resize", slider.resize)
+
+
+    function Slider()
+    {
+        this.images = []
+        this.data = null
+        this.index = 0
+        this.offset = 0
+
+        this.div = document.getElementById("image")
+
+        this.tags = ""
+        this.filter = ""
+
+
+        this.loading = false
+        this.loadData = function()
+        {
+            this.loading = true
+            console.log(this.tags, this.filter, this.offset)
+            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&offset=" + this.offset++, function(res){
+                //console.log(this.index)
+                this.data = JSON.parse(res)
+                document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
+                this.lock = false
+                this.index = 0
+                this.loading = false
+                this.nextImage()
+            }.bind(this))
+            this.lock = true
+        }
+
+        this.nextImage = function()
+        {
+
+            if(this.data == null || this.data.Posts == null ||  this.index >= this.data.Posts.length)
+            {
+                if(this.data != null && this.data.Posts == null)
+                {
+                    console.log("No more posts")
+                    return
+                }
+                if(!this.loading)
+                {
+                    this.loadData()
+                }
+                return
+            }
+            if(this.lock)
+            {
+                setTimeout(this.nextImage, 100)
+                return
+            }
+            
+            if(this.data.Posts == null)
+            {
+                console.log("No posts available")
+                return
+            }
+
+            let post = this.data.Posts[this.index++]
+            if(post.ThumbHash == "NT")
+            {
+                this.nextImage()
+                return
+            }
+            
+            this.lock = true
+
+            let image = new Image()
+            image.src = "{{.IpfsDaemon}}/ipfs/" + post.ThumbHash
+            image.onclick = function(){
+                window.open("/post/" + post.ID + "/" + post.Hash, "_blank")
+            }
+            image.style.cursor = "pointer"
+            
+            image.onload = function(){
+                //console.log("Unpause")
+                this.pause = false
+
+                let last = this.images[this.images.length - 1]
+                if(last != undefined)
+                {
+                    let left = Number(last.style.left.replace("px", ""))
+                    console.log(document.body.clientWidth, image.width)
+                    image.style.left = (last.width + left) + "px"
+                }
+                else
+                {
+                    image.style.left = document.body.clientWidth + "px"
+                }
+                image.left = Number(image.style.left.replace("px", ""))
+
+                this.div.appendChild(image)
+                this.images.push(image)
+                this.lock = false
+            }.bind(this)
+        }.bind(this)
+
+        this.pause = false
+        this.lock = false
+        this.stop = false
+        this.running = false
+
+        this.tickrate = 32
+        this.pixelsPerTick = 5
+
+        this.search = function(tags, filter)
+        {
+            this.stopSlideshow(function(){
+                this.tags = tags
+                this.filter = filter
+
+                this.loadData()
+                this.tick()
+                this.running = true
+            }.bind(this))
+        }
+
+        this.tick = function()
+        {
+            if(this.stop)
+            {
+                this.running = false
+                return
+            }
+
+            if(this.lock)
+            {
+                setTimeout(this.tick, this.tickrate)
+                return
+            }
+            this.lock = true
+
+            if(this.images.length > 0)
+            {
+                let lastImage = this.images[this.images.length - 1]
+
+                if(lastImage.left + lastImage.width > document.body.clientWidth)
+                {
+                    for(let i = 0; i < this.images.length; i++)
+                    {
+                        this.images[i].left -= this.pixelsPerTick
+                        this.images[i].style.left = this.images[i].left + "px";
+                    }
+                }
+
+                for(let i = 0; i < this.images.length; i++)
+                {
+                    let left = this.images[i].left
+                    //console.log(left, this.images[i].width)
+                    if(this.images[i].width + left < 0)
+                    {
+                        console.log("Popping: ", this.images[i])
+                        this.div.removeChild(this.images[i])
+                        this.images.splice(i, 1)
+                    }
+                    else{
+                        break
+                    }
+                }
+
+                if(!this.pause && lastImage.left < document.body.clientWidth)
+                {
+                    this.pause = true
+                    this.nextImage()
+                }
+            }
+            this.lock = false
+            
+            setTimeout(this.tick, this.tickrate)
+        }.bind(this)
+
+        this.resize = function()
+        {
+            console.log("resizing window")
+            if(this.lock)
+            {
+                setTimeout(this.resize, 100)
+            }
+            if(this.images.length >= 2)
+            {
+                this.lock = true
+                for(let i = 1; i < this.images.length; i++)
+                {
+                    this.images[i].left = this.images[i-1].left + this.images[i-1].width
+                    this.images[i].style.left = this.images[i].left + "px"
+                }
+                this.lock = false
+            }
+        }.bind(this)
+
+        this.GET = function(path, callback)
+        {
+            let req = new XMLHttpRequest()
+            req.onreadystatechange = function(){
+                if(this.readyState == 4 && this.status == 200)
+                {
+                    callback(this.response)
+                }
+            }
+            req.open("GET", path, true)
+            req.send()
+        }.bind(this)
+
+        this.stopSlideshow = function(callback)
+        {
+            this.stop = true
+            if(this.running || this.lock)
+            {
+                setTimeout(this.stopSlideshow, 100, callback)
+                return
+            }
+            for(let i = 0; i < this.images.length; i++)
+            {
+                this.div.removeChild(this.images[i])
+            }
+
+            this.images = []
+            this.offset = 0
+            this.index = 0
+            this.stop = false
+            
+            if(callback != null)
+            {
+                callback()
+            }
+        }.bind(this)
+    }
+
+    if(getParam("tags") || getParam("filter"))
+    {
+        document.getElementById("searchinput").value = getParam("tags")
+        document.getElementById("filterinput").value = getParam("filter")
+        slider.search(getParam("tags"), getParam("filter"))
+    }
+
+    function getParam(parameter)
+    {
+        let items = location.search.substr(1).split("&")
+        for(let i = 0; i < items.length; i++)
+        {
+            tmp = items[i].split("=")
+            if(tmp[0] == parameter)
+            {
+                return decodeURIComponent(tmp[1])
+            }
+        }
+        return ""
+    }
+
+</script>
+
+{{template "baseEnd"}}

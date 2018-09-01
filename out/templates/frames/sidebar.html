@@ -1,0 +1,135 @@
+{{ define "sidebar"}}
+<div id="sidebar">
+    {{template "inner sidebar" .}}
+</div>
+{{ end }}
+
+{{ define "inner sidebar"}}
+<script>
+        var input = null
+        function appendQuery(caller, tag)
+        {
+            if(input == null)
+            {
+                input = document.getElementById("searchinput")
+            }
+            if(input == null)
+            {
+                return
+            }
+            let inp = input.value.split(",")
+            let ret = []
+            let n = true
+            for(let i = 0; i < inp.length; i++)
+            {
+                if(inp[i].trim() != tag)
+                {
+                    if(inp[i].trim().length >= 1)
+                    {
+                        ret.push(inp[i].trim())
+                    }
+                }
+                else
+                {
+                    n = false
+                }
+            }
+            if(n)
+            {
+                ret.push(tag)
+                caller.innerHTML = "-"
+            }
+            else
+            {
+                caller.innerHTML = "+"
+            }
+            input.value = ""
+            for(let i = 0; i < ret.length; i++)
+            {
+                if(i == ret.length - 1)
+                {
+                    input.value += ret[i]
+                }
+                else
+                {
+                    input.value += ret[i] + ", "
+                }
+            }
+        }
+    </script>
+    {{if ne .TotalPosts 0}}
+    <div>
+        {{.TotalPosts}}
+    </div>
+    {{end}}    
+    <div id="searchbar">
+        <form action="/posts/">
+            <input title="Search" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
+            <br>
+            <input title="Filter" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
+            <input type="submit" value="Search">
+        </form>
+    </div>
+    <script type="text/javascript" src="/static/suggestions.js"></script>
+
+    <table class="nolink" id="tags">
+        {{ range .Tags }}
+        <tr>
+            {{ if eq .Namespace.Namespace "none" }}
+                <td class="tag namespace-{{ .Namespace.Namespace }}">
+                    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
+                    <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
+                </td>
+                <td class="counter">{{.Count}}</td>
+            {{ else }}
+                <td class="tag namespace-{{ .Namespace.Namespace }}">
+                    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
+                    <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
+                </td>
+                <td class="counter">{{.Count}}</td>
+            {{ end }}
+        </tr>
+        {{ end }}
+    </table>
+{{ end }}
+
+
+{{ define "sidebartag" }}
+    {{ if eq .Namespace.Namespace "none" }}
+    <li class="tag namespace-{{ .Namespace.Namespace }}">
+        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
+        <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
+        <!--<span class="counter">{{/*.Count*/}}</span>-->
+    </li>
+    {{ else }}
+    <li class="tag namespace-{{ .Namespace.Namespace }}">
+        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
+        <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
+        <!--<span class="counter">{{/*.Count*/}}</span>-->
+    </li>
+    {{ end }}
+{{ end }}
+
+{{ define "tag"}}
+    {{ if eq .Namespace.Namespace "none" }}
+    <div class="tag namespace-{{ .Namespace.Namespace }}">
+        <span>{{ .Tag }}</span>
+    </div>
+    {{ else }}
+    <div class="tag namespace-{{ .Namespace.Namespace }}">
+       <span>{{ .Namespace.Namespace }}:{{ .Tag }}</span>
+    </div>
+    {{ end }}
+{{end}}
+
+{{ define "tagSpan"}}
+{{ if eq .Namespace.Namespace "none" }}
+<span class="tag namespace-{{ .Namespace.Namespace }}">
+    <span>{{ .Tag }}</span>
+</span>
+{{ else }}
+<span class="tag namespace-{{ .Namespace.Namespace }}">
+   <span>{{ .Namespace.Namespace }}:{{ .Tag }}</span>
+</span>
+{{ end }}
+{{end}}

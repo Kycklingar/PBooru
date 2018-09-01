@@ -1,0 +1,144 @@
+{{ template "base" .Base}}
+
+
+<div id="content">
+    {{ template "sidebar" .Sidebar }}
+
+    <div id="posts-container">
+        {{if .SuggestedTags }}
+        <span id="suggestedtags-button" style="cursor:pointer; display:none;" onclick="toggleVisibility(this)">[+]</span>
+        <div class="nolink" id="suggestedtags">
+            <ul>
+                {{ range .SuggestedTags }}
+                    {{ template "sidebartag" .}}
+                {{ end }}
+            </ul>
+        </div>
+        <script>
+            function toggleVisibility(sender)
+            {
+                document.getElementById("suggestedtags").style.display = "block"
+                sender.style.display = "none"
+            }
+
+            document.getElementById("suggestedtags").style.display = "none"
+            document.getElementById("suggestedtags-button").style.display = "inherit"
+            
+        </script>
+        {{ end }}
+
+        <div class="nolink" id="posts" contextmenu="postmenu">
+            <style>
+                .thumbnail
+                {
+                    width: {{.User.ImageSize}}px;
+                    height: {{.User.ImageSize}}px;
+                }
+                .thumbnail img
+                {
+                    max-width: {{.User.ImageSize}}px;
+                    max-height: {{.User.ImageSize}}px;
+                }
+                .thumbnail .mimetype
+                {
+                    background-color: grey;
+                    {{if lt .User.ImageSize 50}}
+                    font-size:8px;
+                    {{else if lt .User.ImageSize 100}}
+                    font-size:12px;
+                    {{end}}
+                }
+            </style>
+            {{ if .Posts }}
+                {{ range .Posts }}
+                <a href="/post/{{.ID}}/{{.Hash}}">
+                    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
+                        {{if eq .Thumb "NT"}}
+                        <div class="centered mimetype" {{if .Deleted}}style="border-style:solid;border-color:red;"{{end}}>{{.Mime.Type}} / {{.Mime.Name}}</div>
+                        {{else}}
+                        <img src="{{$.User.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}" {{if .Deleted}}style="border-style:solid;border-color:red;"{{end}}>
+                        {{end}}
+                    </div>
+                </a>
+                {{ end }}
+            {{else}}
+                <h1>No posts available</h1>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("posts").onmousedown = function(caller)
+    {
+        var t = caller.target
+
+        if(t.getAttribute("postid") == null)
+        {
+            t = t.parentElement
+            if(t.getAttribute("postid") == null)
+            {
+                document.getElementById("postmenu").setAttribute("postid", null)
+                return
+            }
+        }
+        //console.log(t.getAttribute("postid"))
+        document.getElementById("postmenu").setAttribute("postid", t.getAttribute("postid"))
+    }
+
+    function gotoSimilar(caller)
+    {
+        let id = caller.getAttribute("postid")
+        if(id == 0 || id == "null"){
+            return
+        }
+        window.location = "/similar/?id=" + id
+    }
+</script>
+<menu type="context" id="postmenu">
+    <menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)">
+</menu>
+
+<div class="nolink" id="pageinator">
+
+{{ if ne 0 $.Pageinator.Prev}}
+    <a href="/posts/{{.Pageinator.First}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{end}}">
+        First
+    </a>
+
+    <a href="/posts/{{$.Pageinator.Prev}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{end}}" id="prev">
+        Previous
+    </a>
+{{ end }}
+{{ range .Pageinator.Pages }}
+    <span>
+        {{ if eq $.Pageinator.Current . }}
+        <span style="font-size:25px;">
+            {{.}}
+        </span>
+        {{ else }}
+        <a href="/posts/{{.}}{{if $.Sidebar.Query}}/{{$.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{end}}">
+            {{.}}
+        </a>
+        {{ end }}
+    </span>
+{{ end }}
+{{ if ne 0 $.Pageinator.Next}}
+    <a href="/posts/{{.Pageinator.Next}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{end}}">
+        Next
+    </a>
+    <a href="/posts/{{.Pageinator.Last}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{end}}">
+        Last
+    </a>
+{{ end }}
+
+<br>
+<br>
+<br>
+</div>
+
+{{ template "userSettings" .User }}
+
+<p>Page generated in {{.Time}}s</p>
+
+{{ template "baseEnd" }}
