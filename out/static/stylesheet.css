@@ -285,6 +285,17 @@ li
     
 }
 
+.postcomment
+{
+    display: flex;
+}
+
+.postcomment pre, .comment pre
+{
+    border: solid 1px;
+    background-color:#888;
+}
+
 .comment
 {
     background-color:#667;
@@ -292,11 +303,13 @@ li
     box-shadow: 3px 3px #213;
     word-wrap: break-word;
     padding-left: 3px;
+    padding-right: 3px;
+    padding-top: 3px;
 }
 
 .comment p
 {
-    margin-left: 3px;
+    padding: 3px;
 }
 
 .comics-container

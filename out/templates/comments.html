@@ -1,20 +1,28 @@
 {{ template "base" }}
 
-<div class="postcomment" >
-    <h2>{{.Username}}</h2>
-    <form method="POST">
-        <textarea cols="60" rows="10" name="text"></textarea>
-        <br>
-        <input type="submit" value="Post Comment">    
-    </form>
-    <!-- <p>bbcodes</p>
-    <p>[b]text[/b] == <b>text</b></p>
-    <p>[url]https://ipfs.io[/url] == <a href="https://ipfs.io">https://ipfs.io</a></p>
-    <p>[url=https://ipfs.io]ipfs[/url] == <a href="https://ipfs.io">ipfs</a></p>
-    <p>[color=red]te[/color][color=#05F]xt[/color] == <span style="color:red">te</span><span style="color:#05F">xt</span></p>
-    <p>[code]code block[/code] == <pre>code block</pre></p> -->
-    <p><b>Server Time: {{ .ServerTime }}</b></p>
+<div class="postcomment">
+    <div class="text-panel">
+        <h2>{{.Username}}</h2>
+        <form method="POST">
+            <textarea maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
+            <br>
+            <input type="submit" value="Post Comment">    
+        </form>
+    </div>
+    <div class="text-panel" style="padding-right: 1em;">
+        <h4>Bbcodes:</h4>
+        <p><b>[b]</b> text <b>[/b]</b> == <b>text</b></p>
+        <p><b>[url]</b> https://ipfs.io <b>[/url]</b> == <a href="https://ipfs.io">https://ipfs.io</a></p>
+        <p><b>[url=https://ipfs.io]</b> ipfs <b>[/url]</b> == <a href="https://ipfs.io">ipfs</a></p>
+        <p><b>[color=red]</b> te <b>[/color][color=#05F]</b> xt <b>[/color]</b> == <span style="color:red">te</span><span style="color:#05F">xt</span></p>
+        <p><b>[code]</b> code {block} <b>[/code]</b> == 
+<pre>code {
+    block
+}</pre></p>
+    </div>
+    
 </div>
+<p><b>Server Time: {{ .ServerTime }}</b></p>
 
 <ul id="commentlist">
 {{ range .Comments }}
@@ -25,7 +33,7 @@
             <span class="comment-id">#{{.ID}}</span>
             <span class="comment-time">{{.Time}}</span>
             </b>
-            <p>{{noescape .Text}}<p>
+            <p>{{noescape .Text}}</p>
         </div>
     </li>
 {{ end}}
