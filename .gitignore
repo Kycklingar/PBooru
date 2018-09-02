@@ -6,3 +6,4 @@ PBDB.db
 PBDB.db-wal
 *.test
 *.db
+*.cfg
