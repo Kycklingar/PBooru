@@ -13,28 +13,33 @@
         transform: translateY(-50%);
     }
 </style>
-
 <div style="position:fixed; z-index: 10; bottom: 0px; left: 0px;">
-    <form onsubmit="slider.search(this.children[0].value, this.children[2].value); return false">
-        <input class="stinput" type="text" id="searchinput" placeholder="Search">
+    <span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
+    <div id="controller" >
+        <form onsubmit="slider.search(this.children[0].value, this.children[2].value, this.children[4].value); return false">
+            <input class="stinput" type="text" id="searchinput" placeholder="Search">
+            <br>
+            <input class="stinput" type="text" id="filterinput" placeholder="Filter">
+            <br>
+            <input class="stinput" type="text" id="unlessinput" placeholder="Unless">
+            <br>
+            <input type="submit">
+        </form>
+        <script type="text/javascript" src="/static/suggestions.js"></script>
+        <button onclick="slider.stopSlideshow()">Stop</button>
         <br>
-        <input class="stinput" type="text" id="filterinput" placeholder="Filter">
+        <label>Tickrate</label>
         <br>
-        <input type="submit">
-    </form>
-    <script type="text/javascript" src="/static/suggestions.js"></script>
-    <button onclick="slider.stopSlideshow()">Stop</button>
-    <br>
-    <label>Tickrate</label>
-    <br>
-    1<input type="range" min="1" max="100" id="tickrate" value=25 oninput="slider.tickrate = this.value">100
-    <br>
-    <label>PixelsPerTick</label>
-    <br>
-    1<input type="range" min="1" max="10" id="pixelsPerTick" value="5" oninput="slider.pixelsPerTick = this.value">10
+        1<input type="range" min="1" max="100" id="tickrate" value=25 oninput="slider.tickrate = this.value">100
+        <br>
+        <label>PixelsPerTick</label>
+        <br>
+        1<input type="range" min="1" max="10" id="pixelsPerTick" value="5" oninput="slider.pixelsPerTick = this.value">10
+    </div>
 </div>
 <div id="image" >
 </div>
+
 
 <script>
     var im = document.getElementById("image")
@@ -43,6 +48,20 @@
 
     window.addEventListener("resize", slider.resize)
 
+    function toggleController(caller)
+    {
+        let ctrl = document.getElementById("controller")
+        if(ctrl.style.display != "none")
+        {
+            ctrl.style.display = "none"
+            caller.innerText = "Show"
+        }
+        else
+        {
+            caller.innerText = "Hide"
+            ctrl.style.display = "inherit"
+        }
+    }
 
     function Slider()
     {
@@ -55,14 +74,15 @@
 
         this.tags = ""
         this.filter = ""
+        this.unless = ""
 
 
         this.loading = false
         this.loadData = function()
         {
             this.loading = true
-            console.log(this.tags, this.filter, this.offset)
-            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&offset=" + this.offset++, function(res){
+            console.log(this.tags, this.filter, this.unless, this.offset)
+            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&unless=" + this.unless + "&offset=" + this.offset++, function(res){
                 //console.log(this.index)
                 this.data = JSON.parse(res)
                 document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
@@ -149,11 +169,12 @@
         this.tickrate = 32
         this.pixelsPerTick = 5
 
-        this.search = function(tags, filter)
+        this.search = function(tags, filter, unless)
         {
             this.stopSlideshow(function(){
                 this.tags = tags
                 this.filter = filter
+                this.unless = unless
 
                 this.loadData()
                 this.tick()
@@ -276,7 +297,8 @@
     {
         document.getElementById("searchinput").value = getParam("tags")
         document.getElementById("filterinput").value = getParam("filter")
-        slider.search(getParam("tags"), getParam("filter"))
+        document.getElementById("unlessinput").value = getParam("unless")
+        slider.search(getParam("tags"), getParam("filter"), getParam("unless"))
     }
 
     function getParam(parameter)
