@@ -13,6 +13,7 @@ type Sidebar struct {
 	Tags       []*DM.Tag
 	Query      string
 	Filter     string
+	Unless     string
 }
 
 const tagLimit = 200

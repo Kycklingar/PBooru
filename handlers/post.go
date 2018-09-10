@@ -233,11 +233,15 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	tagString := r.FormValue("tags")
 	p.Sidebar.Filter = r.FormValue("filter")
+	p.Sidebar.Unless = r.FormValue("unless")
 
 	if tagString != "" {
 		red := fmt.Sprintf("/posts/%d/%s", page, UrlEncode(tagString))
 		if p.Sidebar.Filter != "" {
 			red += "?filter=" + p.Sidebar.Filter
+			if p.Sidebar.Unless != "" {
+				red += "&unless=" + p.Sidebar.Unless
+			}
 		}
 		http.Redirect(w, r, red, http.StatusSeeOther)
 		return
@@ -249,9 +253,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	asc := false
 
-	if r.FormValue("asc") != "" {
-		asc = true
-	}
+	// if r.FormValue("asc") != "" {
+	// 	asc = true
+	// }
 
 	// var totalPosts int
 	var err error
@@ -260,7 +264,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc := &DM.PostCollector{}
 
-	err = pc.Get(tagString, p.Sidebar.Filter, asc, pageLimit, offset)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, asc, pageLimit, offset)
 	if err != nil {
 		//log.Println(err)
 		// http.NotFound(w, r)

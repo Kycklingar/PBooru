@@ -64,9 +64,11 @@
     {{end}}    
     <div id="searchbar">
         <form action="/posts/">
-            <input title="Search" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
+            <input title="Search for posts with these tags" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
             <br>
-            <input title="Filter" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
+            <input title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
+            <br>
+            <input title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
             <input type="submit" value="Search">
         </form>
     </div>

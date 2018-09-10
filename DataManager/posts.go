@@ -676,6 +676,7 @@ type PostCollector struct {
 	posts    map[int][]*Post
 	id       []int
 	blackTag []int
+	unless   []int
 
 	tags       []*Tag //Sidebar
 	TotalPosts int
@@ -685,9 +686,17 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func (pc *PostCollector) Get(tagString, blackTagString string, asc bool, limit, offset int) error {
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString string, asc bool, limit, offset int) error {
 	//var tagIDs []int
 
+	in := func(i int, arr []int) bool {
+		for _, j := range arr {
+			if i == j {
+				return true
+			}
+		}
+		return false
+	}
 	if len(tagString) >= 1 {
 		var tc TagCollector
 
@@ -698,6 +707,7 @@ func (pc *PostCollector) Get(tagString, blackTagString string, asc bool, limit, 
 
 		for _, tag := range tc.Tags {
 			if tag.QID(DB) == 0 {
+				// No posts will be available, return
 				pc.id = []int{-1}
 				return nil
 			}
@@ -725,24 +735,55 @@ func (pc *PostCollector) Get(tagString, blackTagString string, asc bool, limit, 
 
 		for _, tag := range tc.Tags {
 			if tag.QID(DB) == 0 {
-				pc.id = []int{-1}
-				return nil
+				continue
 			}
+
 			alias := NewAlias()
 			alias.Tag = tag
 			if alias.QTo(DB).QID(DB) != 0 {
 				tag = alias.QTo(DB)
 			}
+
+			// Cant have your tag and filter it too
+			if in(tag.QID(DB), pc.id) {
+				continue
+			}
+
 			pc.blackTag = append(pc.blackTag, tag.QID(DB))
 		}
 		sort.Ints(pc.blackTag)
-		//fmt.Println(tagIDs)
-		if len(pc.blackTag) <= 0 {
-			pc.blackTag = []int{-1}
-		}
 	}
 	//fmt.Println(tagIDs)
 	//pc.id = tagIDs //idStr
+
+	if len(unlessString) >= 1 {
+		var tc TagCollector
+
+		err := tc.Parse(unlessString)
+		if err != nil {
+			return err
+		}
+
+		for _, tag := range tc.Tags {
+			if tag.QID(DB) == 0 {
+				continue
+			}
+
+			alias := NewAlias()
+			alias.Tag = tag
+			if alias.QTo(DB).QID(DB) != 0 {
+				tag = alias.QTo(DB)
+			}
+
+			// Cant filter your tag and include it too
+			if in(tag.QID(DB), pc.blackTag) || in(tag.QID(DB), pc.id) {
+				continue
+			}
+
+			pc.unless = append(pc.unless, tag.QID(DB))
+		}
+		sort.Ints(pc.unless)
+	}
 
 	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
 		tmp, ok := t.(*PostCollector)
@@ -771,14 +812,16 @@ func (pc *PostCollector) idStr() string {
 	for _, i := range pc.id {
 		str = fmt.Sprint(str+" ", i)
 	}
-	if len(pc.blackTag) >= 1 {
-		str += " -"
-	}
+	str += " -"
 	for _, i := range pc.blackTag {
 		str = fmt.Sprint(str+" ", i)
 	}
+	str += " -"
+	for _, i := range pc.unless {
+		str = fmt.Sprint(str+" ", i)
+	}
 	str = strings.TrimSpace(str)
-	//fmt.Println("PCSTR", str)
+	// fmt.Println("PCSTR", str)
 	return str
 }
 
@@ -829,12 +872,22 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		var innerStr string
 		var blt string
 		if len(pc.blackTag) >= 1 {
-			var or string
+			var or, un string
 			for _, t := range pc.blackTag {
 				or += fmt.Sprint(" tag_id = ", t, " OR")
 			}
 			or = strings.TrimRight(or, " OR")
+
+			for _, t := range pc.unless {
+				un += fmt.Sprint(" tag_id = ", t, " OR")
+			}
+			un = strings.TrimRight(un, " OR")
+			if un != "" {
+				or = fmt.Sprint(or, " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+			}
+
 			blt = fmt.Sprintf("AND t1.post_id NOT IN(SELECT post_id FROM post_tag_mappings WHERE %s)", or)
+			// fmt.Println(blt)
 		}
 		if len(pc.id) > 1 {
 			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 ")
@@ -872,17 +925,25 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 
 	} else if len(pc.blackTag) > 0 {
 		var innerStr string
-		var or string
+		var or, un string
 
 		for _, t := range pc.blackTag {
-			or += fmt.Sprint("t1.tag_id = ", t, " OR ")
+			or += fmt.Sprint("tag_id = ", t, " OR ")
 		}
 		or = strings.TrimRight(or, " OR ")
 
-		innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE %s", or)
+		for _, t := range pc.unless {
+			un += fmt.Sprint("tag_id = ", t, " OR")
+		}
+		un = strings.TrimRight(un, " OR")
+		if un != "" {
+			or = fmt.Sprint(or, " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+		}
+
+		innerStr = fmt.Sprintf("SELECT post_id FROM post_tag_mappings WHERE %s", or)
 		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = 0 ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
 
-		//fmt.Println(str)
+		// fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
 			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s)", innerStr)
