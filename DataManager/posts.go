@@ -883,7 +883,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			}
 			un = strings.TrimRight(un, " OR")
 			if un != "" {
-				or = fmt.Sprint(or, " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+				or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
 			}
 
 			blt = fmt.Sprintf("AND t1.post_id NOT IN(SELECT post_id FROM post_tag_mappings WHERE %s)", or)
@@ -901,7 +901,6 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 				innerStr += tstr
 			}
 		} else {
-
 			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", pc.id[0], blt)
 		}
 		//fmt.Println(innerStr)
@@ -937,7 +936,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		}
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
-			or = fmt.Sprint(or, " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+			or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
 		}
 
 		innerStr = fmt.Sprintf("SELECT post_id FROM post_tag_mappings WHERE %s", or)
@@ -946,7 +945,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		// fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s)", innerStr)
+			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s) AND deleted = 0", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
