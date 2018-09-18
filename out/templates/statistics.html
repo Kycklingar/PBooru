@@ -1,0 +1,41 @@
+{{template "base"}}
+
+<div class="text-panel">
+    <h3>24h Total: {{.Total}}</h3>
+    {{range .Stats}}
+        --------------------------------------------
+        {{.Print | noescape}}
+    {{end}}
+</div>
+
+<script>
+    let ols = document.getElementsByTagName("li")
+    for(let i = 0; i < ols.length; i++)
+    {
+        ols[i].style.cursor = "pointer"
+        ols[i].onclick = function(e){
+            hide(ols[i])
+            e.stopPropagation()
+        }
+    }
+
+    function hide(caller)
+    {
+        console.log(caller)
+        for(let j = 0; j < caller.children.length; j++)
+        {
+            let child = caller.children[j]
+            console.log("hiding ", child)
+            if(child.style.display == "none")
+            {
+                child.style.display = ""
+            }
+            else
+            {
+                child.style.display = "none"
+            }
+        }
+    }
+</script>
+
+{{template "baseEnd"}}
