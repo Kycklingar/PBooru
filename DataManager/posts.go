@@ -809,8 +809,12 @@ func (pc *PostCollector) idStr() string {
 	// 	return "0"
 	// }
 	var str string
-	for _, i := range pc.id {
-		str = fmt.Sprint(str+" ", i)
+	if len(pc.id) >= 1 {
+		for _, i := range pc.id {
+			str = fmt.Sprint(str+" ", i)
+		}
+	} else {
+		str = fmt.Sprint(str, " ", 0)
 	}
 	str += " -"
 	for _, i := range pc.blackTag {
@@ -1102,7 +1106,7 @@ func GetTotalPosts() int {
 func resetCacheTag(tagID int) {
 	C.Cache.Purge("PC", strconv.Itoa(tagID))
 	C.Cache.Purge("TAG", strconv.Itoa(tagID))
-	C.Cache.Purge("PC", "")
+	C.Cache.Purge("PC", "0")
 }
 
 func (p *PostCollector) GetW(limit, offset int) []*Post {
