@@ -39,7 +39,7 @@ func (p *Post) QID(q querier) int {
 	}
 
 	if p.Hash != "" {
-		err := q.QueryRow("SELECT id FROM posts WHERE multihash=$1", p.Hash).Scan(&p.ID)
+		err := q.QueryRow("SELECT id FROM posts WHERE multihash=?", p.Hash).Scan(&p.ID)
 		if err != nil && err != sql.ErrNoRows {
 			log.Print(err)
 			return 0
@@ -52,7 +52,7 @@ func (p *Post) QID(q querier) int {
 }
 
 func (p *Post) SetID(q querier, id int) error {
-	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
+	return q.QueryRow("SELECT id FROM posts WHERE id=?", id).Scan(&p.ID)
 }
 
 func (p *Post) QHash(q querier) string {
@@ -75,7 +75,7 @@ func (p *Post) QHash(q querier) string {
 			}
 		}
 
-		err := q.QueryRow("SELECT multihash FROM posts WHERE id=$1", p.ID).Scan(&p.Hash)
+		err := q.QueryRow("SELECT multihash FROM posts WHERE id=?", p.ID).Scan(&p.Hash)
 		if err != nil {
 			log.Print(err)
 			return ""
@@ -94,7 +94,7 @@ func (p *Post) QThumb(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT thumbhash FROM posts WHERE id=$1", p.ID).Scan(&p.Thumb)
+	err := q.QueryRow("SELECT thumbhash FROM posts WHERE id=?", p.ID).Scan(&p.Thumb)
 	if err != nil {
 		log.Print(err)
 	}
@@ -108,7 +108,7 @@ func (p *Post) QMime(q querier) *Mime {
 	if p.Mime.QID(q) != 0 {
 		return p.Mime
 	}
-	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=$1", p.QID(q)).Scan(&p.Mime.ID)
+	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=?", p.QID(q)).Scan(&p.Mime.ID)
 	if err != nil {
 		log.Print(err)
 	}
@@ -125,7 +125,7 @@ func (p *Post) QDeleted(q querier) int {
 	if p.QID(q) == 0 {
 		return -1
 	}
-	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&p.Deleted)
+	err := q.QueryRow("SELECT deleted FROM posts WHERE id=?", p.ID).Scan(&p.Deleted)
 	if err != nil {
 		log.Print(err)
 		return -1
@@ -201,7 +201,7 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			ph.h3 = uint16(b[5]) | uint16(b[4])<<8
 			ph.h4 = uint16(b[7]) | uint16(b[6])<<8
 
-			_, err = tx.Exec("INSERT INTO phash(post_id, h1, h2, h3, h4) VALUES($1, $2, $3, $4, $5)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
+			_, err = tx.Exec("INSERT INTO phash(post_id, h1, h2, h3, h4) VALUES(?, ?, ?, ?, ?)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
 			if err != nil {
 				return txError(tx, err)
 			}
@@ -266,7 +266,7 @@ func (p *Post) Save(q querier, user *User) error {
 		return fmt.Errorf("post missing argument. Want Hash, Thumb and Mime.ID, Have: %s, %s, %d, %d", p.Hash, p.Thumb, p.Mime.ID, user.ID)
 	}
 
-	_, err := q.Exec("INSERT INTO posts(multihash, thumbhash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Thumb, p.Mime.QID(q), user.QID(q))
+	_, err := q.Exec("INSERT INTO posts(multihash, thumbhash, mime_id, uploader) VALUES(?, ?, ?, ?)", p.Hash, p.Thumb, p.Mime.QID(q), user.QID(q))
 	if err != nil {
 		log.Print(err)
 	} else {
@@ -279,7 +279,7 @@ func (p *Post) Delete(q querier) error {
 	if p.QID(q) == 0 {
 		return errors.New("post:delete: invalid post")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=1 WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=1 WHERE id=?", p.QID(q))
 	if err != nil {
 		log.Print(err)
 		return err
@@ -304,7 +304,7 @@ func (p *Post) UnDelete(q querier) error {
 	if p.QID(q) == 0 {
 		return errors.New("post:undelete: invalid post id")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=0 WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=0 WHERE id=?", p.QID(q))
 	if err != nil {
 		log.Print(err)
 		return err
@@ -359,7 +359,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 		}
 
 		var tmp int
-		err = q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		err = q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=? AND tag_id=?", p.QID(q), b.QID(q)).Scan(&tmp)
 		if err == nil && tmp > 0 {
 			continue // Tag is already on this post
 		}
@@ -382,7 +382,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 		}
 
 		var exist int
-		err := q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		err := q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=? AND tag_id=?", p.QID(q), b.QID(q)).Scan(&exist)
 		if err != nil || exist == 0 {
 			// Tag does not exist on this post
 			continue
@@ -398,7 +398,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.Tags = at
 	remTags.Tags = rt
 
-	res, err := q.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	res, err := q.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES(?, ?, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
 	if err != nil {
 		return err
 	}
@@ -407,7 +407,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	historyID := int(id64)
 
 	for _, tag := range at {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES(?, ?, ?)", historyID, tag.QID(q), 1)
 		if err != nil {
 			return err
 		}
@@ -415,7 +415,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.AddToPost(q, p)
 
 	for _, tag := range rt {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES(?, ?, ?)", historyID, tag.QID(q), -1)
 		if err != nil {
 			return err
 		}
@@ -475,7 +475,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 		}
 
 		var tmp int
-		err = tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		err = tx.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=? AND tag_id=?", p.QID(q), b.QID(q)).Scan(&tmp)
 		if err == nil && tmp > 0 {
 			continue // Tag is already on this post
 		}
@@ -498,7 +498,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 		}
 
 		var exist int
-		err := tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		err := tx.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=? AND tag_id=?", p.QID(q), b.QID(q)).Scan(&exist)
 		if err != nil || exist == 0 {
 			// Tag does not exist on this post
 			continue
@@ -514,7 +514,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 	addTags.Tags = at
 	remTags.Tags = rt
 
-	res, err := tx.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	res, err := tx.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES(?, ?, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
 	if err != nil {
 		return txError(tx, err)
 	}
@@ -523,7 +523,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 	historyID := int(id64)
 
 	for _, tag := range at {
-		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
+		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES(?, ?, ?)", historyID, tag.QID(q), 1)
 		if err != nil {
 			return txError(tx, err)
 		}
@@ -531,7 +531,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 	addTags.AddToPost(tx, p)
 
 	for _, tag := range rt {
-		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
+		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES(?, ?, ?)", historyID, tag.QID(q), -1)
 		if err != nil {
 			return txError(tx, err)
 		}
@@ -566,12 +566,12 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 
 	var ph phash
 
-	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.QID(q)).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
+	err := q.QueryRow("SELECT * FROM phash WHERE post_id = ?", p.QID(q)).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := q.Query("SELECT * FROM phash WHERE h1=$1 OR h2=$2 OR h3=$3 OR h4=$4 ORDER BY post_id DESC", ph.h1, ph.h2, ph.h3, ph.h4)
+	rows, err := q.Query("SELECT * FROM phash WHERE h1=? OR h2=? OR h3=? OR h4=? ORDER BY post_id DESC", ph.h1, ph.h2, ph.h3, ph.h4)
 	if err != nil {
 		return nil, err
 	}
@@ -609,7 +609,7 @@ func (p *Post) Comics(q querier) []*Comic {
 	if p.QID(q) == 0 {
 		return nil
 	}
-	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.QID(q))
+	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=?", p.QID(q))
 	if err != nil {
 		return nil
 	}
@@ -645,7 +645,7 @@ func (p *Post) Comments(q querier) []*PostComment {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, user_id, text, DATETIME(timestamp, 'localtime') FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.QID(q))
+	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM post_comments WHERE post_id = ? ORDER BY id DESC", p.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -908,11 +908,11 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", pc.id[0], blt)
 		}
 		//fmt.Println(innerStr)
-		// str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) AND deleted=0 ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
+		// str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) AND deleted=0 ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT ? OFFSET ?", order)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) ORDER BY id %s LIMIT ? OFFSET ?", innerStr, order)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count() FROM posts WHERE id IN(%s)", innerStr)
+			count := fmt.Sprintf("SELECT count(1) FROM posts WHERE id IN(%s)", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -944,12 +944,12 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		}
 
 		innerStr = fmt.Sprintf("SELECT post_id FROM post_tag_mappings WHERE %s", or)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = 0 ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = 0 ORDER BY id %s LIMIT ? OFFSET ?", innerStr, order)
 
 		// fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s) AND deleted = 0", innerStr)
+			count := fmt.Sprintf("SELECT count(1) FROM posts WHERE id NOT IN(%s) AND deleted = 0", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -966,8 +966,8 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		pc.TotalPosts = GetTotalPosts()
 
 		var err error
-		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted=0 ORDER BY id %s LIMIT $1 OFFSET $2", order)
+		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT ? OFFSET ?", order)
+		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted=0 ORDER BY id %s LIMIT ? OFFSET ?", order)
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1095,7 +1095,7 @@ func GetTotalPosts() int {
 	if totalPosts != 0 {
 		return totalPosts
 	}
-	err := DB.QueryRow("SELECT count() FROM posts WHERE deleted=0").Scan(&totalPosts)
+	err := DB.QueryRow("SELECT count(1) FROM posts WHERE deleted=0").Scan(&totalPosts)
 	if err != nil {
 		log.Println(err)
 		return totalPosts

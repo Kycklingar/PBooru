@@ -27,7 +27,7 @@ func NewComment() *Comment {
 
 // Get the latest comments
 func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
-	rows, err := q.Query("SELECT id, user_id, text, DATETIME(timestamp, 'localtime') FROM comment_wall ORDER BY id DESC LIMIT $1", count)
+	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM comment_wall ORDER BY id DESC LIMIT ?", count)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (cm *Comment) Save(userID int, text string) error {
 		return fmt.Errorf("Post does not exist")
 	}
 
-	_, err := DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", userID, strings.TrimSpace(text))
+	_, err := DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES(?, ?)", userID, strings.TrimSpace(text))
 	return err
 }
 
@@ -109,7 +109,7 @@ func (pc *PostComment) Save(q querier) error {
 		return fmt.Errorf("expected: Text, PostID, UserID. Got: %s, %d, %d", pc.Text, pc.Post.ID, pc.User.ID)
 	}
 
-	_, err := DB.Exec("INSERT INTO post_comments(post_id, user_id, text) VALUES($1, $2, $3)", pc.Post.ID, pc.User.ID, pc.Text)
+	_, err := DB.Exec("INSERT INTO post_comments(post_id, user_id, text) VALUES(?, ?, ?)", pc.Post.ID, pc.User.ID, pc.Text)
 
 	return err
 }

@@ -23,7 +23,7 @@ func (n *Namespace) QID(q querier) int {
 	if n.Namespace == "" {
 		return 0
 	}
-	err := q.QueryRow("SELECT id FROM namespaces WHERE nspace=$1", n.Namespace).Scan(&n.ID)
+	err := q.QueryRow("SELECT id FROM namespaces WHERE nspace=?", n.Namespace).Scan(&n.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return 0
@@ -39,7 +39,7 @@ func (n *Namespace) QNamespace(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT nspace FROM namespaces WHERE id=$1", n.ID).Scan(&n.Namespace)
+	err := q.QueryRow("SELECT nspace FROM namespaces WHERE id=?", n.ID).Scan(&n.Namespace)
 	if err != nil {
 		log.Print(err)
 		return ""
@@ -59,7 +59,7 @@ func (n *Namespace) Save(q querier) error {
 		return errors.New("Namespace cannot contain ','")
 	}
 
-	res, err := q.Exec("INSERT INTO namespaces(nspace) VALUES($1)", n.Namespace)
+	res, err := q.Exec("INSERT INTO namespaces(nspace) VALUES(?)", n.Namespace)
 	if err != nil {
 		return err
 	}

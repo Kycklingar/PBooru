@@ -36,7 +36,7 @@ func (u *User) QID(q querier) int {
 		return u.ID
 	}
 	if u.Name != "" {
-		err := q.QueryRow("SELECT id FROM users WHERE username=$1", u.Name).Scan(&u.ID)
+		err := q.QueryRow("SELECT id FROM users WHERE username=?", u.Name).Scan(&u.ID)
 		if err != nil {
 			log.Print(err)
 		}
@@ -59,7 +59,7 @@ func (u *User) QName(q querier) string {
 	if u.QID(q) == 0 {
 		return ""
 	}
-	err := q.QueryRow("SELECT username FROM users WHERE id=$1", u.QID(q)).Scan(&u.Name)
+	err := q.QueryRow("SELECT username FROM users WHERE id=?", u.QID(q)).Scan(&u.Name)
 	if err != nil {
 		log.Print(err)
 	}
@@ -78,7 +78,7 @@ func (u *User) QFlag(q querier) int {
 		return -1
 	}
 
-	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.AdmFlag)
+	err := q.QueryRow("SELECT adminflag FROM users WHERE id=?", u.QID(q)).Scan(&u.AdmFlag)
 	if err != nil {
 		log.Print(err)
 	}
@@ -98,7 +98,7 @@ func (u *User) PassHash(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT passwordhash, salt FROM users WHERE id=$1", u.QID(q)).Scan(&u.passwordHash, &u.salt)
+	err := q.QueryRow("SELECT passwordhash, salt FROM users WHERE id=?", u.QID(q)).Scan(&u.passwordHash, &u.salt)
 	if err != nil {
 		log.Print(err)
 	}
@@ -147,7 +147,7 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 	var id int
-	err = tx.QueryRow("SELECT id FROM users WHERE username=LOWER($1)", u.Name).Scan(&id)
+	err = tx.QueryRow("SELECT id FROM users WHERE username=LOWER(?)", u.Name).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return txError(tx, err)
@@ -158,7 +158,7 @@ func (u User) Register(name, password string) error {
 		return txError(tx, errors.New("Username already exist"))
 	}
 
-	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined) VALUES($1, $2, $3, CURRENT_TIMESTAMP)", u.Name, u.passwordHash, u.salt)
+	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined) VALUES(?, ?, ?, CURRENT_TIMESTAMP)", u.Name, u.passwordHash, u.salt)
 
 	if err != nil {
 		log.Print(err)
@@ -171,7 +171,7 @@ func (u User) Register(name, password string) error {
 }
 
 func (u *User) Sessions(q querier) []*Session {
-	rows, err := q.Query("SELECT * FROM sessions WHERE user_id=$1", u.QID(q))
+	rows, err := q.Query("SELECT * FROM sessions WHERE user_id=?", u.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -214,7 +214,7 @@ func (s *Session) UserID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=$1", s.key).Scan(&s.userID)
+	err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=?", s.key).Scan(&s.userID)
 	if err != nil {
 		log.Print(err)
 	}
@@ -238,7 +238,7 @@ func (s *Session) create(user *User) error {
 	// s.key = randomString(64)
 	// sessions[s.key] = user.ID()
 
-	// _, err := q.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", user.ID(), s.key)
+	// _, err := q.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES(?, ?, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", user.ID(), s.key)
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
@@ -250,7 +250,7 @@ func (s *Session) Get(q querier, key string) {
 	// s.userID = sessions[key]
 	s.userID = sessionRead(key)
 	if s.userID == 0 {
-		err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=$1", key).Scan(&s.userID)
+		err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=?", key).Scan(&s.userID)
 		if err != nil {
 			return
 		}
@@ -263,7 +263,7 @@ func (s *Session) Get(q querier, key string) {
 		// }
 		// if exp.UnixNano() < time.Now().UnixNano() {
 		// 	// Session has expired
-		// 	q.Exec("DELETE FROM sessions WHERE sesskey=$1", key)
+		// 	q.Exec("DELETE FROM sessions WHERE sesskey=?", key)
 		// 	s.key = ""
 		// 	return
 		// }
@@ -275,7 +275,7 @@ func (s *Session) Get(q querier, key string) {
 func (s *Session) destroy(q querier) {
 	sessionDestroy(s.Key(q))
 	if s.Key(q) != "" {
-		q.Exec("DELETE FROM sessions WHERE sesskey=$1", s.Key(q))
+		q.Exec("DELETE FROM sessions WHERE sesskey=?", s.Key(q))
 	}
 }
 
@@ -306,13 +306,13 @@ var (
 )
 
 func UpgradeUserToAdmin(userID int) error {
-	_, err := DB.Exec("UPDATE users SET adminflag=1 WHERE id=$1", userID)
+	_, err := DB.Exec("UPDATE users SET adminflag=1 WHERE id=?", userID)
 	return err
 }
 
 func GetUsernameFromID(userID int) string {
 	var username string
-	err := DB.QueryRow("SELECT username FROM users WHERE id=$1", userID).Scan(&username)
+	err := DB.QueryRow("SELECT username FROM users WHERE id=?", userID).Scan(&username)
 	if err != nil {
 		return "Anonymous"
 	}
@@ -383,7 +383,7 @@ func sessionCreate(userID int) string {
 	e := seslist.PushBack(s)
 	sesmap[s.key] = e
 
-	_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", userID, s.key)
+	_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES(?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY))", userID, s.key)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -409,7 +409,7 @@ func sessionGC() {
 		if (e.Value.(*sess).lastAccess.Add(time.Hour).Unix()) < time.Now().Unix() {
 			seslist.Remove(e)
 			delete(sesmap, e.Value.(*sess).key)
-			_, err := DB.Exec("INSERT OR REPLACE INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", e.Value.(*sess).userID, e.Value.(*sess).key)
+			_, err := DB.Exec("INSERT OR REPLACE INTO sessions(user_id, sesskey, expire) VALUES(?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY))", e.Value.(*sess).userID, e.Value.(*sess).key)
 			if err != nil {
 				log.Print(err)
 			}
@@ -417,7 +417,7 @@ func sessionGC() {
 			break
 		}
 	}
-	_, err := DB.Exec("DELETE FROM sessions WHERE expire < DATETIME(CURRENT_TIMESTAMP)")
+	_, err := DB.Exec("DELETE FROM sessions WHERE expire < CURRENT_TIMESTAMP")
 	if err != nil {
 		log.Println(err)
 	}

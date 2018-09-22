@@ -31,7 +31,7 @@ func updateCounter() {
 		count = last
 	}
 	if last < count {
-		if _, err := DB.Exec("UPDATE counter SET count=$1", count); err != nil {
+		if _, err := DB.Exec("UPDATE counter SET count=?", count); err != nil {
 			log.Print(err)
 		}
 

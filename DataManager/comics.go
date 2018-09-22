@@ -36,7 +36,7 @@ func (cc *ComicCollector) Get(limit, offset int) error {
 		log.Print(rows.Err())
 		return err
 	}
-	err = DB.QueryRow("SELECT count() FROM comics").Scan(&cc.TotalComics)
+	err = DB.QueryRow("SELECT count(1) FROM comics").Scan(&cc.TotalComics)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -66,7 +66,7 @@ func (c *Comic) QID(q querier) int {
 	if c.Title == "" {
 		return 0
 	}
-	err := q.QueryRow("SELECT id FROM comics WHERE title=$1", c.QTitle(q)).Scan(&c.ID)
+	err := q.QueryRow("SELECT id FROM comics WHERE title=?", c.QTitle(q)).Scan(&c.ID)
 	if err != nil {
 		return 0
 	}
@@ -76,7 +76,7 @@ func (c *Comic) QID(q querier) int {
 func (c *Comic) SetID(id int) error {
 	c.ID = id
 	return nil
-	//err := q.QueryRow("SELECT id FROM comics WHERE id=$1", id).Scan(&c.ID)
+	//err := q.QueryRow("SELECT id FROM comics WHERE id=?", id).Scan(&c.ID)
 	//return err
 }
 
@@ -88,7 +88,7 @@ func (c *Comic) QTitle(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT title FROM comics WHERE id=$1", c.ID).Scan(&c.Title)
+	err := q.QueryRow("SELECT title FROM comics WHERE id=?", c.ID).Scan(&c.Title)
 	if err != nil {
 		log.Print(err)
 		return ""
@@ -140,7 +140,7 @@ func (c *Comic) QPosts(q querier) []*ComicPost {
 		return c.Posts
 	}
 
-	str := fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=$1 ORDER BY post_order")
+	str := fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=? ORDER BY post_order")
 
 	return c.postsQuery(q, str, newChapter())
 }
@@ -154,9 +154,9 @@ func (c *Comic) PostsCh(q querier, ch *Chapter) []*ComicPost {
 	}
 	var str string
 	if ch.QID(q) == 0 {
-		str = fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=$1 ORDER BY post_order")
+		str = fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=? ORDER BY post_order")
 	} else {
-		str = fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=$1 AND Chapter_id=$2 ORDER BY post_order")
+		str = fmt.Sprintf("SELECT post_id, post_order FROM comic_mappings WHERE comic_id=? AND Chapter_id=? ORDER BY post_order")
 	}
 
 	return c.postsQuery(q, str, ch)
@@ -188,7 +188,7 @@ func (c *Comic) QChapters(q querier) []*Chapter {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, c_order, title FROM comic_Chapter WHERE comic_id=$1 ORDER BY c_order", c.QID(q))
+	rows, err := q.Query("SELECT id, c_order, title FROM comic_Chapter WHERE comic_id=? ORDER BY c_order", c.QID(q))
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -224,7 +224,7 @@ func (c *Comic) QPageCount(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT count() FROM comic_mappings WHERE comic_id=$1", c.QID(q)).Scan(&c.PageCount)
+	err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE comic_id=?", c.QID(q)).Scan(&c.PageCount)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -240,7 +240,7 @@ func (c *Comic) QChapterCount(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT count() FROM comic_Chapter WHERE comic_id=$1", c.QID(q)).Scan(&c.ChapterCount)
+	err := q.QueryRow("SELECT count(1) FROM comic_Chapter WHERE comic_id=?", c.QID(q)).Scan(&c.ChapterCount)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -255,7 +255,7 @@ func (c *Comic) Save(q querier) error {
 	if c.QTitle(q) == "" {
 		return errors.New("Title is empty")
 	}
-	st, err := q.Exec("INSERT INTO comics(title) VALUES($1)", c.QTitle(q))
+	st, err := q.Exec("INSERT INTO comics(title) VALUES(?)", c.QTitle(q))
 	if err != nil {
 		log.Print(err)
 		return err
@@ -298,7 +298,7 @@ func (c *Chapter) QID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT id FROM comic_Chapter WHERE comic_id=$1 AND c_order=$2", c.Comic.QID(q), c.QOrder(q)).Scan(&c.ID)
+	err := q.QueryRow("SELECT id FROM comic_Chapter WHERE comic_id=? AND c_order=?", c.Comic.QID(q), c.QOrder(q)).Scan(&c.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 	}
@@ -317,7 +317,7 @@ func (c *Chapter) QTitle(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT title FROM comic_Chapter WHERE id=$1", c.QID(q)).Scan(&c.Title)
+	err := q.QueryRow("SELECT title FROM comic_Chapter WHERE id=?", c.QID(q)).Scan(&c.Title)
 	if err != nil {
 		log.Print(err)
 	}
@@ -333,7 +333,7 @@ func (c *Chapter) QOrder(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT c_order FROM comic_Chapter WHERE id=$1", c.QID(q)).Scan(&c.Order)
+	err := q.QueryRow("SELECT c_order FROM comic_Chapter WHERE id=?", c.QID(q)).Scan(&c.Order)
 	if err != nil {
 		log.Print(err)
 	}
@@ -350,7 +350,7 @@ func (c *Chapter) QPageCount(q querier) int {
 		return c.PageCount
 	}
 
-	if err := q.QueryRow("SELECT count() FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
+	if err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE chapter_id = ?", c.QID(q)).Scan(&c.PageCount); err != nil {
 		log.Println(err)
 		return 0
 	}
@@ -373,7 +373,7 @@ func (c *Chapter) Save(q querier) error {
 		return errors.New("order is 0")
 	}
 
-	_, err := q.Exec("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES($1, $2, $3)", c.Comic.QID(q), c.Order, c.QTitle(q))
+	_, err := q.Exec("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES(?, ?, ?)", c.Comic.QID(q), c.Order, c.QTitle(q))
 
 	C.Cache.Purge("CCH", strconv.Itoa(c.QID(q)))
 
@@ -396,7 +396,7 @@ func (c *Chapter) QPosts(q querier) []*ComicPost {
 		}
 	}
 
-	str := "SELECT id, post_id, post_order FROM comic_mappings WHERE Chapter_id=$1 ORDER BY post_order"
+	str := "SELECT id, post_id, post_order FROM comic_mappings WHERE Chapter_id=? ORDER BY post_order"
 	rows, err := q.Query(str, c.QID(q))
 	if err != nil {
 		log.Print(err)
@@ -459,7 +459,7 @@ func (p *ComicPost) QID(q querier) int {
 		return p.ID
 	}
 
-	err := q.QueryRow("SELECT id FROM comic_mappings WHERE comic_id=$1 AND post_id=$2", p.Comic.QID(q), p.Post.QID(q)).Scan(&p.ID)
+	err := q.QueryRow("SELECT id FROM comic_mappings WHERE comic_id=? AND post_id=?", p.Comic.QID(q), p.Post.QID(q)).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 	}
@@ -482,13 +482,13 @@ func (p *ComicPost) Save(q querier, overwrite bool) error {
 	}
 
 	if overwrite && p.QID(q) != 0 {
-		_, err := q.Exec("UPDATE comic_mappings SET post_order=$1, Chapter_id=$2 WHERE comic_id=$3 AND post_id=$4", p.Order, p.Chapter.QID(q), p.Comic.QID(q), p.Post.QID(q))
+		_, err := q.Exec("UPDATE comic_mappings SET post_order=?, Chapter_id=? WHERE comic_id=? AND post_id=?", p.Order, p.Chapter.QID(q), p.Comic.QID(q), p.Post.QID(q))
 		if err != nil {
 			log.Print(err)
 			return err
 		}
 	} else {
-		_, err := q.Exec("INSERT INTO comic_mappings(comic_id, post_id, post_order, Chapter_id) Values($1, $2, $3, $4)", p.Comic.QID(q), p.Post.QID(q), p.Order, p.Chapter.QID(q))
+		_, err := q.Exec("INSERT INTO comic_mappings(comic_id, post_id, post_order, Chapter_id) Values(?, ?, ?, ?)", p.Comic.QID(q), p.Post.QID(q), p.Order, p.Chapter.QID(q))
 		if err != nil {
 			log.Print(err)
 			return err
@@ -507,7 +507,7 @@ func (p *ComicPost) replacePost(q querier, new *Post) error {
 	if p.Post.QID(q) == 0 {
 		return errors.New("p.ID is zero")
 	}
-	_, err := q.Exec("UPDATE comic_mappings SET post_id=$1 WHERE post_id=$2", new.QID(q), p.Post.QID(q))
+	_, err := q.Exec("UPDATE comic_mappings SET post_id=? WHERE post_id=?", new.QID(q), p.Post.QID(q))
 	if err != nil {
 		log.Print(err)
 		return err
