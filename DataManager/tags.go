@@ -58,10 +58,6 @@ func (t *Tag) QTag(q querier) string {
 	if tm := C.Cache.Get("TAG", strconv.Itoa(t.ID)); tm != nil {
 		switch m := tm.(type) {
 		case *Tag:
-			//fmt.Println("Tag was accuired from cache!")
-			// t.Tag = m.tag
-			// t.Namespace = m.namespace
-			// t.Count = m.count
 			*t = *m
 			return t.Tag
 		default:
@@ -105,6 +101,7 @@ func (t *Tag) QCount(q querier) int {
 		log.Print(err)
 		return 0
 	}
+
 	return t.Count
 }
 

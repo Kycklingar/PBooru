@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS namespaces(
 
 CREATE TABLE IF NOT EXISTS tags(
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    tag VARCHAR(64) NOT NULL,
+    tag VARCHAR(128) NOT NULL,
     namespace_id INTEGER NOT NULL REFERENCES namespaces(id),
     count INT NOT NULL DEFAULT 0,
     CONSTRAINT tag_namespace UNIQUE (tag, namespace_id)

@@ -33,7 +33,7 @@ var DB *sql.DB
 
 func Setup(iApi string) {
 	var err error
-	DB, err = sql.Open("mysql", "pbooru.app:zxcvbnm@tcp(localhost)/pbdb2")
+	DB, err = sql.Open("mysql", "pbdb:@/pbdb")
 	if err != nil {
 		panic(err)
 	}
@@ -60,10 +60,10 @@ func Setup(iApi string) {
 
 	// DB.SetMaxOpenConns(1)
 
-	_, err = DB.Exec("SET autocommit=0")
-	if err != nil {
-		panic(err)
-	}
+	// _, err = DB.Exec("SET autocommit=0")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	err = update(DB, "sql")
 	if err != nil {

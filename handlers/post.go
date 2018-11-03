@@ -229,8 +229,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		offset = (page - 1) * pageLimit
 	}
 
-	bm.Split("Test")
-
 	tagString := r.FormValue("tags")
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
@@ -291,9 +289,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 	for _, t := range p.Sidebar.Tags {
+		t.QTag(DM.DB)
 		t.QCount(DM.DB)
 		t.QNamespace(DM.DB).QNamespace(DM.DB)
-		t.QTag(DM.DB)
 	}
 
 	bm.Split("Retrieved and appended tags")
