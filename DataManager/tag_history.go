@@ -51,7 +51,7 @@ func (th *TagHistory) ID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT id FROM tag_history WHERE user_id=? AND post_id=?", th.User.QID(q), th.Post.QID(q)).Scan(&th.id)
+	err := q.QueryRow("SELECT id FROM tag_history WHERE user_id=$1 AND post_id=$2", th.User.QID(q), th.Post.QID(q)).Scan(&th.id)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -68,7 +68,7 @@ func (th *TagHistory) QETags(q querier) []*EditedTag {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT tag_id, direction FROM edited_tags WHERE history_id=?", th.ID(q))
+	rows, err := q.Query("SELECT tag_id, direction FROM edited_tags WHERE history_id=$1", th.ID(q))
 	if err != nil {
 		return nil
 	}

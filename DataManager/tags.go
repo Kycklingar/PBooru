@@ -36,7 +36,7 @@ func (t *Tag) QID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT id FROM tags WHERE tag=? AND namespace_id=?", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
+	err := q.QueryRow("SELECT id FROM tags WHERE tag=$1 AND namespace_id=$2", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return 0
@@ -64,7 +64,7 @@ func (t *Tag) QTag(q querier) string {
 			log.Print("tm is not typeof Tag")
 		}
 	}
-	err := q.QueryRow("SELECT tag, nspace FROM tags JOIN namespaces ON namespaces.id = tags.namespace_id WHERE tags.id=?", t.ID).Scan(&t.Tag, &t.Namespace.Namespace)
+	err := q.QueryRow("SELECT tag, nspace FROM tags JOIN namespaces ON namespaces.id = tags.namespace_id WHERE tags.id=$1", t.ID).Scan(&t.Tag, &t.Namespace.Namespace)
 	if err != nil {
 		log.Print(err)
 		return ""
@@ -78,7 +78,7 @@ func (t *Tag) QNamespace(q querier) *Namespace {
 		return t.Namespace
 	}
 	if t.QID(q) != 0 {
-		err := q.QueryRow("SELECT namespace_id FROM tags WHERE id=?", t.ID).Scan(&t.Namespace.ID)
+		err := q.QueryRow("SELECT namespace_id FROM tags WHERE id=$1", t.ID).Scan(&t.Namespace.ID)
 		if err != nil {
 			log.Print(err)
 		}
@@ -96,7 +96,7 @@ func (t *Tag) QCount(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT count FROM tags WHERE id=?", t.ID).Scan(&t.Count)
+	err := q.QueryRow("SELECT count FROM tags WHERE id=$1", t.ID).Scan(&t.Count)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -125,15 +125,10 @@ func (t *Tag) Save(q querier) error {
 		return errors.New("Tag cannot contain ','")
 	}
 
-	res, err := q.Exec("INSERT INTO tags(tag, namespace_id) VALUES(?, ?)", t.Tag, t.Namespace.QID(q))
+	err := q.QueryRow("INSERT INTO tags(tag, namespace_id) VALUES($1, $2) RETURNING id", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	t.ID = int(id64)
 
 	return nil
 }
@@ -190,13 +185,13 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		parentID = parent.QID(q)
 	}
 
-	if _, err = q.Exec("INSERT OR IGNORE INTO post_tag_mappings(post_id, tag_id) SELECT post_id, ? FROM post_tag_mappings WHERE tag_id=?", parentID, childID); err != nil {
+	if _, err = q.Exec("INSERT OR IGNORE INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2", parentID, childID); err != nil {
 		log.Println(err)
 		return err
 	}
 	//fmt.Println(res.RowsAffected())
 
-	if _, err := q.Exec("INSERT INTO parent_tags(parent_id, child_id) VALUES(?, ?)", parentID, childID); err != nil {
+	if _, err := q.Exec("INSERT INTO parent_tags(parent_id, child_id) VALUES($1, $2)", parentID, childID); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -255,7 +250,7 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 		}
 
 		var parentIDs []int
-		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = ?", tag.QID(q))
+		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", tag.QID(q))
 		if err != nil {
 			log.Print(err)
 		}
@@ -271,7 +266,7 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 		}
 		rows.Close()
 
-		execStr := "INSERT IGNORE INTO post_tag_mappings VALUES(?, ?)"
+		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
 
 		for _, i := range parentIDs {
 			if _, err = q.Exec(execStr, i, post.QID(q)); err != nil {
@@ -318,7 +313,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 
 		resetCacheTag(t.QID(q))
 
-		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=? AND post_id=?", t.QID(q), post.QID(q))
+		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), post.QID(q))
 		if err != nil {
 			log.Print(err)
 			continue
@@ -328,7 +323,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) Get(limit, offset int) error {
-	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags LIMIT ? OFFSET ?", limit, offset)
+	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		return err
 	}
@@ -360,7 +355,7 @@ func (tc *TagCollector) GetFromPost(q querier, p Post) error {
 		return errors.New("post invalid")
 	}
 
-	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=?", p.QID(q))
+	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=$1", p.QID(q))
 	if err != nil {
 		return err
 	}
@@ -408,7 +403,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		IN(
 			SELECT tag_id 
 			FROM post_tag_mappings 
-			WHERE post_id=?
+			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
 		p.QID(q))
@@ -468,9 +463,9 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		var rows *sql.Rows
 		var err error
 		if tag.QNamespace(q).QNamespace(q) == "none" {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE tag LIKE(?) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE tag LIKE($1) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		} else {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE namespace_id=? AND tag LIKE(?) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE namespace_id=$1 AND tag LIKE($2) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		}
 		if err != nil {
 			log.Print(err)

@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	"log"
 	"net/http"
 	"strconv"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 )
 
 type Postpage struct {
@@ -199,8 +200,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		p.QDeleted(DM.DB)
 	}
 
-	t := bm.End(performBenchmarks)
-	pp.Time = fmt.Sprint(float64(int64(float64(t.Seconds()*2000+0.5))) / 2000)
+	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
 }
 
@@ -502,8 +502,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.User = userCookies(w, r)
-
-	p.Time = fmt.Sprint(float64(int64(float64(bm.End(false).Seconds()*2000+0.5))) / 2000)
+	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "posts", p)
 }

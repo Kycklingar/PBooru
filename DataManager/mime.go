@@ -25,7 +25,7 @@ func (m *Mime) QID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT id FROM mime_type WHERE mime=? AND type=?", m.Name, m.Type).Scan(&m.ID)
+	err := q.QueryRow("SELECT id FROM mime_type WHERE mime=$1 AND type=$2", m.Name, m.Type).Scan(&m.ID)
 	if err != nil {
 		log.Print(err)
 	}
@@ -42,7 +42,7 @@ func (m *Mime) QName(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT mime, type FROM mime_type WHERE id=?", m.QID(q)).Scan(&m.Name, &m.Type)
+	err := q.QueryRow("SELECT mime, type FROM mime_type WHERE id=$1", m.QID(q)).Scan(&m.Name, &m.Type)
 	if err != nil {
 		log.Print(err)
 	}
@@ -59,7 +59,7 @@ func (m *Mime) QType(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT mime, type FROM mime_type WHERE id=?", m.QID(q)).Scan(&m.Name, &m.Type)
+	err := q.QueryRow("SELECT mime, type FROM mime_type WHERE id=$1", m.QID(q)).Scan(&m.Name, &m.Type)
 	if err != nil {
 		log.Print(err)
 	}
@@ -76,15 +76,10 @@ func (m *Mime) Save(q querier) error {
 		return errors.New("mime: not enough arguments")
 	}
 
-	res, err := q.Exec("INSERT INTO mime_type(mime, type) VALUES(?, ?)", m.Name, m.Type)
+	err := q.QueryRow("INSERT INTO mime_type(mime, type) VALUES($1, $2) RETURNING id", m.Name, m.Type).Scan(&m.ID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	m.ID = int(id64)
 
 	return nil
 }

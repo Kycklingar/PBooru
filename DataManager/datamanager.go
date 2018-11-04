@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,7 +33,7 @@ var DB *sql.DB
 
 func Setup(iApi string) {
 	var err error
-	DB, err = sql.Open("mysql", "pbdb:@/pbdb")
+	DB, err = sql.Open("postgres", "user=pbdb password=1234 dbname=pbdb sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -99,23 +99,33 @@ func update(db *sql.DB, folder string) error {
 		}
 
 		sqlString := string(dat)
-		sqlStrings := strings.Split(sqlString, ";")
+	//	sqlStrings := strings.Split(sqlString, ";")
 
 		tx, err := db.Begin()
 		if err != nil {
 			return err
 		}
 
-		for _, str := range sqlStrings {
-			if len(strings.TrimSpace(str)) <= 0 {
-				continue
-			}
-			fmt.Println("Executing: ", str)
-			_, err = tx.Exec(str)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
+	//	for _, str := range sqlStrings {
+	//		if len(strings.TrimSpace(str)) <= 0 {
+	//			continue
+	//		}
+	//		fmt.Println("Executing: ", str)
+	//		_, err = tx.Exec(str)
+	//		if err != nil {
+	//			tx.Rollback()
+		//		return err
+		//	}
+		//}
+
+		if len(strings.TrimSpace(sqlString)) <= 0 {
+			continue
+		}
+		fmt.Println("Executing: ", sqlString)
+		_, err = tx.Exec(sqlString)
+		if err != nil {
+			tx.Rollback()
+			return err
 		}
 
 		err = updateCode(i, tx)
@@ -172,7 +182,7 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 			u.passwordHash = string(hash)
 
-			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES(?, ?, ?, CURRENT_TIMESTAMP, ?)", u.Name, u.passwordHash, u.salt, u.AdmFlag)
+			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.AdmFlag)
 			if err != nil {
 				return err
 			}
@@ -192,6 +202,6 @@ func getDbVersion(db *sql.DB) int {
 }
 
 func setDbVersion(ver int, tx *sql.Tx) error {
-	_, err := tx.Exec("UPDATE dbinfo SET ver=?", ver)
+	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
 }

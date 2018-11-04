@@ -3,9 +3,10 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
-	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"log"
 	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func NewDuplicate() *Duplicate {
@@ -30,7 +31,7 @@ func (d *Duplicate) QID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT id FROM duplicate_posts WHERE post_id=?", d.Post.QID(q)).Scan(&d.ID)
+	err := q.QueryRow("SELECT id FROM duplicate_posts WHERE post_id=$1", d.Post.QID(q)).Scan(&d.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return 0
@@ -48,7 +49,7 @@ func (d *Duplicate) QDupID(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT dup_id FROM duplicate_posts WHERE id=?", d.QID(q)).Scan(&d.DupID)
+	err := q.QueryRow("SELECT dup_id FROM duplicate_posts WHERE id=$1", d.QID(q)).Scan(&d.DupID)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -58,7 +59,7 @@ func (d *Duplicate) QDupID(q querier) int {
 }
 
 func (d *Duplicate) SetDupID(q querier, id int) error {
-	err := q.QueryRow("SELECT dup_id FROM duplicate_posts WHERE dup_id=?", id).Scan(&d.DupID)
+	err := q.QueryRow("SELECT dup_id FROM duplicate_posts WHERE dup_id=$1", id).Scan(&d.DupID)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -74,7 +75,7 @@ func (d *Duplicate) QLevel(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT level FROM duplicate_posts WHERE id=?", d.QID(q)).Scan(&d.Level)
+	err := q.QueryRow("SELECT level FROM duplicate_posts WHERE id=$1", d.QID(q)).Scan(&d.Level)
 	if err != nil {
 		log.Print(err)
 	}
@@ -113,7 +114,7 @@ func (d *Duplicate) QPosts(q querier) []*Post {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT post_id FROM duplicate_posts WHERE dup_id=? ORDER BY level", d.QDupID(q))
+	rows, err := q.Query("SELECT post_id FROM duplicate_posts WHERE dup_id=$1 ORDER BY level", d.QDupID(q))
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -167,13 +168,13 @@ func (d *Duplicate) Save() error {
 
 	if d.QID(tx) == 0 {
 		//return errors.New("dup already exist")
-		_, err = tx.Exec("INSERT INTO duplicate_posts(dup_id, post_id, level) VALUES(?, ?, ?)", d.QDupID(tx), d.Post.QID(tx), d.QLevel(tx))
+		_, err = tx.Exec("INSERT INTO duplicate_posts(dup_id, post_id, level) VALUES($1, $2, $3)", d.QDupID(tx), d.Post.QID(tx), d.QLevel(tx))
 		if err != nil {
 			log.Print(err)
 			return txError(tx, err)
 		}
 	} else {
-		_, err = tx.Exec("UPDATE duplicate_posts SET dup_id = ?, level = ? WHERE id=?", d.QDupID(tx), d.QLevel(tx), d.QID(tx))
+		_, err = tx.Exec("UPDATE duplicate_posts SET dup_id = $1, level = $2 WHERE id=$3", d.QDupID(tx), d.QLevel(tx), d.QID(tx))
 		if err != nil {
 			log.Print(err)
 			return txError(tx, err)
