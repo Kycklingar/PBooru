@@ -883,45 +883,52 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 	//fmt.Println(idStr)
 	if len(pc.id) > 0 {
 		var innerStr string
+		var endStr = "WHERE "
 		var blt string
 		if len(pc.blackTag) >= 1 {
 			var or, un string
 			for _, t := range pc.blackTag {
-				or += fmt.Sprint(" tag_id = ", t, " OR")
+				or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 			}
 			or = strings.TrimRight(or, " OR")
 
 			for _, t := range pc.unless {
-				un += fmt.Sprint(" tag_id = ", t, " OR")
+				un += fmt.Sprint(" u1.tag_id = ", t, " OR")
 			}
 			un = strings.TrimRight(un, " OR")
 			if un != "" {
-				or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+				un = fmt.Sprint(" LEFT JOIN post_tag_mappings u1 ON t1.post_id = u1.post_id AND(", un, ")")
+				endStr += "(u1.post_id IS NULL OR "
 			}
 
-			blt = fmt.Sprintf("AND t1.post_id NOT IN(SELECT post_id FROM post_tag_mappings WHERE %s)", or)
+			blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.post_id = f1.post_id AND(", or, ") ", un)
 			// fmt.Println(blt)
+			endStr += "f1.post_id IS NULL) AND "
 		}
+
+		innerStr = "JOIN post_tag_mappings t1 ON t1.post_id = p1.id AND p1.deleted = false "
+
 		if len(pc.id) > 1 {
-			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 ")
 			for i, tagID := range pc.id {
 				var tstr string
 				if i+1 == len(pc.id) {
-					tstr = fmt.Sprintf("AND t1.tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", tagID, blt)
+					endStr += fmt.Sprintf("t1.tag_id = %d ", tagID)
 				} else {
-					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id AND t%d.tag_id = %d ", i+2, i+1, i+2, i+2, tagID)
+					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id ", i+2, i+1, i+2)
+					endStr += fmt.Sprintf("t%d.tag_id = %d AND ", i+2, tagID)
 				}
 				innerStr += tstr
 			}
 		} else {
-			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = false", pc.id[0], blt)
+			endStr = fmt.Sprintf(endStr+"t1.tag_id = %d", pc.id[0])
 		}
-		//fmt.Println(innerStr)
-		// str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) AND deleted=0 ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+		innerStr += blt + endStr
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(SELECT id FROM posts p1 %s ) ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+
+		fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(1) FROM posts WHERE id IN(%s)", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -966,6 +973,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			}
 		}
 
+		fmt.Println(str)
 		rows, err = DB.Query(str, limit, offset)
 		if err != nil {
 			log.Print(err)
