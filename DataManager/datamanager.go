@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	sqlite3Timestamp  = "2006-01-02 15:04:05"
-	Sqlite3Timestamp  = "2006-01-02 15:04:05"
-	Fsqlite3Timestamp = "2006-01-02T15:04:05Z"
+	sqlite3Timestamp    = "2006-01-02 15:04:05"
+	postgresqlTimestamp = "2006-01-02T15:04:05.000000Z"
+	Sqlite3Timestamp    = "2006-01-02 15:04:05"
+	Fsqlite3Timestamp   = "2006-01-02T15:04:05Z"
 )
 
 type querier interface {
@@ -33,7 +34,7 @@ var DB *sql.DB
 
 func Setup(iApi string) {
 	var err error
-	DB, err = sql.Open("postgres", "user=pbdb password=1234 dbname=pbdb sslmode=disable")
+	DB, err = sql.Open("postgres", CFG.ConnectionString)
 	if err != nil {
 		panic(err)
 	}
@@ -99,21 +100,21 @@ func update(db *sql.DB, folder string) error {
 		}
 
 		sqlString := string(dat)
-	//	sqlStrings := strings.Split(sqlString, ";")
+		//	sqlStrings := strings.Split(sqlString, ";")
 
 		tx, err := db.Begin()
 		if err != nil {
 			return err
 		}
 
-	//	for _, str := range sqlStrings {
-	//		if len(strings.TrimSpace(str)) <= 0 {
-	//			continue
-	//		}
-	//		fmt.Println("Executing: ", str)
-	//		_, err = tx.Exec(str)
-	//		if err != nil {
-	//			tx.Rollback()
+		//	for _, str := range sqlStrings {
+		//		if len(strings.TrimSpace(str)) <= 0 {
+		//			continue
+		//		}
+		//		fmt.Println("Executing: ", str)
+		//		_, err = tx.Exec(str)
+		//		if err != nil {
+		//			tx.Rollback()
 		//		return err
 		//	}
 		//}
@@ -205,3 +206,14 @@ func setDbVersion(ver int, tx *sql.Tx) error {
 	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
 }
+
+type Config struct {
+	//Database string
+	ConnectionString string
+}
+
+func (c Config) Default() {
+	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
+}
+
+var CFG *Config

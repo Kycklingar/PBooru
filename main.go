@@ -1,13 +1,14 @@
 package main
 
 import (
-	DM "github.com/kycklingar/PBooru/DataManager"
-	h "github.com/kycklingar/PBooru/handlers"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	h "github.com/kycklingar/PBooru/handlers"
 )
 
 var gConf config
@@ -45,9 +46,10 @@ func main() {
 	log.SetFlags(log.Llongfile)
 
 	gConf = exeConf()
+	h.CFG = &gConf.HCfg
+	DM.CFG = &gConf.DBCfg
 
 	DM.Setup(gConf.IPFSAPI)
-	h.CFG = &gConf.HCfg
 
 	go catchSignals()
 
