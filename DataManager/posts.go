@@ -886,6 +886,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		var endStr = "WHERE "
 		var blt string
 		if len(pc.blackTag) >= 1 {
+			endStr += "("
 			var or, un string
 			for _, t := range pc.blackTag {
 				or += fmt.Sprint(" f1.tag_id = ", t, " OR")
@@ -897,8 +898,8 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			}
 			un = strings.TrimRight(un, " OR")
 			if un != "" {
-				un = fmt.Sprint(" LEFT JOIN post_tag_mappings u1 ON t1.post_id = u1.post_id AND(", un, ")")
-				endStr += "(u1.post_id IS NULL OR "
+				un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.post_id = u1.post_id AND(", un, ")")
+				endStr += "u1.post_id IS NOT NULL OR "
 			}
 
 			blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.post_id = f1.post_id AND(", or, ") ", un)
@@ -906,7 +907,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			endStr += "f1.post_id IS NULL) AND "
 		}
 
-		innerStr = "JOIN post_tag_mappings t1 ON t1.post_id = p1.id AND p1.deleted = false "
+		innerStr = "SELECT DISTINCT t1.post_id FROM post_tag_mappings t1 "
 
 		if len(pc.id) > 1 {
 			for i, tagID := range pc.id {
@@ -923,12 +924,12 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			endStr = fmt.Sprintf(endStr+"t1.tag_id = %d", pc.id[0])
 		}
 		innerStr += blt + endStr
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(SELECT id FROM posts p1 %s ) ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s ORDER BY t1.post_id %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY id %s", innerStr, order, order)
 
-		fmt.Println(str)
+		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN (%s) AND deleted = false", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -943,29 +944,37 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		}
 
 	} else if len(pc.blackTag) > 0 {
-		var innerStr string
+		var innerStr, endStr string
+		var blt string
 		var or, un string
 
+		endStr = "WHERE "
 		for _, t := range pc.blackTag {
-			or += fmt.Sprint("tag_id = ", t, " OR ")
+			or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 		}
-		or = strings.TrimRight(or, " OR ")
+		or = strings.TrimRight(or, " OR")
 
 		for _, t := range pc.unless {
-			un += fmt.Sprint("tag_id = ", t, " OR")
+			un += fmt.Sprint(" u1.tag_id = ", t, " OR")
 		}
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
-			or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
+			endStr += "(u1.post_id IS NOT NULL OR "
 		}
 
-		innerStr = fmt.Sprintf("SELECT post_id FROM post_tag_mappings WHERE %s", or)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = false ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
+		endStr += "f1.post_id IS NULL) AND "
 
-		// fmt.Println(str)
+		innerStr = "SELECT DISTINCT t1.id FROM posts t1 "
+		innerStr += blt + endStr + " t1.deleted = false"
+
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s ORDER BY t1.id %s LIMIT $1 OFFSET $2) ORDER BY id %s", innerStr, order, order)
+
+		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(1) FROM posts WHERE id NOT IN(%s) AND deleted = false", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN(%s)", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
