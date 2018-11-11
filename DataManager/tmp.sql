@@ -177,3 +177,34 @@ WHERE id IN(
     AND t2.tag_id = 2 
     AND t1.tag_id = 4  
     ORDER BY id DESC LIMIT $1 OFFSET $2)
+
+
+
+SELECT count(*)
+FROM post_tag_mappings t1
+FULL OUTER JOIN post_tag_mappings f1
+ON t1.post_id = f1.post_id
+AND (f1.tag_id = 6 OR f1.tag_id = 209 )
+LEFT OUTER JOIN post_tag_mappings u1
+ON t1.post_id = u1.post_id
+AND (u1.tag_id = 4692 OR u1.tag_id = 2689)
+WHERE t1.tag_id = 4
+AND (f1.post_id IS NULL OR u1.post_id IS NOT NULL)
+--ORDER BY t1.post_id DESC
+--LIMIT 500 OFFSET 0
+
+ -- FALSE	1 | 0 | 0
+ -- TRUE	1 | 0 | 1
+ -- TRUE	1 | 1 | 0
+ -- TRUE	1 | 1 | 1
+
+SELECT count(*) 
+FROM post_tag_mappings t1  
+FULL OUTER JOIN post_tag_mappings f1 
+ON t1.post_id = f1.post_id 
+AND (f1.tag_id = 6 OR f1.tag_id = 209)
+LEFT JOIN post_tag_mappings u1 
+ON t1.post_id = u1.post_id 
+AND (u1.tag_id = 2689 OR u1.tag_id = 4692)
+WHERE (u1.post_id IS NOT NULL OR f1.post_id IS NULL)
+AND t1.tag_id = 4 

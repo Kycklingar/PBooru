@@ -187,7 +187,10 @@ func (u *User) Sessions(q querier) []*Session {
 			return nil
 		}
 
-		s.expire, _ = time.Parse(Sqlite3Timestamp, t)
+		s.expire, err = time.Parse(postgresqlTimestamp, t)
+		if err != nil {
+			log.Println(err)
+		}
 
 		sessions = append(sessions, s)
 	}

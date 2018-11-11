@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users(
 CREATE TABLE IF NOT EXISTS posts(
     id SERIAL PRIMARY KEY,
     multihash CHAR(49) UNIQUE NOT NULL,
-    thumbhash CHAR(49) NOT NULL,
+    thumbhash VARCHAR(49) NOT NULL,
     mime_id INT NOT NULL REFERENCES mime_type(id),
     deleted BOOL NOT NULL DEFAULT FALSE,
     uploader INTEGER NOT NULL REFERENCES users(id)

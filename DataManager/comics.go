@@ -256,7 +256,7 @@ func (c *Comic) Save(q querier) error {
 	if c.QTitle(q) == "" {
 		return errors.New("Title is empty")
 	}
-	err := q.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNS id", c.QTitle(q)).Scan(&c.ID)
+	err := q.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNING id", c.QTitle(q)).Scan(&c.ID)
 	if err != nil {
 		log.Print(err)
 		return err

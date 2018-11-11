@@ -2,6 +2,8 @@ package DataManager
 
 import (
 	"fmt"
+	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,21 +29,24 @@ func NewComment() *Comment {
 
 // Get the latest comments
 func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
-	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM comment_wall ORDER BY id DESC LIMIT $1", count)
+	rows, err := q.Query("SELECT id, user_id, text, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM comment_wall ORDER BY id DESC LIMIT $1", count)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		c := NewComment()
-		err = rows.Scan(&c.ID, &c.User.ID, &c.Text, &c.Time)
+		var userID *int
+		err = rows.Scan(&c.ID, &userID, &c.Text, &c.Time)
 		if err != nil {
-			rows.Close()
 			return err
+		}
+		if userID != nil {
+			c.User.ID = *userID
 		}
 		cm.Comments = append(cm.Comments, c)
 	}
-	rows.Close()
 
 	for i := range cm.Comments {
 		cm.Comments[i].Text = compileBBCode(q, cm.Comments[i].Text, daemon)
@@ -82,12 +87,39 @@ func compileBBCode(q querier, text, daemon string) string {
 //Save a new comment to the wall
 func (cm *Comment) Save(userID int, text string) error {
 
-	str := compileBBCode(DB, strings.TrimSpace(text), "")
-	if len(str) < 3 {
+	if suc, err := regexp.MatchString("\\[post=?([0-9]+)\\]", text); err != nil || !suc {
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 		return fmt.Errorf("Post does not exist")
 	}
 
-	_, err := DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", userID, strings.TrimSpace(text))
+	reg, err := regexp.Compile("\\[post=([0-9]+)]")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	res := reg.FindAllStringSubmatch(text, -1)
+	for _, val := range res {
+		post := NewPost()
+		id, err := strconv.Atoi(val[1])
+		if err != nil {
+			log.Println("Post id is not a number. This should never happen.", err)
+			return err
+		}
+		if err = post.SetID(DB, id); err != nil {
+			return fmt.Errorf("Post does not exist")
+		}
+	}
+
+	isNull := func(id int) *int {
+		if id == 0 {
+			return nil
+		}
+		return &id
+	}
+	_, err = DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", isNull(userID), strings.TrimSpace(text))
 	return err
 }
 
