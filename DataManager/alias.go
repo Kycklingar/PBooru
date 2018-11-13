@@ -75,56 +75,10 @@ func (a *Alias) Save(q querier) error {
 		}
 	}
 
-	// Check if to have a relation and append last
-	b := NewAlias()
-	b.Tag = a.To
-
-	for {
-		if b.QTo(q).QID(q) == 0 {
-			a.To = b.Tag
-			break
-		}
-		b.Tag = b.To
-		b.To = NewTag()
-	}
-
-	// Check if from have a relation and change them to To
-	for _, from := range a.QFrom(q) {
-		b := NewAlias()
-		b.Tag = from
-
-		b.To = a.To
-		err := b.Save(q)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-	}
-
-	// Find all parent/child relations and act on them
-	if _, err := q.Exec("UPDATE OR REPLACE parent_tags SET parent_id=$1 WHERE parent_id=$2", a.To.QID(q), a.Tag.QID(q)); err != nil {
+	_, err := q.Exec("INSERT INTO alias (alias_from, alias_to) VALUES($1, COALESCE((SELECT alias_to FROM alias WHERE alias_from = $2), $2)) ON CONFLICT (alias_from) DO UPDATE SET alias_to = EXCLUDED.alias_to", a.Tag.QID(q), a.To.QID(q))
+	if err != nil {
 		log.Println(err)
-		return err
 	}
-
-	if _, err := q.Exec("UPDATE OR REPLACE parent_tags SET child_id=$1 WHERE child_id=$2", a.To.QID(q), a.Tag.QID(q)); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	if _, err := q.Exec("INSERT OR IGNORE INTO post_tag_mappings(post_id, tag_id) SELECT post_id, (SELECT parent_id FROM parent_tags WHERE child_id=$1) FROM post_tag_mappings WHERE tag_id=$2", a.To.QID(q), a.Tag.QID(q)); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Finnaly insert/update post_tag_mappings with new alias
-	if _, err := q.Exec("UPDATE OR REPLACE post_tag_mappings SET tag_id=$1 WHERE tag_id=$2", a.To.QID(q), a.Tag.QID(q)); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	_, err := q.Exec("INSERT OR IGNORE INTO alias (alias_from, alias_to) VALUES($1, $2)", a.Tag.QID(q), a.To.QID(q))
-
 	resetCacheTag(a.To.QID(q))
 	resetCacheTag(a.Tag.QID(q))
 
