@@ -185,7 +185,7 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		parentID = parent.QID(q)
 	}
 
-	if _, err = q.Exec("INSERT OR IGNORE INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2", parentID, childID); err != nil {
+	if _, err = q.Exec("INSERT INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2 ON CONFLICT DO NOTHING", parentID, childID); err != nil {
 		log.Println(err)
 		return err
 	}
