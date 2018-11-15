@@ -81,35 +81,50 @@ func compileBBCode(q querier, text, daemon string) string {
 
 		return a, true
 	})
-	return cmp.Compile(text)
+
+	out := cmp.Compile(text)
+
+	reg, err := regexp.Compile("#([0-9]+)")
+	if err != nil {
+		log.Println(err)
+		return out
+	}
+
+	return reg.ReplaceAllString(out, "<a href=\"#c$1\">#$1</a>")
 }
 
 //Save a new comment to the wall
 func (cm *Comment) Save(userID int, text string) error {
 
-	if suc, err := regexp.MatchString("\\[post=?([0-9]+)\\]", text); err != nil || !suc {
+	if suc, err := regexp.MatchString("\\[post(?s).*\\]", text); err != nil || suc {
 		if err != nil {
 			log.Println(err)
 			return err
 		}
-		return fmt.Errorf("Post does not exist")
-	}
+		//return fmt.Errorf("Post does not exist")
 
-	reg, err := regexp.Compile("\\[post=([0-9]+)]")
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	res := reg.FindAllStringSubmatch(text, -1)
-	for _, val := range res {
-		post := NewPost()
-		id, err := strconv.Atoi(val[1])
+		reg, err := regexp.Compile("\\[post=([0-9]+)]")
 		if err != nil {
-			log.Println("Post id is not a number. This should never happen.", err)
+			log.Println(err)
 			return err
 		}
-		if err = post.SetID(DB, id); err != nil {
+
+		res := reg.FindAllStringSubmatch(text, -1)
+
+		if len(res) <= 0 {
 			return fmt.Errorf("Post does not exist")
+		}
+
+		for _, val := range res {
+			post := NewPost()
+			id, err := strconv.Atoi(val[1])
+			if err != nil {
+				log.Println("Post id is not a number. This should never happen.", err)
+				return err
+			}
+			if err = post.SetID(DB, id); err != nil {
+				return fmt.Errorf("Post does not exist")
+			}
 		}
 	}
 
@@ -119,7 +134,7 @@ func (cm *Comment) Save(userID int, text string) error {
 		}
 		return &id
 	}
-	_, err = DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", isNull(userID), strings.TrimSpace(text))
+	_, err := DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", isNull(userID), strings.TrimSpace(text))
 	return err
 }
 
