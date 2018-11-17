@@ -314,7 +314,7 @@ li
 
 .comment:target
 {
-    box-shadow: -1px -1px 5px 5px #DBD;
+    box-shadow: 0px 0px 5px 5px #DBD;
 }
 
 .comics-container

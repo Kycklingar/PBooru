@@ -56,6 +56,15 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 }
 
 func compileBBCode(q querier, text, daemon string) string {
+	// This is ugly as shit and probably ripe for abuse :)
+	reg, err := regexp.Compile("#([0-9]+)")
+	if err != nil {
+		log.Println(err)
+		return text
+	}
+
+	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref]")
+
 	cmp := bbcode.NewCompiler(true, true)
 	cmp.SetTag("img", nil)
 	cmp.SetTag("post", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
@@ -81,16 +90,16 @@ func compileBBCode(q querier, text, daemon string) string {
 
 		return a, true
 	})
+	cmp.SetTag("ref", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		ref := node.GetOpeningTag().Value
 
-	out := cmp.Compile(text)
+		a := bbcode.NewHTMLTag("")
+		a.Name = "a"
+		a.Attrs["href"] = ref
+		return a, true
+	})
 
-	reg, err := regexp.Compile("#([0-9]+)")
-	if err != nil {
-		log.Println(err)
-		return out
-	}
-
-	return reg.ReplaceAllString(out, "<a href=\"#c$1\">#$1</a>")
+	return cmp.Compile(out)
 }
 
 //Save a new comment to the wall
