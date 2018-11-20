@@ -11,6 +11,11 @@ body
     text-shadow: 3px 3px #213;
 }
 
+#pageinator a:hover
+{
+    text-decoration-line: underline;
+}
+
 ul
 {
     padding:10px;
@@ -105,8 +110,16 @@ li
     transform: translate(-50%);
 }
 
-.thumbnail .full{
+.thumbnail .full
+{
     display:none;
+}
+
+.thumbnail .mimetype
+{
+    background-image: linear-gradient(to top left, #AAA, #666);
+    width: 100%;
+    height: 100%;
 }
 
 #content
@@ -345,6 +358,21 @@ li
 {
     margin:3px;
     word-break: break-all;
+}
+
+.deleted
+{
+    border: 2px solid red;
+}
+.current
+{
+    border: 2px solid yellow;
+}
+
+.current.deleted
+{
+    border: 2px solid;
+    border-image: linear-gradient(to bottom right, yellow, red) 1;
 }
 
 .comic-thumb img

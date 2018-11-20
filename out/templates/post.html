@@ -116,8 +116,8 @@
     <div class="cpage-container">
         {{range .Dups.Posts}}
             <a href="/post/{{.ID}}/{{.Hash}}">
-                <div class="comic-thumb" {{if eq .ID $.Post.ID}}style="border:solid yellow"{{else if .Deleted}}style="border:solid red;"{{end}}>
-                    <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}">
+                <div class="comic-thumb">
+                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}">
                 </div>
             </a>
         {{end}}
