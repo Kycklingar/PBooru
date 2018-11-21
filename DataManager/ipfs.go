@@ -115,11 +115,11 @@ func mfsCP(dir, mhash string) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return errors.New(res.Status)
+		var b bytes.Buffer
+		b.ReadFrom(res.Body)
+		return errors.New(fmt.Sprint(res.Status, string(b.Bytes())))
 	}
-	//var b bytes.Buffer
-	//b.ReadFrom(res.Body)
-	//fmt.Println(string(b.Bytes()))
+
 	return nil
 }
 
