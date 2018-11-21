@@ -3,11 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	DM "github.com/kycklingar/PBooru/DataManager"
-	BM "github.com/kycklingar/PBooru/benchmark"
 	"log"
 	"net/http"
 	"strconv"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	BM "github.com/kycklingar/PBooru/benchmark"
 )
 
 func APIHandler(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +153,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
 	filterStr := r.FormValue("filter")
 	unlessStr := r.FormValue("unless")
+	order := r.FormValue("order")
 	offsetStr := r.FormValue("offset")
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
@@ -161,7 +163,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagStr, filterStr, unlessStr, false, 30, 30*offset)
+	err = pc.Get(tagStr, filterStr, unlessStr, order, 30, 30*offset)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)

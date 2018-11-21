@@ -27,6 +27,7 @@ type PostsPage struct {
 	Posts         []*DM.Post
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
+	ArgString     string
 	Pageinator    Pageination
 	User          UserInfo
 	Time          string
@@ -232,15 +233,35 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagString := r.FormValue("tags")
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
+	order := r.FormValue("order")
 
-	if tagString != "" {
-		red := fmt.Sprintf("/posts/%d/%s", page, UrlEncode(tagString))
-		if p.Sidebar.Filter != "" {
-			red += "?filter=" + p.Sidebar.Filter
-			if p.Sidebar.Unless != "" {
-				red += "&unless=" + p.Sidebar.Unless
+	type arg struct {
+		name  string
+		value string
+	}
+
+	args := []arg{}
+	args = append(args, arg{"filter", p.Sidebar.Filter})
+	args = append(args, arg{"unless", p.Sidebar.Unless})
+	args = append(args, arg{"order", order})
+
+	argString := func(arguments []arg) string {
+		var str string
+		for _, arg := range arguments {
+			if arg.value != "" {
+				str += fmt.Sprintf("%s=%s&", arg.name, arg.value)
 			}
 		}
+		if str != "" {
+			str = "?" + str
+		}
+		return str
+	}
+
+	p.ArgString = argString(args)
+
+	if tagString != "" {
+		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), p.ArgString)
 		http.Redirect(w, r, red, http.StatusSeeOther)
 		return
 	}
@@ -249,12 +270,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		tagString = UrlDecode(uri[2])
 	}
 
-	asc := false
-
-	// if r.FormValue("asc") != "" {
-	// 	asc = true
-	// }
-
 	// var totalPosts int
 	var err error
 
@@ -262,7 +277,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc := &DM.PostCollector{}
 
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, asc, pageLimit, offset)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, pageLimit, offset)
 	if err != nil {
 		//log.Println(err)
 		// http.NotFound(w, r)

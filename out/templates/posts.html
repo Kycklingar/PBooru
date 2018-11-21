@@ -103,11 +103,11 @@
 <div class="nolink" id="pageinator">
 
 {{ if ne 0 $.Pageinator.Prev}}
-    <a href="/posts/{{.Pageinator.First}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{with $.Sidebar.Unless}}&unless={{.}}{{end}}{{end}}">
+    <a href="/posts/{{.Pageinator.First}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
         First
     </a>
 
-    <a href="/posts/{{$.Pageinator.Prev}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{with $.Sidebar.Unless}}&unless={{.}}{{end}}{{end}}" id="prev">
+    <a href="/posts/{{$.Pageinator.Prev}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}" id="prev">
         Previous
     </a>
 {{ end }}
@@ -118,17 +118,17 @@
             {{.}}
         </span>
         {{ else }}
-        <a href="/posts/{{.}}{{if $.Sidebar.Query}}/{{$.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{with $.Sidebar.Unless}}&unless={{.}}{{end}}{{end}}">
+        <a href="/posts/{{.}}{{if $.Sidebar.Query}}/{{$.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
             {{.}}
         </a>
         {{ end }}
     </span>
 {{ end }}
 {{ if ne 0 $.Pageinator.Next}}
-    <a href="/posts/{{.Pageinator.Next}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{with $.Sidebar.Unless}}&unless={{.}}{{end}}{{end}}">
+    <a href="/posts/{{.Pageinator.Next}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
         Next
     </a>
-    <a href="/posts/{{.Pageinator.Last}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{if $.Sidebar.Filter}}?filter={{$.Sidebar.Filter}}{{with $.Sidebar.Unless}}&unless={{.}}{{end}}{{end}}">
+    <a href="/posts/{{.Pageinator.Last}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
         Last
     </a>
 {{ end }}

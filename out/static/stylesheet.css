@@ -172,6 +172,25 @@ li
     
 }
 
+#advanced-search
+{
+    display: none;
+    background-color:#778;
+    color: #000;
+    /*font-size:12px;*/
+    word-break: keep-all;
+}
+
+#advanced-search input
+{
+    width:auto;
+}
+
+#advanced-search:target
+{
+    display: block;
+}
+
 #stbox
 {
     position: absolute;
