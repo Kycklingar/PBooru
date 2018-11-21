@@ -60,7 +60,7 @@ func makeThumbnail(file io.Reader, mime string) (string, error) {
 		return "", err
 	}
 
-	mfsCP(fmt.Sprint(mfsThumbsDir, "/", thumbnailSize, "/"), thumbHash)
+	err = mfsCP(fmt.Sprint(mfsThumbsDir, "/", thumbnailSize, "/"), thumbHash)
 
 	return thumbHash, err
 }

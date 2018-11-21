@@ -239,7 +239,9 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on file:", hash)
-			mfsCP(mfsFilesDir, hash)
+			if err = mfsCP(mfsFilesDir, hash); err != nil {
+				log.Fatal(err)
+			}
 		}
 		offset++
 	}
@@ -255,7 +257,9 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on thumbnail:", hash)
-			mfsCP(mfsThumbsDir+"1024/", hash)
+			if err = mfsCP(mfsThumbsDir+"1024/", hash); err != nil {
+				log.Fatal(err)
+			}
 		}
 		offset++
 	}
