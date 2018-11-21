@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 )
@@ -70,11 +71,15 @@ func ipfsAdd(file io.Reader) (string, error) {
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
 
-	resp, err := http.Post(ipfsAPI+"add?cid-version=1&fscache", contentType, bodyBuff)
+	resp, err := http.Post(ipfsAPI+"add?cid-version=1&fscache&pin=false", contentType, bodyBuff)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", errors.New(resp.Status)
+	}
 
 	body := &bytes.Buffer{}
 	_, err = body.ReadFrom(resp.Body)
@@ -92,6 +97,44 @@ func ipfsAdd(file io.Reader) (string, error) {
 	}
 
 	return m, nil
+}
+
+func mfsCP(dir, mhash string) error {
+	directory := dir + mhash[len(mhash)-2:] + "/"
+	if err := mfsMkdir(directory); err != nil {
+		log.Println(err)
+		return err
+	}
+	uri := fmt.Sprintf("%s/files/cp?arg=%s&arg=%s", ipfsAPI, "/ipfs/"+mhash, directory+mhash)
+	//fmt.Println(uri)
+	res, err := http.Get(uri)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return errors.New(res.Status)
+	}
+	//var b bytes.Buffer
+	//b.ReadFrom(res.Body)
+	//fmt.Println(string(b.Bytes()))
+	return nil
+}
+
+func mfsMkdir(dir string) error {
+	res, err := http.Get(ipfsAPI + "files/mkdir?parents=true&arg=" + dir)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return errors.New(res.Status)
+	}
+
+	return nil
 }
 
 func ipfsPatchLink(rootHash, name, linkHash string) (string, error) {
