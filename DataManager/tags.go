@@ -58,10 +58,6 @@ func (t *Tag) QTag(q querier) string {
 	if tm := C.Cache.Get("TAG", strconv.Itoa(t.ID)); tm != nil {
 		switch m := tm.(type) {
 		case *Tag:
-			//fmt.Println("Tag was accuired from cache!")
-			// t.Tag = m.tag
-			// t.Namespace = m.namespace
-			// t.Count = m.count
 			*t = *m
 			return t.Tag
 		default:
@@ -105,6 +101,7 @@ func (t *Tag) QCount(q querier) int {
 		log.Print(err)
 		return 0
 	}
+
 	return t.Count
 }
 
@@ -128,15 +125,10 @@ func (t *Tag) Save(q querier) error {
 		return errors.New("Tag cannot contain ','")
 	}
 
-	res, err := q.Exec("INSERT INTO tags(tag, namespace_id) VALUES($1, $2)", t.Tag, t.Namespace.QID(q))
+	err := q.QueryRow("INSERT INTO tags(tag, namespace_id) VALUES($1, $2) RETURNING id", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	t.ID = int(id64)
 
 	return nil
 }
@@ -193,7 +185,7 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		parentID = parent.QID(q)
 	}
 
-	if _, err = q.Exec("INSERT OR IGNORE INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2", parentID, childID); err != nil {
+	if _, err = q.Exec("INSERT INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2 ON CONFLICT DO NOTHING", parentID, childID); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -274,7 +266,7 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 		}
 		rows.Close()
 
-		execStr := "INSERT OR IGNORE INTO post_tag_mappings VALUES($1, $2)"
+		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
 
 		for _, i := range parentIDs {
 			if _, err = q.Exec(execStr, i, post.QID(q)); err != nil {

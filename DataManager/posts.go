@@ -125,16 +125,29 @@ func (p *Post) QDeleted(q querier) int {
 	if p.QID(q) == 0 {
 		return -1
 	}
-	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&p.Deleted)
+	var deleted bool
+	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&deleted)
 	if err != nil {
 		log.Print(err)
 		return -1
+	}
+
+	if deleted {
+		p.Deleted = 1
+	} else {
+		p.Deleted = 0
 	}
 
 	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
 
 	return p.Deleted
 }
+
+const (
+	mfsRootDir   = "/pbooru/"
+	mfsFilesDir  = mfsRootDir + "files/"
+	mfsThumbsDir = mfsRootDir + "thumbnails/"
+)
 
 func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
 	var err error
@@ -144,6 +157,11 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 		return err
 	}
 	file.Seek(0, 0)
+
+	if err = mfsCP(mfsFilesDir, p.Hash, true); err != nil {
+		log.Println("Error copying file to mfs: ", err)
+		return err
+	}
 
 	var tx *sql.Tx
 
@@ -163,18 +181,21 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 		err = p.Mime.Parse(mime)
 		if err != nil {
+			log.Println(err)
 			return txError(tx, err)
 		}
 
 		if p.Mime.QID(tx) == 0 {
 			err := p.Mime.Save(tx)
 			if err != nil {
+				log.Println(err)
 				return txError(tx, err)
 			}
 		}
 
 		err = p.Save(tx, user)
 		if err != nil {
+			log.Println(err)
 			return txError(tx, err)
 		}
 
@@ -279,7 +300,7 @@ func (p *Post) Delete(q querier) error {
 	if p.QID(q) == 0 {
 		return errors.New("post:delete: invalid post")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=1 WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=true WHERE id=$1", p.QID(q))
 	if err != nil {
 		log.Print(err)
 		return err
@@ -304,7 +325,7 @@ func (p *Post) UnDelete(q querier) error {
 	if p.QID(q) == 0 {
 		return errors.New("post:undelete: invalid post id")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=0 WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=false WHERE id=$1", p.QID(q))
 	if err != nil {
 		log.Print(err)
 		return err
@@ -359,7 +380,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 		}
 
 		var tmp int
-		err = q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		err = q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
 		if err == nil && tmp > 0 {
 			continue // Tag is already on this post
 		}
@@ -382,7 +403,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 		}
 
 		var exist int
-		err := q.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		err := q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
 		if err != nil || exist == 0 {
 			// Tag does not exist on this post
 			continue
@@ -415,7 +436,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.AddToPost(q, p)
 
 	for _, tag := range rt {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $1, $3)", historyID, tag.QID(q), -1)
 		if err != nil {
 			return err
 		}
@@ -475,7 +496,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 		}
 
 		var tmp int
-		err = tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		err = tx.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
 		if err == nil && tmp > 0 {
 			continue // Tag is already on this post
 		}
@@ -498,7 +519,7 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 		}
 
 		var exist int
-		err := tx.QueryRow("SELECT count() FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
+		err := tx.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
 		if err != nil || exist == 0 {
 			// Tag does not exist on this post
 			continue
@@ -513,18 +534,17 @@ func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
 
 	addTags.Tags = at
 	remTags.Tags = rt
-
-	res, err := tx.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	var historyID int
+	err = tx.QueryRow("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP) RETURNING id", user.QID(q), p.QID(q)).Scan(&historyID)
 	if err != nil {
+		log.Println(err)
 		return txError(tx, err)
 	}
-	id64, err := res.LastInsertId()
-
-	historyID := int(id64)
 
 	for _, tag := range at {
 		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
 		if err != nil {
+			log.Println(err)
 			return txError(tx, err)
 		}
 	}
@@ -645,7 +665,7 @@ func (p *Post) Comments(q querier) []*PostComment {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, user_id, text, DATETIME(timestamp, 'localtime') FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.QID(q))
+	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -809,8 +829,12 @@ func (pc *PostCollector) idStr() string {
 	// 	return "0"
 	// }
 	var str string
-	for _, i := range pc.id {
-		str = fmt.Sprint(str+" ", i)
+	if len(pc.id) >= 1 {
+		for _, i := range pc.id {
+			str = fmt.Sprint(str+" ", i)
+		}
+	} else {
+		str = fmt.Sprint(str, " ", 0)
 	}
 	str += " -"
 	for _, i := range pc.blackTag {
@@ -870,45 +894,53 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 	//fmt.Println(idStr)
 	if len(pc.id) > 0 {
 		var innerStr string
+		var endStr = "WHERE "
 		var blt string
 		if len(pc.blackTag) >= 1 {
+			endStr += "("
 			var or, un string
 			for _, t := range pc.blackTag {
-				or += fmt.Sprint(" tag_id = ", t, " OR")
+				or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 			}
 			or = strings.TrimRight(or, " OR")
 
 			for _, t := range pc.unless {
-				un += fmt.Sprint(" tag_id = ", t, " OR")
+				un += fmt.Sprint(" u1.tag_id = ", t, " OR")
 			}
 			un = strings.TrimRight(un, " OR")
 			if un != "" {
-				or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+				un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.post_id = u1.post_id AND(", un, ")")
+				endStr += "u1.post_id IS NOT NULL OR "
 			}
 
-			blt = fmt.Sprintf("AND t1.post_id NOT IN(SELECT post_id FROM post_tag_mappings WHERE %s)", or)
+			blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.post_id = f1.post_id AND(", or, ") ", un)
 			// fmt.Println(blt)
+			endStr += "f1.post_id IS NULL) AND "
 		}
+
+		innerStr = "SELECT DISTINCT t1.post_id FROM post_tag_mappings t1 "
+
 		if len(pc.id) > 1 {
-			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 ")
 			for i, tagID := range pc.id {
 				var tstr string
 				if i+1 == len(pc.id) {
-					tstr = fmt.Sprintf("AND t1.tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", tagID, blt)
+					endStr += fmt.Sprintf("t1.tag_id = %d ", tagID)
 				} else {
-					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id AND t%d.tag_id = %d ", i+2, i+1, i+2, i+2, tagID)
+					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id ", i+2, i+1, i+2)
+					endStr += fmt.Sprintf("t%d.tag_id = %d AND ", i+2, tagID)
 				}
 				innerStr += tstr
 			}
 		} else {
-			innerStr = fmt.Sprintf("SELECT t1.post_id FROM post_tag_mappings t1 WHERE tag_id = %d %s AND (SELECT deleted FROM posts WHERE id = t1.post_id) = 0", pc.id[0], blt)
+			endStr = fmt.Sprintf(endStr+"t1.tag_id = %d", pc.id[0])
 		}
-		//fmt.Println(innerStr)
-		// str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) AND deleted=0 ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s) ORDER BY id %s", innerStr+" ORDER BY t1.post_id DESC LIMIT $1 OFFSET $2", order)
+		innerStr += blt + endStr
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s ORDER BY t1.post_id %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY id %s", innerStr, order, order)
+
+		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count() FROM posts WHERE id IN(%s)", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN (%s) AND deleted = false", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -923,29 +955,37 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		}
 
 	} else if len(pc.blackTag) > 0 {
-		var innerStr string
+		var innerStr, endStr string
+		var blt string
 		var or, un string
 
+		endStr = "WHERE "
 		for _, t := range pc.blackTag {
-			or += fmt.Sprint("tag_id = ", t, " OR ")
+			or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 		}
-		or = strings.TrimRight(or, " OR ")
+		or = strings.TrimRight(or, " OR")
 
 		for _, t := range pc.unless {
-			un += fmt.Sprint("tag_id = ", t, " OR")
+			un += fmt.Sprint(" u1.tag_id = ", t, " OR")
 		}
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
-			or = fmt.Sprint("(", or, ")", " AND post_id NOT IN( SELECT post_id FROM post_tag_mappings WHERE ", un, ")")
+			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
+			endStr += "(u1.post_id IS NOT NULL OR "
 		}
 
-		innerStr = fmt.Sprintf("SELECT post_id FROM post_tag_mappings WHERE %s", or)
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id NOT IN(%s) AND deleted = 0 ORDER BY id %s LIMIT $1 OFFSET $2", innerStr, order)
+		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
+		endStr += "f1.post_id IS NULL) AND "
 
-		// fmt.Println(str)
+		innerStr = "SELECT DISTINCT t1.id FROM posts t1 "
+		innerStr += blt + endStr + " t1.deleted = false"
+
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s ORDER BY t1.id %s LIMIT $1 OFFSET $2) ORDER BY id %s", innerStr, order, order)
+
+		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count() FROM posts WHERE id NOT IN(%s) AND deleted = 0", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN(%s)", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -953,6 +993,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			}
 		}
 
+		fmt.Println(str)
 		rows, err = DB.Query(str, limit, offset)
 		if err != nil {
 			log.Print(err)
@@ -963,7 +1004,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted=0 ORDER BY id %s LIMIT $1 OFFSET $2", order)
+		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted = false ORDER BY id %s LIMIT $1 OFFSET $2", order)
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1091,7 +1132,7 @@ func GetTotalPosts() int {
 	if totalPosts != 0 {
 		return totalPosts
 	}
-	err := DB.QueryRow("SELECT count() FROM posts WHERE deleted=0").Scan(&totalPosts)
+	err := DB.QueryRow("SELECT count(1) FROM posts WHERE deleted=false").Scan(&totalPosts)
 	if err != nil {
 		log.Println(err)
 		return totalPosts
@@ -1102,7 +1143,7 @@ func GetTotalPosts() int {
 func resetCacheTag(tagID int) {
 	C.Cache.Purge("PC", strconv.Itoa(tagID))
 	C.Cache.Purge("TAG", strconv.Itoa(tagID))
-	C.Cache.Purge("PC", "")
+	C.Cache.Purge("PC", "0")
 }
 
 func (p *PostCollector) GetW(limit, offset int) []*Post {

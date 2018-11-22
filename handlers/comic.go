@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	"log"
 	"net/http"
 	"strconv"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 )
 
 type comicsPage struct {
@@ -65,7 +66,9 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		c.QChapterCount(DM.DB)
 		c.QPageCount(DM.DB)
 		c.QTitle(DM.DB)
-
+		if len(c.Chapters) <= 0 {
+			continue
+		}
 		c.Chapters[0].QID(DM.DB)
 		c.Chapters[0].QOrder(DM.DB)
 		c.Chapters[0].QTitle(DM.DB)
@@ -84,7 +87,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	var u *DM.User
 	u, p.UserInfo = getUser(w, r)
 	p.User = tUser(u)
-	p.Time = fmt.Sprint(float64(int64(float64(bm.End(performBenchmarks).Seconds()*2000+0.5))) / 2000)
+	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "comics", p)
 }
@@ -183,7 +186,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 	u, p.UserInfo = getUser(w, r)
 
 	p.User = tUser(u)
-	p.Time = fmt.Sprint(float64(int64(float64(bm.End(performBenchmarks).Seconds()*2000+0.5))) / 2000)
+	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "comic", p)
 }

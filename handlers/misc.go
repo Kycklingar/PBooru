@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"fmt"
-	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	"html/template"
 	"log"
 	"math"
 	"net/http"
 	"strings"
 	"time"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 )
 
 const (
@@ -217,7 +217,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 	err := commMod.Get(DM.DB, 100, uinfo.IpfsDaemon)
 	if err != nil {
 		http.Error(w, "Oops, something went wrong.", http.StatusInternalServerError)
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	type P struct {

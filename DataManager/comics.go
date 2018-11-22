@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"log"
 	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type ComicCollector struct {
@@ -36,7 +37,7 @@ func (cc *ComicCollector) Get(limit, offset int) error {
 		log.Print(rows.Err())
 		return err
 	}
-	err = DB.QueryRow("SELECT count() FROM comics").Scan(&cc.TotalComics)
+	err = DB.QueryRow("SELECT count(1) FROM comics").Scan(&cc.TotalComics)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -224,7 +225,7 @@ func (c *Comic) QPageCount(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT count() FROM comic_mappings WHERE comic_id=$1", c.QID(q)).Scan(&c.PageCount)
+	err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE comic_id=$1", c.QID(q)).Scan(&c.PageCount)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -240,7 +241,7 @@ func (c *Comic) QChapterCount(q querier) int {
 		return 0
 	}
 
-	err := q.QueryRow("SELECT count() FROM comic_Chapter WHERE comic_id=$1", c.QID(q)).Scan(&c.ChapterCount)
+	err := q.QueryRow("SELECT count(1) FROM comic_Chapter WHERE comic_id=$1", c.QID(q)).Scan(&c.ChapterCount)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -255,18 +256,11 @@ func (c *Comic) Save(q querier) error {
 	if c.QTitle(q) == "" {
 		return errors.New("Title is empty")
 	}
-	st, err := q.Exec("INSERT INTO comics(title) VALUES($1)", c.QTitle(q))
+	err := q.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNING id", c.QTitle(q)).Scan(&c.ID)
 	if err != nil {
 		log.Print(err)
 		return err
 	}
-	id64, err := st.LastInsertId()
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-
-	c.ID = int(id64)
 
 	return err
 }
@@ -350,7 +344,7 @@ func (c *Chapter) QPageCount(q querier) int {
 		return c.PageCount
 	}
 
-	if err := q.QueryRow("SELECT count() FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
+	if err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
 		log.Println(err)
 		return 0
 	}

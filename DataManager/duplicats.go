@@ -3,9 +3,10 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
-	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"log"
 	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func NewDuplicate() *Duplicate {

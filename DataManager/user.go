@@ -187,7 +187,10 @@ func (u *User) Sessions(q querier) []*Session {
 			return nil
 		}
 
-		s.expire, _ = time.Parse(Sqlite3Timestamp, t)
+		s.expire, err = time.Parse(postgresqlTimestamp, t)
+		if err != nil {
+			log.Println(err)
+		}
 
 		sessions = append(sessions, s)
 	}
@@ -383,9 +386,9 @@ func sessionCreate(userID int) string {
 	e := seslist.PushBack(s)
 	sesmap[s.key] = e
 
-	_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", userID, s.key)
+	_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY')", userID, s.key)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	return s.key
 }
@@ -409,7 +412,7 @@ func sessionGC() {
 		if (e.Value.(*sess).lastAccess.Add(time.Hour).Unix()) < time.Now().Unix() {
 			seslist.Remove(e)
 			delete(sesmap, e.Value.(*sess).key)
-			_, err := DB.Exec("INSERT OR REPLACE INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", e.Value.(*sess).userID, e.Value.(*sess).key)
+			_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY') ON CONFLICT (sesskey) DO UPDATE expire = CURRENT_TIMESTAMP + INTERVAL '30 DAY'", e.Value.(*sess).userID, e.Value.(*sess).key)
 			if err != nil {
 				log.Print(err)
 			}
@@ -417,7 +420,7 @@ func sessionGC() {
 			break
 		}
 	}
-	_, err := DB.Exec("DELETE FROM sessions WHERE expire < DATETIME(CURRENT_TIMESTAMP)")
+	_, err := DB.Exec("DELETE FROM sessions WHERE expire < CURRENT_TIMESTAMP")
 	if err != nil {
 		log.Println(err)
 	}

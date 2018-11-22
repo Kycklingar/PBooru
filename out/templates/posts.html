@@ -41,7 +41,6 @@
                 }
                 .thumbnail .mimetype
                 {
-                    background-color: grey;
                     {{if lt .User.ImageSize 50}}
                     font-size:8px;
                     {{else if lt .User.ImageSize 100}}
@@ -54,9 +53,11 @@
                 <a href="/post/{{.ID}}/{{.Hash}}">
                     <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
                         {{if eq .Thumb "NT"}}
-                        <div class="centered mimetype" {{if .Deleted}}style="border-style:solid;border-color:red;"{{end}}>{{.Mime.Type}} / {{.Mime.Name}}</div>
+                        <div class="mimetype centered {{if .Deleted}}deleted{{end}}">
+                            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
+                        </div>
                         {{else}}
-                        <img src="{{$.User.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}" {{if .Deleted}}style="border-style:solid;border-color:red;"{{end}}>
+                        <img src="{{$.User.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
                         {{end}}
                     </div>
                 </a>

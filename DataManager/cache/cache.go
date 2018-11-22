@@ -117,5 +117,5 @@ func (c *cacher) GC() {
 
 func init() {
 	Cache = &cacher{mapped: make(map[string]*list.Element), maplist: list.New()}
-	go Cache.GC()
+	time.AfterFunc(maxLifetTime, Cache.GC)
 }

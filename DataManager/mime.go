@@ -76,15 +76,10 @@ func (m *Mime) Save(q querier) error {
 		return errors.New("mime: not enough arguments")
 	}
 
-	res, err := q.Exec("INSERT INTO mime_type(mime, type) VALUES($1, $2)", m.Name, m.Type)
+	err := q.QueryRow("INSERT INTO mime_type(mime, type) VALUES($1, $2) RETURNING id", m.Name, m.Type).Scan(&m.ID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	m.ID = int(id64)
 
 	return nil
 }

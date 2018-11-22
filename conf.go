@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/kycklingar/PBooru/handlers"
 	"io"
 	"log"
 	"os"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/handlers"
 )
 
 type config struct {
@@ -16,13 +18,15 @@ type config struct {
 	HTTPSAddress string
 	IPFSAPI      string
 
-	HCfg handlers.Config
+	HCfg  handlers.Config
+	DBCfg DM.Config
 }
 
 func (c *config) Default() {
 	c.HTTPAddress = ":80"
 	c.IPFSAPI = "http://localhost:5001/api/v0/"
 	c.HCfg.Default()
+	c.DBCfg.Default()
 }
 
 func exeConf() config {
@@ -46,6 +50,7 @@ func exeConf() config {
 		decoder := json.NewDecoder(file)
 
 		err = decoder.Decode(&conf)
+		decoder.DisallowUnknownFields()
 		if err != nil {
 			log.Fatal("Error decoding config: ", err.Error())
 		}

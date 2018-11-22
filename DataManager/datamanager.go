@@ -2,21 +2,22 @@ package DataManager
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	sqlite3Timestamp  = "2006-01-02 15:04:05"
-	Sqlite3Timestamp  = "2006-01-02 15:04:05"
-	Fsqlite3Timestamp = "2006-01-02T15:04:05Z"
+	sqlite3Timestamp    = "2006-01-02 15:04:05"
+	postgresqlTimestamp = "2006-01-02T15:04:05.000000Z"
+	Sqlite3Timestamp    = "2006-01-02 15:04:05"
+	Fsqlite3Timestamp   = "2006-01-02T15:04:05Z"
 )
 
 type querier interface {
@@ -34,7 +35,7 @@ var DB *sql.DB
 
 func Setup(iApi string) {
 	var err error
-	DB, err = sql.Open("sqlite3", "PBDB.db")
+	DB, err = sql.Open("postgres", CFG.ConnectionString)
 	if err != nil {
 		panic(err)
 	}
@@ -46,20 +47,25 @@ func Setup(iApi string) {
 		panic(err)
 	}
 
-	_, err = DB.Exec("PRAGMA journal_mode=WAL")
-	if err != nil {
-		panic(err)
-	}
-	_, err = DB.Exec("PRAGMA cache_size=250000")
-	if err != nil {
-		panic(err)
-	}
-	_, err = DB.Exec("PRAGMA busy_timeout=5000")
-	if err != nil {
-		panic(err)
-	}
+	// _, err = DB.Exec("PRAGMA journal_mode=WAL")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// _, err = DB.Exec("PRAGMA cache_size=250000")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// _, err = DB.Exec("PRAGMA busy_timeout=5000")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	DB.SetMaxOpenConns(1)
+	// DB.SetMaxOpenConns(1)
+
+	// _, err = DB.Exec("SET autocommit=0")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	err = update(DB, "sql")
 	if err != nil {
@@ -95,12 +101,29 @@ func update(db *sql.DB, folder string) error {
 		}
 
 		sqlString := string(dat)
+		//	sqlStrings := strings.Split(sqlString, ";")
 
 		tx, err := db.Begin()
 		if err != nil {
 			return err
 		}
 
+		//	for _, str := range sqlStrings {
+		//		if len(strings.TrimSpace(str)) <= 0 {
+		//			continue
+		//		}
+		//		fmt.Println("Executing: ", str)
+		//		_, err = tx.Exec(str)
+		//		if err != nil {
+		//			tx.Rollback()
+		//		return err
+		//	}
+		//}
+
+		if len(strings.TrimSpace(sqlString)) <= 0 {
+			continue
+		}
+		fmt.Println("Executing: ", sqlString)
 		_, err = tx.Exec(sqlString)
 		if err != nil {
 			tx.Rollback()
@@ -128,7 +151,7 @@ func update(db *sql.DB, folder string) error {
 
 func updateCode(ver int, tx *sql.Tx) error {
 	switch ver {
-	case 8:
+	case 1:
 		{
 			var password string
 			for {
@@ -166,143 +189,6 @@ func updateCode(ver int, tx *sql.Tx) error {
 				return err
 			}
 		}
-	// case 14:
-	// 	rows, err := tx.Query("SELECT id, multihash FROM posts WHERE thumbhash='NO THUMBNAIL'")
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	defer rows.Close()
-
-	// 	for i := 0; rows.Next(); i++ {
-	// 		if i > 10 {
-	// 			fmt.Println("Checkpoint")
-	// 			i = 0
-	// 			tx.Commit()
-	// 			tx, err = db.Begin()
-	// 			if err != nil {
-	// 				panic(err)
-	// 			}
-	// 		}
-	// 		var id int
-	// 		var multihash string
-	// 		err = rows.Scan(&id, &multihash)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		fmt.Println("Working on post ", id, " ", multihash)
-
-	// 		file := ipfsCat(multihash)
-	// 		if file == nil {
-	// 			panic("file is nil")
-	// 		}
-	// 		defer file.Close()
-
-	// 		thumbhash, err := makeThumbnail(file)
-	// 		if err != nil {
-	// 			fmt.Println(err)
-	// 			continue
-	// 		}
-	// 		fmt.Println("Got thumbnailhash: ", thumbhash)
-	// 		_, err = tx.Exec("UPDATE posts SET thumbhash=$1 WHERE id=$2", thumbhash, id)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// 	err = rows.Err()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	break
-	case 21:
-		var height *int
-		err := tx.QueryRow("SELECT MAX(post_id) FROM phash").Scan(&height)
-		if err != nil && err != sql.ErrNoRows {
-			log.Println(err)
-			return err
-		}
-		if height == nil {
-			return nil
-		}
-		for i := 0; ; i++ {
-			rows, err := tx.Query("SELECT id, thumbhash FROM posts WHERE thumbhash !='NT' AND id > $2 LIMIT 1000 OFFSET $1", i*1000, *height)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil
-				}
-				return err
-			}
-
-			type PHS struct {
-				id int
-				h1 uint16
-				h2 uint16
-				h3 uint16
-				h4 uint16
-			}
-
-			var phs []PHS
-
-			n := 0
-
-			for rows.Next() {
-				n++
-				var (
-					id   int
-					hash string
-				)
-				err = rows.Scan(&id, &hash)
-				if err != nil {
-					return err
-				}
-
-				f := ipfsCat(hash)
-
-				dhash := dHash(f)
-				if err = f.Close(); err != nil {
-					return err
-				}
-
-				fmt.Println(id, hash, dhash)
-
-				var ph PHS
-
-				ph.id = id
-
-				b := make([]byte, 8)
-				binary.BigEndian.PutUint64(b, dhash)
-				ph.h1 = uint16(b[1]) | uint16(b[0])<<8
-				ph.h2 = uint16(b[3]) | uint16(b[2])<<8
-				ph.h3 = uint16(b[5]) | uint16(b[4])<<8
-				ph.h4 = uint16(b[7]) | uint16(b[6])<<8
-
-				phs = append(phs, ph)
-			}
-			rows.Close()
-
-			if n == 0 {
-				return nil
-			}
-
-			for _, ph := range phs {
-				_, err = tx.Exec("INSERT INTO phash (post_id, h1, h2, h3, h4) VALUES($1, $2, $3, $4, $5)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
-				if err != nil {
-					return err
-				}
-			}
-
-			err = tx.Commit()
-			if err != nil {
-				return err
-			}
-
-			tx, err = DB.Begin()
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-
-		}
-
 	}
 	return nil
 }
@@ -321,3 +207,78 @@ func setDbVersion(ver int, tx *sql.Tx) error {
 	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
 }
+
+func MigrateMfs() {
+	query := func(str string, offset int) ([]string, error) {
+		rows, err := DB.Query(str, offset*20000)
+		if err != nil {
+			log.Println(err)
+			return []string{}, err
+		}
+		defer rows.Close()
+
+		var hashes []string
+
+		for rows.Next() {
+			var hash string
+			rows.Scan(&hash)
+			hashes = append(hashes, hash)
+		}
+
+		return hashes, nil
+	}
+
+	var hashes []string
+	var err error
+
+	offset := 0
+	defer mfsFlush(mfsRootDir)
+
+	for {
+		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+			break
+		}
+		for _, hash := range hashes {
+			fmt.Println("Working on file:", hash)
+			if err = mfsCP(mfsFilesDir, hash, false); err != nil {
+				log.Fatal(err)
+			}
+		}
+		offset++
+		mfsFlush(mfsRootDir)
+	}
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+
+	offset = 0
+
+	for {
+		if hashes, err = query("SELECT thumbhash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+			break
+		}
+		for _, hash := range hashes {
+			fmt.Println("Working on thumbnail:", hash)
+			if err = mfsCP(mfsThumbsDir+"1024/", hash, false); err != nil {
+				log.Fatal(err)
+			}
+		}
+		offset++
+		mfsFlush(mfsRootDir)
+	}
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+}
+
+type Config struct {
+	//Database string
+	ConnectionString string
+}
+
+func (c Config) Default() {
+	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
+}
+
+var CFG *Config

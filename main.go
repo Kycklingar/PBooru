@@ -1,13 +1,15 @@
 package main
 
 import (
-	DM "github.com/kycklingar/PBooru/DataManager"
-	h "github.com/kycklingar/PBooru/handlers"
+	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	h "github.com/kycklingar/PBooru/handlers"
 )
 
 var gConf config
@@ -42,14 +44,29 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	migrateMfs := flag.Bool("migrate-mfs", false, "Migrate all files and thumbnails to the mfs.")
+	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
+	flag.Parse()
+
 	log.SetFlags(log.Llongfile)
 
 	gConf = exeConf()
+	h.CFG = &gConf.HCfg
+	DM.CFG = &gConf.DBCfg
+
+	if *initConfig {
+		return
+	}
 
 	DM.Setup(gConf.IPFSAPI)
-	h.CFG = &gConf.HCfg
 
 	go catchSignals()
+
+	if *migrateMfs {
+		DM.MigrateMfs()
+		return
+	}
 
 	fs := http.FileServer(http.Dir("./static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))

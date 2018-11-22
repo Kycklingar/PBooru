@@ -59,15 +59,10 @@ func (n *Namespace) Save(q querier) error {
 		return errors.New("Namespace cannot contain ','")
 	}
 
-	res, err := q.Exec("INSERT INTO namespaces(nspace) VALUES($1)", n.Namespace)
+	err := q.QueryRow("INSERT INTO namespaces(nspace) VALUES($1) RETURNING id", n.Namespace).Scan(&n.ID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	n.ID = int(id64)
 
 	return nil
 }
