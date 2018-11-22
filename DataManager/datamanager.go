@@ -232,6 +232,7 @@ func MigrateMfs() {
 	var err error
 
 	offset := 0
+	defer mfsFlush(mfsRootDir)
 
 	for {
 		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
@@ -239,11 +240,12 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on file:", hash)
-			if err = mfsCP(mfsFilesDir, hash); err != nil {
+			if err = mfsCP(mfsFilesDir, hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
+		mfsFlush(mfsRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -257,11 +259,12 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on thumbnail:", hash)
-			if err = mfsCP(mfsThumbsDir+"1024/", hash); err != nil {
+			if err = mfsCP(mfsThumbsDir+"1024/", hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
+		mfsFlush(mfsRootDir)
 	}
 
 	if err != nil && err != sql.ErrNoRows {

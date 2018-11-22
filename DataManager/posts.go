@@ -158,7 +158,7 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 	}
 	file.Seek(0, 0)
 
-	if err = mfsCP(mfsFilesDir, p.Hash); err != nil {
+	if err = mfsCP(mfsFilesDir, p.Hash, true); err != nil {
 		log.Println("Error copying file to mfs: ", err)
 		return err
 	}

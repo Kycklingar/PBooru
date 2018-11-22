@@ -99,7 +99,7 @@ func ipfsAdd(file io.Reader) (string, error) {
 	return m, nil
 }
 
-func mfsCP(dir, mhash string) error {
+func mfsCP(dir, mhash string, flush bool) error {
 	directory := dir + mhash[len(mhash)-2:] + "/"
 
 	if mfsExists(directory, mhash) == nil {
@@ -110,7 +110,13 @@ func mfsCP(dir, mhash string) error {
 		log.Println(err)
 		return err
 	}
-	uri := fmt.Sprintf("%s/files/cp?arg=%s&arg=%s", ipfsAPI, "/ipfs/"+mhash, directory+mhash)
+
+	var fl string
+	if !flush {
+		fl = "flush=false&"
+	}
+
+	uri := fmt.Sprintf("%s/files/cp?%sarg=%s&arg=%s", ipfsAPI, fl, "/ipfs/"+mhash, directory+mhash)
 	//fmt.Println(uri)
 	res, err := http.Get(uri)
 	if err != nil {
@@ -157,6 +163,17 @@ func mfsExists(dir, hash string) error {
 	if v["Hash"] != hash {
 		return errors.New(fmt.Sprint("File doesn't match hash:", v["Hash"], hash))
 	}
+	return nil
+}
+
+func mfsFlush(dir string) error {
+	res, err := http.Get(ipfsAPI + "/files/flush?arg=" + dir)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	res.Body.Close()
 	return nil
 }
 
