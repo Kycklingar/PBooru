@@ -70,6 +70,7 @@
             <br>
             <input title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
             <div id="advanced-search">
+                <div><a style="position:relative;right:0px;float:right;text-decoration:none;background-color:red; color:white" href="#">X</a></div>
                 <label>Order:</label>
                 <br>
                 <input type="radio" name="order" value="" checked> Descending<br>
@@ -77,7 +78,7 @@
                 <input type="radio" name="order" value="random"> Random<br>
             </div>
             <input type="submit" value="Search">
-            <div class="nolink"><a href="#advanced-search">Advanced</a></div>
+            <div class=""><a style="color:#AAA;font-size:10px;" href="#advanced-search">Advanced</a></div>
         </form>
     </div>
     <script type="text/javascript" src="/static/suggestions.js"></script>

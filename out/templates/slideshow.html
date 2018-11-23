@@ -16,13 +16,16 @@
 <div style="position:fixed; z-index: 10; bottom: 0px; left: 0px;">
     <span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
     <div id="controller" >
-        <form onsubmit="slider.search(this.children[0].value, this.children[2].value, this.children[4].value); return false">
-            <input class="stinput" type="text" id="searchinput" placeholder="Search">
+        <form onsubmit="slider.search(this); return false">
+            <input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search">
             <br>
-            <input class="stinput" type="text" id="filterinput" placeholder="Filter">
+            <input class="stinput" type="text" name="filter" id="filterinput" placeholder="Filter">
             <br>
-            <input class="stinput" type="text" id="unlessinput" placeholder="Unless">
+            <input class="stinput" type="text" name="unless" id="unlessinput" placeholder="Unless">
             <br>
+            <input type="radio" name="order" value="desc" checked><label>Descending</label><br>
+            <input type="radio" name="order" value="asc"><label>Ascending</label><br>
+            <input type="radio" name="order" value="random"><label>Random</label><br>
             <input type="submit">
         </form>
         <script type="text/javascript" src="/static/suggestions.js"></script>
@@ -82,7 +85,7 @@
         {
             this.loading = true
             console.log(this.tags, this.filter, this.unless, this.offset)
-            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&unless=" + this.unless + "&offset=" + this.offset++, function(res){
+            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&unless=" + this.unless + "&order=" + this.order + "&offset=" + this.offset++, function(res){
                 //console.log(this.index)
                 this.data = JSON.parse(res)
                 document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
@@ -169,12 +172,18 @@
         this.tickrate = 32
         this.pixelsPerTick = 5
 
-        this.search = function(tags, filter, unless)
+        this.search = function(caller)
         {
+            let form = new FormData(caller)
+            let tags = form.get("tags")
+            let filter = form.get("filter")
+            let unless = form.get("unless")
+            let order = form.get("order")
             this.stopSlideshow(function(){
                 this.tags = tags
                 this.filter = filter
                 this.unless = unless
+                this.order = order
 
                 this.loadData()
                 this.tick()

@@ -1,9 +1,8 @@
-PBooru.exe
+PBooru.exe*
 PBooru
 debug
-PBDB.db-shm
-PBDB.db
-PBDB.db-wal
+PBDB.db*
 *.test
 *.db
 config.cfg
+

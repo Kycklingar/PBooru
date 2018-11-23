@@ -27,6 +27,12 @@ li
     list-style-type:none;
 }
 
+.separator
+{
+    padding: 1em;
+    border-bottom:solid grey;
+}
+
 .nolink a:visited, .nolink a:link
 {
     text-decoration: none;
@@ -177,7 +183,7 @@ li
     display: none;
     background-color:#778;
     color: #000;
-    /*font-size:12px;*/
+    font-size:14px;
     word-break: keep-all;
 }
 

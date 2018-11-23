@@ -1,43 +1,54 @@
 {{template "base"}}
 {{if eq .User.Flag 1}}
-<form id="searchinput" onsubmit="newSearch(this);return false">
-    <input id="inputtags" class="stinput" type="text" name="tags">
-    <input id="inputbltags" class="stinput" type="text" name="filter">
-    <input id="inputunless" class="stinput" type="text" name="unless">
-    <input type="submit">
-</form>
 <style>
-    h4{
-        margin:4px;
-    }
-</style>
-<style id="stylesheet">
-    .thumbnail{
-        width:{{.UserInfo.ImageSize}};
-        height:{{.UserInfo.ImageSize}};
-    }
-    .thumbnail img{
-        max-width:{{.UserInfo.ImageSize}};
-        max-height:{{.UserInfo.ImageSize}};
-    }
-</style>
-<h4>Dups</h4>
-<button onclick="postDupChanges()">Submit Duplicates</button>
-<br>
-<h4>Tags</h4>
-<form id="newtagsform" onsubmit="postTags(); return false">
-    <textarea class="stinput" name="addtags"></textarea>
-    <textarea class="stinput" name="remtags"></textarea>
-    <input type="submit" value="Submit Tags">
-</form>
-<h4>Comic</h4>
-<form id="comicpageform" onsubmit="postComicPages(); return false">
-    <label>ComicID</label>
-    <input type="number" id="comicidinput" name="comicid">
-    <label>ChapterID</label>
-    <input type="number" id="chapteridinput" name="chapterid">
-    <input type="submit">
-</form>
+        h4{
+            margin:4px;
+        }
+    </style>
+    <style id="stylesheet">
+        .thumbnail{
+            width:{{.UserInfo.ImageSize}};
+            height:{{.UserInfo.ImageSize}};
+        }
+        .thumbnail img{
+            max-width:{{.UserInfo.ImageSize}};
+            max-height:{{.UserInfo.ImageSize}};
+        }
+    </style>
+
+<div class="separator">
+    <form id="searchinput" onsubmit="newSearch(this);return false">
+        <input id="inputtags" class="stinput" type="text" name="tags">
+        <input id="inputbltags" class="stinput" type="text" name="filter">
+        <input id="inputunless" class="stinput" type="text" name="unless"><br>
+        <input type="radio" id="inp-desc" name="order" value="desc" checked><label for="inp-desc">Descending</label><br>
+        <input type="radio" id="inp-asc" name="order" value="asc"><label for="inp-asc">Ascending</label><br>
+        <input type="radio" id="inp-rand" name="order" value="random"><label for="inp-rand">Random</label><br>
+        <input type="submit" value="Search">
+    </form>
+</div>
+<div class="separator">
+    <h4>Dups</h4>
+    <button onclick="postDupChanges()">Submit Duplicates</button>
+</div>
+<div class="separator">
+    <h4>Tags</h4>
+    <form id="newtagsform" onsubmit="postTags(); return false">
+        <textarea class="stinput" name="addtags"></textarea>
+        <textarea class="stinput" name="remtags"></textarea>
+        <input type="submit" value="Submit Tags">
+    </form>
+</div>
+<div class="separator">
+    <h4>Comic</h4>
+    <form id="comicpageform" onsubmit="postComicPages(); return false">
+        <label>ComicID</label>
+        <input type="number" id="comicidinput" name="comicid">
+        <label>ChapterID</label>
+        <input type="number" id="chapteridinput" name="chapterid">
+        <input type="submit">
+    </form>
+</div>
 <div>
     <div style="border:dotted; display:flex; flex-flow:row wrap;" id="postlist">
     </div>
