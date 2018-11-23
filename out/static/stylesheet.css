@@ -27,6 +27,12 @@ li
     list-style-type:none;
 }
 
+.separator
+{
+    padding: 1em;
+    border-bottom:solid grey;
+}
+
 .nolink a:visited, .nolink a:link
 {
     text-decoration: none;
@@ -170,6 +176,25 @@ li
     width:100%;
     box-shadow: 3px 3px #213;
     
+}
+
+#advanced-search
+{
+    display: none;
+    background-color:#778;
+    color: #000;
+    font-size:14px;
+    word-break: keep-all;
+}
+
+#advanced-search input
+{
+    width:auto;
+}
+
+#advanced-search:target
+{
+    display: block;
 }
 
 #stbox

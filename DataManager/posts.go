@@ -701,12 +701,14 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
+	order string
+
 	tagLock sync.Mutex
 }
 
 var perSlice = 500
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString string, asc bool, limit, offset int) error {
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, limit, offset int) error {
 	//var tagIDs []int
 
 	in := func(i int, arr []int) bool {
@@ -805,6 +807,15 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString string, asc
 		sort.Ints(pc.unless)
 	}
 
+	switch strings.ToUpper(order) {
+	case "ASC", "DESC":
+		pc.order = strings.ToUpper(order)
+	case "RANDOM":
+		pc.order = strings.ToUpper(order) + "()"
+	default:
+		pc.order = "DESC"
+	}
+
 	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
 		tmp, ok := t.(*PostCollector)
 		if ok {
@@ -821,7 +832,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString string, asc
 		C.Cache.Set("PC", pc.idStr(), pc)
 	}
 
-	return pc.search(asc, limit, offset)
+	return pc.search(limit, offset)
 }
 
 func (pc *PostCollector) idStr() string {
@@ -844,20 +855,34 @@ func (pc *PostCollector) idStr() string {
 	for _, i := range pc.unless {
 		str = fmt.Sprint(str+" ", i)
 	}
+
+	str += pc.order
 	str = strings.TrimSpace(str)
 	// fmt.Println("PCSTR", str)
 	return str
 }
 
-func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
-	order := "DESC"
-	if asc {
-		order = "ASC"
-	}
+func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 	if pc.idStr() == "-1" {
 		return nil
 	}
+
+	rand := func(pre, order string) string {
+		if order == "RANDOM()" {
+			return order
+		}
+		return fmt.Sprintf(pre, order)
+	}
+
+	emptyRand := func(pre, str string) string {
+		if str == "RANDOM()" {
+			return ""
+		}
+		return fmt.Sprintf(pre, str)
+	}
+
+	//fmt.Println(rand("test %s", pc.order))
 
 	//pc.id = tagString
 
@@ -869,20 +894,6 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 	var rows *sql.Rows
 	var err error
 	//fmt.Println(pc.idStr())
-
-	// if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-	// 	tmp, ok := t.(*PostCollector)
-	// 	if ok {
-	// 		*pc = *tmp
-	// 		// pc.posts = tmp.posts
-	// 		// pc.id = tmp.ID
-	// 		// pc.TotalPosts = tmp.TotalPosts
-	// 		// pc.tags = tmp.tags
-	// 		if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-	// 			return nil
-	// 		}
-	// 	}
-	// }
 
 	if ok := pc.GetW(ulimit, uoffset); ok != nil {
 		return nil
@@ -935,7 +946,8 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			endStr = fmt.Sprintf(endStr+"t1.tag_id = %d", pc.id[0])
 		}
 		innerStr += blt + endStr
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s ORDER BY t1.post_id %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY id %s", innerStr, order, order)
+
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY %s", innerStr, emptyRand("ORDER BY t1.post_id %s", pc.order), rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -971,16 +983,17 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
 			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
-			endStr += "(u1.post_id IS NOT NULL OR "
+			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) AND"
+		} else {
+			endStr += "f1.post_id IS NULL AND "
 		}
 
 		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
-		endStr += "f1.post_id IS NULL) AND "
 
 		innerStr = "SELECT DISTINCT t1.id FROM posts t1 "
 		innerStr += blt + endStr + " t1.deleted = false"
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s ORDER BY t1.id %s LIMIT $1 OFFSET $2) ORDER BY id %s", innerStr, order, order)
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s %s LIMIT $1 OFFSET $2) ORDER BY %s", innerStr, emptyRand("ORDER BY t1.id %s", pc.order), rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -993,7 +1006,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 			}
 		}
 
-		fmt.Println(str)
+		//fmt.Println(str)
 		rows, err = DB.Query(str, limit, offset)
 		if err != nil {
 			log.Print(err)
@@ -1004,7 +1017,7 @@ func (pc *PostCollector) search(asc bool, ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted = false ORDER BY id %s LIMIT $1 OFFSET $2", order)
+		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1046,7 +1059,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	}
 
 	// Get the first batch
-	pc.search(false, 10, 0)
+	pc.search(10, 0)
 	//pc.GetW(10, 0)
 
 	// Get tags from all posts
@@ -1185,7 +1198,7 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		tmp, ok := p.posts[begOff]
 		if !ok {
 			//fmt.Println("Not ok1")
-			p.search(false, limit, offset-limit)
+			p.search(limit, offset-limit)
 			tmp, ok = p.posts[begOff]
 			if !ok {
 				//log.Print("Fatal erorr")
