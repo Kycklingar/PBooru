@@ -412,7 +412,7 @@ func sessionGC() {
 		if (e.Value.(*sess).lastAccess.Add(time.Hour).Unix()) < time.Now().Unix() {
 			seslist.Remove(e)
 			delete(sesmap, e.Value.(*sess).key)
-			_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY') ON CONFLICT (sesskey) DO UPDATE expire = CURRENT_TIMESTAMP + INTERVAL '30 DAY'", e.Value.(*sess).userID, e.Value.(*sess).key)
+			_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY') ON CONFLICT (sesskey) DO UPDATE SET expire = CURRENT_TIMESTAMP + INTERVAL '30 DAY'", e.Value.(*sess).userID, e.Value.(*sess).key)
 			if err != nil {
 				log.Print(err)
 			}
