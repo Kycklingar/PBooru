@@ -875,12 +875,21 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return fmt.Sprintf(pre, order)
 	}
 
+<<<<<<< HEAD
 	emptyRand := func(pre, str string) string {
 		if str == "RANDOM()" {
 			return ""
 		}
 		return fmt.Sprintf(pre, str)
 	}
+=======
+	// emptyRand := func(pre, str string) string {
+	// 	if str == "RANDOM()" {
+	// 		return ""
+	// 	}
+	// 	return fmt.Sprintf(pre, str)
+	// }
+>>>>>>> aso
 
 	//fmt.Println(rand("test %s", pc.order))
 
@@ -929,7 +938,8 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			endStr += "f1.post_id IS NULL) AND "
 		}
 
-		innerStr = "SELECT DISTINCT t1.post_id FROM post_tag_mappings t1 "
+		//innerStr = "SELECT DISTINCT t1.post_id FROM post_tag_mappings t1 "
+		innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 
 		if len(pc.id) > 1 {
 			for i, tagID := range pc.id {
@@ -947,12 +957,16 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
+<<<<<<< HEAD
 		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY %s", innerStr, emptyRand("ORDER BY t1.post_id %s", pc.order), rand("id %s", pc.order))
+=======
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
+>>>>>>> aso
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN (%s) AND deleted = false", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -982,6 +996,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
+<<<<<<< HEAD
 			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
 			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) AND"
 		} else {
@@ -989,16 +1004,29 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 
 		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
+=======
+			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON p1.id = u1.post_id AND(", un, ")")
+			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) "
+		} else {
+			endStr += "f1.post_id IS NULL "
+		}
 
-		innerStr = "SELECT DISTINCT t1.id FROM posts t1 "
-		innerStr += blt + endStr + " t1.deleted = false"
+		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON p1.id = f1.post_id AND(", or, ") ", un)
+>>>>>>> aso
 
+		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
+		innerStr += blt + endStr
+
+<<<<<<< HEAD
 		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s %s LIMIT $1 OFFSET $2) ORDER BY %s", innerStr, emptyRand("ORDER BY t1.id %s", pc.order), rand("id %s", pc.order))
+=======
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
+>>>>>>> aso
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(*) FROM posts WHERE id IN(%s)", innerStr)
+			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
 			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 			if err != nil {
 				log.Print(err)
@@ -1145,7 +1173,7 @@ func GetTotalPosts() int {
 	if totalPosts != 0 {
 		return totalPosts
 	}
-	err := DB.QueryRow("SELECT count(1) FROM posts WHERE deleted=false").Scan(&totalPosts)
+	err := DB.QueryRow("SELECT count(*) FROM posts WHERE deleted=false").Scan(&totalPosts)
 	if err != nil {
 		log.Println(err)
 		return totalPosts
