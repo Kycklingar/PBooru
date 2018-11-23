@@ -277,7 +277,7 @@ type Config struct {
 	ConnectionString string
 }
 
-func (c Config) Default() {
+func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
 }
 
