@@ -55,6 +55,13 @@ func makeThumbnail(file io.Reader, mime string) (string, error) {
 	}
 
 	thumbHash, err := ipfsAdd(&w)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	err = mfsCP(fmt.Sprint(mfsThumbsDir, "/", thumbnailSize, "/"), thumbHash, true)
+
 	return thumbHash, err
 }
 

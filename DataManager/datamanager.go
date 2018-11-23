@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -205,6 +206,70 @@ func getDbVersion(db *sql.DB) int {
 func setDbVersion(ver int, tx *sql.Tx) error {
 	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
+}
+
+func MigrateMfs() {
+	query := func(str string, offset int) ([]string, error) {
+		rows, err := DB.Query(str, offset*20000)
+		if err != nil {
+			log.Println(err)
+			return []string{}, err
+		}
+		defer rows.Close()
+
+		var hashes []string
+
+		for rows.Next() {
+			var hash string
+			rows.Scan(&hash)
+			hashes = append(hashes, hash)
+		}
+
+		return hashes, nil
+	}
+
+	var hashes []string
+	var err error
+
+	offset := 0
+	defer mfsFlush(mfsRootDir)
+
+	for {
+		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+			break
+		}
+		for _, hash := range hashes {
+			fmt.Println("Working on file:", hash)
+			if err = mfsCP(mfsFilesDir, hash, false); err != nil {
+				log.Fatal(err)
+			}
+		}
+		offset++
+		mfsFlush(mfsRootDir)
+	}
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+
+	offset = 0
+
+	for {
+		if hashes, err = query("SELECT thumbhash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+			break
+		}
+		for _, hash := range hashes {
+			fmt.Println("Working on thumbnail:", hash)
+			if err = mfsCP(mfsThumbsDir+"1024/", hash, false); err != nil {
+				log.Fatal(err)
+			}
+		}
+		offset++
+		mfsFlush(mfsRootDir)
+	}
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
 }
 
 type Config struct {

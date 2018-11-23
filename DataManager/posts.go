@@ -143,6 +143,12 @@ func (p *Post) QDeleted(q querier) int {
 	return p.Deleted
 }
 
+const (
+	mfsRootDir   = "/pbooru/"
+	mfsFilesDir  = mfsRootDir + "files/"
+	mfsThumbsDir = mfsRootDir + "thumbnails/"
+)
+
 func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
 	var err error
 	p.Hash, err = ipfsAdd(file)
@@ -151,6 +157,11 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 		return err
 	}
 	file.Seek(0, 0)
+
+	if err = mfsCP(mfsFilesDir, p.Hash, true); err != nil {
+		log.Println("Error copying file to mfs: ", err)
+		return err
+	}
 
 	var tx *sql.Tx
 
