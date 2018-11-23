@@ -875,21 +875,12 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return fmt.Sprintf(pre, order)
 	}
 
-<<<<<<< HEAD
-	emptyRand := func(pre, str string) string {
-		if str == "RANDOM()" {
-			return ""
-		}
-		return fmt.Sprintf(pre, str)
-	}
-=======
 	// emptyRand := func(pre, str string) string {
 	// 	if str == "RANDOM()" {
 	// 		return ""
 	// 	}
 	// 	return fmt.Sprintf(pre, str)
 	// }
->>>>>>> aso
 
 	//fmt.Println(rand("test %s", pc.order))
 
@@ -957,11 +948,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-<<<<<<< HEAD
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN( %s %s LIMIT $1 OFFSET $2) AND deleted = false ORDER BY %s", innerStr, emptyRand("ORDER BY t1.post_id %s", pc.order), rand("id %s", pc.order))
-=======
 		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
->>>>>>> aso
 
 		//fmt.Println(str)
 
@@ -996,15 +983,6 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
-<<<<<<< HEAD
-			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
-			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) AND"
-		} else {
-			endStr += "f1.post_id IS NULL AND "
-		}
-
-		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
-=======
 			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON p1.id = u1.post_id AND(", un, ")")
 			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) "
 		} else {
@@ -1012,16 +990,11 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 
 		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON p1.id = f1.post_id AND(", or, ") ", un)
->>>>>>> aso
 
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-<<<<<<< HEAD
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s %s LIMIT $1 OFFSET $2) ORDER BY %s", innerStr, emptyRand("ORDER BY t1.id %s", pc.order), rand("id %s", pc.order))
-=======
 		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
->>>>>>> aso
 
 		//fmt.Println(str)
 
