@@ -16,7 +16,7 @@ type Config struct {
 	IPFSDaemonMap map[string]string
 }
 
-func (c Config) Default() {
+func (c *Config) Default() {
 	if c.IPFSDaemonMap == nil {
 		c.IPFSDaemonMap = make(map[string]string)
 	}

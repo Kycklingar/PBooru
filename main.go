@@ -47,11 +47,12 @@ func main() {
 
 	migrateMfs := flag.Bool("migrate-mfs", false, "Migrate all files and thumbnails to the mfs.")
 	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
+	configFilePath := flag.String("cfg", "config.cfg", "Load config file.")
 	flag.Parse()
 
 	log.SetFlags(log.Llongfile)
 
-	gConf = exeConf()
+	gConf = exeConf(*configFilePath)
 	h.CFG = &gConf.HCfg
 	DM.CFG = &gConf.DBCfg
 
