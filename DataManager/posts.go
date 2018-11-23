@@ -983,16 +983,17 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		un = strings.TrimRight(un, " OR")
 		if un != "" {
 			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.id = u1.post_id AND(", un, ")")
-			endStr += "(u1.post_id IS NOT NULL OR "
+			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) AND"
+		} else {
+			endStr += "f1.post_id IS NULL AND "
 		}
 
 		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.id = f1.post_id AND(", or, ") ", un)
-		endStr += "f1.post_id IS NULL) AND "
 
 		innerStr = "SELECT DISTINCT t1.id FROM posts t1 "
 		innerStr += blt + endStr + " t1.deleted = false"
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s %s LIMIT $1 OFFSET $2) ORDER BY %s", innerStr, emptyRand("ORDER BY t1.post_id %s", pc.order), rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE id IN(%s %s LIMIT $1 OFFSET $2) ORDER BY %s", innerStr, emptyRand("ORDER BY t1.id %s", pc.order), rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -1005,7 +1006,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			}
 		}
 
-		fmt.Println(str)
+		//fmt.Println(str)
 		rows, err = DB.Query(str, limit, offset)
 		if err != nil {
 			log.Print(err)
