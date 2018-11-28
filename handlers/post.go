@@ -306,6 +306,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, t := range p.Sidebar.Tags {
 		t.QTag(DM.DB)
 		t.QCount(DM.DB)
+		t.QNamespace(DM.DB).SetCache()
 		t.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 

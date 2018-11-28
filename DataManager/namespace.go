@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"strings"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func NewNamespace() *Namespace {
@@ -23,11 +25,24 @@ func (n *Namespace) QID(q querier) int {
 	if n.Namespace == "" {
 		return 0
 	}
+
+	if t := C.Cache.Get("NSP", n.Namespace); t != nil {
+		if ns, ok := t.(*Namespace); ok {
+			//fmt.Println("Cache get:", ns.Namespace)
+			*n = *ns
+			if n.ID != 0 {
+				return n.ID
+			}
+		}
+	}
+	//fmt.Println("Cache miss:", n.Namespace)
+
 	err := q.QueryRow("SELECT id FROM namespaces WHERE nspace=$1", n.Namespace).Scan(&n.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return 0
 	}
+
 	return n.ID
 }
 
@@ -44,7 +59,40 @@ func (n *Namespace) QNamespace(q querier) string {
 		log.Print(err)
 		return ""
 	}
+
+	if t := C.Cache.Get("NSP", n.Namespace); t != nil {
+		if ns, ok := t.(*Namespace); ok {
+			*n = *ns
+		}
+	} else {
+		C.Cache.Set("NSP", n.Namespace, n)
+	}
+
 	return n.Namespace
+}
+
+func (n *Namespace) GetCache() bool {
+	if n.Namespace == "" {
+		return false
+	}
+	if t := C.Cache.Get("NSP", n.Namespace); t != nil {
+		if ns, ok := t.(*Namespace); ok {
+			*n = *ns
+			return true
+		}
+	}
+	return false
+}
+
+func (n *Namespace) SetCache() {
+	if n.GetCache() {
+		return
+	}
+	if n.Namespace == "" {
+		//fmt.Println("Empty namespace cache")
+		return
+	}
+	C.Cache.Set("NSP", n.Namespace, n)
 }
 
 func (n *Namespace) Save(q querier) error {

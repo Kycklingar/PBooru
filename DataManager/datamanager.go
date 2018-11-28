@@ -245,7 +245,7 @@ func MigrateMfs() {
 			}
 		}
 		offset++
-		mfsFlush(mfsRootDir)
+		//mfsFlush(mfsRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -264,7 +264,7 @@ func MigrateMfs() {
 			}
 		}
 		offset++
-		mfsFlush(mfsRootDir)
+		//mfsFlush(mfsRootDir)
 	}
 
 	if err != nil && err != sql.ErrNoRows {
