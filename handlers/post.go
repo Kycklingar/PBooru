@@ -276,15 +276,17 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, pageLimit, offset)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
 	if err != nil {
 		//log.Println(err)
 		// http.NotFound(w, r)
 		// return
 	}
+
+	DM.CachedPostCollector(pc)
+
 	//fmt.Println(pc.TotalPosts)
-	for _, post := range pc.GetW(pageLimit, offset) {
+	for _, post := range pc.Search(pageLimit, offset) {
 		post.QDeleted(DM.DB)
 		post.QMime(DM.DB).QName(DM.DB)
 		post.QMime(DM.DB).QType(DM.DB)
