@@ -232,7 +232,7 @@ func MigrateMfs() {
 	var err error
 
 	offset := 0
-	defer mfsFlush(mfsRootDir)
+	defer mfsFlush(CFG.MFSRootDir)
 
 	for {
 		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
@@ -245,7 +245,7 @@ func MigrateMfs() {
 			}
 		}
 		offset++
-		mfsFlush(mfsRootDir)
+		mfsFlush(CFG.MFSRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -264,7 +264,7 @@ func MigrateMfs() {
 			}
 		}
 		offset++
-		mfsFlush(mfsRootDir)
+		mfsFlush(CFG.MFSRootDir)
 	}
 
 	if err != nil && err != sql.ErrNoRows {
@@ -275,10 +275,12 @@ func MigrateMfs() {
 type Config struct {
 	//Database string
 	ConnectionString string
+	MFSRootDir       string
 }
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
+	c.MFSRootDir = "/pbooru/"
 }
 
 var CFG *Config
