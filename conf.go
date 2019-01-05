@@ -46,7 +46,7 @@ func exeConf(filePath string) config {
 }
 
 func (c *config) loadConfigFile(filePath string) error {
-	file, err := c.openConfigFile(filePath, os.o_RDWR)
+	file, err := c.openConfigFile(filePath, os.O_RDWR)
 	if err != nil {
 		log.Println(err)
 		return err
