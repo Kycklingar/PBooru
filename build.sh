@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go build -o /out/pbooru
+go build -o out/pbooru
