@@ -25,12 +25,18 @@ func NewPost() *Post {
 	return &p
 }
 
+type Thumb struct{
+	Hash string
+	Size int
+}
+
+
 type Post struct {
-	ID      int
-	Hash    string
-	Thumb   string
-	Mime    *Mime
-	Deleted int
+	ID         int
+	Hash       string
+	Thumbnails []Thumb
+	Mime       *Mime
+	Deleted    int
 }
 
 func (p *Post) QID(q querier) int {
@@ -86,22 +92,53 @@ func (p *Post) QHash(q querier) string {
 	return p.Hash
 }
 
-func (p *Post) QThumb(q querier) string {
-	if p.Thumb != "" {
-		return p.Thumb
+func (p *Post) QThumbnails(q querier) error {
+	if len(p.Thumbnails) > 0{
+		return nil
 	}
 	if p.QID(q) == 0 {
-		return ""
+		return errors.New("nil id")
 	}
 
-	err := q.QueryRow("SELECT thumbhash FROM posts WHERE id=$1", p.ID).Scan(&p.Thumb)
+	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 	}
+	defer rows.Close()
 
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+	for rows.Next() {
+		var t Thumb
+		if err = rows.Scan(&t.Hash, &t.Size); err != nil {
+			log.Println(err)
+			return err
+		}
+		p.Thumbnails = append(p.Thumbnails, t)
+	}
 
-	return p.Thumb
+	p.Thumbnails = append(p.Thumbnails, Thumb{Hash:"", Size:0})
+	return rows.Err()
+}
+
+func (p *Post) ClosestThumbnail(size int) (ret string) {
+	if len(p.Thumbnails) <= 0 {
+		return ""
+	}
+	var s int
+	for _, k := range p.Thumbnails {
+		if k.Size > s {
+			s = k.Size
+		}
+	}
+	for _, k := range p.Thumbnails {
+		if k.Size < size {
+			continue
+		}
+		if k.Size < s {
+			s = k.Size
+			ret = k.Hash
+		}
+	}
+	return
 }
 
 func (p *Post) QMime(q querier) *Mime {
@@ -112,8 +149,6 @@ func (p *Post) QMime(q querier) *Mime {
 	if err != nil {
 		log.Print(err)
 	}
-
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
 
 	return p.Mime
 }
@@ -161,9 +196,12 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 	if p.QID(DB) == 0 {
 
-		p.Thumb, err = makeThumbnail(file, mime)
-		if err != nil {
-			return err
+		for _, dim := range CFG.ThumbnailSizes{
+			thash, err := makeThumbnail(file, mime, dim)
+			if err != nil {
+				return err
+			}
+			p.Thumbnails = append(p.Thumbnails, Thumb{Hash:thash, Size:dim})
 		}
 
 		tx, err = DB.Begin()
@@ -193,8 +231,8 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			return txError(tx, err)
 		}
 
-		if p.Thumb != "NT" {
-			f := ipfsCat(p.Thumb)
+		if p.Mime.Type == "image" {
+			f := ipfsCat(p.Hash)
 			u := dHash(f)
 			f.Close()
 
@@ -277,17 +315,25 @@ func (p *Post) Save(q querier, user *User) error {
 		}
 	}
 
-	if p.Hash == "" || p.Thumb == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
-		return fmt.Errorf("post missing argument. Want Hash, Thumb and Mime.ID, Have: %s, %s, %d, %d", p.Hash, p.Thumb, p.Mime.ID, user.ID)
+	if p.Hash == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
+		return fmt.Errorf("post missing argument. Want Hash and Mime.ID, Have: %s, %d, %d", p.Hash, p.Mime.ID, user.ID)
 	}
 
-	_, err := q.Exec("INSERT INTO posts(multihash, thumbhash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Thumb, p.Mime.QID(q), user.QID(q))
+	_, err := q.Exec("INSERT INTO posts(multihash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Mime.QID(q), user.QID(q))
 	if err != nil {
 		log.Print(err)
-	} else {
-		totalPosts = 0
+		return err
 	}
-	return err
+	for _, t := range p.Thumbnails{
+		_, err = q.Exec("INSERT INTO thumbnails (post_id, dimension, multihash) VALUES($1, $2, $3)", p.ID, t.Size, t.Hash)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+	}
+	totalPosts = 0
+
+	return nil
 }
 
 func (p *Post) Delete(q querier) error {
@@ -942,7 +988,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -988,7 +1034,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -1012,7 +1058,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1023,7 +1069,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	var tmpPosts []*Post
 	for rows.Next() {
 		post := NewPost()
-		err := rows.Scan(&post.ID, &post.Hash, &post.Thumb, &post.Mime.ID)
+		err := rows.Scan(&post.ID, &post.Hash, &post.Mime.ID)
 
 		if err != nil {
 			return err

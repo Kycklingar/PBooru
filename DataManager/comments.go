@@ -80,10 +80,10 @@ func compileBBCode(q querier, text, daemon string) string {
 		a := bbcode.NewHTMLTag("")
 		a.Name = "a"
 		a.Attrs["href"] = fmt.Sprintf("/post/%d/%s", post.QID(q), post.QHash(q))
-
+		post.QThumbnails(q)
 		img := bbcode.NewHTMLTag("")
 		img.Name = "img"
-		img.Attrs["src"] = daemon + "/ipfs/" + post.QThumb(q)
+		img.Attrs["src"] = daemon + "/ipfs/" + post.ClosestThumbnail(250)
 		img.Attrs["style"] = "max-width:250px; max-height:250px;"
 
 		a.AppendChild(img)

@@ -240,7 +240,7 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on file:", hash)
-			if err = mfsCP(mfsFilesDir, hash, false); err != nil {
+			if err = mfsCP(CFG.MFSRootDir + "files/", hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -253,13 +253,29 @@ func MigrateMfs() {
 
 	offset = 0
 
+	tquery := func(str string, offset int)([]Thumb, error){
+		rows, err := DB.Query(str, offset*20000)
+		if err != nil{
+			return nil, err
+		}
+		defer rows.Close()
+		var thumbs []Thumb
+		for rows.Next(){
+			var t Thumb
+			rows.Scan(&t.Hash, &t.Size)
+			thumbs = append(thumbs, t)
+		}
+		return thumbs, rows.Err()
+	}
+
 	for {
-		if hashes, err = query("SELECT thumbhash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+		var thumbs []Thumb
+		if thumbs, err = tquery("SELECT multihash, dimension FROM thumbnails ORDER BY post_id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(thumbs) <= 0 {
 			break
 		}
-		for _, hash := range hashes {
-			fmt.Println("Working on thumbnail:", hash)
-			if err = mfsCP(mfsThumbsDir+"1024/", hash, false); err != nil {
+		for _, thumb := range thumbs{
+			fmt.Println("Working on thumbnail:", thumb)
+			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/",thumb.Size, "/"), thumb.Hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -276,11 +292,13 @@ type Config struct {
 	//Database string
 	ConnectionString string
 	MFSRootDir       string
+	ThumbnailSizes []int
 }
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
 	c.MFSRootDir = "/pbooru/"
+	c.ThumbnailSizes = append(c.ThumbnailSizes, 1024)
 }
 
 var CFG *Config

@@ -16,9 +16,8 @@ import (
 	"github.com/nfnt/resize"
 )
 
-const thumbnailSize = 1024
 
-func makeThumbnail(file io.Reader, mime string) (string, error) {
+func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
 
 	if !strings.Contains(mime, "image") {
 		return "NT", nil
