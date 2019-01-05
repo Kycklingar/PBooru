@@ -240,7 +240,11 @@ func MigrateMfs() {
 		}
 		for _, hash := range hashes {
 			fmt.Println("Working on file:", hash)
+<<<<<<< HEAD
 			if err = mfsCP(CFG.MFSRootDir+"files/", hash, false); err != nil {
+=======
+			if err = mfsCP(CFG.MFSRootDir + "files/", hash, false); err != nil {
+>>>>>>> 302331641f1fa8f61affb0e82e5e420e63f61cb1
 				log.Fatal(err)
 			}
 		}
@@ -273,9 +277,15 @@ func MigrateMfs() {
 		if thumbs, err = tquery("SELECT multihash, dimension FROM thumbnails ORDER BY post_id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(thumbs) <= 0 {
 			break
 		}
+<<<<<<< HEAD
 		for _, thumb := range thumbs {
 			fmt.Println("Working on thumbnail:", thumb)
 			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), thumb.Hash, false); err != nil {
+=======
+		for _, hash := range hashes {
+			fmt.Println("Working on thumbnail:", hash)
+			if err = mfsCP(CFG.MFSRootDir+"thumbnails/1024/", hash, false); err != nil {
+>>>>>>> 302331641f1fa8f61affb0e82e5e420e63f61cb1
 				log.Fatal(err)
 			}
 		}
