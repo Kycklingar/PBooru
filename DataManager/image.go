@@ -16,7 +16,6 @@ import (
 	"github.com/nfnt/resize"
 )
 
-
 func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
 
 	if !strings.Contains(mime, "image") {

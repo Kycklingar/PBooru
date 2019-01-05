@@ -1,5 +1,5 @@
 CREATE TABLE thumbnails(
-	post_id INTEGER NOT NULL REFERENCES post(id),
+	post_id INTEGER NOT NULL REFERENCES posts(id),
 	dimension INTEGER NOT NULL,
 	multihash CHAR(49) NOT NULL,
 	PRIMARY KEY (post_id, dimension)

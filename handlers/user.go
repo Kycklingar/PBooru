@@ -17,12 +17,13 @@ type User struct {
 }
 
 type UserInfo struct {
-	IpfsDaemon     string
-	Limit          int
-	ImageSize      int
-	SessionToken   string
-	ThumbHover     bool
-	ThumbHoverFull bool
+	IpfsDaemon       string
+	Limit            int
+	ImageSize        int
+	MinThumbnailSize int
+	SessionToken     string
+	ThumbHover       bool
+	ThumbHoverFull   bool
 }
 
 func tUser(u *DM.User) User {
@@ -186,6 +187,19 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 			val = 1024
 		}
 		user.ImageSize = val
+		updateCookie(w, cookie)
+	}
+
+	cookie, err = r.Cookie("MinThumbnailSize")
+	if err != nil {
+		setC(w, "MinThumbnailSize", strconv.Itoa(defaultMinThumbnailSize))
+		user.MinThumbnailSize = defaultMinThumbnailSize
+	} else {
+		val, err := strconv.Atoi(cookie.Value)
+		if err != nil {
+			val = defaultMinThumbnailSize
+		}
+		user.MinThumbnailSize = val
 		updateCookie(w, cookie)
 	}
 

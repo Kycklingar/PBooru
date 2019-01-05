@@ -25,11 +25,10 @@ func NewPost() *Post {
 	return &p
 }
 
-type Thumb struct{
+type Thumb struct {
 	Hash string
 	Size int
 }
-
 
 type Post struct {
 	ID         int
@@ -93,7 +92,7 @@ func (p *Post) QHash(q querier) string {
 }
 
 func (p *Post) QThumbnails(q querier) error {
-	if len(p.Thumbnails) > 0{
+	if len(p.Thumbnails) > 0 {
 		return nil
 	}
 	if p.QID(q) == 0 {
@@ -115,17 +114,19 @@ func (p *Post) QThumbnails(q querier) error {
 		p.Thumbnails = append(p.Thumbnails, t)
 	}
 
-	p.Thumbnails = append(p.Thumbnails, Thumb{Hash:"", Size:0})
+	p.Thumbnails = append(p.Thumbnails, Thumb{Hash: "", Size: 0})
 	return rows.Err()
 }
 
 func (p *Post) ClosestThumbnail(size int) (ret string) {
+	p.QThumbnails(DB)
 	if len(p.Thumbnails) <= 0 {
 		return ""
 	}
 	var s int
 	for _, k := range p.Thumbnails {
 		if k.Size > s {
+			ret = k.Hash
 			s = k.Size
 		}
 	}
@@ -196,12 +197,13 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 	if p.QID(DB) == 0 {
 
-		for _, dim := range CFG.ThumbnailSizes{
+		for _, dim := range CFG.ThumbnailSizes {
+			file.Seek(0, 0)
 			thash, err := makeThumbnail(file, mime, dim)
 			if err != nil {
 				return err
 			}
-			p.Thumbnails = append(p.Thumbnails, Thumb{Hash:thash, Size:dim})
+			p.Thumbnails = append(p.Thumbnails, Thumb{Hash: thash, Size: dim})
 		}
 
 		tx, err = DB.Begin()
@@ -319,15 +321,16 @@ func (p *Post) Save(q querier, user *User) error {
 		return fmt.Errorf("post missing argument. Want Hash and Mime.ID, Have: %s, %d, %d", p.Hash, p.Mime.ID, user.ID)
 	}
 
-	_, err := q.Exec("INSERT INTO posts(multihash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Mime.QID(q), user.QID(q))
+	err := q.QueryRow("INSERT INTO posts(multihash, mime_id, uploader) VALUES($1, $2, $3) RETURNING id", p.Hash, p.Mime.QID(q), user.QID(q)).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
 	}
-	for _, t := range p.Thumbnails{
+	for _, t := range p.Thumbnails {
 		_, err = q.Exec("INSERT INTO thumbnails (post_id, dimension, multihash) VALUES($1, $2, $3)", p.ID, t.Size, t.Hash)
 		if err != nil {
 			log.Println(err)
+			log.Println(p)
 			return err
 		}
 	}

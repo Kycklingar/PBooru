@@ -51,11 +51,12 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 // TODO: Put in config file
 const (
-	defaultPostsPerPage = 24
-	defaultImageSize    = 250
-	pageCount           = 30
-	maxTagsPerPage      = 50
-	performBenchmarks   = false
+	defaultPostsPerPage     = 24
+	defaultImageSize        = 250
+	defaultMinThumbnailSize = 250
+	pageCount               = 30
+	maxTagsPerPage          = 50
+	performBenchmarks       = false
 )
 
 var allowedFiletypes = []string{

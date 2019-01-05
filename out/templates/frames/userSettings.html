@@ -7,6 +7,8 @@
         <input type="text" name="limit" value="{{if .Limit}}{{.Limit}}{{end}}">
         <p>Thumbnail Size</p>
         <input type="text" name="ImageSize" value="{{if .ImageSize}}{{.ImageSize}}{{end}}">
+	<p>Minimum Thumbnail Image Size</p>
+	<input type="text" name="MinThumbnailSize" value="{{with .MinThumbnailSize}}{{.}}{{end}}">
         <br>
         <br>
         <label for="thumbhover">Thumbnail Preview Hover</label>

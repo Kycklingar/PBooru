@@ -117,7 +117,7 @@
         {{range .Dups.Posts}}
             <a href="/post/{{.ID}}/{{.Hash}}">
                 <div class="comic-thumb">
-                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}">
+                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
                 </div>
             </a>
         {{end}}
@@ -138,7 +138,7 @@
                     {{range .PostsLimit 5}}
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
                             <div class="comic-thumb" {{if eq .Post.ID $.Post.ID}}style="border-style:solid;border-color:yellow;"{{end}}>
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
                             </div>
                         </a>
                     {{end}}

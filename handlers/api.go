@@ -20,12 +20,12 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 type APIv1Post struct {
-	ID        int
-	Hash      string
+	ID          int
+	Hash        string
 	ThumbHashes []DM.Thumb
-	Mime      string
-	Deleted   bool
-	Tags      []APIv1Tag
+	Mime        string
+	Deleted     bool
+	Tags        []APIv1Tag
 }
 
 type APIv1Tag struct {
@@ -134,12 +134,11 @@ func DMToAPIPost(p *DM.Post) (APIv1Post, error) {
 		return AP, err
 	}
 	p.QThumbnails(DM.DB)
-	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB),ThumbHashes:p.Thumbnails, Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
+	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB), ThumbHashes: p.Thumbnails, Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
 
 	for _, tag := range tc.Tags {
 		AP.Tags = append(AP.Tags, APIv1Tag{tag.QTag(DM.DB), tag.QNamespace(DM.DB).QNamespace(DM.DB)})
 	}
-
 
 	return AP, nil
 }

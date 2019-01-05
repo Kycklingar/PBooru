@@ -80,7 +80,7 @@ func (c *config) openConfigFile(filePath string, mode int) (*os.File, error) {
 }
 
 func (c *config) saveConfigFile(filePath string) error {
-	file, err := c.openConfigFile(filePath, os.O_TRUNC | os.O_RDWR)
+	file, err := c.openConfigFile(filePath, os.O_TRUNC|os.O_RDWR)
 	if err != nil {
 		log.Println(err)
 		return err

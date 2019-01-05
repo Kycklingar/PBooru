@@ -19,11 +19,11 @@
             <h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
             <div class="cpage-container">
                 {{range .PostsLimit 5}}
-                    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                        <div class="comic-thumb">
-                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
-                        </div>
-                    </a>
+			<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+			    <div class="comic-thumb">
+			        <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
+			    </div>
+			</a>
                 {{end}}
             </div>
             {{end}}
