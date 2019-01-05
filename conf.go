@@ -46,7 +46,7 @@ func exeConf(filePath string) config {
 }
 
 func (c *config) loadConfigFile(filePath string) error {
-	file, err := c.openConfigFile(filePath)
+	file, err := c.openConfigFile(filePath, os.o_RDWR)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -63,8 +63,8 @@ func (c *config) loadConfigFile(filePath string) error {
 	return err
 }
 
-func (c *config) openConfigFile(filePath string) (*os.File, error) {
-	file, err := os.OpenFile(filePath, os.O_RDWR, 0600)
+func (c *config) openConfigFile(filePath string, mode int) (*os.File, error) {
+	file, err := os.OpenFile(filePath, mode, 0600)
 	if err != nil {
 		// If the file doesn't exist. Create it
 		if !os.IsNotExist(err) {
@@ -80,7 +80,7 @@ func (c *config) openConfigFile(filePath string) (*os.File, error) {
 }
 
 func (c *config) saveConfigFile(filePath string) error {
-	file, err := c.openConfigFile(filePath)
+	file, err := c.openConfigFile(filePath, os.O_TRUNC | os.O_RDWR)
 	if err != nil {
 		log.Println(err)
 		return err
