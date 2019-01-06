@@ -19,7 +19,7 @@ import (
 func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
 
 	if !strings.Contains(mime, "image") {
-		return "NT", nil
+		return "", nil
 	}
 
 	img, _, err := image.Decode(file)

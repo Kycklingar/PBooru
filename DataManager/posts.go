@@ -203,6 +203,9 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			if err != nil {
 				return err
 			}
+			if thash == "" {
+				continue
+			}
 			p.Thumbnails = append(p.Thumbnails, Thumb{Hash: thash, Size: dim})
 		}
 

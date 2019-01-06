@@ -50,18 +50,23 @@
             </style>
             {{ if .Posts }}
                 {{ range .Posts }}
-                <a href="/post/{{.ID}}/{{.Hash}}">
-                    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
-			{{$ct := .ClosestThumbnail 500}}
-                        {{if eq $ct ""}}
-                        <div class="mimetype centered {{if .Deleted}}deleted{{end}}">
-                            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
-                        </div>
-                        {{else}}
-                        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
-                        {{end}}
-                    </div>
-                </a>
+	    		{{$ct := 0}}
+	    		{{if le $.User.MinThumbnailSize 0}}
+				{{$ct = .ClosestThumbnail $.User.ImageSize}}
+			{{else}}
+				{{$ct = .ClosestThumbnail $.User.MinThumbnailSize}}
+			{{end}}
+                	<a href="/post/{{.ID}}/{{.Hash}}">
+                	    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
+                	        {{if eq $ct ""}}
+                	        <div class="mimetype centered {{if .Deleted}}deleted{{end}}">
+                	            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
+                	        </div>
+                	        {{else}}
+                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+                	        {{end}}
+                	    </div>
+                	</a>
                 {{ end }}
             {{else}}
                 <h1>No posts available</h1>

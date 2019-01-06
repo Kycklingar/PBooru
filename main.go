@@ -48,6 +48,7 @@ func main() {
 	migrateMfs := flag.Bool("migrate-mfs", false, "Migrate all files and thumbnails to the mfs.")
 	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
 	configFilePath := flag.String("cfg", "config.cfg", "Load config file.")
+	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
 	flag.Parse()
 
 	log.SetFlags(log.Llongfile)
@@ -66,6 +67,11 @@ func main() {
 
 	if *migrateMfs {
 		DM.MigrateMfs()
+		return
+	}
+
+	if *generateThumbnails > 0 {
+		DM.GenerateThumbnails(*generateThumbnails)
 		return
 	}
 

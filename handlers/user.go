@@ -183,8 +183,8 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 		}
 		if val < 1 {
 			val = 1
-		} else if val > 1024 {
-			val = 1024
+		} else if val > largestThumbnailSize() {
+			val = largestThumbnailSize()
 		}
 		user.ImageSize = val
 		updateCookie(w, cookie)
@@ -198,6 +198,9 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 		val, err := strconv.Atoi(cookie.Value)
 		if err != nil {
 			val = defaultMinThumbnailSize
+		}
+		if val < 0 {
+			val = 0
 		}
 		user.MinThumbnailSize = val
 		updateCookie(w, cookie)
