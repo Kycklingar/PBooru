@@ -78,7 +78,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 			p.QID(DM.DB)
 			p.Post.QID(DM.DB)
 			p.Post.QHash(DM.DB)
-			p.Post.QThumb(DM.DB)
+			p.Post.QThumbnails(DM.DB)
 		}
 	}
 
@@ -154,7 +154,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 			cp.QID(DM.DB)
 			cp.QOrder(DM.DB)
 			cp.Post.QHash(DM.DB)
-			cp.Post.QThumb(DM.DB)
+			cp.Post.QThumbnails(DM.DB)
 			cp.Post.QID(DM.DB)
 		}
 
@@ -172,7 +172,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 				cp.QID(DM.DB)
 				cp.QOrder(DM.DB)
 				cp.Post.QHash(DM.DB)
-				cp.Post.QThumb(DM.DB)
+				cp.Post.QThumbnails(DM.DB)
 				cp.Post.QID(DM.DB)
 			}
 		}

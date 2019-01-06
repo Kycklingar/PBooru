@@ -51,12 +51,28 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 // TODO: Put in config file
 const (
-	defaultPostsPerPage = 24
-	defaultImageSize    = 250
-	pageCount           = 30
-	maxTagsPerPage      = 50
-	performBenchmarks   = false
+	defaultPostsPerPage     = 24
+	defaultImageSize        = 250
+	defaultMinThumbnailSize = 0
+	pageCount               = 30
+	maxTagsPerPage          = 50
+	performBenchmarks       = false
 )
+
+var (
+	lts = 0
+)
+
+func largestThumbnailSize() int {
+	if lts <= 0 {
+		for _, s := range DM.CFG.ThumbnailSizes {
+			if s > lts {
+				lts = s
+			}
+		}
+	}
+	return lts
+}
 
 var allowedFiletypes = []string{
 	"image/png",
@@ -138,6 +154,7 @@ func OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	setC(w, "daemon", r.FormValue("daemon"))
 	setC(w, "limit", r.FormValue("limit"))
 	setC(w, "ImageSize", r.FormValue("ImageSize"))
+	setC(w, "MinThumbnailSize", r.FormValue("MinThumbnailSize"))
 
 	th := r.FormValue("thumbhover")
 	if th == "on" {
