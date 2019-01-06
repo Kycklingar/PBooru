@@ -754,11 +754,11 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func CachedPostCollector(pc *PostCollector){
+func CachedPostCollector(pc *PostCollector) {
 	c := C.Cache.Get("PC", pc.idStr())
-	if c != nil{
+	if c != nil {
 		*pc = *c.(*PostCollector)
-	}else{
+	} else {
 		C.Cache.Set("PC", pc.idStr(), pc)
 	}
 }
@@ -871,21 +871,21 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-//		tmp, ok := t.(*PostCollector)
-//		if ok {
-//			*pc = *tmp
-//			// pc.posts = tmp.posts
-//			// pc.id = tmp.ID
-//			// pc.TotalPosts = tmp.TotalPosts
-//			// pc.tags = tmp.tags
-//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-//			// 	return nil
-//			// }
-//		}
-//	} else {
-//		C.Cache.Set("PC", pc.idStr(), pc)
-//	}
+	//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+	//		tmp, ok := t.(*PostCollector)
+	//		if ok {
+	//			*pc = *tmp
+	//			// pc.posts = tmp.posts
+	//			// pc.id = tmp.ID
+	//			// pc.TotalPosts = tmp.TotalPosts
+	//			// pc.tags = tmp.tags
+	//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+	//			// 	return nil
+	//			// }
+	//		}
+	//	} else {
+	//		C.Cache.Set("PC", pc.idStr(), pc)
+	//	}
 
 	return pc.search(10, 0)
 }
@@ -917,7 +917,7 @@ func (pc *PostCollector) idStr() string {
 	return str
 }
 
-func (pc *PostCollector) Search(limit, offset int)[]*Post{
+func (pc *PostCollector) Search(limit, offset int) []*Post {
 	pc.search(limit, offset)
 	return pc.GetW(limit, offset)
 }
