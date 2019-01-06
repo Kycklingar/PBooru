@@ -163,18 +163,20 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagStr, filterStr, unlessStr, order, 30, 30*offset)
+	err = pc.Get(tagStr, filterStr, unlessStr, order)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 
+	DM.CachedPostCollector(pc)
+
 	var AP APIv1Posts
 
 	AP.TotalPosts = pc.TotalPosts
 
-	for _, post := range pc.GetW(30, 30*offset) {
+	for _, post := range pc.Search(30, 30*offset) {
 		APp, err := DMToAPIPost(post)
 		if err != nil {
 			log.Print(err)
