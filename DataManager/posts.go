@@ -754,7 +754,16 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, limit, offset int) error {
+func CachedPostCollector(pc *PostCollector){
+	c := C.Cache.Get("PC", pc.idStr())
+	if c != nil{
+		*pc = *c.(*PostCollector)
+	}else{
+		C.Cache.Set("PC", pc.idStr(), pc)
+	}
+}
+
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
 	//var tagIDs []int
 
 	in := func(i int, arr []int) bool {
@@ -862,23 +871,23 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-		tmp, ok := t.(*PostCollector)
-		if ok {
-			*pc = *tmp
-			// pc.posts = tmp.posts
-			// pc.id = tmp.ID
-			// pc.TotalPosts = tmp.TotalPosts
-			// pc.tags = tmp.tags
-			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-			// 	return nil
-			// }
-		}
-	} else {
-		C.Cache.Set("PC", pc.idStr(), pc)
-	}
+//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+//		tmp, ok := t.(*PostCollector)
+//		if ok {
+//			*pc = *tmp
+//			// pc.posts = tmp.posts
+//			// pc.id = tmp.ID
+//			// pc.TotalPosts = tmp.TotalPosts
+//			// pc.tags = tmp.tags
+//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+//			// 	return nil
+//			// }
+//		}
+//	} else {
+//		C.Cache.Set("PC", pc.idStr(), pc)
+//	}
 
-	return pc.search(limit, offset)
+	return pc.search(10, 0)
 }
 
 func (pc *PostCollector) idStr() string {
@@ -906,6 +915,11 @@ func (pc *PostCollector) idStr() string {
 	str = strings.TrimSpace(str)
 	// fmt.Println("PCSTR", str)
 	return str
+}
+
+func (pc *PostCollector) Search(limit, offset int)[]*Post{
+	pc.search(limit, offset)
+	return pc.GetW(limit, offset)
 }
 
 func (pc *PostCollector) search(ulimit, uoffset int) error {
@@ -945,10 +959,6 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return nil
 	}
 
-	//fmt.Println("Cache not accessed")
-
-	//pc.id = idStr
-	//fmt.Println(idStr)
 	if len(pc.id) > 0 {
 		var innerStr string
 		var endStr = "WHERE "
@@ -1181,7 +1191,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	// }
 	// tx = nil
 
-	C.Cache.Set("PC", pc.idStr(), pc)
+	//C.Cache.Set("PC", pc.idStr(), pc)
 
 	return pc.tags
 }
