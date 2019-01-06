@@ -289,18 +289,14 @@ func MigrateMfs() {
 }
 
 func GenerateThumbnails(size int) {
-	var tx, err = DB.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	type P struct {
 		id   int
 		hash string
 	}
-	query := func() []P {
+	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.mime_id IN(SELECT id FROM mime_type WHERE type = 'image') LIMIT 20000", size)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.mime_id IN(SELECT id FROM mime_type WHERE type = 'image') ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
@@ -321,24 +317,37 @@ func GenerateThumbnails(size int) {
 		return hashes
 	}
 
+	var failed int
 	for {
-		hashes := query()
+		var tx, err = DB.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		hashes := query(tx, failed)
+
 		if len(hashes) <= 0 {
 			break
 		}
 
 		for _, hash := range hashes {
+			fmt.Println("Working on post: ", hash.id, hash.hash)
 			file := ipfsCat(hash.hash)
 			thash, err := makeThumbnail(file, "image", size)
+			file.Close()
 			if err != nil {
 				log.Println(err, hash)
+				failed++
 				continue
 			} else if thash == "" {
+				log.Println("makeThumbnail did not produce a hash", hash)
+				failed++
 				continue
 			}
-			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
+			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, false)
 			if err != nil {
 				log.Println(err, thash)
+				failed++
 				continue
 			}
 			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", hash.id, size, thash)
@@ -347,8 +356,9 @@ func GenerateThumbnails(size int) {
 				log.Fatal(err)
 			}
 		}
+		mfsFlush(CFG.MFSRootDir)
+		tx.Commit()
 	}
-	tx.Commit()
 }
 
 type Config struct {
