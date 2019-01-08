@@ -27,7 +27,6 @@ func NewComment() *Comment {
 	return &Comment{User: NewUser()}
 }
 
-
 // Get the latest comments
 func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 	rows, err := q.Query("SELECT id, user_id, text, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM comment_wall ORDER BY id DESC LIMIT $1", count)

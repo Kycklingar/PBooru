@@ -13,12 +13,21 @@ import (
 )
 
 type Config struct {
+	AllowedMimes  []string
 	IPFSDaemonMap map[string]string
 }
 
 func (c *Config) Default() {
 	if c.IPFSDaemonMap == nil {
 		c.IPFSDaemonMap = make(map[string]string)
+	}
+
+	c.AllowedMimes = []string{
+		"image/png",
+		"image/jpeg",
+		"image/gif",
+		"video/webm",
+		"video/mp4",
 	}
 
 	c.IPFSDaemonMap["default"] = "http://localhost:8080"

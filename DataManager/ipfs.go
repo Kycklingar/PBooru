@@ -160,8 +160,8 @@ func mfsExists(dir string) error {
 	v := make(map[string]interface{})
 	json.Unmarshal(b.Bytes(), &v)
 
-	if v["Type"] == "error"{
-		return errors.New(fmt.Sprint("Path doesn't exist"))//"File doesn't match hash:", v["Hash"], hash))
+	if v["Type"] == "error" {
+		return errors.New(fmt.Sprint("Path doesn't exist")) //"File doesn't match hash:", v["Hash"], hash))
 	}
 	return nil
 }

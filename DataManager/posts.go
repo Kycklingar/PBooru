@@ -33,7 +33,7 @@ type Thumb struct {
 type Post struct {
 	ID         int
 	Hash       string
-	Thumbnails []Thumb
+	thumbnails []Thumb
 	Mime       *Mime
 	Deleted    int
 }
@@ -92,7 +92,7 @@ func (p *Post) QHash(q querier) string {
 }
 
 func (p *Post) QThumbnails(q querier) error {
-	if len(p.Thumbnails) > 0 {
+	if len(p.thumbnails) > 0 {
 		return nil
 	}
 	if p.QID(q) == 0 {
@@ -111,26 +111,36 @@ func (p *Post) QThumbnails(q querier) error {
 			log.Println(err)
 			return err
 		}
-		p.Thumbnails = append(p.Thumbnails, t)
+		p.thumbnails = append(p.thumbnails, t)
 	}
 
-	p.Thumbnails = append(p.Thumbnails, Thumb{Hash: "", Size: 0})
+	p.thumbnails = append(p.thumbnails, Thumb{Hash: "", Size: 0})
 	return rows.Err()
+}
+
+func (p *Post) Thumbnails() []Thumb {
+	var thumbs []Thumb
+	for _, t := range p.thumbnails {
+		if t.Size > 0 {
+			thumbs = append(thumbs, t)
+		}
+	}
+	return thumbs
 }
 
 func (p *Post) ClosestThumbnail(size int) (ret string) {
 	p.QThumbnails(DB)
-	if len(p.Thumbnails) <= 0 {
+	if len(p.thumbnails) <= 0 {
 		return ""
 	}
 	var s int
-	for _, k := range p.Thumbnails {
+	for _, k := range p.thumbnails {
 		if k.Size > s {
 			ret = k.Hash
 			s = k.Size
 		}
 	}
-	for _, k := range p.Thumbnails {
+	for _, k := range p.thumbnails {
 		if k.Size < size {
 			continue
 		}
@@ -206,7 +216,7 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			if thash == "" {
 				continue
 			}
-			p.Thumbnails = append(p.Thumbnails, Thumb{Hash: thash, Size: dim})
+			p.thumbnails = append(p.thumbnails, Thumb{Hash: thash, Size: dim})
 		}
 
 		tx, err = DB.Begin()
@@ -329,7 +339,7 @@ func (p *Post) Save(q querier, user *User) error {
 		log.Print(err)
 		return err
 	}
-	for _, t := range p.Thumbnails {
+	for _, t := range p.Thumbnails() {
 		_, err = q.Exec("INSERT INTO thumbnails (post_id, dimension, multihash) VALUES($1, $2, $3)", p.ID, t.Size, t.Hash)
 		if err != nil {
 			log.Println(err)
@@ -754,11 +764,11 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func CachedPostCollector(pc *PostCollector){
+func CachedPostCollector(pc *PostCollector) {
 	c := C.Cache.Get("PC", pc.idStr())
-	if c != nil{
+	if c != nil {
 		*pc = *c.(*PostCollector)
-	}else{
+	} else {
 		C.Cache.Set("PC", pc.idStr(), pc)
 	}
 }
@@ -871,21 +881,21 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-//		tmp, ok := t.(*PostCollector)
-//		if ok {
-//			*pc = *tmp
-//			// pc.posts = tmp.posts
-//			// pc.id = tmp.ID
-//			// pc.TotalPosts = tmp.TotalPosts
-//			// pc.tags = tmp.tags
-//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-//			// 	return nil
-//			// }
-//		}
-//	} else {
-//		C.Cache.Set("PC", pc.idStr(), pc)
-//	}
+	//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+	//		tmp, ok := t.(*PostCollector)
+	//		if ok {
+	//			*pc = *tmp
+	//			// pc.posts = tmp.posts
+	//			// pc.id = tmp.ID
+	//			// pc.TotalPosts = tmp.TotalPosts
+	//			// pc.tags = tmp.tags
+	//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+	//			// 	return nil
+	//			// }
+	//		}
+	//	} else {
+	//		C.Cache.Set("PC", pc.idStr(), pc)
+	//	}
 
 	return pc.search(10, 0)
 }
@@ -917,7 +927,7 @@ func (pc *PostCollector) idStr() string {
 	return str
 }
 
-func (pc *PostCollector) Search(limit, offset int)[]*Post{
+func (pc *PostCollector) Search(limit, offset int) []*Post {
 	pc.search(limit, offset)
 	return pc.GetW(limit, offset)
 }
