@@ -10,7 +10,7 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	h "github.com/kycklingar/PBooru/handlers"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 var gConf config

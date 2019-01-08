@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/Nr90/imgsim"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
@@ -23,6 +23,7 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 	b.ReadFrom(file)
 
 	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
 	var err error
 
 	if err = mw.ReadImageBlob(b.Bytes()); err != nil {
@@ -30,21 +31,58 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		return "", err
 	}
 
-	if err = mw.SetImageCompressionQuality(85); err != nil {
-		log.Println(err)
-		return "", err
-	}
+	if mw.GetNumberImages() > 1 {
+		if err = mw.StripImage(); err != nil{
+			log.Println(err)
+			return "", err
+		}
+		nmw := mw.CoalesceImages()
+		mw.Destroy()
+		mw = nmw
+		//	nmw := imagick.NewMagickWand()
 
-	if err = mw.SetImageCompression(imagick.COMPRESSION_LZW); err != nil {
-		log.Println(err)
-		return "", err
-	}
+		//	const tfr = 3
+		//	fmt.Println(mw.GetNumberImages())
+		//	for i := 0; i < tfr && int(mw.GetNumberImages()) > i; i++ {
+		//		fmt.Println(int(mw.GetNumberImages()-1) / (tfr - 1) * i)
+		//		mw.SetIteratorIndex(int(mw.GetNumberImages()-1) / (tfr - 1) * i)
 
-	if err = mw.SetImageFormat("JPEG"); err != nil {
-		log.Println(err)
-		return "", err
-	}
+		//		iw := mw.GetImageWidth()
+		//		ih := mw.GetImageHeight()
 
+		//		var width = uint(thumbnailSize)
+		//		var height = uint(thumbnailSize)
+
+		//		if iw > ih {
+		//			width = uint(thumbnailSize)
+		//			height = uint(float32(ih) / float32(iw) * float32(thumbnailSize))
+		//		} else if iw < ih {
+		//			height = uint(thumbnailSize)
+		//			width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
+		//		}
+
+		//		if err = mw.ResizeImage(width, height, imagick.FILTER_LANCZOS2, 1); err != nil {
+		//			log.Println(err, width, height, iw, ih)
+		//			return "", err
+		//		}
+
+		//		mw.SetImageDelay(uint(100))
+
+		//		nmw.AddImage(mw.GetImage())
+		//	}
+
+		//	mw = nmw
+
+		//	mw = mw.OptimizeImageLayers()
+		//	mw.OptimizeImageTransparency()
+		//	fmt.Println(mw.GetNumberImages())
+
+		//	if err = mw.SetImageFormat("GIF"); err != nil {
+		//		log.Println(err)
+		//		return "", err
+		//	}
+		//} else {
+	}
 	iw := mw.GetImageWidth()
 	ih := mw.GetImageHeight()
 	var width = uint(thumbnailSize)
@@ -57,8 +95,24 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
 	}
 
-	if err = mw.ResizeImage(width, height, imagick.FILTER_LANCZOS2, 1); err != nil {
+	if err = mw.SetImageFormat("JPEG"); err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	if err = mw.ResizeImage(width, height, imagick.FILTER_LANCZOS2); err != nil {
 		log.Println(err, width, height, iw, ih)
+		return "", err
+	}
+	//}
+
+	if err = mw.SetImageCompressionQuality(85); err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	if err = mw.SetImageCompression(imagick.COMPRESSION_LZW); err != nil {
+		log.Println(err)
 		return "", err
 	}
 
