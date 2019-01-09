@@ -760,6 +760,7 @@ type PostCollector struct {
 	order string
 
 	tagLock sync.Mutex
+	pl sync.RWMutex
 }
 
 var perSlice = 500
@@ -1130,6 +1131,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	//pc.GetW(10, 0)
 
 	// Get tags from all posts
+	pc.pl.RLock()
 	for _, post := range pc.posts[0] {
 		var ptc TagCollector
 		err := ptc.GetFromPost(DB, *post)
@@ -1142,6 +1144,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 		}
 		allTagIds = append(allTagIds, ids)
 	}
+	pc.pl.RUnlock()
 
 	type tagMap struct {
 		id    int
@@ -1249,7 +1252,9 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 
 	if begOff == endOff {
 		//fmt.Println("Single")
+		p.pl.RLock()
 		tmp, ok := p.posts[begOff]
+		p.pl.RUnlock()
 		if !ok {
 			//log.Print("FATAL ERROR")
 			return nil
@@ -1262,11 +1267,15 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		posts = append(posts, tmp[frstOff:max(len(tmp), secOff)]...)
 	} else {
 		//fmt.Println("Double")
+		p.pl.RLock()
 		tmp, ok := p.posts[begOff]
+		p.pl.RUnlock()
 		if !ok {
 			//fmt.Println("Not ok1")
 			p.search(limit, offset-limit)
+			p.pl.RLock()
 			tmp, ok = p.posts[begOff]
+			p.pl.RUnlock()
 			if !ok {
 				//log.Print("Fatal erorr")
 				return nil
@@ -1277,7 +1286,9 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		}
 		posts = append(posts, tmp[max(len(tmp)-1, frstOff):]...)
 
+		p.pl.RLock()
 		tmp, ok = p.posts[endOff]
+		p.pl.RUnlock()
 		if ok {
 			if len(tmp) > 0 {
 				posts = append(posts, tmp[:max(len(tmp), secOff)]...)
@@ -1325,6 +1336,8 @@ func min(x, y int) int {
 }
 
 func (p *PostCollector) set(offset int, posts []*Post) {
+	p.pl.Lock()
+	defer p.pl.Unlock()
 	if p.posts == nil {
 		p.posts = make(map[int][]*Post)
 	}
