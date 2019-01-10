@@ -48,7 +48,6 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
 	}
 
-	fmt.Println(CFG.ThumbnailFormat)
 	if err = mw.SetImageFormat(CFG.ThumbnailFormat); err != nil {
 		log.Println(err)
 		return "", err
