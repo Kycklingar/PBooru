@@ -74,16 +74,8 @@ func largestThumbnailSize() int {
 	return lts
 }
 
-var allowedFiletypes = []string{
-	"image/png",
-	"image/jpeg",
-	"image/gif",
-	"video/webm",
-	"video/mp4",
-}
-
 func allowedContentType(contentType string) bool {
-	for _, cType := range allowedFiletypes {
+	for _, cType := range CFG.AllowedMimes {
 		if cType == contentType {
 			return true
 		}
