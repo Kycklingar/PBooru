@@ -760,7 +760,7 @@ type PostCollector struct {
 	order string
 
 	tagLock sync.Mutex
-	pl sync.RWMutex
+	pl      sync.RWMutex
 }
 
 var perSlice = 500
