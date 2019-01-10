@@ -32,56 +32,9 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 	}
 
 	if mw.GetNumberImages() > 1 {
-		if err = mw.StripImage(); err != nil{
-			log.Println(err)
-			return "", err
-		}
 		nmw := mw.CoalesceImages()
 		mw.Destroy()
 		mw = nmw
-		//	nmw := imagick.NewMagickWand()
-
-		//	const tfr = 3
-		//	fmt.Println(mw.GetNumberImages())
-		//	for i := 0; i < tfr && int(mw.GetNumberImages()) > i; i++ {
-		//		fmt.Println(int(mw.GetNumberImages()-1) / (tfr - 1) * i)
-		//		mw.SetIteratorIndex(int(mw.GetNumberImages()-1) / (tfr - 1) * i)
-
-		//		iw := mw.GetImageWidth()
-		//		ih := mw.GetImageHeight()
-
-		//		var width = uint(thumbnailSize)
-		//		var height = uint(thumbnailSize)
-
-		//		if iw > ih {
-		//			width = uint(thumbnailSize)
-		//			height = uint(float32(ih) / float32(iw) * float32(thumbnailSize))
-		//		} else if iw < ih {
-		//			height = uint(thumbnailSize)
-		//			width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
-		//		}
-
-		//		if err = mw.ResizeImage(width, height, imagick.FILTER_LANCZOS2, 1); err != nil {
-		//			log.Println(err, width, height, iw, ih)
-		//			return "", err
-		//		}
-
-		//		mw.SetImageDelay(uint(100))
-
-		//		nmw.AddImage(mw.GetImage())
-		//	}
-
-		//	mw = nmw
-
-		//	mw = mw.OptimizeImageLayers()
-		//	mw.OptimizeImageTransparency()
-		//	fmt.Println(mw.GetNumberImages())
-
-		//	if err = mw.SetImageFormat("GIF"); err != nil {
-		//		log.Println(err)
-		//		return "", err
-		//	}
-		//} else {
 	}
 	iw := mw.GetImageWidth()
 	ih := mw.GetImageHeight()
