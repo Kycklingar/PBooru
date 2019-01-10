@@ -41,9 +41,9 @@
                 }
                 .thumbnail .mimetype
                 {
-                    {{if lt .User.ImageSize 50}}
-                    font-size:8px;
-                    {{else if lt .User.ImageSize 100}}
+                    {{if le .User.ImageSize 75}}
+                    font-size:9px;
+                    {{else if le .User.ImageSize 175}}
                     font-size:12px;
                     {{end}}
                 }
@@ -59,11 +59,40 @@
                 	<a href="/post/{{.ID}}/{{.Hash}}">
                 	    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
                 	        {{if eq $ct ""}}
-                	        <div class="mimetype centered {{if .Deleted}}deleted{{end}}">
-                	            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
-                	        </div>
+                	        {{if eq .Mime.Name "pdf"}}
+					<div class="mimetype {{if .Deleted}}deleted{{end}}">
+						<div class="sep t-creator">
+						{{range .Tags}}
+							{{if eq .Namespace.Namespace "creator"}}
+							<span>{{.Tag}}</span>
+							{{end}}
+						{{end}}
+						</div>
+						<div class="sep t-title">
+						{{range .Tags}}
+							{{if eq .Namespace.Namespace "title"}}
+							<span>{{.Tag}}</span>
+							{{end}}
+						{{end}}
+						</div>
+						<div class="sep t-tags">
+						{{range .Tags}}
+							{{if eq .Namespace.Namespace "creator" "title"}}
+							{{else}}
+							<span class="sep t-tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
+							{{end}}
+						{{end}}
+						</div>
+						<div class="sep t-mime"><span>{{.Mime.Name}}</span></div>
+					</div>
+				{{else}}
+                	        	<div class="mimetype centered {{if .Deleted}}deleted{{end}}">
+                	        	    <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
+                	        	</div>
+				{{end}}
                 	        {{else}}
-                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+					
+					<img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
                 	        {{end}}
                 	    </div>
                 	</a>

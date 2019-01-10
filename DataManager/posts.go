@@ -189,6 +189,12 @@ func (p *Post) QDeleted(q querier) int {
 	return p.Deleted
 }
 
+func (p *Post) Tags()[]*Tag{
+	tc := TagCollector{}
+	tc.GetPostTags(DB, p)
+	return tc.Tags
+}
+
 func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
 	var err error
 	p.Hash, err = ipfsAdd(file)

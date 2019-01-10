@@ -87,6 +87,7 @@ li
     height:250px;
     word-wrap: break-word;
     /*border: 1px solid red;*/
+    overflow:hidden;
 }
 
 .thumbnail img
@@ -98,6 +99,43 @@ li
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.sep span
+{
+	background-color:grey;
+}
+
+.sep
+{
+	border:1px solid black;
+}
+
+.t-tags
+{
+	padding:8px;
+}
+
+.t-creator
+{
+	position: relative;
+	left:0px;
+	top:0px;
+}
+
+.t-title
+{
+	position:absolute;
+	left:0px;
+	bottom:0px;
+}
+
+.t-mime
+{
+	position:absolute;
+	right:0px;
+	bottom:0px;
+	z-index:10;
 }
 
 .centered
