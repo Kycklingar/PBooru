@@ -48,7 +48,8 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
 	}
 
-	if err = mw.SetImageFormat("JPEG"); err != nil {
+	fmt.Println(CFG.ThumbnailFormat)
+	if err = mw.SetImageFormat(CFG.ThumbnailFormat); err != nil {
 		log.Println(err)
 		return "", err
 	}
@@ -57,14 +58,8 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		log.Println(err, width, height, iw, ih)
 		return "", err
 	}
-	//}
 
 	if err = mw.SetImageCompressionQuality(85); err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	if err = mw.SetImageCompression(imagick.COMPRESSION_LZW); err != nil {
 		log.Println(err)
 		return "", err
 	}
