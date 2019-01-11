@@ -373,7 +373,7 @@ func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
-	c.ThumbnailSizes = append(c.ThumbnailSizes, 1024)
+	c.ThumbnailSizes = []int{1024, 512, 256}
 }
 
 var CFG *Config
