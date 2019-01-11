@@ -40,7 +40,7 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 	ih := mw.GetImageHeight()
 	var width = iw
 	var height = ih
-	if iw >= uint(thumbnailSize) && ih >= uint(thumbnailSize) {
+	if iw >= uint(thumbnailSize) || ih >= uint(thumbnailSize) {
 		if iw > ih {
 			width = uint(thumbnailSize)
 			height = uint(float32(ih) / float32(iw) * float32(thumbnailSize))
