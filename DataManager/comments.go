@@ -57,13 +57,12 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 
 func compileBBCode(q querier, text, daemon string) string {
 	// This is ugly as shit and probably ripe for abuse :)
-	reg, err := regexp.Compile("#([0-9]+)")
+	reg, err := regexp.Compile("#([0-9]+)\\b(\\s+|$)")
 	if err != nil {
 		log.Println(err)
 		return text
 	}
 
-	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref]")
 
 	cmp := bbcode.NewCompiler(true, true)
 	cmp.SetTag("img", nil)
@@ -98,7 +97,7 @@ func compileBBCode(q querier, text, daemon string) string {
 		a.Attrs["href"] = ref
 		return a, true
 	})
-
+	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref] ")
 	return cmp.Compile(out)
 }
 
