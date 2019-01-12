@@ -354,7 +354,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		contentType := http.DetectContentType(buffer)
 		if !allowedContentType(contentType) {
-			http.Error(w, "Filetype not allowed: " + contentType, http.StatusBadRequest)
+			http.Error(w, "Filetype not allowed: "+contentType, http.StatusBadRequest)
 			return
 		}
 
