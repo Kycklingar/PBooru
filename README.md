@@ -4,6 +4,7 @@
 [Golang](https://golang.org)
 [Ipfs](https://ipfs.io)
 [Postgresql](https://postgresql.org)
+[ImageMagick](https://imagemagick.org)
 
 ### Installing
 Go get and build PBooru
