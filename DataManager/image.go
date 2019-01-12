@@ -38,8 +38,8 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 	}
 	iw := mw.GetImageWidth()
 	ih := mw.GetImageHeight()
-	var width = uint(thumbnailSize)
-	var height = uint(thumbnailSize)
+	var width uint
+	var height uint
 	if iw >= uint(thumbnailSize) || ih >= uint(thumbnailSize) {
 		if iw > ih {
 			width = uint(thumbnailSize)
@@ -47,7 +47,17 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 		} else if iw < ih {
 			height = uint(thumbnailSize)
 			width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
+		}else if iw == ih{
+			width = uint(thumbnailSize)
+			height = uint(thumbnailSize)
 		}
+	}else{
+		width = iw
+		height = ih
+	}
+
+	if width == 0 || height == 0{
+		log.Fatal("Dumbdumb was here")
 	}
 
 	if err = mw.SetImageFormat(CFG.ThumbnailFormat); err != nil {
