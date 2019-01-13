@@ -102,6 +102,7 @@ func (p *Post) QThumbnails(q querier) error {
 	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
+		return err
 	}
 	defer rows.Close()
 
@@ -766,7 +767,7 @@ type PostCollector struct {
 	order string
 
 	tagLock sync.Mutex
-	pl sync.RWMutex
+	pl      sync.RWMutex
 }
 
 var perSlice = 500
@@ -1236,8 +1237,14 @@ func resetCacheTag(tagID int) {
 }
 
 func (p *PostCollector) GetW(limit, offset int) []*Post {
+	p.pl.RLock()
 	if p.posts == nil {
+		p.pl.RUnlock()
+		p.pl.Lock()
 		p.posts = make(map[int][]*Post)
+		p.pl.Unlock()
+	}else{
+		p.pl.RUnlock()
 	}
 	if limit <= 0 || offset < 0 {
 		return nil
