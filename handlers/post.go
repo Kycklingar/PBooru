@@ -287,7 +287,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Println(pc.TotalPosts)
 	for _, post := range pc.Search(pageLimit, offset) {
-		post.QDeleted(DM.DB)
 		post.QMime(DM.DB).QName(DM.DB)
 		post.QMime(DM.DB).QType(DM.DB)
 		p.Posts = append(p.Posts, post)
@@ -306,6 +305,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 	for _, t := range p.Sidebar.Tags {
+		DM.CachedTag(t)
 		t.QTag(DM.DB)
 		t.QCount(DM.DB)
 		t.QNamespace(DM.DB).QNamespace(DM.DB)
