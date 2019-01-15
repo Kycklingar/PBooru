@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+	"bytes"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -296,7 +297,7 @@ func GenerateThumbnails(size int) {
 	}
 	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.mime_id IN(SELECT id FROM mime_type WHERE type = 'image') ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.mime_id IN(SELECT id FROM mime_type WHERE type = 'image' OR mime = 'pdf' OR mime = 'zip') ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
@@ -333,7 +334,10 @@ func GenerateThumbnails(size int) {
 		for _, hash := range hashes {
 			fmt.Println("Working on post: ", hash.id, hash.hash)
 			file := ipfsCat(hash.hash)
-			thash, err := makeThumbnail(file, "image", size)
+			var b bytes.Buffer
+			b.ReadFrom(file)
+			f := bytes.NewReader(b.Bytes())
+			thash, err := makeThumbnail(f, size)
 			file.Close()
 			if err != nil {
 				log.Println(err, hash)
