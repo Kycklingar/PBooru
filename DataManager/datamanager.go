@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"math/rand"
 	"strings"
 	"time"
-	"bytes"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"

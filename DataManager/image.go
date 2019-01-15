@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"image/png"
 	"io"
-	"log"
-	"os/exec"
-	"os"
 	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/Nr90/imgsim"
 	"github.com/zRedShift/mimemagic"
@@ -29,21 +30,27 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 
 	mime := mimemagic.MatchMagic(buffer)
 
-	fmt.Println(mime.MediaType())
+	//fmt.Println(mime.MediaType())
 	file.Seek(0, 0)
 
 	var b *bytes.Buffer
 
-	switch mime.MediaType(){
-		case "image/png", "image/jpeg", "image/gif", "image/webp":
-			b, err = magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
-		case "application/pdf", "application/epub+zip":
-			b, err = mupdf(file, CFG.ThumbnailFormat, thumbnailSize)
-		default:
-			return "", nil
+	switch mime.MediaType() {
+	case "image/png", "image/jpeg", "image/gif", "image/webp":
+		b, err = magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
+	case "application/pdf", "application/epub+zip":
+		var m string
+		if strings.Contains(mime.MediaType(), "pdf") {
+			m = "pdf"
+		} else if strings.Contains(mime.MediaType(), "epub") {
+			m = "epub"
+		}
+		b, err = mupdf(file, m, CFG.ThumbnailFormat, thumbnailSize)
+	default:
+		return "", nil
 	}
 
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return "", err
 	}
@@ -91,51 +98,41 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 	return &b, nil
 }
 
-func mupdf(file io.Reader, format string, size int)(*bytes.Buffer, error){
-	tmp, err := ioutil.TempFile("", "pbooru-tmp")
-	if err != nil{
+func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error) {
+	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
+	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
+	defer os.RemoveAll(tmpdir)
 
 	var tmpbuf bytes.Buffer
 	tmpbuf.ReadFrom(file)
 
-	_, err = tmp.Write(tmpbuf.Bytes())
-	if err != nil{
+	err = ioutil.WriteFile(fmt.Sprintf("%s/file.%s", tmpdir, mime), tmpbuf.Bytes(), 0660)
+	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	fmt.Println(tmp.Name())
-
 	args := []string{
-		"-dNOPAUSE",
-		"-q",
-		"-dBATCH",
-		"-r200",
-		"-sDEVICE=png256",
-		"-dLastPage=1",
-		"-sOutputFile=-",
-		tmp.Name(),
+		"draw",
+		"-o",
+		"",
+		"-F",
+		"png",
+		fmt.Sprintf("%s/file.%s", tmpdir, mime),
+		"1",
 	}
 
-	cmd := exec.Command("gs", args...)
-
-	//res, err := cmd.CombinedOutput()
-	//if err != nil{
-	//	log.Println(string(res), err)
-	//	return nil, err
-	//}
+	cmd := exec.Command("mutool", args...)
 
 	var b, er bytes.Buffer
 	cmd.Stdout = &b
 	cmd.Stderr = &er
 
 	err = cmd.Run()
-	if err != nil{
+	if err != nil {
 		log.Println(b.String(), er.String(), err)
 		return nil, err
 	}
