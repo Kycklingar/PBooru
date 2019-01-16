@@ -2,85 +2,30 @@ package DataManager
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"image"
-	_ "image/png"
+	"image/png"
 	"io"
 	"log"
+	"os/exec"
 	"strings"
 
 	"github.com/Nr90/imgsim"
-	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
-
+	var err error
 	if !strings.Contains(mime, "image") {
 		return "", nil
 	}
 
-	var b bytes.Buffer
-	b.ReadFrom(file)
-
-	mw := imagick.NewMagickWand()
-	defer mw.Destroy()
-	var err error
-
-	if err = mw.ReadImageBlob(b.Bytes()); err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	if mw.GetNumberImages() > 1 {
-		nmw := mw.CoalesceImages()
-		mw.Destroy()
-		mw = nmw
-	}
-	iw := mw.GetImageWidth()
-	ih := mw.GetImageHeight()
-	var width uint
-	var height uint
-	if iw >= uint(thumbnailSize) || ih >= uint(thumbnailSize) {
-		if iw > ih {
-			width = uint(thumbnailSize)
-			height = uint(float32(ih) / float32(iw) * float32(thumbnailSize))
-		} else if iw < ih {
-			height = uint(thumbnailSize)
-			width = uint(float32(iw) / float32(ih) * float32(thumbnailSize))
-		}else if iw == ih{
-			width = uint(thumbnailSize)
-			height = uint(thumbnailSize)
-		}
-	}else{
-		width = iw
-		height = ih
-	}
-
-	if width == 0 || height == 0{
-		log.Fatal("Dumbdumb was here")
-	}
-
-	if err = mw.SetImageFormat(CFG.ThumbnailFormat); err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	if err = mw.ResizeImage(width, height, imagick.FILTER_LANCZOS2); err != nil {
-		log.Println(err, width, height, iw, ih)
-		return "", err
-	}
-
-	if err = mw.SetImageCompressionQuality(85); err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	w := bytes.NewReader(mw.GetImageBlob())
+	b, err := magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
-	thumbHash, err := ipfsAdd(w)
+	thumbHash, err := ipfsAdd(b)
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -91,25 +36,44 @@ func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, erro
 	return thumbHash, err
 }
 
-func dHash(file io.Reader) uint64 {
-	mw := imagick.NewMagickWand()
+func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
+	args := []string{
+		"-[0]",
+		"-quality",
+		"75",
+		"-strip",
+		"-resize",
+		fmt.Sprintf("%dx%d\\>", size, size),
+		fmt.Sprintf("%s:-", format),
+	}
+	command := exec.Command("magick", args...)
 
-	var err error
+	command.Stdin = file
+
 	var b bytes.Buffer
-	b.ReadFrom(file)
+	var err error
+	command.Stdout = &b
 
-	if err = mw.ReadImageBlob(b.Bytes()); err != nil {
+	err = command.Run()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if len(b.Bytes()) <= 0 {
+		return nil, errors.New("nolength buffer")
+	}
+
+	return &b, nil
+}
+
+func dHash(file io.Reader) uint64 {
+	b, err := magickResize(file, "png", 1024)
+	if err != nil {
 		log.Println(err)
 		return 0
 	}
-
-	if err = mw.SetImageFormat("PNG"); err != nil {
-		log.Println(err)
-		return 0
-	}
-	f := bytes.NewReader(mw.GetImageBlob())
-
-	img, _, err := image.Decode(f)
+	img, err := png.Decode(b)
 	if err != nil {
 		log.Println(err)
 		return 0

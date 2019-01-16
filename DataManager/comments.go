@@ -63,7 +63,6 @@ func compileBBCode(q querier, text, daemon string) string {
 		return text
 	}
 
-
 	cmp := bbcode.NewCompiler(true, true)
 	cmp.SetTag("img", nil)
 	cmp.SetTag("post", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
