@@ -102,14 +102,15 @@ func ipfsAdd(file io.Reader) (string, error) {
 func mfsCP(dir, mhash string, flush bool) error {
 	directory := dir + mhash[len(mhash)-2:] + "/"
 
-	if mfsExists(directory) == nil {
+	if mfsExists(directory) != nil {
+		if err := mfsMkdir(directory); err != nil {
+			log.Println(err)
+			return err
+		}
+	}else if mfsExists(directory + mhash) == nil{
 		return nil
 	}
 
-	if err := mfsMkdir(directory); err != nil {
-		log.Println(err)
-		return err
-	}
 
 	var fl string
 	if !flush {
