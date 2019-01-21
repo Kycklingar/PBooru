@@ -26,8 +26,6 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 		return "", err
 	}
 
-	//mime := http.DetectContentType(buffer)
-
 	mime := mimemagic.MatchMagic(buffer)
 
 	//fmt.Println(mime.MediaType())
