@@ -899,7 +899,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 	//		C.Cache.Set("PC", pc.idStr(), pc)
 	//	}
 
-	return pc.search(10, 0)
+	return nil//pc.search(10, 0)
 }
 
 func (pc *PostCollector) idStr() string {
