@@ -167,7 +167,7 @@ func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		h.Post.QID(DM.DB)
 		h.Post.QHash(DM.DB)
-		h.Post.QThumb(DM.DB)
+		h.Post.QThumbnails(DM.DB)
 		h.Post.QMime(DM.DB).QName(DM.DB)
 		h.Post.QMime(DM.DB).QType(DM.DB)
 

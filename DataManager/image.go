@@ -2,76 +2,82 @@ package DataManager
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"image"
-	_ "image/gif"
-	"image/jpeg"
-	_ "image/png"
+	"image/png"
 	"io"
 	"log"
+	"os/exec"
 	"strings"
 
 	"github.com/Nr90/imgsim"
-
-	"github.com/nfnt/resize"
 )
 
-const thumbnailSize = 1024
-
-func makeThumbnail(file io.Reader, mime string) (string, error) {
-
+func makeThumbnail(file io.Reader, mime string, thumbnailSize int) (string, error) {
+	var err error
 	if !strings.Contains(mime, "image") {
-		return "NT", nil
+		return "", nil
 	}
 
-	img, _, err := image.Decode(file)
-	if err != nil {
-		fmt.Println("error decoding")
-		return "", err
-	}
-
-	var width, height int
-
-	rec := img.Bounds()
-
-	if rec.Dx() < thumbnailSize && rec.Dy() < thumbnailSize {
-		width = rec.Dx()
-		height = rec.Dy()
-	} else if rec.Dx() > rec.Dy() {
-		width = thumbnailSize
-		height = 0
-	} else {
-		width = 0
-		height = thumbnailSize
-	}
-
-	thumb := resize.Resize(uint(width), uint(height), img, resize.Lanczos3)
-
-	var w bytes.Buffer
-
-	err = jpeg.Encode(&w, thumb, &jpeg.Options{Quality: 85})
-	if err != nil {
-		return "", err
-	}
-
-	thumbHash, err := ipfsAdd(&w)
+	b, err := magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
 	if err != nil {
 		log.Println(err)
 		return "", err
 	}
 
-	err = mfsCP(fmt.Sprint(mfsThumbsDir, "/", thumbnailSize, "/"), thumbHash, true)
+	thumbHash, err := ipfsAdd(b)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumbnailSize, "/"), thumbHash, true)
 
 	return thumbHash, err
 }
 
+func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
+	args := []string{
+		"-[0]",
+		"-quality",
+		"75",
+		"-strip",
+		"-resize",
+		fmt.Sprintf("%dx%d\\>", size, size),
+		fmt.Sprintf("%s:-", format),
+	}
+	command := exec.Command("magick", args...)
+
+	command.Stdin = file
+
+	var b bytes.Buffer
+	var err error
+	command.Stdout = &b
+
+	err = command.Run()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if len(b.Bytes()) <= 0 {
+		return nil, errors.New("nolength buffer")
+	}
+
+	return &b, nil
+}
+
 func dHash(file io.Reader) uint64 {
-	img, _, err := image.Decode(file)
+	b, err := magickResize(file, "png", 1024)
 	if err != nil {
 		log.Println(err)
 		return 0
 	}
-
+	img, err := png.Decode(b)
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
 	hash := imgsim.DifferenceHash(img)
 	return uint64(hash)
 }

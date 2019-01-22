@@ -45,13 +45,7 @@
         {{end}}
     </div>
     <div id="post">
-        {{if eq .Post.Mime.Type "video"}}
-        <div>
-            <video loop controls>
-                <source src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
-            </video>
-        </div>
-        {{else}}
+	{{if eq .Post.Mime.Type "image"}}
         <div id="image">
             <script>
                 function resize(caller)
@@ -68,6 +62,16 @@
             </script>
             <img onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
         </div>
+        {{else if eq .Post.Mime.Type "video"}}
+        <div>
+            <video loop controls>
+                <source src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+            </video>
+        </div>
+        {{else}}
+	<div>
+		<p>No Preview</p>
+	</div>
         {{end}}
         <div style="padding-left: 4px;">
             <a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>
@@ -75,6 +79,14 @@
             </a>
             <h4>ID:{{ .Post.ID }}</h4>
             <h4>{{ .Post.Hash }}</h4>
+		{{with .Post.Thumbnails}}
+			<span>Thumbnails:</span>
+			<ul>
+	    		{{range .}}
+	    			<li>{{.Size}}px <a href="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}">{{.Hash}}</a></li>
+			{{end}}
+			</ul>
+		{{end}}
             <p>{{ .Post.Mime.Str }}</p>
             {{ if .Post.Deleted }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
             <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
@@ -117,7 +129,7 @@
         {{range .Dups.Posts}}
             <a href="/post/{{.ID}}/{{.Hash}}">
                 <div class="comic-thumb">
-                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Thumb}}" alt="{{.Hash}}">
+                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
                 </div>
             </a>
         {{end}}
@@ -138,7 +150,7 @@
                     {{range .PostsLimit 5}}
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
                             <div class="comic-thumb" {{if eq .Post.ID $.Post.ID}}style="border-style:solid;border-color:yellow;"{{end}}>
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
                             </div>
                         </a>
                     {{end}}

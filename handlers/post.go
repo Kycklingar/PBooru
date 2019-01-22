@@ -144,7 +144,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QID(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
-	p.QThumb(DM.DB)
+	p.QThumbnails(DM.DB)
 
 	pp.Post = p
 
@@ -177,7 +177,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			cp.Post.QID(DM.DB)
-			cp.Post.QThumb(DM.DB)
+			cp.Post.QThumbnails(DM.DB)
 			cp.Post.QHash(DM.DB)
 			cp.Post.QMime(DM.DB).QName(DM.DB)
 			cp.Post.QMime(DM.DB).QType(DM.DB)
@@ -197,7 +197,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	for _, p := range pp.Dups.QPosts(DM.DB) {
 		p.QID(DM.DB)
 		p.QHash(DM.DB)
-		p.QThumb(DM.DB)
+		p.QThumbnails(DM.DB)
 		p.QDeleted(DM.DB)
 	}
 
@@ -276,15 +276,17 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, pageLimit, offset)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
 	if err != nil {
 		//log.Println(err)
 		// http.NotFound(w, r)
 		// return
 	}
+
+	DM.CachedPostCollector(pc)
+
 	//fmt.Println(pc.TotalPosts)
-	for _, post := range pc.GetW(pageLimit, offset) {
+	for _, post := range pc.Search(pageLimit, offset) {
 		post.QDeleted(DM.DB)
 		post.QMime(DM.DB).QName(DM.DB)
 		post.QMime(DM.DB).QType(DM.DB)
@@ -353,7 +355,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		contentType := http.DetectContentType(buffer)
 		if !allowedContentType(contentType) {
-			http.Error(w, "Filetype not allowed.", http.StatusBadRequest)
+			http.Error(w, "Filetype not allowed: "+contentType, http.StatusBadRequest)
 			return
 		}
 
@@ -509,7 +511,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	for _, pst := range posts {
 		pst.QID(DM.DB)
 		pst.QHash(DM.DB)
-		pst.QThumb(DM.DB)
+		pst.QThumbnails(DM.DB)
 		pst.QDeleted(DM.DB)
 		pst.QMime(DM.DB).QName(DM.DB)
 		pst.QMime(DM.DB).QType(DM.DB)

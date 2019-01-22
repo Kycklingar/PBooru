@@ -25,12 +25,17 @@ func NewPost() *Post {
 	return &p
 }
 
+type Thumb struct {
+	Hash string
+	Size int
+}
+
 type Post struct {
-	ID      int
-	Hash    string
-	Thumb   string
-	Mime    *Mime
-	Deleted int
+	ID         int
+	Hash       string
+	thumbnails []Thumb
+	Mime       *Mime
+	Deleted    int
 }
 
 func (p *Post) QID(q querier) int {
@@ -86,22 +91,66 @@ func (p *Post) QHash(q querier) string {
 	return p.Hash
 }
 
-func (p *Post) QThumb(q querier) string {
-	if p.Thumb != "" {
-		return p.Thumb
+func (p *Post) QThumbnails(q querier) error {
+	if len(p.thumbnails) > 0 {
+		return nil
 	}
 	if p.QID(q) == 0 {
-		return ""
+		return errors.New("nil id")
 	}
 
-	err := q.QueryRow("SELECT thumbhash FROM posts WHERE id=$1", p.ID).Scan(&p.Thumb)
+	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t Thumb
+		if err = rows.Scan(&t.Hash, &t.Size); err != nil {
+			log.Println(err)
+			return err
+		}
+		p.thumbnails = append(p.thumbnails, t)
 	}
 
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+	p.thumbnails = append(p.thumbnails, Thumb{Hash: "", Size: 0})
+	return rows.Err()
+}
 
-	return p.Thumb
+func (p *Post) Thumbnails() []Thumb {
+	var thumbs []Thumb
+	for _, t := range p.thumbnails {
+		if t.Size > 0 {
+			thumbs = append(thumbs, t)
+		}
+	}
+	return thumbs
+}
+
+func (p *Post) ClosestThumbnail(size int) (ret string) {
+	p.QThumbnails(DB)
+	if len(p.thumbnails) <= 0 {
+		return ""
+	}
+	var s int
+	for _, k := range p.thumbnails {
+		if k.Size > s {
+			ret = k.Hash
+			s = k.Size
+		}
+	}
+	for _, k := range p.thumbnails {
+		if k.Size < size {
+			continue
+		}
+		if k.Size < s {
+			s = k.Size
+			ret = k.Hash
+		}
+	}
+	return
 }
 
 func (p *Post) QMime(q querier) *Mime {
@@ -112,8 +161,6 @@ func (p *Post) QMime(q querier) *Mime {
 	if err != nil {
 		log.Print(err)
 	}
-
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
 
 	return p.Mime
 }
@@ -143,12 +190,6 @@ func (p *Post) QDeleted(q querier) int {
 	return p.Deleted
 }
 
-const (
-	mfsRootDir   = "/pbooru/"
-	mfsFilesDir  = mfsRootDir + "files/"
-	mfsThumbsDir = mfsRootDir + "thumbnails/"
-)
-
 func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
 	var err error
 	p.Hash, err = ipfsAdd(file)
@@ -158,7 +199,7 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 	}
 	file.Seek(0, 0)
 
-	if err = mfsCP(mfsFilesDir, p.Hash, true); err != nil {
+	if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
 		log.Println("Error copying file to mfs: ", err)
 		return err
 	}
@@ -167,9 +208,16 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 	if p.QID(DB) == 0 {
 
-		p.Thumb, err = makeThumbnail(file, mime)
-		if err != nil {
-			return err
+		for _, dim := range CFG.ThumbnailSizes {
+			file.Seek(0, 0)
+			thash, err := makeThumbnail(file, mime, dim)
+			if err != nil {
+				return err
+			}
+			if thash == "" {
+				continue
+			}
+			p.thumbnails = append(p.thumbnails, Thumb{Hash: thash, Size: dim})
 		}
 
 		tx, err = DB.Begin()
@@ -199,8 +247,8 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			return txError(tx, err)
 		}
 
-		if p.Thumb != "NT" {
-			f := ipfsCat(p.Thumb)
+		if p.Mime.Type == "image" {
+			f := ipfsCat(p.Hash)
 			u := dHash(f)
 			f.Close()
 
@@ -283,17 +331,26 @@ func (p *Post) Save(q querier, user *User) error {
 		}
 	}
 
-	if p.Hash == "" || p.Thumb == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
-		return fmt.Errorf("post missing argument. Want Hash, Thumb and Mime.ID, Have: %s, %s, %d, %d", p.Hash, p.Thumb, p.Mime.ID, user.ID)
+	if p.Hash == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
+		return fmt.Errorf("post missing argument. Want Hash and Mime.ID, Have: %s, %d, %d", p.Hash, p.Mime.ID, user.ID)
 	}
 
-	_, err := q.Exec("INSERT INTO posts(multihash, thumbhash, mime_id, uploader) VALUES($1, $2, $3, $4)", p.Hash, p.Thumb, p.Mime.QID(q), user.QID(q))
+	err := q.QueryRow("INSERT INTO posts(multihash, mime_id, uploader) VALUES($1, $2, $3) RETURNING id", p.Hash, p.Mime.QID(q), user.QID(q)).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
-	} else {
-		totalPosts = 0
+		return err
 	}
-	return err
+	for _, t := range p.Thumbnails() {
+		_, err = q.Exec("INSERT INTO thumbnails (post_id, dimension, multihash) VALUES($1, $2, $3)", p.ID, t.Size, t.Hash)
+		if err != nil {
+			log.Println(err)
+			log.Println(p)
+			return err
+		}
+	}
+	totalPosts = 0
+
+	return nil
 }
 
 func (p *Post) Delete(q querier) error {
@@ -704,11 +761,21 @@ type PostCollector struct {
 	order string
 
 	tagLock sync.Mutex
+	pl      sync.RWMutex
 }
 
 var perSlice = 500
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, limit, offset int) error {
+func CachedPostCollector(pc *PostCollector) {
+	c := C.Cache.Get("PC", pc.idStr())
+	if c != nil {
+		*pc = *c.(*PostCollector)
+	} else {
+		C.Cache.Set("PC", pc.idStr(), pc)
+	}
+}
+
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
 	//var tagIDs []int
 
 	in := func(i int, arr []int) bool {
@@ -816,23 +883,23 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-		tmp, ok := t.(*PostCollector)
-		if ok {
-			*pc = *tmp
-			// pc.posts = tmp.posts
-			// pc.id = tmp.ID
-			// pc.TotalPosts = tmp.TotalPosts
-			// pc.tags = tmp.tags
-			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-			// 	return nil
-			// }
-		}
-	} else {
-		C.Cache.Set("PC", pc.idStr(), pc)
-	}
+	//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
+	//		tmp, ok := t.(*PostCollector)
+	//		if ok {
+	//			*pc = *tmp
+	//			// pc.posts = tmp.posts
+	//			// pc.id = tmp.ID
+	//			// pc.TotalPosts = tmp.TotalPosts
+	//			// pc.tags = tmp.tags
+	//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
+	//			// 	return nil
+	//			// }
+	//		}
+	//	} else {
+	//		C.Cache.Set("PC", pc.idStr(), pc)
+	//	}
 
-	return pc.search(limit, offset)
+	return pc.search(10, 0)
 }
 
 func (pc *PostCollector) idStr() string {
@@ -860,6 +927,11 @@ func (pc *PostCollector) idStr() string {
 	str = strings.TrimSpace(str)
 	// fmt.Println("PCSTR", str)
 	return str
+}
+
+func (pc *PostCollector) Search(limit, offset int) []*Post {
+	pc.search(limit, offset)
+	return pc.GetW(limit, offset)
 }
 
 func (pc *PostCollector) search(ulimit, uoffset int) error {
@@ -899,10 +971,6 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return nil
 	}
 
-	//fmt.Println("Cache not accessed")
-
-	//pc.id = idStr
-	//fmt.Println(idStr)
 	if len(pc.id) > 0 {
 		var innerStr string
 		var endStr = "WHERE "
@@ -948,7 +1016,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -994,7 +1062,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -1018,7 +1086,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, thumbhash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1029,7 +1097,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	var tmpPosts []*Post
 	for rows.Next() {
 		post := NewPost()
-		err := rows.Scan(&post.ID, &post.Hash, &post.Thumb, &post.Mime.ID)
+		err := rows.Scan(&post.ID, &post.Hash, &post.Mime.ID)
 
 		if err != nil {
 			return err
@@ -1064,6 +1132,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	//pc.GetW(10, 0)
 
 	// Get tags from all posts
+	pc.pl.RLock()
 	for _, post := range pc.posts[0] {
 		var ptc TagCollector
 		err := ptc.GetFromPost(DB, *post)
@@ -1076,6 +1145,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 		}
 		allTagIds = append(allTagIds, ids)
 	}
+	pc.pl.RUnlock()
 
 	type tagMap struct {
 		id    int
@@ -1135,7 +1205,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	// }
 	// tx = nil
 
-	C.Cache.Set("PC", pc.idStr(), pc)
+	//C.Cache.Set("PC", pc.idStr(), pc)
 
 	return pc.tags
 }
@@ -1161,8 +1231,14 @@ func resetCacheTag(tagID int) {
 }
 
 func (p *PostCollector) GetW(limit, offset int) []*Post {
+	p.pl.RLock()
 	if p.posts == nil {
+		p.pl.RUnlock()
+		p.pl.Lock()
 		p.posts = make(map[int][]*Post)
+		p.pl.Unlock()
+	} else {
+		p.pl.RUnlock()
 	}
 	if limit <= 0 || offset < 0 {
 		return nil
@@ -1183,7 +1259,9 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 
 	if begOff == endOff {
 		//fmt.Println("Single")
+		p.pl.RLock()
 		tmp, ok := p.posts[begOff]
+		p.pl.RUnlock()
 		if !ok {
 			//log.Print("FATAL ERROR")
 			return nil
@@ -1196,11 +1274,15 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		posts = append(posts, tmp[frstOff:max(len(tmp), secOff)]...)
 	} else {
 		//fmt.Println("Double")
+		p.pl.RLock()
 		tmp, ok := p.posts[begOff]
+		p.pl.RUnlock()
 		if !ok {
 			//fmt.Println("Not ok1")
 			p.search(limit, offset-limit)
+			p.pl.RLock()
 			tmp, ok = p.posts[begOff]
+			p.pl.RUnlock()
 			if !ok {
 				//log.Print("Fatal erorr")
 				return nil
@@ -1211,7 +1293,9 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		}
 		posts = append(posts, tmp[max(len(tmp)-1, frstOff):]...)
 
+		p.pl.RLock()
 		tmp, ok = p.posts[endOff]
+		p.pl.RUnlock()
 		if ok {
 			if len(tmp) > 0 {
 				posts = append(posts, tmp[:max(len(tmp), secOff)]...)
@@ -1259,6 +1343,8 @@ func min(x, y int) int {
 }
 
 func (p *PostCollector) set(offset int, posts []*Post) {
+	p.pl.Lock()
+	defer p.pl.Unlock()
 	if p.posts == nil {
 		p.posts = make(map[int][]*Post)
 	}

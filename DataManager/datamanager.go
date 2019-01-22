@@ -209,43 +209,47 @@ func setDbVersion(ver int, tx *sql.Tx) error {
 }
 
 func MigrateMfs() {
-	query := func(str string, offset int) ([]string, error) {
+	type post struct{
+		Hash string
+		ID int
+	}
+	query := func(str string, offset int) ([]post, error) {
 		rows, err := DB.Query(str, offset*20000)
 		if err != nil {
 			log.Println(err)
-			return []string{}, err
+			return nil, err
 		}
 		defer rows.Close()
 
-		var hashes []string
+		var posts []post
 
 		for rows.Next() {
-			var hash string
-			rows.Scan(&hash)
-			hashes = append(hashes, hash)
+			var p post
+			rows.Scan(&p.Hash, &p.ID)
+			posts = append(posts, p)
 		}
 
-		return hashes, nil
+		return posts, nil
 	}
 
-	var hashes []string
 	var err error
 
 	offset := 0
-	defer mfsFlush(mfsRootDir)
+	defer mfsFlush(CFG.MFSRootDir)
 
 	for {
-		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset)
+		if err != nil || len(posts) <= 0 {
 			break
 		}
-		for _, hash := range hashes {
-			fmt.Println("Working on file:", hash)
-			if err = mfsCP(mfsFilesDir, hash, false); err != nil {
+		for _, post := range posts{
+			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
+			if err = mfsCP(CFG.MFSRootDir+"files/", post.Hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
-		//mfsFlush(mfsRootDir)
+		mfsFlush(CFG.MFSRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -253,18 +257,34 @@ func MigrateMfs() {
 
 	offset = 0
 
+	tquery := func(str string, offset int) ([]Thumb, error) {
+		rows, err := DB.Query(str, offset*20000)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		var thumbs []Thumb
+		for rows.Next() {
+			var t Thumb
+			rows.Scan(&t.Hash, &t.Size)
+			thumbs = append(thumbs, t)
+		}
+		return thumbs, rows.Err()
+	}
+
 	for {
-		if hashes, err = query("SELECT thumbhash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+		var thumbs []Thumb
+		if thumbs, err = tquery("SELECT multihash, dimension FROM thumbnails ORDER BY post_id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(thumbs) <= 0 {
 			break
 		}
-		for _, hash := range hashes {
-			fmt.Println("Working on thumbnail:", hash)
-			if err = mfsCP(mfsThumbsDir+"1024/", hash, false); err != nil {
+		for _, thumb := range thumbs {
+			fmt.Println("Working on thumbnail:", thumb)
+			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), thumb.Hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
-		//mfsFlush(mfsRootDir)
+		mfsFlush(CFG.MFSRootDir)
 	}
 
 	if err != nil && err != sql.ErrNoRows {
@@ -272,13 +292,92 @@ func MigrateMfs() {
 	}
 }
 
+func GenerateThumbnails(size int) {
+
+	type P struct {
+		id   int
+		hash string
+	}
+	query := func(tx *sql.Tx, offset int) []P {
+
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.mime_id IN(SELECT id FROM mime_type WHERE type = 'image') ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		var hashes []P
+
+		for rows.Next() {
+			var p P
+			err = rows.Scan(&p.hash, &p.id)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+			hashes = append(hashes, p)
+		}
+		return hashes
+	}
+
+	var failed int
+	for {
+		var tx, err = DB.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		hashes := query(tx, failed)
+
+		if len(hashes) <= 0 {
+			break
+		}
+
+		for _, hash := range hashes {
+			fmt.Println("Working on post: ", hash.id, hash.hash)
+			file := ipfsCat(hash.hash)
+			thash, err := makeThumbnail(file, "image", size)
+			file.Close()
+			if err != nil {
+				log.Println(err, hash)
+				failed++
+				continue
+			} else if thash == "" {
+				log.Println("makeThumbnail did not produce a hash", hash)
+				failed++
+				continue
+			}
+			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, false)
+			if err != nil {
+				log.Println(err, thash)
+				failed++
+				continue
+			}
+			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", hash.id, size, thash)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+		}
+		mfsFlush(CFG.MFSRootDir)
+		tx.Commit()
+	}
+}
+
 type Config struct {
 	//Database string
 	ConnectionString string
+	MFSRootDir       string
+	ThumbnailFormat  string
+	ThumbnailSizes   []int
 }
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
+	c.MFSRootDir = "/pbooru/"
+	c.ThumbnailFormat = "JPEG"
+	c.ThumbnailSizes = []int{1024, 512, 256}
 }
 
 var CFG *Config

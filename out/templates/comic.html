@@ -77,7 +77,7 @@
                     <!-- <div class="centHorizont"> -->
                     <div>
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.Thumb}}{{end}}" alt="{{.Post.Hash}}">
+                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
                         </a>
                         <br>
                         <p>Page:{{.Order}}</p>
@@ -106,7 +106,7 @@
                         {{range .PostsLimit 2}}
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
                             <div class="comic-thumb">
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
                             </div>
                         </a>
                         {{end}}
@@ -114,7 +114,7 @@
                         {{range .PostsLimit 5}}
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
                             <div class="comic-thumb">
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
+                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
                             </div>
                         </a>
                         {{end}}
