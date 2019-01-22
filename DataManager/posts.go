@@ -99,7 +99,7 @@ func (p *Post) QThumbnails(q querier) error {
 		return errors.New("nil id")
 	}
 
-	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
+		rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -155,6 +155,11 @@ func (p *Post) ClosestThumbnail(size int) (ret string) {
 
 func (p *Post) QMime(q querier) *Mime {
 	if p.Mime.QID(q) != 0 {
+		if cm := C.Cache.Get("MIME", strconv.Itoa(p.Mime.ID)); cm != nil{
+			p.Mime = cm.(*Mime)
+		}else{
+			C.Cache.Set("MIME", strconv.Itoa(p.Mime.ID), p.Mime)
+		}
 		return p.Mime
 	}
 	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=$1", p.QID(q)).Scan(&p.Mime.ID)
@@ -764,7 +769,7 @@ type PostCollector struct {
 	pl      sync.RWMutex
 }
 
-var perSlice = 500
+var perSlice = 250 
 
 func CachedPostCollector(pc *PostCollector) {
 	c := C.Cache.Get("PC", pc.idStr())
@@ -1016,7 +1021,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -1068,7 +1073,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
@@ -1098,7 +1103,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1109,9 +1114,15 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	var tmpPosts []*Post
 	for rows.Next() {
 		post := NewPost()
-		err := rows.Scan(&post.ID, &post.Hash, &post.Mime.ID)
-
+		var del bool
+		err := rows.Scan(&post.ID, &post.Hash, &del, &post.Mime.ID)
+		if del{
+			post.Deleted = 1
+		}else{
+			post.Deleted = 0
+		}
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		tmpPosts = append(tmpPosts, post)
