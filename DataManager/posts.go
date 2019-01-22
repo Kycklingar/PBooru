@@ -1248,7 +1248,7 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		p.pl.Lock()
 		p.posts = make(map[int][]*Post)
 		p.pl.Unlock()
-	}else{
+	} else {
 		p.pl.RUnlock()
 	}
 	if limit <= 0 || offset < 0 {
