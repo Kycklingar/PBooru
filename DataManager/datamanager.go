@@ -209,9 +209,9 @@ func setDbVersion(ver int, tx *sql.Tx) error {
 }
 
 func MigrateMfs() {
-	type post struct{
+	type post struct {
 		Hash string
-		ID int
+		ID   int
 	}
 	query := func(str string, offset int) ([]post, error) {
 		rows, err := DB.Query(str, offset*20000)
@@ -242,7 +242,7 @@ func MigrateMfs() {
 		if err != nil || len(posts) <= 0 {
 			break
 		}
-		for _, post := range posts{
+		for _, post := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
 			if err = mfsCP(CFG.MFSRootDir+"files/", post.Hash, false); err != nil {
 				log.Fatal(err)

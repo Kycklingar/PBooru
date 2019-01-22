@@ -36,7 +36,8 @@ type indexPage struct {
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
+		//http.NotFound(w, r)
 		return
 	}
 	if r.Method == http.MethodHead {

@@ -46,23 +46,23 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		post := DM.NewPost()
 
 		if len(uri) <= 1 {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		} else if len(uri) >= 2 && uri[1] != "hash" {
 			var err error
 			postID, err := strconv.Atoi(uri[1])
 			if err != nil {
-				http.NotFound(w, r)
+				notFoundHandler(w, r)
 				//log.Println("Failed converting string to int")
 				return
 			}
 			err = post.SetID(DM.DB, postID)
 			if err != nil {
-				http.NotFound(w, r)
+				notFoundHandler(w, r)
 				return
 			}
 		} else {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 
@@ -107,24 +107,24 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// Valid Uris: 	post/1
 	//				post/hash/Qm...
 	if len(uri) <= 1 {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	} else if len(uri) >= 2 && uri[1] != "hash" {
 		id, err := strconv.Atoi(uri[1])
 		if err != nil {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			fmt.Println("Failed converting string to int")
 			return
 		}
 
 		err = p.SetID(DM.DB, id)
 		if err != nil {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 		//dPost = DM.NewPost(id)
 		if p.QID(DM.DB) == 0 {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 
@@ -133,7 +133,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	} else if len(uri) > 2 && uri[1] == "hash" {
 		p.Hash = uri[2]
 		if p.QID(DM.DB) == 0 {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 	}
@@ -224,7 +224,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		page, err = strconv.Atoi(uri[1])
 		if err != nil {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 		offset = (page - 1) * pageLimit
@@ -279,7 +279,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
 	if err != nil {
 		//log.Println(err)
-		// http.NotFound(w, r)
+		// notFoundHandler(w, r)
 		// return
 	}
 
@@ -308,6 +308,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		DM.CachedTag(t)
 		t.QTag(DM.DB)
 		t.QCount(DM.DB)
+		t.QNamespace(DM.DB).SetCache()
 		t.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
@@ -371,7 +372,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.QID(DM.DB)), http.StatusSeeOther)
 
 	} else {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 }
@@ -410,7 +411,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 
 func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 
