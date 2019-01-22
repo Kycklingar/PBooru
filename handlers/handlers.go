@@ -185,6 +185,11 @@ func statisticsHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "statistics", p)
 }
 
+func notFoundHandler(w http.ResponseWriter, r *http.Request){
+	w.WriteHeader(http.StatusNotFound)
+	renderTemplate(w, "404", nil)
+}
+
 func init() {
 	stat.init()
 

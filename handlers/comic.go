@@ -108,14 +108,14 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 	spl := splitURI(r.URL.EscapedPath())
 	if len(spl) < 2 {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 
 	id, err := strconv.Atoi(spl[1])
 	if err != nil {
 		log.Print(err)
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 
@@ -131,7 +131,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 		cOrd, err := strconv.Atoi(spl[2])
 		if err != nil {
 			log.Print(err)
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 
@@ -143,7 +143,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if p.Chapter.ID == 0 {
-			http.NotFound(w, r)
+			notFoundHandler(w, r)
 			return
 		}
 
@@ -193,7 +193,7 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 
 func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 	u, _ := getUser(w, r)
@@ -237,7 +237,7 @@ func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 
 	ch := c.Chapter(DM.DB, chID)
 	if ch == nil {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 
@@ -261,7 +261,7 @@ func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.NotFound(w, r)
+		notFoundHandler(w, r)
 		return
 	}
 

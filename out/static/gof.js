@@ -1,11 +1,14 @@
 
 var canvas = document.getElementById("canvas")
-canvas.width = screen.width
-canvas.height = screen.height
+//canvas.width = screen.width
+//canvas.height = screen.height
+
+canvas.width = canvas.parentElement.offsetWidth
+canvas.height = canvas.parentElement.offsetHeight
 var context = canvas.getContext("2d")
 
-var boardSizeX = canvas.width / 8
-var boardSizeY = canvas.height / 8
+var boardSizeX = canvas.width / 28
+var boardSizeY = canvas.height / 28
 
 
 livingTiles = []
