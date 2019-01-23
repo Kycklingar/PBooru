@@ -769,7 +769,7 @@ type PostCollector struct {
 	pl      sync.RWMutex
 }
 
-var perSlice = 250 
+var perSlice = 500
 
 func CachedPostCollector(pc *PostCollector) {
 	c := C.Cache.Get("PC", pc.idStr())
