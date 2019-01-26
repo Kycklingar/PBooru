@@ -50,7 +50,13 @@ func main() {
 	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
 	configFilePath := flag.String("cfg", "config.cfg", "Load config file.")
 	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
+	checkThumbSupport := flag.Bool("thumb-support", false, "Check for installed thumbnailing software")
 	flag.Parse()
+
+	if *checkThumbSupport {
+		DM.ThumbnailerInstalled()
+		return
+	}
 
 	log.SetFlags(log.Llongfile)
 

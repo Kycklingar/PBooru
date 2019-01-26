@@ -10,12 +10,38 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/Nr90/imgsim"
 	"github.com/zRedShift/mimemagic"
 )
+
+func ThumbnailerInstalled() {
+	fmt.Println("Checking if Image Magick is installed.. ")
+	cmd := exec.Command("magick", "-version")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install instructions can be found https://www.imagemagick.org/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
+	fmt.Println("Checking if mutool is installed..")
+	cmd = exec.Command("mutool", "-v")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install instruction can be found at https://mupdf.com/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
+	fmt.Println("Checking if gnome-mobi-thumbnailer is installed.. ")
+	cmd = exec.Command("gnome-mobi-thumbnailer", "-h")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Source can be found at https://github.com/GNOME/gnome-epub-thumbnailer\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+}
 
 func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 	var err error
@@ -142,7 +168,7 @@ func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error)
 	return magickResize(f, format, size)
 }
 
-func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error){
+func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
 	if err != nil {
 		log.Println(err)
@@ -173,13 +199,13 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error){
 	cmd.Stderr = &er
 
 	err = cmd.Run()
-	if err != nil{
+	if err != nil {
 		log.Println(b.String(), er.String(), err)
 		return nil, err
 	}
 
 	f, err := os.Open(fmt.Sprintf("%s/out.png", tmpdir))
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
