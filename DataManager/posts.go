@@ -99,7 +99,7 @@ func (p *Post) QThumbnails(q querier) error {
 		return errors.New("nil id")
 	}
 
-		rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
+	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -155,9 +155,9 @@ func (p *Post) ClosestThumbnail(size int) (ret string) {
 
 func (p *Post) QMime(q querier) *Mime {
 	if p.Mime.QID(q) != 0 {
-		if cm := C.Cache.Get("MIME", strconv.Itoa(p.Mime.ID)); cm != nil{
+		if cm := C.Cache.Get("MIME", strconv.Itoa(p.Mime.ID)); cm != nil {
 			p.Mime = cm.(*Mime)
-		}else{
+		} else {
 			C.Cache.Set("MIME", strconv.Itoa(p.Mime.ID), p.Mime)
 		}
 		return p.Mime
@@ -771,13 +771,14 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func CachedPostCollector(pc *PostCollector) {
+func CachedPostCollector(pc *PostCollector) *PostCollector {
 	c := C.Cache.Get("PC", pc.idStr())
 	if c != nil {
-		*pc = *c.(*PostCollector)
-	} else {
-		C.Cache.Set("PC", pc.idStr(), pc)
+		return c.(*PostCollector)
 	}
+
+	C.Cache.Set("PC", pc.idStr(), pc)
+	return pc
 }
 
 func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
@@ -904,7 +905,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 	//		C.Cache.Set("PC", pc.idStr(), pc)
 	//	}
 
-	return nil//pc.search(10, 0)
+	return nil //pc.search(10, 0)
 }
 
 func (pc *PostCollector) idStr() string {
@@ -1027,7 +1028,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
-			if c < 0{
+			if c < 0 {
 				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
@@ -1035,7 +1036,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 					return err
 				}
 				pc.ccSet(pc.TotalPosts)
-			}else{
+			} else {
 				pc.TotalPosts = c
 			}
 		}
@@ -1079,7 +1080,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
-			if c < 0{
+			if c < 0 {
 				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
@@ -1087,7 +1088,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 					return err
 				}
 				pc.ccSet(pc.TotalPosts)
-			}else{
+			} else {
 				pc.TotalPosts = c
 			}
 		}
@@ -1116,9 +1117,9 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		post := NewPost()
 		var del bool
 		err := rows.Scan(&post.ID, &post.Hash, &del, &post.Mime.ID)
-		if del{
+		if del {
 			post.Deleted = 1
-		}else{
+		} else {
 			post.Deleted = 0
 		}
 		if err != nil {
@@ -1254,9 +1255,9 @@ func resetCacheTag(tagID int) {
 	ccPurge(tagID)
 }
 
-func ccPurge(tagID int){
+func ccPurge(tagID int) {
 	_, err := DB.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 	}
 }
@@ -1339,24 +1340,24 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 	return posts
 }
 
-func (pc *PostCollector) ccGet()(c int){
-	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&c); err != nil{
+func (pc *PostCollector) ccGet() (c int) {
+	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&c); err != nil {
 		return -1
 	}
 	return
 }
 
-func (pc *PostCollector) ccSet(c int){
-	if c <= 0{
+func (pc *PostCollector) ccSet(c int) {
+	if c <= 0 {
 		return
 	}
 	tx, err := DB.Begin()
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return
 	}
 	_, err = tx.Exec("INSERT INTO search_count_cache (str, count) VALUES($1, $2)", pc.idStr(), c)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		txError(tx, err)
 		return
@@ -1364,15 +1365,15 @@ func (pc *PostCollector) ccSet(c int){
 
 	var cid int
 	err = tx.QueryRow("SELECT id FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&cid)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		txError(tx, err)
 		return
 	}
 
-	in := func(id int, sl []int)bool{
-		for _, i := range sl{
-			if id == i{
+	in := func(id int, sl []int) bool {
+		for _, i := range sl {
+			if id == i {
 				return true
 			}
 		}
@@ -1380,25 +1381,25 @@ func (pc *PostCollector) ccSet(c int){
 	}
 
 	var tagids []int
-	for _, id := range pc.id{
-		if !in(id, tagids){
+	for _, id := range pc.id {
+		if !in(id, tagids) {
 			tagids = append(tagids, id)
 		}
 	}
-	for _, id := range pc.blackTag{
-		if !in(id, tagids){
+	for _, id := range pc.blackTag {
+		if !in(id, tagids) {
 			tagids = append(tagids, id)
 		}
 	}
-	for _, id := range pc.unless{
-		if !in(id, tagids){
+	for _, id := range pc.unless {
+		if !in(id, tagids) {
 			tagids = append(tagids, id)
 		}
 	}
 
-	for _, id := range tagids{
+	for _, id := range tagids {
 		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, id)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			txError(tx, err)
 			return

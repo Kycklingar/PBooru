@@ -24,12 +24,12 @@ type Tag struct {
 	Count     int
 }
 
-func CachedTag(t *Tag){
-	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil{
-		*t = *ct.(*Tag)
-	}else{
-		C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+func CachedTag(t *Tag) *Tag {
+	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
+		return ct.(*Tag)
 	}
+	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+	return t
 }
 
 func (t *Tag) QID(q querier) int {

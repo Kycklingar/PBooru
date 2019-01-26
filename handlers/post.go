@@ -283,7 +283,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		// return
 	}
 
-	DM.CachedPostCollector(pc)
+	pc = DM.CachedPostCollector(pc)
 
 	//fmt.Println(pc.TotalPosts)
 	for _, post := range pc.Search(pageLimit, offset) {
@@ -304,12 +304,12 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
-	for _, t := range p.Sidebar.Tags {
-		DM.CachedTag(t)
-		t.QTag(DM.DB)
-		t.QCount(DM.DB)
-		t.QNamespace(DM.DB).SetCache()
-		t.QNamespace(DM.DB).QNamespace(DM.DB)
+	for i := range p.Sidebar.Tags {
+		p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
+		p.Sidebar.Tags[i].QTag(DM.DB)
+		p.Sidebar.Tags[i].QCount(DM.DB)
+		p.Sidebar.Tags[i].QNamespace(DM.DB).SetCache()
+		p.Sidebar.Tags[i].QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
 	bm.Split("Retrieved and appended tags")
