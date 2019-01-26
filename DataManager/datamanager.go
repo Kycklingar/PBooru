@@ -210,38 +210,42 @@ func setDbVersion(ver int, tx *sql.Tx) error {
 }
 
 func MigrateMfs() {
-	query := func(str string, offset int) ([]string, error) {
+	type post struct{
+		Hash string
+		ID int
+	}
+	query := func(str string, offset int) ([]post, error) {
 		rows, err := DB.Query(str, offset*20000)
 		if err != nil {
 			log.Println(err)
-			return []string{}, err
+			return nil, err
 		}
 		defer rows.Close()
 
-		var hashes []string
+		var posts []post
 
 		for rows.Next() {
-			var hash string
-			rows.Scan(&hash)
-			hashes = append(hashes, hash)
+			var p post
+			rows.Scan(&p.Hash, &p.ID)
+			posts = append(posts, p)
 		}
 
-		return hashes, nil
+		return posts, nil
 	}
 
-	var hashes []string
 	var err error
 
 	offset := 0
 	defer mfsFlush(CFG.MFSRootDir)
 
 	for {
-		if hashes, err = query("SELECT multihash FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(hashes) <= 0 {
+		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset)
+		if err != nil || len(posts) <= 0 {
 			break
 		}
-		for _, hash := range hashes {
-			fmt.Println("Working on file:", hash)
-			if err = mfsCP(CFG.MFSRootDir+"files/", hash, false); err != nil {
+		for _, post := range posts{
+			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
+			if err = mfsCP(CFG.MFSRootDir+"files/", post.Hash, false); err != nil {
 				log.Fatal(err)
 			}
 		}

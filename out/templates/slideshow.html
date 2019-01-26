@@ -126,22 +126,44 @@
             }
 
             let post = this.data.Posts[this.index++]
-            if(post.ThumbHash == "NT")
+
+            if(post.ThumbHashes == null)
             {
                 this.nextImage()
                 return
             }
+
+	    let thumbnail = null
+	    for(let i = 0; i < post.ThumbHashes.length; i++)
+	    {
+	    	if(thumbnail == null || post.ThumbHashes[i].Size > thumbnail.Size)
+		{
+			thumbnail = post.ThumbHashes[i]
+		}
+	    }
+
             
             this.lock = true
 
             let image = new Image()
-            image.src = "{{.IpfsDaemon}}/ipfs/" + post.ThumbHash
+
+            image.src = "{{.IpfsDaemon}}/ipfs/" + thumbnail.Hash
             image.onclick = function(){
                 window.open("/post/" + post.ID + "/" + post.Hash, "_blank")
             }
             image.style.cursor = "pointer"
             
+	    let timeout = setTimeout(function(){
+		console.log("image timed out")
+		image = null
+	    	this.pause = false
+		this.lock = false
+		this.nextImage()
+	    }.bind(this), 15000)
+
             image.onload = function(){
+		clearTimeout(timeout)
+
                 //console.log("Unpause")
                 this.pause = false
 

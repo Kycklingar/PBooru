@@ -130,6 +130,7 @@ func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error)
 	if err != nil {
 		log.Println(err)
 		return nil, err
+
 	}
 	defer os.RemoveAll(tmpdir)
 
@@ -137,6 +138,7 @@ func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error)
 	tmpbuf.ReadFrom(file)
 
 	err = ioutil.WriteFile(fmt.Sprintf("%s/file.%s", tmpdir, mime), tmpbuf.Bytes(), 0660)
+
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -205,10 +207,12 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 	}
 
 	f, err := os.Open(fmt.Sprintf("%s/out.png", tmpdir))
+
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	defer f.Close()
 
 	return magickResize(f, format, size)
@@ -220,6 +224,7 @@ func dHash(file io.Reader) uint64 {
 		log.Println(err)
 		return 0
 	}
+
 	img, err := png.Decode(b)
 	if err != nil {
 		log.Println(err)
