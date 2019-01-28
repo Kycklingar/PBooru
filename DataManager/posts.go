@@ -215,7 +215,7 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 		for _, dim := range CFG.ThumbnailSizes {
 			file.Seek(0, 0)
-			thash, err := makeThumbnail(file, mime, dim)
+			thash, err := makeThumbnail(file, dim)
 			if err != nil {
 				return err
 			}

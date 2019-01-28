@@ -25,12 +25,33 @@ type APIv1Post struct {
 	ThumbHashes []DM.Thumb
 	Mime        string
 	Deleted     bool
-	Tags        []APIv1Tag
+	Tags        []APIv1TagI
+}
+
+type APIv1TagI interface{
+	Parse(*DM.Tag)
+}
+
+type APIv1TagHydrus struct{
+	Tag string
+}
+
+func (t *APIv1TagHydrus) Parse(tag *DM.Tag){
+	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none"{
+		t.Tag = tag.QTag(DM.DB)
+	}else{
+		t.Tag = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
+	}
 }
 
 type APIv1Tag struct {
 	Tag       string
 	Namespace string
+}
+
+func (t *APIv1Tag) Parse(tag *DM.Tag){
+	t.Tag = tag.QTag(DM.DB)
+	t.Namespace = tag.QNamespace(DM.DB).QNamespace(DM.DB)
 }
 
 func jsonEncode(w http.ResponseWriter, v interface{}) error {
@@ -74,7 +95,12 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	AP, err := DMToAPIPost(p)
+	var combineTags bool
+	if len(r.FormValue("combTagNamespace")) > 0{
+		combineTags = true
+	}
+
+	AP, err := DMToAPIPost(p, combineTags)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -125,7 +151,7 @@ func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, dp)
 }
 
-func DMToAPIPost(p *DM.Post) (APIv1Post, error) {
+func DMToAPIPost(p *DM.Post, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 	tc := DM.TagCollector{}
 	// err := tc.GetFromPost(DM.DB, *p)
@@ -138,7 +164,14 @@ func DMToAPIPost(p *DM.Post) (APIv1Post, error) {
 
 	for _, tag := range tc.Tags {
 		tag = DM.CachedTag(tag)
-		AP.Tags = append(AP.Tags, APIv1Tag{tag.QTag(DM.DB), tag.QNamespace(DM.DB).QNamespace(DM.DB)})
+		var t APIv1TagI
+		if combineTagNamespace{
+			t = &APIv1TagHydrus{}
+		}else{
+			t = &APIv1Tag{}
+		}
+		t.Parse(tag)
+		AP.Tags = append(AP.Tags, t)
 	}
 
 	return AP, nil
@@ -161,6 +194,11 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
+	var combineTags bool
+	if len(r.FormValue("combTagNamespace")) > 0{
+		combineTags = true
+	}
+
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
@@ -178,7 +216,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	AP.TotalPosts = pc.TotalPosts
 
 	for _, post := range pc.Search(30, 30*offset) {
-		APp, err := DMToAPIPost(post)
+		APp, err := DMToAPIPost(post, combineTags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
@@ -261,6 +299,11 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var combineTags bool
+	if len(r.FormValue("combTagNamespace")) > 0{
+		combineTags = true
+	}
+
 	type page struct {
 		Posts []APIv1Post
 	}
@@ -280,7 +323,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, pst := range posts {
 		var ps APIv1Post
-		if ps, err = DMToAPIPost(pst); err != nil {
+		if ps, err = DMToAPIPost(pst, combineTags); err != nil {
 			APIError(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}

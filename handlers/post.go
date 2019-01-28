@@ -8,6 +8,7 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
+	"github.com/zRedShift/mimemagic"
 )
 
 type Postpage struct {
@@ -353,7 +354,8 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		file.Seek(0, 0)
 
-		contentType := http.DetectContentType(buffer)
+		mime := mimemagic.MatchMagic(buffer)
+		contentType := mime.MediaType()
 		if !allowedContentType(contentType) {
 			http.Error(w, "Filetype not allowed: "+contentType, http.StatusBadRequest)
 			return

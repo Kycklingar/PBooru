@@ -1,7 +1,7 @@
 {{template "base"}}
 
 <div>
-    <div class="text-panel" style="float:right;min-width:50%;">
+    <div class="text-panel" style="float:right;max-width:50%;">
         <h2>Structures</h2>
         <ul>
             <div class="panel">
@@ -16,8 +16,8 @@
                         <td>String</td>
                     </tr>
                     <tr>
-                        <td>ThumbHash</td>
-                        <td>String</td>
+                        <td>ThumbHashes</td>
+                        <td>[ ]Thumbnail</td>
                     </tr>
                     <tr>
                         <td>Mime</td>
@@ -29,10 +29,23 @@
                     </tr>
                     <tr>
                         <td>Tags</td>
-                        <td>Tag [ ]</td>
+                        <td>[ ]Tag</td>
                     </tr>
                 </table>
             </div>
+	    <div class="panel">
+	    	<table>
+			<b>Thumbnail</b>
+			<tr>
+				<td>Hash</td>
+				<td>String</td>
+			</tr>
+			<tr>
+				<td>Size</td>
+				<td>Integer</td>
+			</tr>
+		</table>
+	    </div>
             <div class="panel">
                 <table>
                     <b>Tag</b>
@@ -45,6 +58,13 @@
                         <td>String</td>
                     </tr>
                 </table>
+		<table>
+			<b>Tag</b><span> (with combTagNamespace)</span>
+			<tr>
+				<td>Tag</td>
+				<td>String</td>
+			</tr>
+		</table>
             </div>
         </ul>
     </div>
@@ -63,6 +83,7 @@
                             <th>Arg</th>
                             <th>Type</th>
                             <th>Required</th>
+			    <th>Description</th>
                             <tr>
                                 <td>
                                     <b>id</b>
@@ -70,6 +91,14 @@
                                 <td>Integer</td>
                                 <td>Yes</td>
                             </tr>
+			    <tr>
+			    	<td>
+					<b>combTagNamespace</b>
+				</td>
+				<td>Boolean</td>
+				<td>No</td>
+				<td>Combine tags with their namespace. Useful for tag parsing in hydrus</td>
+			    </tr>
                         </table>
                         <br> Returns:
                         <table>
@@ -89,9 +118,9 @@
                             </tr>
                             <tr>
                                 <td>
-                                    <b>ThumbHash</b>
+                                    <b>ThumbHashes</b>
                                 </td>
-                                <td>String</td>
+                                <td>[ ]Thumbnail</td>
                             </tr>
                             <tr>
                                 <td>
@@ -109,7 +138,7 @@
                                 <td>
                                     <b>Tags</b>
                                 </td>
-                                <td>Array</td>
+                                <td>[ ]Tag</td>
                             </tr>
                         </TABLE>
                         <p>Example query:</p>
@@ -142,6 +171,13 @@
                                     <td>No</td>
                                 </td>
                             </tr>
+			    <tr>
+			    	<td>
+					<b>combTagNamespace</b>
+				</td>
+				<td>Boolean</td>
+				<td>No</td>
+			    </tr>
                         </table>
                         <br> Returns:
                         <table>
@@ -157,7 +193,7 @@
                                 <td>
                                     <b>Posts</b>
                                 </td>
-                                <td>Array</td>
+                                <td>[ ]Post</td>
                             </tr>
                         </table>
                         <br>
