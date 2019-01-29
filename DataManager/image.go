@@ -61,8 +61,6 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 	var b *bytes.Buffer
 
 	switch mime.MediaType() {
-	case "image/png", "image/jpeg", "image/gif", "image/webp":
-		b, err = magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
 	case "application/pdf", "application/epub+zip":
 		var m string
 		if strings.Contains(mime.MediaType(), "pdf") {
@@ -74,7 +72,11 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 	case "application/x-mobipocket-ebook":
 		b, err = gnomeMobi(file, CFG.ThumbnailFormat, thumbnailSize)
 	default:
-		return "", nil
+		if strings.Contains(mime.MediaType(), "image") {
+			b, err = magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
+		} else {
+			return "", nil
+		}
 	}
 
 	if err != nil {
