@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"image/png"
 	"io"
@@ -12,9 +11,10 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"path/filepath"
 
 	"github.com/Nr90/imgsim"
-	"github.com/zRedShift/mimemagic"
+	"github.com/kycklingar/mimemagic"
 )
 
 func ThumbnailerInstalled() {
@@ -96,6 +96,13 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 }
 
 func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
+	tmpdir, err := ioutil.TempDir("", "pbooru-temp")
+	if err != nil{
+		log.Println(err)
+		return nil, err
+	}
+	defer os.RemoveAll(tmpdir)
+
 	args := []string{
 		"-[0]",
 		"-quality",
@@ -103,14 +110,13 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 		"-strip",
 		"-resize",
 		fmt.Sprintf("%dx%d\\>", size, size),
-		fmt.Sprintf("%s:-", format),
+		fmt.Sprintf("%s:%s", format, filepath.Join(tmpdir, "out")),
 	}
 	command := exec.Command("magick", args...)
 
 	command.Stdin = file
 
 	var b, er bytes.Buffer
-	var err error
 	command.Stdout = &b
 	command.Stderr = &er
 
@@ -120,11 +126,17 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 		return nil, err
 	}
 
-	if len(b.Bytes()) <= 0 {
-		return nil, errors.New("nolength buffer")
+	f, err := os.Open(filepath.Join(tmpdir, "out"))
+	if err != nil {
+		log.Println(err)
+		return nil, err
 	}
+	defer f.Close()
 
-	return &b, nil
+	var buf bytes.Buffer
+	buf.ReadFrom(f)
+
+	return &buf, nil
 }
 
 func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error) {
@@ -208,7 +220,7 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	f, err := os.Open(fmt.Sprintf("%s/out.png", tmpdir))
+	f, err := os.Open(filepath.Join(tmpdir, "out.png"))
 
 	if err != nil {
 		log.Println(err)
