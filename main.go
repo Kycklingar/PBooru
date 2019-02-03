@@ -10,7 +10,6 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	h "github.com/kycklingar/PBooru/handlers"
-	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 var gConf config
@@ -67,9 +66,6 @@ func main() {
 	if *initConfig {
 		return
 	}
-
-	imagick.Initialize()
-	defer imagick.Terminate()
 
 	DM.Setup(gConf.IPFSAPI)
 
