@@ -46,7 +46,7 @@
 
                 function thumbPreview(sender)
                 {
-                    if(sender.className.contains("video"))
+                    if(sender.className.includes("video"))
                     {
                         var video = document.createElement("video")
                         video.src = "{{.IpfsDaemon}}/ipfs/" + sender.firstElementChild.getAttribute("alt")
