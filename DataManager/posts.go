@@ -217,7 +217,8 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 			file.Seek(0, 0)
 			thash, err := makeThumbnail(file, dim)
 			if err != nil {
-				return err
+				break // It is better to add faulty file than it is to lose it forever.
+				//return err
 			}
 			if thash == "" {
 				continue

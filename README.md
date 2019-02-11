@@ -1,10 +1,19 @@
 # The Permanent Booru
+The Permanent Booru is an image board web server which takes leverage of the decentralization of IPFS to distribute its content.
 
 ### Requirements
 [Golang](https://golang.org)
+
 [Ipfs](https://ipfs.io)
+
 [Postgresql](https://postgresql.org)
+
 [ImageMagick](https://imagemagick.org)
+
+#### Optional
+[Mupdf](https://mupdf.com) For pdf and epub thumbnails
+
+[Gnome-epub-thumbnailer](https://github.com/GNOME/gnome-epub-thumbnailer) For mobi thumbnails
 
 ### Installing
 Go get and build PBooru

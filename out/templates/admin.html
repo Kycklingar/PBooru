@@ -340,7 +340,7 @@
 
         rdiv.onmousedown = function (c) {
             var t = c.target
-            while (!t.className.contains("thumbContainer")) {
+            while (!t.className.includes("thumbContainer")) {
                 t = t.parentElement
             }
             moveInSelection(t, "right")

@@ -8,7 +8,7 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
-	"github.com/zRedShift/mimemagic"
+	"github.com/kycklingar/mimemagic"
 )
 
 type Postpage struct {
