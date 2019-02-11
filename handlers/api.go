@@ -28,18 +28,18 @@ type APIv1Post struct {
 	Tags        []APIv1TagI
 }
 
-type APIv1TagI interface{
+type APIv1TagI interface {
 	Parse(*DM.Tag)
 }
 
-type APIv1TagHydrus struct{
+type APIv1TagHydrus struct {
 	Tag string
 }
 
-func (t *APIv1TagHydrus) Parse(tag *DM.Tag){
-	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none"{
+func (t *APIv1TagHydrus) Parse(tag *DM.Tag) {
+	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none" {
 		t.Tag = tag.QTag(DM.DB)
-	}else{
+	} else {
 		t.Tag = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
 	}
 }
@@ -49,7 +49,7 @@ type APIv1Tag struct {
 	Namespace string
 }
 
-func (t *APIv1Tag) Parse(tag *DM.Tag){
+func (t *APIv1Tag) Parse(tag *DM.Tag) {
 	t.Tag = tag.QTag(DM.DB)
 	t.Namespace = tag.QNamespace(DM.DB).QNamespace(DM.DB)
 }
@@ -96,7 +96,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var combineTags bool
-	if len(r.FormValue("combTagNamespace")) > 0{
+	if len(r.FormValue("combTagNamespace")) > 0 {
 		combineTags = true
 	}
 
@@ -164,9 +164,9 @@ func DMToAPIPost(p *DM.Post, combineTagNamespace bool) (APIv1Post, error) {
 
 	for _, tag := range tc.Tags {
 		var t APIv1TagI
-		if combineTagNamespace{
+		if combineTagNamespace {
 			t = &APIv1TagHydrus{}
-		}else{
+		} else {
 			t = &APIv1Tag{}
 		}
 		t.Parse(tag)
@@ -194,7 +194,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var combineTags bool
-	if len(r.FormValue("combTagNamespace")) > 0{
+	if len(r.FormValue("combTagNamespace")) > 0 {
 		combineTags = true
 	}
 
@@ -299,7 +299,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var combineTags bool
-	if len(r.FormValue("combTagNamespace")) > 0{
+	if len(r.FormValue("combTagNamespace")) > 0 {
 		combineTags = true
 	}
 

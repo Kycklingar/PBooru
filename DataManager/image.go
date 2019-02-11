@@ -9,9 +9,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
 
 	"github.com/Nr90/imgsim"
 	"github.com/kycklingar/mimemagic"
@@ -19,7 +19,7 @@ import (
 
 func ThumbnailerInstalled() {
 	fmt.Println("Checking if Image Magick is installed.. ")
-	cmd := exec.Command("magick", "-version")
+	cmd := exec.Command("convert", "-version")
 	if err := cmd.Run(); err != nil {
 		fmt.Print("Not found in '$PATH'! Install instructions can be found https://www.imagemagick.org/\n")
 	} else {
@@ -97,7 +97,7 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 
 func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 	tmpdir, err := ioutil.TempDir("", "pbooru-temp")
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
@@ -109,10 +109,10 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 		"75",
 		"-strip",
 		"-resize",
-		fmt.Sprintf("%dx%d\\>", size, size),
+		fmt.Sprintf("%dx%d>", size, size),
 		fmt.Sprintf("%s:%s", format, filepath.Join(tmpdir, "out")),
 	}
-	command := exec.Command("magick", args...)
+	command := exec.Command("convert", args...)
 
 	command.Stdin = file
 
