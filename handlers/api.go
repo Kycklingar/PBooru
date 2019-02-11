@@ -163,6 +163,7 @@ func DMToAPIPost(p *DM.Post, combineTagNamespace bool) (APIv1Post, error) {
 	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB), ThumbHashes: p.Thumbnails(), Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
 
 	for _, tag := range tc.Tags {
+		tag = DM.CachedTag(tag)
 		var t APIv1TagI
 		if combineTagNamespace {
 			t = &APIv1TagHydrus{}
@@ -208,7 +209,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	DM.CachedPostCollector(pc)
+	pc = DM.CachedPostCollector(pc)
 
 	var AP APIv1Posts
 

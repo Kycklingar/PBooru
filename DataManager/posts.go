@@ -155,6 +155,11 @@ func (p *Post) ClosestThumbnail(size int) (ret string) {
 
 func (p *Post) QMime(q querier) *Mime {
 	if p.Mime.QID(q) != 0 {
+		if cm := C.Cache.Get("MIME", strconv.Itoa(p.Mime.ID)); cm != nil {
+			p.Mime = cm.(*Mime)
+		} else {
+			C.Cache.Set("MIME", strconv.Itoa(p.Mime.ID), p.Mime)
+		}
 		return p.Mime
 	}
 	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=$1", p.QID(q)).Scan(&p.Mime.ID)
@@ -767,13 +772,14 @@ type PostCollector struct {
 
 var perSlice = 500
 
-func CachedPostCollector(pc *PostCollector) {
+func CachedPostCollector(pc *PostCollector) *PostCollector {
 	c := C.Cache.Get("PC", pc.idStr())
 	if c != nil {
-		*pc = *c.(*PostCollector)
-	} else {
-		C.Cache.Set("PC", pc.idStr(), pc)
+		return c.(*PostCollector)
 	}
+
+	C.Cache.Set("PC", pc.idStr(), pc)
+	return pc
 }
 
 func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
@@ -900,7 +906,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 	//		C.Cache.Set("PC", pc.idStr(), pc)
 	//	}
 
-	return pc.search(10, 0)
+	return nil //pc.search(10, 0)
 }
 
 func (pc *PostCollector) idStr() string {
@@ -1017,16 +1023,22 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("p1.id %s", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
-			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
-			if err != nil {
-				log.Print(err)
-				return err
+			c := pc.ccGet()
+			if c < 0 {
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+				if err != nil {
+					log.Print(err)
+					return err
+				}
+				pc.ccSet(pc.TotalPosts)
+			} else {
+				pc.TotalPosts = c
 			}
 		}
 
@@ -1063,16 +1075,22 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, rand("id %s", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
-			count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
-			err = DB.QueryRow(count).Scan(&pc.TotalPosts)
-			if err != nil {
-				log.Print(err)
-				return err
+			c := pc.ccGet()
+			if c < 0 {
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+				if err != nil {
+					log.Print(err)
+					return err
+				}
+				pc.ccSet(pc.TotalPosts)
+			} else {
+				pc.TotalPosts = c
 			}
 		}
 
@@ -1087,7 +1105,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", rand("id %s", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1098,9 +1116,15 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	var tmpPosts []*Post
 	for rows.Next() {
 		post := NewPost()
-		err := rows.Scan(&post.ID, &post.Hash, &post.Mime.ID)
-
+		var del bool
+		err := rows.Scan(&post.ID, &post.Hash, &del, &post.Mime.ID)
+		if del {
+			post.Deleted = 1
+		} else {
+			post.Deleted = 0
+		}
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		tmpPosts = append(tmpPosts, post)
@@ -1229,6 +1253,14 @@ func resetCacheTag(tagID int) {
 	C.Cache.Purge("PC", strconv.Itoa(tagID))
 	C.Cache.Purge("TAG", strconv.Itoa(tagID))
 	C.Cache.Purge("PC", "0")
+	ccPurge(tagID)
+}
+
+func ccPurge(tagID int) {
+	_, err := DB.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (p *PostCollector) GetW(limit, offset int) []*Post {
@@ -1307,6 +1339,76 @@ func (p *PostCollector) GetW(limit, offset int) []*Post {
 		}
 	}
 	return posts
+}
+
+func (pc *PostCollector) ccGet() (c int) {
+	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&c); err != nil {
+		return -1
+	}
+	return
+}
+
+func (pc *PostCollector) ccSet(c int) {
+	if c <= 0 {
+		return
+	}
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = tx.Exec("INSERT INTO search_count_cache (str, count) VALUES($1, $2)", pc.idStr(), c)
+	if err != nil {
+		log.Println(err)
+		txError(tx, err)
+		return
+	}
+
+	var cid int
+	err = tx.QueryRow("SELECT id FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&cid)
+	if err != nil {
+		log.Println(err)
+		txError(tx, err)
+		return
+	}
+
+	in := func(id int, sl []int) bool {
+		for _, i := range sl {
+			if id == i {
+				return true
+			}
+		}
+		return false
+	}
+
+	var tagids []int
+	for _, id := range pc.id {
+		if !in(id, tagids) {
+			tagids = append(tagids, id)
+		}
+	}
+	for _, id := range pc.blackTag {
+		if !in(id, tagids) {
+			tagids = append(tagids, id)
+		}
+	}
+	for _, id := range pc.unless {
+		if !in(id, tagids) {
+			tagids = append(tagids, id)
+		}
+	}
+
+	for _, id := range tagids {
+		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, id)
+		if err != nil {
+			log.Println(err)
+			txError(tx, err)
+			return
+		}
+	}
+	tx.Commit()
+
+	return
 }
 
 // Returns whichever is smaller

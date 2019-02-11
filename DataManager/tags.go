@@ -24,6 +24,14 @@ type Tag struct {
 	Count     int
 }
 
+func CachedTag(t *Tag) *Tag {
+	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
+		return ct.(*Tag)
+	}
+	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+	return t
+}
+
 func (t *Tag) QID(q querier) int {
 	if t.ID != 0 {
 		return t.ID
@@ -55,21 +63,11 @@ func (t *Tag) QTag(q querier) string {
 	if t.ID == 0 {
 		return ""
 	}
-	if tm := C.Cache.Get("TAG", strconv.Itoa(t.ID)); tm != nil {
-		switch m := tm.(type) {
-		case *Tag:
-			*t = *m
-			return t.Tag
-		default:
-			log.Print("tm is not typeof Tag")
-		}
-	}
 	err := q.QueryRow("SELECT tag, nspace FROM tags JOIN namespaces ON namespaces.id = tags.namespace_id WHERE tags.id=$1", t.ID).Scan(&t.Tag, &t.Namespace.Namespace)
 	if err != nil {
 		log.Print(err)
 		return ""
 	}
-	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
 	return t.Tag
 }
 
