@@ -482,13 +482,12 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.Tags = at
 	remTags.Tags = rt
 
-	res, err := q.Exec("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP)", user.QID(q), p.QID(q))
+	var historyID int
+
+	err = q.QueryRow("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP) RETURNING id", user.QID(q), p.QID(q)).Scan(&historyID)
 	if err != nil {
 		return err
 	}
-	id64, err := res.LastInsertId()
-
-	historyID := int(id64)
 
 	for _, tag := range at {
 		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
