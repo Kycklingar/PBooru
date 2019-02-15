@@ -3,6 +3,7 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -109,7 +110,7 @@ func (t *Tag) Save(q querier) error {
 	}
 
 	if t.Tag == "" {
-		return errors.New("tag: not enough arguments")
+		return errors.New(fmt.Sprintf("tag: not enough arguments. Expected Tag got '%s'", t.Tag))
 	}
 
 	if t.Namespace.QID(q) == 0 {
@@ -196,6 +197,73 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 	resetCacheTag(parentID)
 	resetCacheTag(childID)
 	return nil
+}
+
+func (t *Tag) Parents(q querier) []*Tag {
+	if t.QID(q) <= 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", t.QID(q))
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return nil
+	}
+	defer rows.Close()
+
+	var tags []*Tag
+	for rows.Next() {
+		nt := NewTag()
+		err = rows.Scan(&nt.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		tags = append(tags, nt)
+	}
+
+	if rows.Err() != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return tags
+}
+
+func (t *Tag) Children(q querier) []*Tag {
+	if t.QID(q) <= 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT child_id FROM parent_tags WHERE parent_id = $1", t.QID(q))
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return nil
+	}
+	defer rows.Close()
+
+	var tags []*Tag
+	for rows.Next() {
+		nt := NewTag()
+		err = rows.Scan(&nt.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+
+		tags = append(tags, nt)
+	}
+
+	if rows.Err() != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return tags
 }
 
 type TagCollector struct {
@@ -461,9 +529,9 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		var rows *sql.Rows
 		var err error
 		if tag.QNamespace(q).QNamespace(q) == "none" {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE tag LIKE($1) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE tag LIKE($1) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		} else {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE namespace_id=$1 AND tag LIKE($2) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE namespace_id=$1 AND tag LIKE($2) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		}
 		if err != nil {
 			log.Print(err)
@@ -473,7 +541,7 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		for rows.Next() {
 			t := NewTag()
 			//var cnt int
-			err = rows.Scan(&t.Tag, &t.Namespace.ID)
+			err = rows.Scan(&t.ID, &t.Tag, &t.Namespace.ID)
 			if err != nil {
 				log.Print(err)
 				break

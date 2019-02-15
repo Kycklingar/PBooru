@@ -21,14 +21,18 @@ const tagLimit = 200
 func TagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		type P struct {
+			Query     string
 			Tags      []*DM.Tag
 			Tag       *DM.Tag
 			To        *DM.Tag
 			From      []*DM.Tag
+			Parents   []*DM.Tag
+			Children  []*DM.Tag
 			Paginator Pageination
 		}
 		var p P
 
+		tagStr := r.FormValue("tag")
 		currPage := 1
 		var err error
 		f := splitURI(r.URL.Path)
@@ -42,7 +46,15 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 		bm := benchmark.Begin()
 		var tc DM.TagCollector
-		err = tc.Get(tagLimit, (currPage-1)*tagLimit)
+
+		if len(tagStr) > 0 {
+			tc.Parse(tagStr)
+			tc = tc.SuggestedTags(DM.DB)
+			p.Query = "?tag=" + tagStr
+		} else {
+			err = tc.Get(tagLimit, (currPage-1)*tagLimit)
+		}
+
 		for _, t := range tc.Tags {
 			t.QNamespace(DM.DB).QNamespace(DM.DB)
 		}
@@ -51,6 +63,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
+
 		p.Tags = tc.Tags
 
 		if len(f) >= 3 && f[2] != "" {
@@ -60,22 +73,30 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			preload := func(tags ...*DM.Tag) {
+				for _, tag := range tags {
+					tag.QID(DM.DB)
+					tag.QTag(DM.DB)
+					tag.QNamespace(DM.DB).QNamespace(DM.DB)
+				}
+			}
+
 			a := DM.NewAlias()
 			a.Tag.SetID(tagID)
-			a.Tag.QTag(DM.DB)
-			a.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
+			preload(a.Tag)
 
 			p.Tag = a.Tag
 			p.From = a.QFrom(DM.DB)
-			for _, f := range p.From {
-				f.QID(DM.DB)
-				f.QTag(DM.DB)
-				f.QNamespace(DM.DB).QNamespace(DM.DB)
-			}
+			preload(p.From...)
+
 			p.To = a.QTo(DM.DB)
-			p.To.QID(DM.DB)
-			p.To.QTag(DM.DB)
-			p.To.QNamespace(DM.DB).QNamespace(DM.DB)
+			preload(p.To)
+
+			p.Parents = p.Tag.Parents(DM.DB)
+			preload(p.Parents...)
+
+			p.Children = p.Tag.Children(DM.DB)
+			preload(p.Children...)
 
 			bm.End(performBenchmarks)
 		}

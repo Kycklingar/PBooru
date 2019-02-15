@@ -78,6 +78,7 @@ func (a *Alias) Save(q querier) error {
 	_, err := q.Exec("INSERT INTO alias (alias_from, alias_to) VALUES($1, COALESCE((SELECT alias_to FROM alias WHERE alias_from = $2), $2)) ON CONFLICT (alias_from) DO UPDATE SET alias_to = EXCLUDED.alias_to", a.Tag.QID(q), a.To.QID(q))
 	if err != nil {
 		log.Println(err)
+		log.Println(a.To, a.Tag)
 	}
 	resetCacheTag(a.To.QID(q))
 	resetCacheTag(a.Tag.QID(q))

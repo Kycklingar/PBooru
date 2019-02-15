@@ -1,10 +1,16 @@
 {{ template "base" }}
-
+<div>
+	<form>
+		<label for="tagsearch">Search</label>
+    		<input id="tagsearch" class="stinput" name="tag" type="text">
+    		<input value="Search" type="submit">
+	</form>
+</div>
 <div id="content" class="nolink">
-    <div id="sidebar">
+    <div class="panel" id="sidebar">
         <ul>
         {{ range .Tags }}
-            <a href="/tags/{{$.Paginator.Current}}/{{.ID}}">
+            <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
                 <li>
                     {{template "tag" .}}
                 </li>
@@ -15,7 +21,7 @@
     <div class="text-panel">
         {{ if .Tag}}
         <h2>
-            <a href="/tags/{{.Paginator.Current}}/{{.Tag.ID}}">
+            <a href="/tags/{{.Paginator.Current}}/{{.Tag.ID}}{{$.Query}}">
                 {{template "tag" .Tag}}
             </a>
         </h2>
@@ -25,7 +31,7 @@
             <ul>
                 {{ range .From }}
                 <li>
-                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}">
+                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
                         {{ template "tag" .}}
                     </a>
                 </li>
@@ -36,25 +42,65 @@
         <p>
             Aliased to: 
             {{ if ne .To.ID 0}}
-                <a href="/tags/{{.Paginator.Current}}/{{.To.ID}}">
+                <a href="/tags/{{.Paginator.Current}}/{{.To.ID}}{{$.Query}}">
                     {{ template "tag" .To}}
                 </a>
             {{ end }}
         </p>
+
+        <p>
+            Parents: 
+            {{ if .Parents}}
+            <ul>
+                {{ range .Parents}}
+                <li>
+                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
+                        {{ template "tag" .}}
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </p>
+
+        <p>
+            Children: 
+            {{ if .Children}}
+            <ul>
+                {{ range .Children}}
+                <li>
+                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
+                        {{ template "tag" .}}
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </p>
+
         {{ end }}
 
         <form method="POST">
             <input type="hidden" name="action" value="alias">
             <p>Alias from</p>
-            <input type="text" class="stinput" name="from">
+            {{with .Tag}}
+	    	<input type="hidden" name="from" value="{{.Namespace.Namespace}}:{{.Tag}}">
+	    {{else}}
+	    	<input type="text" class="stinput" name="from">
+	    {{end}}
             <p>Alias to</p>
             <input type="text" class="stinput" name="to">
             <input type="submit">
         </form>
+	<div class="divider"></div>
         <form method="POST">
                 <input type="hidden" name="action" value="parent">
-                <p>Child</p>
-                <input type="text" class="stinput" name="child">
+                {{with .Tag}}
+	    		<input type="hidden" name="child" value="{{.Namespace.Namespace}}:{{.Tag}}">
+		{{else}}
+			<p>Child</p>
+                	<input type="text" class="stinput" name="child">
+		{{end}}
                 <p>Parent</p>
                 <input type="text" class="stinput" name="parent">
                 <input type="submit">
