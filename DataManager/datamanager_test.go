@@ -12,23 +12,19 @@ const (
 	connectionString = "user=pbdb password=1234 dbname=pbdbtest sslmode=disable"
 )
 
-var testDB *sql.DB
-
 func openTestDB(t *testing.T) *sql.DB {
-	if testDB != nil {
-		return testDB
+	if DB != nil {
+		return DB
 	}
 
 	var err error
 
-	if testDB, err = sql.Open(dbDriver, connectionString); err != nil {
-		t.Error("Failed to open testdb", err)
-		return nil
+	if DB, err = sql.Open(dbDriver, connectionString); err != nil {
+		t.Fatal("Failed to open testdb", err)
 	}
 
-	if err = update(testDB, "../out/sql"); err != nil {
-		t.Error("Failed to update testdb", err)
-		return nil
+	if err = update(DB, "../out/sql"); err != nil {
+		t.Fatal("Failed to update testdb", err)
 	}
-	return testDB
+	return DB
 }
