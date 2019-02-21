@@ -88,6 +88,7 @@
 			</ul>
 		{{end}}
             <p>{{ .Post.Mime.Str }}</p>
+	    <p>{{ .Post.SizePretty }}</p>
             {{ if .Post.Deleted }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
             <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
 

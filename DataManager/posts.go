@@ -36,6 +36,7 @@ type Post struct {
 	thumbnails []Thumb
 	Mime       *Mime
 	Deleted    int
+	Size       int64
 }
 
 func (p *Post) QID(q querier) int {
@@ -195,19 +196,56 @@ func (p *Post) QDeleted(q querier) int {
 	return p.Deleted
 }
 
-func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error {
+func (p *Post) QSize(q querier) int64 {
+	if p.Size > 0 {
+		return p.Size
+	}
+
+	if p.QID(q) == 0 {
+		return 0
+	}
+
+	err := q.QueryRow("SELECT file_size FROM posts WHERE id = $1", p.QID(q)).Scan(&p.Size)
+	if err != nil {
+		log.Println(err)
+	}
+	return p.Size
+}
+
+func (p *Post) SizePretty() string{
+	const unit = 1000
+	if p.Size < unit{
+		return fmt.Sprintf("%dB", p.Size)
+	}
+
+	div, exp := int64(unit), 0
+	for n := p.Size / unit; n >= unit; n /= unit{
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.2f%cB", float64(p.Size)/float64(div), "KMGTPE"[exp])
+}
+
+func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user *User) error {
 	var err error
 	p.Hash, err = ipfsAdd(file)
 	if err != nil {
 		log.Println("Error pinning file to ipfs: ", err)
 		return err
 	}
-	file.Seek(0, 0)
+	_, err = file.Seek(0, 0)
+	if err != nil{
+		log.Println(err)
+		return err
+	}
 
 	if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
 		log.Println("Error copying file to mfs: ", err)
 		return err
 	}
+
+	p.Size = size
 
 	var tx *sql.Tx
 
@@ -337,11 +375,11 @@ func (p *Post) Save(q querier, user *User) error {
 		}
 	}
 
-	if p.Hash == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 {
-		return fmt.Errorf("post missing argument. Want Hash and Mime.ID, Have: %s, %d, %d", p.Hash, p.Mime.ID, user.ID)
+	if p.Hash == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 || p.Size == 0 {
+		return fmt.Errorf("post missing argument. Want Hash, Mime.ID, User.ID, Size Have: %s, %d, %d, %d", p.Hash, p.Mime.ID, user.ID, p.Size)
 	}
 
-	err := q.QueryRow("INSERT INTO posts(multihash, mime_id, uploader) VALUES($1, $2, $3) RETURNING id", p.Hash, p.Mime.QID(q), user.QID(q)).Scan(&p.ID)
+	err := q.QueryRow("INSERT INTO posts(multihash, mime_id, uploader, file_size) VALUES($1, $2, $3, $4) RETURNING id", p.Hash, p.Mime.QID(q), user.QID(q), p.Size).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -354,6 +392,8 @@ func (p *Post) Save(q querier, user *User) error {
 			return err
 		}
 	}
+
+	// Move this
 	totalPosts = 0
 
 	return nil

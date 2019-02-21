@@ -30,6 +30,35 @@ func tUser(u *DM.User) User {
 	return User{u.QID(DM.DB), u.QName(DM.DB), u.QFlag(DM.DB)}
 }
 
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	u, ui := getUser(w, r)
+	type page struct {
+		User        User
+		UserInfo    UserInfo
+		Pools       []*DM.Pool
+		RecentPosts []*DM.Post
+	}
+	var p = page{User: tUser(u), UserInfo: ui, Pools: u.QPools(DM.DB, 5)}
+
+	for _, pool := range p.Pools {
+		pool.QPosts(DM.DB)
+		for _, post := range pool.Posts {
+			post.Post.QThumbnails(DM.DB)
+			post.Post.QHash(DM.DB)
+			post.Post.QDeleted(DM.DB)
+		}
+	}
+
+	p.RecentPosts = u.RecentPosts(DM.DB, 5)
+	for _, post := range p.RecentPosts {
+		post.QHash(DM.DB)
+		post.QThumbnails(DM.DB)
+		post.QDeleted(DM.DB)
+	}
+
+	renderTemplate(w, "user", p)
+}
+
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")

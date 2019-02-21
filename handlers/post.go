@@ -143,6 +143,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
 	p.QID(DM.DB)
+	p.QSize(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
 	p.QThumbnails(DM.DB)
@@ -339,7 +340,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
 		r.ParseMultipartForm(50 << 20)
-		file, _, err := r.FormFile("file")
+		file, fh, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
 			return
@@ -365,7 +366,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		post := DM.NewPost()
 
-		err = post.New(file, tagString, contentType, user)
+		err = post.New(file, fh.Size, tagString, contentType, user)
 		if err != nil {
 			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
 			log.Println(err)

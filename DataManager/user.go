@@ -31,6 +31,50 @@ type User struct {
 	Session      *Session
 }
 
+type Pool struct {
+	ID          int
+	User        *User
+	Title       string
+	Description string
+
+	Posts []PoolMapping
+}
+
+type PoolMapping struct {
+	Post     *Post
+	Position int
+}
+
+func (p *Pool) QPosts(q querier) error {
+	if len(p.Posts) > 0 {
+		return nil
+	}
+	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1", p.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pm PoolMapping
+		pm.Post = NewPost()
+		err = rows.Scan(&pm.Post.ID, &pm.Position)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		p.Posts = append(p.Posts, pm)
+	}
+
+	return rows.Err()
+}
+
+func (p *Pool) PostsLimit(limit int) []PoolMapping {
+	return p.Posts[:Smal(limit, len(p.Posts))]
+}
+
 func (u *User) QID(q querier) int {
 	if u.ID != 0 {
 		return u.ID
@@ -50,6 +94,34 @@ func (u *User) QID(q querier) int {
 
 func (u *User) SetID(id int) {
 	u.ID = id
+}
+
+func (u *User) RecentPosts(q querier, limit int) []*Post {
+	rows, err := q.Query("SELECT id FROM posts WHERE uploader = $1 ORDER BY id DESC LIMIT $2", u.QID(q), limit)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+
+	var posts []*Post
+
+	for rows.Next() {
+		var p = NewPost()
+		err = rows.Scan(&p.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		posts = append(posts, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return posts
 }
 
 func (u *User) QName(q querier) string {
@@ -168,6 +240,34 @@ func (u User) Register(name, password string) error {
 	err = tx.Commit()
 
 	return err
+}
+
+func (u *User) QPools(q querier, limit int) []*Pool {
+	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2", u.QID(q), limit)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+
+	var pools []*Pool
+	for rows.Next() {
+		var pool Pool
+		pool.User = u
+		err = rows.Scan(&pool.ID, &pool.Title, &pool.Description)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		pools = append(pools, &pool)
+	}
+
+	if rows.Err() != nil {
+		log.Println(rows.Err())
+		return nil
+	}
+
+	return pools
 }
 
 func (u *User) Sessions(q querier) []*Session {

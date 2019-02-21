@@ -235,7 +235,7 @@ func ipfsCat(hash string) io.ReadCloser {
 	cl := http.Client{}
 	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil
 	}
 
@@ -248,4 +248,49 @@ func ipfsCat(hash string) io.ReadCloser {
 	}
 
 	return res.Body
+}
+
+func ipfsSize(hash string) int64{
+	if len(hash) < 46 {
+		return 0
+	}
+
+	cl := http.Client{}
+	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"object/stat?arg=%s", hash))
+	if err != nil{
+		log.Println(err)
+		return 0
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200{
+		log.Println("status ", res.StatusCode)
+		return 0
+	}
+
+
+	body := &bytes.Buffer{}
+	_, err = body.ReadFrom(res.Body)
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	f := make(map[string]interface{})
+
+	json.Unmarshal(body.Bytes(), &f)
+	fmt.Println(f)
+
+	m, ok := f["CumulativeSize"]
+	if !ok {
+		log.Println("not ok")
+		return 0
+	}
+
+	//size, err := strconv.ParseInt(m.(string), 10, 64)
+	//if err != nil{
+	//	log.Println(err)
+	//	return 0
+	//}
+	return int64(m.(float64))
 }
