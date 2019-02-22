@@ -250,24 +250,23 @@ func ipfsCat(hash string) io.ReadCloser {
 	return res.Body
 }
 
-func ipfsSize(hash string) int64{
+func ipfsSize(hash string) int64 {
 	if len(hash) < 46 {
 		return 0
 	}
 
 	cl := http.Client{}
 	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"object/stat?arg=%s", hash))
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return 0
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200{
+	if res.StatusCode != 200 {
 		log.Println("status ", res.StatusCode)
 		return 0
 	}
-
 
 	body := &bytes.Buffer{}
 	_, err = body.ReadFrom(res.Body)

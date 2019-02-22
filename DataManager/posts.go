@@ -212,14 +212,14 @@ func (p *Post) QSize(q querier) int64 {
 	return p.Size
 }
 
-func (p *Post) SizePretty() string{
+func (p *Post) SizePretty() string {
 	const unit = 1000
-	if p.Size < unit{
+	if p.Size < unit {
 		return fmt.Sprintf("%dB", p.Size)
 	}
 
 	div, exp := int64(unit), 0
-	for n := p.Size / unit; n >= unit; n /= unit{
+	for n := p.Size / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
 	}
@@ -235,7 +235,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		return err
 	}
 	_, err = file.Seek(0, 0)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return err
 	}

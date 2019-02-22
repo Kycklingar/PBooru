@@ -3,8 +3,8 @@ package DataManager
 import (
 	"bytes"
 	"database/sql"
-	"fmt"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -193,52 +193,52 @@ func updateCode(ver int, tx *sql.Tx) error {
 		}
 	case 6:
 		{
-			type p struct{
-				id int
+			type p struct {
+				id   int
 				hash string
 			}
-			query := func(q querier, offset int)([]p, error){
-					limit := 50000
-					rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1 OFFSET $2", limit, limit *  offset)
-					if err != nil{
+			query := func(q querier, offset int) ([]p, error) {
+				limit := 50000
+				rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1 OFFSET $2", limit, limit*offset)
+				if err != nil {
+					return nil, err
+				}
+				defer rows.Close()
+				offset++
+
+				var ids []p
+				for rows.Next() {
+					var id p
+					err := rows.Scan(&id.id, &id.hash)
+					if err != nil {
 						return nil, err
 					}
-					defer rows.Close()
-					offset++
-
-					var ids []p
-					for rows.Next(){
-						var id p
-						err := rows.Scan(&id.id, &id.hash)
-						if err != nil{
-							return nil, err
-						}
-						ids = append(ids, id)
-					}
-					return ids, nil
+					ids = append(ids, id)
 				}
+				return ids, nil
+			}
 			offset := 0
 			for {
 
 				ids, err := query(tx, offset)
-				if err != nil{
+				if err != nil {
 					return err
 				}
-				if len(ids) <= 0{
+				if len(ids) <= 0 {
 					break
 				}
 				offset++
 
-				for _, id := range ids{
+				for _, id := range ids {
 					fmt.Printf("Working on id %d hash %s -> ", id.id, id.hash)
 					size := ipfsSize(id.hash)
 					fmt.Println(size)
-					if size <= 0{
+					if size <= 0 {
 						return errors.New("size returned was <= 0")
 					}
 
 					_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
-					if err != nil{
+					if err != nil {
 						return err
 					}
 				}
@@ -261,6 +261,74 @@ func getDbVersion(db *sql.DB) int {
 func setDbVersion(ver int, tx *sql.Tx) error {
 	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
+}
+
+func CalculateChecksums() error {
+	type P struct {
+		id   int
+		hash string
+	}
+
+	var tx, err = DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	query := func() ([]P, error) {
+		var limit = 5000
+		rows, err := tx.Query("SELECT p.id, p.multihash FROM posts p LEFT JOIN hashes h ON p.id = h.post_id WHERE h.post_id IS NULL ORDER BY p.id LIMIT $1", limit)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var posts []P
+		for rows.Next() {
+			var p P
+			err = rows.Scan(&p.id, &p.hash)
+			if err != nil {
+				return nil, err
+			}
+			posts = append(posts, p)
+		}
+
+		return posts, rows.Err()
+	}
+
+	for {
+		posts, err := query()
+		if err != nil {
+			return txError(tx, err)
+		}
+		if len(posts) <= 0 {
+			break
+		}
+
+		for _, p := range posts {
+			fmt.Printf("Calculating checksum on post: %d %s\n", p.id, p.hash)
+			file := ipfsCat(p.hash)
+			sha, md := checksum(file)
+			file.Close()
+
+			if sha == "" || md == "" {
+				return txError(tx, errors.New("Checksum empty"))
+			}
+
+			_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.id, sha, md)
+			if err != nil {
+				return txError(tx, err)
+			}
+		}
+
+		tx.Commit()
+		tx, err = DB.Begin()
+		if err != nil {
+			return err
+		}
+	}
+
+	tx.Commit()
+	return nil
 }
 
 func MigrateMfs() {
