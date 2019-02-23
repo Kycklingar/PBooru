@@ -1,31 +1,28 @@
 {{template "base"}}
 
 <div class="text-panel">
-	{{if .User.ID}}
-		<a href="/logout/">Logout</a>
+	{{if .Profile.ID}}
 		<div>
-			<h4><a href="/user/pools/">Pools</a></h4>
-			<ul>
-			{{range .Pools}}
-				<li>
-					<h5>{{.Title}}</h5>
-					{{range .PostsLimit 5}}
-						{{.Position}}
-						{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
-					{{end}}
-				</li>
-			{{end}}
-			</ul>
+			<h2>{{.Profile.Name}}</h2>
+		</div>
+		<div>
+			<h3><a href="/user/pools/{{.Profile.ID}}">Pools</a></h3>
 		</div>
 		<div>
 			<h4>Recent uploads</h4>
-			{{range .RecentPosts}}
-				{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
-			{{end}}
+			<div class="comic-strip">
+				{{range .RecentPosts}}
+					{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+				{{end}}
+			</div>
 		</div>
+	{{end}}
+	{{if .User.ID}}
+		<h2><a href="/logout/">Logout</a></h2>
+		<h3><a href="/login/">Sessions</a></h3>
 	{{else}}
-		<a href="/login/">Login</a>
-		<a href="/register/">Register</a>
+		<h2><a href="/login/">Login</a></h2>
+		<h2><a href="/register/">Register</a></h2>
 	{{end}}
 </div>
 

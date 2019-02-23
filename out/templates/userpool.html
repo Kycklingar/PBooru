@@ -1,0 +1,21 @@
+{{ template "base"}}
+
+<div class="text-panel">
+<h3>Pools of {{.Profile.Name}}</h3>
+	<ul>
+		{{range .Pools}}
+		<li>
+			<h5>{{.Title}}</h5>
+			<p>{{.Description}}</p>
+			<div class="comic-strip">
+			{{range .PostsLimit 5}}
+				{{.Position}}
+				{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+			{{end}}
+			</div>
+		</li>
+		{{end}}
+	</ul>
+</div>
+
+{{template "baseEnd"}}

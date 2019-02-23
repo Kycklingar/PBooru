@@ -11,6 +11,28 @@ body
     text-shadow: 3px 3px #213;
 }
 
+.comic-strip
+{
+	display: flex;
+	margin: 1em;
+}
+
+.comic-strip .thumbnail
+{
+	width:auto;
+	height:auto;
+}
+
+.comic-strip .thumbnail img
+{
+	position:relative;
+	max-width:unset;
+	max-height:unset;
+	top:auto;
+	left:auto;
+	transform:none;
+}
+
 #pageinator a:hover
 {
     text-decoration-line: underline;

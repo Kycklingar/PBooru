@@ -242,8 +242,8 @@ func (u User) Register(name, password string) error {
 	return err
 }
 
-func (u *User) QPools(q querier, limit int) []*Pool {
-	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2", u.QID(q), limit)
+func (u *User) QPools(q querier, limit, offset int) []*Pool {
+	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset * limit)
 	if err != nil {
 		log.Println(err)
 		return nil

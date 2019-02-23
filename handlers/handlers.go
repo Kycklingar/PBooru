@@ -231,6 +231,7 @@ func init() {
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
 	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/pools/"] = makeStatHandler(UserPoolHandler)
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)

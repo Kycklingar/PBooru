@@ -32,13 +32,28 @@ func tUser(u *DM.User) User {
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	u, ui := getUser(w, r)
+	profile := u
+
+	paths := splitURI(r.URL.Path)
+	if len(paths) >= 2{
+		uid, err := strconv.Atoi(paths[1])
+		if err != nil{
+			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
+			return
+		}
+
+		profile = DM.NewUser()
+		profile.SetID(uid)
+	}
+
 	type page struct {
 		User        User
 		UserInfo    UserInfo
+		Profile	User
 		Pools       []*DM.Pool
 		RecentPosts []*DM.Post
 	}
-	var p = page{User: tUser(u), UserInfo: ui, Pools: u.QPools(DM.DB, 5)}
+	var p = page{User: tUser(u), UserInfo: ui, Profile: tUser(profile), Pools: profile.QPools(DM.DB, 5, 0)}
 
 	for _, pool := range p.Pools {
 		pool.QPosts(DM.DB)
@@ -49,7 +64,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p.RecentPosts = u.RecentPosts(DM.DB, 5)
+	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {
 		post.QHash(DM.DB)
 		post.QThumbnails(DM.DB)
@@ -57,6 +72,43 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "user", p)
+}
+
+func UserPoolHandler(w http.ResponseWriter, r *http.Request){
+	u, ui := getUser(w, r)
+	profile := u
+
+	paths := splitURI(r.URL.Path)
+	if len(paths) >= 3 {
+		uid, err := strconv.Atoi(paths[2])
+		if err != nil{
+			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
+			return
+		}
+
+		profile = DM.NewUser()
+		profile.SetID(uid)
+	}
+
+	type page struct{
+		User User
+		UserInfo UserInfo
+		Profile User
+		Pools []*DM.Pool
+	}
+
+	var p = page{User: tUser(u), UserInfo: ui, Profile: tUser(profile), Pools: profile.QPools(DM.DB, 5, 0)}
+
+	for _, pool := range p.Pools {
+		pool.QPosts(DM.DB)
+		for _, post := range pool.Posts {
+			post.Post.QThumbnails(DM.DB)
+			post.Post.QHash(DM.DB)
+			post.Post.QDeleted(DM.DB)
+		}
+	}
+
+	renderTemplate(w, "userpool", p)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
