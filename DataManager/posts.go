@@ -294,7 +294,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		file.Seek(0, 0)
 		sha, md := checksum(file)
 		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.QID(tx), sha, md)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			return txError(tx, err)
 		}

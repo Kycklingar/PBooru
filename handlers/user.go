@@ -35,9 +35,9 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	profile := u
 
 	paths := splitURI(r.URL.Path)
-	if len(paths) >= 2{
+	if len(paths) >= 2 {
 		uid, err := strconv.Atoi(paths[1])
-		if err != nil{
+		if err != nil {
 			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
 			return
 		}
@@ -49,7 +49,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	type page struct {
 		User        User
 		UserInfo    UserInfo
-		Profile	User
+		Profile     User
 		Pools       []*DM.Pool
 		RecentPosts []*DM.Post
 	}
@@ -74,14 +74,14 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "user", p)
 }
 
-func UserPoolHandler(w http.ResponseWriter, r *http.Request){
+func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 	u, ui := getUser(w, r)
 	profile := u
 
 	paths := splitURI(r.URL.Path)
 	if len(paths) >= 3 {
 		uid, err := strconv.Atoi(paths[2])
-		if err != nil{
+		if err != nil {
 			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
 			return
 		}
@@ -90,11 +90,11 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request){
 		profile.SetID(uid)
 	}
 
-	type page struct{
-		User User
+	type page struct {
+		User     User
 		UserInfo UserInfo
-		Profile User
-		Pools []*DM.Pool
+		Profile  User
+		Pools    []*DM.Pool
 	}
 
 	var p = page{User: tUser(u), UserInfo: ui, Profile: tUser(profile), Pools: profile.QPools(DM.DB, 5, 0)}
