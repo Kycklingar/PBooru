@@ -338,6 +338,11 @@ func GenerateThumbnails(size int) {
 		for _, hash := range hashes {
 			fmt.Println("Working on post: ", hash.id, hash.hash)
 			file := ipfsCat(hash.hash)
+			if file == nil{
+				log.Println("File is nil")
+				time.Sleep(time.Second)
+				continue
+			}
 			var b bytes.Buffer
 			b.ReadFrom(file)
 			f := bytes.NewReader(b.Bytes())
@@ -352,7 +357,7 @@ func GenerateThumbnails(size int) {
 				failed++
 				continue
 			}
-			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, false)
+			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
 			if err != nil {
 				log.Println(err, thash)
 				failed++
@@ -364,7 +369,7 @@ func GenerateThumbnails(size int) {
 				log.Fatal(err)
 			}
 		}
-		mfsFlush(CFG.MFSRootDir)
+		//mfsFlush(CFG.MFSRootDir)
 		tx.Commit()
 	}
 }
