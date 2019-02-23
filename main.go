@@ -51,6 +51,7 @@ func main() {
 	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
 	checkThumbSupport := flag.Bool("thumb-support", false, "Check for installed thumbnailing software")
 	calcChecksums := flag.Bool("calc-checksums", false, "Calculate the checksums of all posts")
+	generateFileSize := flag.Bool("gen-filesize", false, "Generate file sizes on posts with 0 filesize")
 	flag.Parse()
 
 	if *checkThumbSupport {
@@ -74,6 +75,13 @@ func main() {
 
 	if *calcChecksums {
 		if err := DM.CalculateChecksums(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	if *generateFileSize {
+		if err := DM.GenerateFileSizes(); err != nil {
 			log.Fatal(err)
 		}
 		return

@@ -191,59 +191,6 @@ func updateCode(ver int, tx *sql.Tx) error {
 				return err
 			}
 		}
-	case 6:
-		{
-			type p struct {
-				id   int
-				hash string
-			}
-			query := func(q querier, offset int) ([]p, error) {
-				limit := 50000
-				rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1 OFFSET $2", limit, limit*offset)
-				if err != nil {
-					return nil, err
-				}
-				defer rows.Close()
-				offset++
-
-				var ids []p
-				for rows.Next() {
-					var id p
-					err := rows.Scan(&id.id, &id.hash)
-					if err != nil {
-						return nil, err
-					}
-					ids = append(ids, id)
-				}
-				return ids, nil
-			}
-			offset := 0
-			for {
-
-				ids, err := query(tx, offset)
-				if err != nil {
-					return err
-				}
-				if len(ids) <= 0 {
-					break
-				}
-				offset++
-
-				for _, id := range ids {
-					fmt.Printf("Working on id %d hash %s -> ", id.id, id.hash)
-					size := ipfsSize(id.hash)
-					fmt.Println(size)
-					if size <= 0 {
-						return errors.New("size returned was <= 0")
-					}
-
-					_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
 	}
 	return nil
 }
@@ -261,6 +208,73 @@ func getDbVersion(db *sql.DB) int {
 func setDbVersion(ver int, tx *sql.Tx) error {
 	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
 	return err
+}
+
+func GenerateFileSizes() error {
+	type p struct {
+		id   int
+		hash string
+	}
+
+	var tx, err = DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	query := func(q querier) ([]p, error) {
+		limit := 5000
+		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1", limit)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var ids []p
+		for rows.Next() {
+			var id p
+			err := rows.Scan(&id.id, &id.hash)
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+		return ids, nil
+	}
+
+	for {
+		ids, err := query(tx)
+		if err != nil {
+			return txError(tx, err)
+		}
+		if len(ids) <= 0 {
+			break
+		}
+
+		for _, id := range ids {
+			fmt.Printf("Working on id %d hash %s -> ", id.id, id.hash)
+			size := ipfsSize(id.hash)
+			fmt.Println(size)
+			if size <= 0 {
+				return txError(tx, errors.New("size returned was <= 0"))
+			}
+
+			_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
+			if err != nil {
+				log.Println(err)
+				return txError(tx, err)
+			}
+		}
+
+		tx.Commit()
+		tx, err = DB.Begin()
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func CalculateChecksums() error {
