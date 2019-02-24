@@ -37,6 +37,8 @@ type Post struct {
 	Mime       *Mime
 	Deleted    int
 	Size       int64
+
+	description *string
 }
 
 func (p *Post) QID(q querier) int {
@@ -225,6 +227,32 @@ func (p *Post) SizePretty() string {
 	}
 
 	return fmt.Sprintf("%.2f%cB", float64(p.Size)/float64(div), "KMGTPE"[exp])
+}
+
+func (p *Post) Description() string {
+	if p.description != nil {
+		return *p.description
+	}
+
+	return ""
+}
+
+func (p *Post) QDescription(q querier) string {
+	if p.description != nil{
+		return *p.description
+	}
+
+	var tmp string
+
+	err := q.QueryRow("SELECT text FROM post_description WHERE post_id = $1 ORDER BY itteration DESC LIMIT 1", p.ID).Scan(&tmp)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+	}
+	p.description = &tmp
+
+	return tmp
 }
 
 func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user *User) error {

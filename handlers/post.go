@@ -147,6 +147,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
 	p.QThumbnails(DM.DB)
+	p.QDescription(DM.DB)
 
 	pp.Post = p
 

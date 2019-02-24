@@ -77,6 +77,12 @@
             <a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>
                 <h3>Download</h3>
             </a>
+	    {{with .Post.Description}}
+		<div class="panel">
+	    		<h3>Description</h3>
+	    		<p>{{.}}</p>
+		</div>
+	    {{end}}
             <h4>ID:{{ .Post.ID }}</h4>
             <h4>{{ .Post.Hash }}</h4>
 		{{with .Post.Thumbnails}}
