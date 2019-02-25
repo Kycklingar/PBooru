@@ -13,11 +13,25 @@ function removeSTBox() {
 }
 
 function replaceQuery(input, tag) {
-    input.value = input.value.slice(0, input.value.lastIndexOf(",") + 1) + tag + ", "
+	var a = input.value.lastIndexOf(",")
+	var b = input.value.lastIndexOf("\n")
+	var lastIndex
+	if (a > b)
+		lastIndex = a
+	else
+		lastIndex = b
+
+
+	var append = ", "
+
+	if (input.value[lastIndex] == "\n")
+    		append = input.value[lastIndex]
+		
+    input.value = input.value.slice(0, lastIndex + 1) + tag + append
 }
 
 function suggestionBox(caller) {
-    var str = caller.value.slice(caller.value.lastIndexOf(",") + 1).trim()
+    var str = caller.value.slice(caller.value.replace(/\n/g, ",").lastIndexOf(",") + 1).trim()
     if (str.length <= 2) {
         removeSTBox()
         return
@@ -88,7 +102,6 @@ function updateSelection(box)
 {
     if(box.selection > box.children.length - 1)
     {
-
         box.selection = -1
     }
     else if(box.selection < -1)
