@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS hashes(
 CREATE TABLE IF NOT EXISTS post_description(
 	post_id INT NOT NULL REFERENCES posts(id),
 	itteration INT NOT NULL,
+	editor INT REFERENCES users(id),
 	text TEXT NOT NULL,
 	PRIMARY KEY(post_id, itteration)
 );
