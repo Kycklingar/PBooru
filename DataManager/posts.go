@@ -238,7 +238,7 @@ func (p *Post) Description() string {
 }
 
 func (p *Post) QDescription(q querier) string {
-	if p.description != nil{
+	if p.description != nil {
 		return *p.description
 	}
 

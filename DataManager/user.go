@@ -16,7 +16,7 @@ import (
 
 func NewUser() *User {
 	var u User
-	u.AdmFlag = -1
+	u.Flag = -1
 	u.Session = &Session{}
 	return &u
 }
@@ -27,8 +27,10 @@ type User struct {
 	passwordHash string
 	salt         string
 	Joined       time.Time
-	AdmFlag      int
+	Flag         int
 	Session      *Session
+
+	Pools []*Pool
 }
 
 type Pool struct {
@@ -40,9 +42,69 @@ type Pool struct {
 	Posts []PoolMapping
 }
 
+func NewPool() *Pool {
+	var p Pool
+	p.User = NewUser()
+
+	return &p
+}
+
 type PoolMapping struct {
 	Post     *Post
 	Position int
+}
+
+func (p *Pool) QTitle(q querier) string {
+	if len(p.Title) > 0 {
+		return p.Title
+	}
+
+	if p.ID == 0 {
+		return ""
+	}
+
+	err := q.QueryRow("SELECT title FROM user_pools WHERE id = $1", p.ID).Scan(&p.Title)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	return p.Title
+}
+
+func (p *Pool) QUser(q querier) *User {
+	if p.User.QID(q) != 0 {
+		return p.User
+	}
+
+	if p.ID == 0 {
+		return p.User
+	}
+
+	err := q.QueryRow("SELECT user_id FROM user_pools WHERE id = $1", p.ID).Scan(&p.User.ID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return p.User
+}
+
+func (p *Pool) QDescription(q querier) string {
+	if len(p.Description) > 0 {
+		return p.Description
+	}
+
+	if p.ID == 0 {
+		return ""
+	}
+
+	err := q.QueryRow("SELECT description FROM user_pools WHERE id = $1", p.ID).Scan(&p.Description)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	return p.Description
 }
 
 func (p *Pool) QPosts(q querier) error {
@@ -73,6 +135,37 @@ func (p *Pool) QPosts(q querier) error {
 
 func (p *Pool) PostsLimit(limit int) []PoolMapping {
 	return p.Posts[:Smal(limit, len(p.Posts))]
+}
+
+func (p *Pool) Save(q querier) error {
+	if len(p.Title) <= 0 {
+		return errors.New("Title cannot be empty")
+	}
+
+	if p.User.QID(q) == 0 {
+		return errors.New("No user in pool")
+	}
+
+	_, err := q.Exec("INSERT INTO user_pools(user_id, title, description) VALUES($1, $2, $3)", p.User.QID(q), p.Title, p.Description)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (p *Pool) Add(postID, position int) error {
+	if p.ID <= 0 {
+		return errors.New("Pool id is 0")
+	}
+
+	if postID <= 0 {
+		return errors.New("Post id is < 0")
+	}
+
+	_, err := DB.Exec("INSERT INTO pool_mappings(pool_id, post_id, position) VALUES($1, $2, $3)", p.ID, postID, position)
+	return err
 }
 
 func (u *User) QID(q querier) int {
@@ -143,18 +236,18 @@ func (u *User) SetName(name string) {
 }
 
 func (u *User) QFlag(q querier) int {
-	if u.AdmFlag != -1 {
-		return u.AdmFlag
+	if u.Flag != -1 {
+		return u.Flag
 	}
 	if u.QID(q) == 0 {
 		return -1
 	}
 
-	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.AdmFlag)
+	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.Flag)
 	if err != nil {
 		log.Print(err)
 	}
-	return u.AdmFlag
+	return u.Flag
 }
 
 func (u *User) Salt(q querier) string {
@@ -242,33 +335,61 @@ func (u User) Register(name, password string) error {
 	return err
 }
 
-func (u *User) QPools(q querier, limit, offset int) []*Pool {
-	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset*limit)
+func (u *User) QPools(q querier) []*Pool {
+	if u.Pools != nil {
+		return u.Pools
+	}
+
+	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1", u.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 	defer rows.Close()
 
-	var pools []*Pool
 	for rows.Next() {
-		var pool Pool
-		pool.User = u
-		err = rows.Scan(&pool.ID, &pool.Title, &pool.Description)
+		var p Pool
+		err = rows.Scan(&p.ID, &p.Title, &p.Description)
 		if err != nil {
 			log.Println(err)
 			return nil
 		}
-		pools = append(pools, &pool)
+
+		p.User = u
+
+		u.Pools = append(u.Pools, &p)
 	}
 
-	if rows.Err() != nil {
-		log.Println(rows.Err())
-		return nil
-	}
-
-	return pools
+	return u.Pools
 }
+
+//func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {
+//	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset*limit)
+//	if err != nil {
+//		log.Println(err)
+//		return nil
+//	}
+//	defer rows.Close()
+//
+//	var pools []*Pool
+//	for rows.Next() {
+//		var pool Pool
+//		pool.User = u
+//		err = rows.Scan(&pool.ID, &pool.Title, &pool.Description)
+//		if err != nil {
+//			log.Println(err)
+//			return nil
+//		}
+//		pools = append(pools, &pool)
+//	}
+//
+//	if rows.Err() != nil {
+//		log.Println(rows.Err())
+//		return nil
+//	}
+//
+//	return pools
+//}
 
 func (u *User) Sessions(q querier) []*Session {
 	rows, err := q.Query("SELECT * FROM sessions WHERE user_id=$1", u.QID(q))

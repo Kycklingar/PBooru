@@ -258,7 +258,7 @@ func ipfsSize(hash string) int64 {
 
 	cl := http.Client{}
 	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return 0
 	}
@@ -267,11 +267,10 @@ func ipfsSize(hash string) int64 {
 	sizeStr := res.Header.Get("X-Content-Length")
 
 	size, err := strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
 		return 0
 	}
 
 	return size
 }
-

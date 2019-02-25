@@ -18,7 +18,7 @@ type Postpage struct {
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
 	Sidebar  Sidebar
-	User     User
+	User     *DM.User
 	UserInfo UserInfo
 	Time     string
 }
@@ -99,14 +99,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var pp Postpage
 	p := DM.NewPost()
 
-	var u *DM.User
-	u, pp.UserInfo = getUser(w, r)
-	pp.User = tUser(u)
+	pp.User, pp.UserInfo = getUser(w, r)
+
+	pp.User.QID(DM.DB)
+	pp.User.QFlag(DM.DB)
+	pp.User.QPools(DM.DB)
 
 	uri := splitURI(r.URL.Path)
 
 	// Valid Uris: 	post/1
-	//				post/hash/Qm...
+	//		post/hash/Qm...
 	if len(uri) <= 1 {
 		notFoundHandler(w, r)
 		return
