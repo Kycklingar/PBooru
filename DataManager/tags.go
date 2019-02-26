@@ -271,7 +271,7 @@ type TagCollector struct {
 }
 
 func (tc *TagCollector) Parse(tagStr string) error {
-	tags := strings.Split(tagStr, ",")
+	tags := strings.Split(strings.Replace(tagStr, "\n", ",", -1), ",")
 	for _, tag := range tags {
 		if strings.TrimSpace(tag) == "" {
 			continue
