@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"errors"
 
 	"github.com/Nr90/imgsim"
 	"github.com/kycklingar/mimemagic"
@@ -230,6 +231,54 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 	defer f.Close()
 
 	return magickResize(f, format, size)
+}
+
+func getDimensions(file io.Reader) (int, int, error) {
+	args := []string{
+		"-ping",
+		"-format",
+		"%wx%h",
+		"-[0]",
+	}
+
+	cmd := exec.Command("identify", args...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Println(err)
+		return 0, 0, err
+	}
+
+	go func() {
+		defer stdin.Close()
+		_, err = io.Copy(stdin, file)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println(string(out), err)
+		return 0, 0, err
+	}
+
+	wh := strings.Split(string(out), "x")
+	if len(wh) != 2 {
+		return 0, 0, errors.New("No width/height " + string(out))
+	}
+
+	width, err := strconv.Atoi(wh[0])
+	if err != nil {
+		log.Println(err)
+		return 0, 0, err
+	}
+	height, err := strconv.Atoi(wh[1])
+	if err != nil {
+		log.Println(err)
+		return 0, 0, err
+	}
+
+	return width, height, nil
 }
 
 func dHash(file io.Reader) uint64 {

@@ -505,6 +505,82 @@ func GenerateThumbnails(size int) {
 	}
 }
 
+func GenerateFileDimensions() {
+	type P struct {
+		id   int
+		hash string
+	}
+	query := func(tx *sql.Tx, offset int) []P {
+
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN post_info t ON p.id = t.post_id WHERE t.post_id IS NULL ORDER BY p.id ASC LIMIT 200 OFFSET $1", offset)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		var hashes []P
+
+		for rows.Next() {
+			var p P
+			err = rows.Scan(&p.hash, &p.id)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+			hashes = append(hashes, p)
+		}
+		return hashes
+	}
+
+	var failed int
+	for {
+		var tx, err = DB.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		hashes := query(tx, failed)
+
+		if len(hashes) <= 0 {
+			tx.Commit()
+			break
+		}
+
+		for _, hash := range hashes {
+			fmt.Println("Working on post: ", hash.id, hash.hash)
+			file := ipfsCat(hash.hash)
+			if file == nil {
+				log.Println("File is nil")
+				time.Sleep(time.Second)
+				failed++
+				continue
+			}
+
+			width, height, err := getDimensions(file)
+			file.Close()
+			if err != nil {
+				log.Println(err)
+				failed++
+				continue
+			}
+
+			if width == 0 || height == 0 {
+				log.Println("width or height <= 0: ", width, height)
+				failed++
+				continue
+			}
+
+			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", hash.id, width, height)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+		}
+		tx.Commit()
+	}
+}
+
 type Config struct {
 	//Database string
 	ConnectionString string

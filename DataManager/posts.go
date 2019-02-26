@@ -292,6 +292,9 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 			p.thumbnails = append(p.thumbnails, Thumb{Hash: thash, Size: dim})
 		}
 
+		file.Seek(0, 0)
+		width, height, _ := getDimensions(file)
+
 		tx, err = DB.Begin()
 		if err != nil {
 			log.Println("Error creating transaction: ", err)
@@ -325,6 +328,14 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		if err != nil {
 			log.Println(err)
 			return txError(tx, err)
+		}
+
+		if width > 0 && height > 0 {
+			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.QID(tx), width, height)
+			if err != nil {
+				log.Println(err)
+				return txError(tx, err)
+			}
 		}
 
 		if p.Mime.Type == "image" {
