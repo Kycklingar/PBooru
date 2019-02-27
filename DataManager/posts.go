@@ -202,21 +202,22 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 		log.Println("Error pinning file to ipfs: ", err)
 		return err
 	}
-	file.Seek(0, 0)
-
-	if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
-		log.Println("Error copying file to mfs: ", err)
-		return err
-	}
 
 	var tx *sql.Tx
 
 	if p.QID(DB) == 0 {
 
+		file.Seek(0, 0)
+		if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
+			log.Println("Error copying file to mfs: ", err)
+			return err
+		}
+
 		for _, dim := range CFG.ThumbnailSizes {
 			file.Seek(0, 0)
 			thash, err := makeThumbnail(file, dim)
 			if err != nil {
+				log.Println(err)
 				break // It is better to add faulty file than it is to lose it forever.
 				//return err
 			}
@@ -254,9 +255,8 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 		}
 
 		if p.Mime.Type == "image" {
-			f := ipfsCat(p.Hash)
-			u := dHash(f)
-			f.Close()
+			file.Seek(0, 0)
+			u := dHash(file)
 
 			type PHS struct {
 				id int

@@ -101,14 +101,16 @@ func ipfsAdd(file io.Reader) (string, error) {
 
 func mfsCP(dir, mhash string, flush bool) error {
 	directory := dir + mhash[len(mhash)-2:] + "/"
-
+	var err error
 	if mfsExists(directory) != nil {
 		if err := mfsMkdir(directory); err != nil {
 			log.Println(err)
 			return err
 		}
-	} else if mfsExists(directory+mhash) == nil {
+	} else if err =  mfsExists(directory+mhash); err == nil {
 		return nil
+	} else if err.Error() == "no entries" {
+		return err
 	}
 
 	var fl string
@@ -157,12 +159,21 @@ func mfsExists(dir string) error {
 
 	b := bytes.Buffer{}
 	b.ReadFrom(res.Body)
+
+	if res.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("HTTP Error %d, %s", res.StatusCode, string(b.Bytes())))
+	}
+
 	v := make(map[string]interface{})
 	json.Unmarshal(b.Bytes(), &v)
 
 	if v["Type"] == "error" {
 		return errors.New(fmt.Sprint("Path doesn't exist")) //"File doesn't match hash:", v["Hash"], hash))
 	}
+	if _, ok := v["Entries"]; !ok {
+		return errors.New("no entries")
+	}
+
 	return nil
 }
 
