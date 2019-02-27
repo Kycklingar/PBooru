@@ -3,7 +3,7 @@
 <div class="text-panel">
 	<h3>{{.Pool.User.Name}} - {{.Pool.Title}}</h3>
 	<p>{{.Pool.Description}}</p>
-	<div class="comic-strip">
+	<div id="posts">
 	{{range .Pool.Posts}}
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 	{{end}}
