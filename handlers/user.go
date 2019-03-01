@@ -266,13 +266,26 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := getUser(w, r)
+	if r.Method == http.MethodPost {
+		sessKey := r.FormValue("session-key")
+		if len(sessKey) <= 0 {
+			http.Error(w, "no session key", http.StatusBadRequest)
+			return
+		}
 
-	setC(w, "session", "")
+		u := DM.NewUser()
+		u.Session.Get(DM.DB, sessKey)
 
-	if user.QID(DM.DB) > 0 {
-		user.Logout(DM.DB)
+		u.Logout(DM.DB)
+	} else {
+		user, _ := getUser(w, r)
+		if user.QID(DM.DB) > 0 {
+			user.Logout(DM.DB)
+		}
+		setC(w, "session", "")
 	}
+
+
 
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }

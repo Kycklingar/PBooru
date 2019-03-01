@@ -111,7 +111,7 @@ func (p *Pool) QPosts(q querier) error {
 	if len(p.Posts) > 0 {
 		return nil
 	}
-	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1", p.ID)
+	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1 ORDER BY position, post_id DESC", p.ID)
 	if err != nil {
 		log.Println(err)
 		return err

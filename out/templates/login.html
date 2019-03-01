@@ -13,12 +13,15 @@
         <tr>
             <td>{{.Key}}</td>
             <td>{{.Expire}}</td>
+	    <td>
+	    	<form action="/logout/" method="POST">
+		<input type="hidden" value="{{.Key}}" name="session-key">
+	    	<input type="submit" value="Logout">
+	    	</form>
+	    </td>
         </tr>
     {{end}}
 </table>
-<form action="/logout/">
-    <input type="submit" value="Logout">
-</form>
 {{else}}
 <h2>Login</h2>
 <form method="post">
