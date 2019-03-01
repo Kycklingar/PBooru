@@ -429,6 +429,42 @@ func MigrateMfs() {
 	}
 }
 
+func GenerateThumbnail(postID int) error {
+	var hash string
+	err := DB.QueryRow("SELECT multihash FROM posts WHERE id = $1", postID).Scan(&hash)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	for _, size := range CFG.ThumbnailSizes {
+		file := ipfsCat(hash)
+		if file == nil {
+			log.Println("File is nil")
+			continue
+		}
+
+		var b bytes.Buffer
+		b.ReadFrom(file)
+
+		file.Close()
+
+		f := bytes.NewReader(b.Bytes())
+		thash, err := makeThumbnail(f, size)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		_, err = DB.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, size, thash)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	return err
+}
+
 func GenerateThumbnails(size int) {
 
 	type P struct {
@@ -474,6 +510,12 @@ func GenerateThumbnails(size int) {
 		for _, hash := range hashes {
 			fmt.Println("Working on post: ", hash.id, hash.hash)
 			file := ipfsCat(hash.hash)
+			if file == nil {
+				log.Println("File is nil")
+				time.Sleep(time.Second)
+				failed++
+				continue
+			}
 			var b bytes.Buffer
 			b.ReadFrom(file)
 			f := bytes.NewReader(b.Bytes())
@@ -488,7 +530,7 @@ func GenerateThumbnails(size int) {
 				failed++
 				continue
 			}
-			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, false)
+			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
 			if err != nil {
 				log.Println(err, thash)
 				failed++
@@ -500,7 +542,7 @@ func GenerateThumbnails(size int) {
 				log.Fatal(err)
 			}
 		}
-		mfsFlush(CFG.MFSRootDir)
+		//mfsFlush(CFG.MFSRootDir)
 		tx.Commit()
 	}
 }
