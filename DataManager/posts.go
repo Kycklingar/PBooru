@@ -263,6 +263,8 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		return err
 	}
 
+	p.Size = size
+
 	var tx *sql.Tx
 
 	if p.QID(DB) == 0 {
