@@ -223,7 +223,7 @@ func GenerateFileSizes() error {
 	}
 
 	query := func(q querier) ([]p, error) {
-		limit := 5000
+		limit := 500
 		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1", limit)
 		if err != nil {
 			return nil, err
@@ -256,7 +256,10 @@ func GenerateFileSizes() error {
 			size := ipfsSize(id.hash)
 			fmt.Println(size)
 			if size <= 0 {
-				return txError(tx, errors.New("size returned was <= 0"))
+				log.Println("size returned was <= 0, skipping")
+				time.Sleep(time.Second)
+				continue
+				//return txError(tx, errors.New("size returned was <= 0"))
 			}
 
 			_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
