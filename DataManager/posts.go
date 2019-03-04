@@ -207,10 +207,12 @@ func (p *Post) New(file io.ReadSeeker, tagString, mime string, user *User) error
 
 	if p.QID(DB) == 0 {
 
-		file.Seek(0, 0)
-		if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
-			log.Println("Error copying file to mfs: ", err)
-			return err
+		if CFG.UseMFS {
+			file.Seek(0, 0)
+			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
+				log.Println("Error copying file to mfs: ", err)
+				return err
+			}
 		}
 
 		for _, dim := range CFG.ThumbnailSizes {
