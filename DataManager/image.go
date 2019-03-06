@@ -91,7 +91,9 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 		return "", err
 	}
 
-	err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumbnailSize, "/"), thumbHash, true)
+	if CFG.UseMFS {
+		err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumbnailSize, "/"), thumbHash, true)
+	}
 
 	return thumbHash, err
 }

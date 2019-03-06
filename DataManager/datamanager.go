@@ -533,11 +533,13 @@ func GenerateThumbnails(size int) {
 				failed++
 				continue
 			}
-			err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
-			if err != nil {
-				log.Println(err, thash)
-				failed++
-				continue
+			if CFG.UseMFS {
+				err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
+				if err != nil {
+					log.Println(err, thash)
+					failed++
+					continue
+				}
 			}
 			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", hash.id, size, thash)
 			if err != nil {
@@ -629,6 +631,7 @@ func GenerateFileDimensions() {
 type Config struct {
 	//Database string
 	ConnectionString string
+	UseMFS bool
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
@@ -636,6 +639,7 @@ type Config struct {
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
+	c.UseMFS = true
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
