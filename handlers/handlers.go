@@ -232,6 +232,7 @@ func init() {
 	Handlers["/comic/add"] = makeStatHandler(ComicAddHandler)
 	Handlers["/comic/edit"] = makeStatHandler(EditComicHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
+	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 
 	Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
