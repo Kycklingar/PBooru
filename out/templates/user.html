@@ -4,6 +4,9 @@
 	{{if .Profile.ID}}
 		<div>
 			<h2>{{.Profile.Name}}</h2>
+			{{if .Profile.Flag}}
+			<p style="color:#ff2d2d;text-shadow:2px 2px 2px black;">Admin</p>
+			{{end}}
 		</div>
 		<div>
 			<h3><a href="/user/pools/{{.Profile.ID}}">Pools</a></h3>

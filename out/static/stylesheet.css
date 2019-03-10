@@ -365,6 +365,11 @@ li
     padding: 3px;
 }
 
+.comment-username a:visited, .comment-username a:link
+{
+    color: black;
+}
+
 .comment:target
 {
     box-shadow: 0px 0px 5px 5px #DBD;
