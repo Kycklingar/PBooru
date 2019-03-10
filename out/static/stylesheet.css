@@ -6,6 +6,7 @@ body
     color:#AAA;
 }
 
+
 #comic-container h1, #comic-container h2
 {
     text-shadow: 3px 3px #213;
@@ -210,24 +211,6 @@ li
     
 }
 
-#advanced-search
-{
-    display: none;
-    background-color:#778;
-    color: #000;
-    font-size:14px;
-    word-break: keep-all;
-}
-
-#advanced-search input
-{
-    width:auto;
-}
-
-#advanced-search:target
-{
-    display: block;
-}
 
 #stbox
 {
@@ -477,4 +460,17 @@ li
     {
         opacity: 0.9;
     };
+}
+
+#advanced-search
+{
+    background-color:#778;
+    color: #000;
+    font-size:14px;
+    box-shadow: 3px 3px #213;
+}
+
+#advanced-search input
+{
+    width:auto;
 }
