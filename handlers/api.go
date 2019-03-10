@@ -213,8 +213,6 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
-	AP.TotalPosts = pc.TotalPosts
-
 	for _, post := range pc.Search(30, 30*offset) {
 		APp, err := DMToAPIPost(post, combineTags)
 		if err != nil {
@@ -224,6 +222,8 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		AP.Posts = append(AP.Posts, APp)
 	}
+
+	AP.TotalPosts = pc.TotalPosts
 
 	AP.Generated = bm.End(false).Seconds()
 	jsonEncode(w, AP)

@@ -173,6 +173,16 @@ li
     color:#000;
 }
 
+#post #fullsize
+{
+	max-width: 100%;
+}
+
+#post #fullsize:target
+{
+	max-width: unset;
+}
+
 #posts-container
 {
     /* background-color:green; */

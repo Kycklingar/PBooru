@@ -58,17 +58,19 @@
             <script>
                 function resize(caller)
                 {
-                    if (caller.style.maxWidth == ""){
+                    if (caller.style.maxWidth == "unset"){
                         caller.style.maxWidth = "100%";
-                        caller.style.maxHeight = "100%";
                     }else{
-                        caller.style.maxWidth = null;
-                        caller.style.maxHeight = null;
+                        caller.style.maxWidth = "unset";
                     }
                     
                 }
             </script>
-            <img onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+            <img id="fullsize" onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+	    <h4>
+	    	<a href="#fullsize">Fullsize</a>
+	    	<a href="#">Shrink to fit</a>
+	    </h4>
         </div>
         {{else if eq .Post.Mime.Type "video"}}
         <div>
@@ -82,9 +84,9 @@
 	</div>
         {{end}}
         <div style="padding-left: 4px;">
-            <a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>
-                <h3>Download</h3>
-            </a>
+	    <h3>
+            	<a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>Download</a>
+	    </h3>
 	    {{with .Post.Description}}
 		<div class="panel">
 	    		<h3>Description</h3>
