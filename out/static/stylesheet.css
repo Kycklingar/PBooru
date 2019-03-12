@@ -104,8 +104,8 @@ li
 {
     position: relative;
     margin:3px;
-    width:250px;
-    height:250px;
+    width:256px;
+    height:256px;
     word-wrap: break-word;
     /*border: 1px solid red;*/
 }
@@ -113,8 +113,8 @@ li
 .thumbnail img
 {
     position: absolute;
-    max-width:250px;
-    max-height:250px;
+    max-width:256px;
+    max-height:256px;
 
     top: 50%;
     left: 50%;
@@ -420,8 +420,8 @@ li
 
 .comic-thumb img
 {
-    max-width:250px;
-    max-height:250px;
+    max-width:256px;
+    max-height:256px;
 }
 
 .cpage
