@@ -18,7 +18,7 @@ type Postpage struct {
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
 	Sidebar  Sidebar
-	User     User
+	User     *DM.User
 	UserInfo UserInfo
 	Time     string
 }
@@ -99,14 +99,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var pp Postpage
 	p := DM.NewPost()
 
-	var u *DM.User
-	u, pp.UserInfo = getUser(w, r)
-	pp.User = tUser(u)
+	pp.User, pp.UserInfo = getUser(w, r)
+
+	pp.User.QID(DM.DB)
+	pp.User.QFlag(DM.DB)
+	pp.User.QPools(DM.DB)
 
 	uri := splitURI(r.URL.Path)
 
 	// Valid Uris: 	post/1
-	//				post/hash/Qm...
+	//		post/hash/Qm...
 	if len(uri) <= 1 {
 		notFoundHandler(w, r)
 		return
@@ -143,9 +145,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
 	p.QID(DM.DB)
+	p.QSize(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
 	p.QThumbnails(DM.DB)
+	p.QDescription(DM.DB)
 
 	pp.Post = p
 
@@ -339,7 +343,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
 		r.ParseMultipartForm(50 << 20)
-		file, _, err := r.FormFile("file")
+		file, fh, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
 			return
@@ -365,7 +369,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		post := DM.NewPost()
 
-		err = post.New(file, tagString, contentType, user)
+		err = post.New(file, fh.Size, tagString, contentType, user)
 		if err != nil {
 			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
 			log.Println(err)

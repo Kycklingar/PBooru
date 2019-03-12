@@ -190,6 +190,13 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "404", nil)
 }
 
+func wrap2(x, y string, xv, yv interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		x: xv,
+		y: yv,
+	}
+}
+
 func init() {
 	stat.init()
 
@@ -197,7 +204,8 @@ func init() {
 	Templates.Funcs(template.FuncMap{
 		"noescape":  func(x string) template.HTML { return template.HTML(x) },
 		"urlEncode": UrlEncode,
-		"urlDecode": UrlDecode})
+		"urlDecode": UrlDecode,
+		"wrap2":     wrap2})
 
 	tmpls, err := loadTemplates("./templates/")
 	if err != nil {
@@ -222,6 +230,11 @@ func init() {
 	Handlers["/options/"] = makeStatHandler(OptionsHandler)
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
+	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
+	Handlers["/user/pools/"] = makeStatHandler(UserPoolsHandler)
+	Handlers["/user/pools/append/"] = makeStatHandler(UserPoolAppendHandler)
+	Handlers["/user/pools/add/"] = makeStatHandler(UserPoolAddHandler)
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)

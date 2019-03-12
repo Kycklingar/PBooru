@@ -1,0 +1,13 @@
+{{template "base"}}
+
+<div class="text-panel">
+	<h3>{{.Pool.User.Name}} - {{.Pool.Title}}</h3>
+	<p>{{.Pool.Description}}</p>
+	<div id="posts">
+	{{range .Pool.Posts}}
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+	{{end}}
+	</div>
+</div>
+
+{{template "baseEnd"}}
