@@ -1,0 +1,9 @@
+{{define "thumbnail"}}
+{{with .Post}}
+<a href="/post/{{.ID}}/{{.Hash}}">
+	<div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
+		<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+	</div>
+</a>
+{{end}}
+{{end}}

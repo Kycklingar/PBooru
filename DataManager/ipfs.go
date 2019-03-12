@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 )
 
 var ipfsAPI = "http://localhost:5001/api/v0/"
@@ -107,7 +108,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 			log.Println(err)
 			return err
 		}
-	} else if err =  mfsExists(directory+mhash); err == nil {
+	} else if err = mfsExists(directory + mhash); err == nil {
 		return nil
 	} else if err.Error() == "no entries" {
 		return err
@@ -246,7 +247,7 @@ func ipfsCat(hash string) io.ReadCloser {
 	cl := http.Client{}
 	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil
 	}
 
@@ -259,4 +260,28 @@ func ipfsCat(hash string) io.ReadCloser {
 	}
 
 	return res.Body
+}
+
+func ipfsSize(hash string) int64 {
+	if len(hash) < 46 {
+		return 0
+	}
+
+	cl := http.Client{}
+	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+	res.Body.Close()
+
+	sizeStr := res.Header.Get("X-Content-Length")
+
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	return size
 }

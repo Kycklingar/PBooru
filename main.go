@@ -51,6 +51,10 @@ func main() {
 	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
 	generateThumbnail := flag.Int("gen-thumb", 0, "Generate thumbnails for this post id")
 	checkThumbSupport := flag.Bool("thumb-support", false, "Check for installed thumbnailing software")
+	calcChecksums := flag.Bool("calc-checksums", false, "Calculate the checksums of all posts")
+	generateFileSize := flag.Bool("gen-filesize", false, "Generate file sizes on posts with 0 filesize")
+	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
+
 	flag.Parse()
 
 	if *checkThumbSupport {
@@ -71,6 +75,25 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *generateFileDim {
+		DM.GenerateFileDimensions()
+		return
+	}
+
+	if *calcChecksums {
+		if err := DM.CalculateChecksums(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	if *generateFileSize {
+		if err := DM.GenerateFileSizes(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	if *migrateMfs {
 		DM.MigrateMfs()
