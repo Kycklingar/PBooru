@@ -285,8 +285,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		setC(w, "session", "")
 	}
 
-
-
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }
 

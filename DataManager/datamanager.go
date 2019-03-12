@@ -631,7 +631,7 @@ func GenerateFileDimensions() {
 type Config struct {
 	//Database string
 	ConnectionString string
-	UseMFS bool
+	UseMFS           bool
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int

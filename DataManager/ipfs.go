@@ -108,7 +108,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 			log.Println(err)
 			return err
 		}
-	} else if err =  mfsExists(directory+mhash); err == nil {
+	} else if err = mfsExists(directory + mhash); err == nil {
 		return nil
 	} else if err.Error() == "no entries" {
 		return err

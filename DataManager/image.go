@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image/png"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/Nr90/imgsim"
 	"github.com/kycklingar/mimemagic"
