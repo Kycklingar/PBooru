@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image/png"
@@ -13,7 +14,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"encoding/binary"
 
 	"github.com/Nr90/imgsim"
 	"github.com/kycklingar/mimemagic"
@@ -238,7 +238,7 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 
 func ImageLookup(file io.Reader, distance int) ([]*Post, error) {
 	hash := dHash(file)
-	if hash == 0{
+	if hash == 0 {
 		return nil, nil
 	}
 
@@ -282,7 +282,7 @@ func ImageLookup(file io.Reader, distance int) ([]*Post, error) {
 
 	for _, h := range phs {
 		hashb := f(h)
-		if imgsim.Distance(hasha, hashb) < distance{
+		if imgsim.Distance(hasha, hashb) < distance {
 			pst := NewPost()
 			pst.ID = h.post_id
 			posts = append(posts, pst)
