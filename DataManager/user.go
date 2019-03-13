@@ -312,7 +312,7 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 	var id int
-	err = tx.QueryRow("SELECT id FROM users WHERE username=LOWER($1)", u.Name).Scan(&id)
+	err = tx.QueryRow("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", u.Name).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return txError(tx, err)

@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"net/http"
 	"log"
+	"net/http"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
-
-
 
 func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
