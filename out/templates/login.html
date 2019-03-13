@@ -23,16 +23,6 @@
 	</table>
 {{else}}
 	<h2>Login</h2>
-	<style>
-		.target:target
-		{
-			display:unset;
-		}
-		.target
-		{
-			display:none;
-		}
-	</style>
 	<form method="post">
 	        <label for="username">Username</label><br>
 	        <input id="username" type="text" name="username"><br>
@@ -44,8 +34,18 @@
 	        <input id="captcha" type="text" name="code"><br>
 	        <input type="submit" value="Login">
 	</form>
-	<p class="target" id="username">Username or password was incorrect</p>
-	<p class="target" id="captcha">Captcha was incorrect</p>
+	<style>
+		.target:target
+		{
+			display:block;
+		}
+		.target
+		{
+			display:none;
+		}
+	</style>
+	<p class="target" id="err-username">Username or password was incorrect</p>
+	<p class="target" id="err-captcha">Captcha was incorrect</p>
 {{end}}
 </div>
 {{template "baseEnd"}}

@@ -1,18 +1,6 @@
 {{template "base" }}
 <div class="text-panel">
 	<h2>Register</h2>
-	<style>
-		.target:target
-		{
-			display:unset;
-		}
-		.target
-		{
-			display:none;
-		}
-	</style>
-
-	<p class="target" id="captcha">Captcha was incorrect</p>
 
 	<form method="post">
 	    <label for="username">Username</label><br>
@@ -25,5 +13,16 @@
 	    <input id="captcha" type="text" name="code"><br>
 	    <input type="submit" value="Register">
 	</form>
+	<style>
+		.target:target
+		{
+			display:block;
+		}
+		.target
+		{
+			display:none;
+		}
+	</style>
+	<p class="target" id="err-captcha">Captcha was incorrect</p>
 </div>
 {{template "baseEnd"}}
