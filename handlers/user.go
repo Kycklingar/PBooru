@@ -216,7 +216,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 
 		if !verifyCaptcha(w, r) {
-			http.Error(w, "Captcha was incorrect. Try again!", http.StatusBadRequest)
+			http.Redirect(w, r, "./#captcha", http.StatusSeeOther)
 			return
 		}
 
@@ -224,8 +224,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		err := user.Login(DM.DB, username, password)
 		if err != nil {
-			fmt.Println(err.Error())
-			http.Error(w, "Login failed", http.StatusInternalServerError)
+			//log.Println(err)
+			//http.Error(w, "Login failed", http.StatusInternalServerError)
+			http.Redirect(w, r, "./#username", http.StatusSeeOther)
 			return
 		}
 		//s := user.Session()
@@ -304,7 +305,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 
 		if !verifyCaptcha(w, r) {
-			http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)
+			//http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)
+			http.Redirect(w, r, "./#captcha", http.StatusSeeOther)
 			return
 		}
 

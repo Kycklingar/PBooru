@@ -1,40 +1,51 @@
 {{template "base" }}
 <div class="text-panel">
-
 {{if .Username}}
-<h1>{{.Username}}</h1>
-<table>
-    <caption>Sessions</caption>
-    <tr>
-        <th>Key</th>
-        <th>Expires</th>
-    </tr>
-    {{range .Sessions}}
-        <tr>
-            <td>{{.Key}}</td>
-            <td>{{.Expire}}</td>
-	    <td>
-	    	<form action="/logout/" method="POST">
-		<input type="hidden" value="{{.Key}}" name="session-key">
-	    	<input type="submit" value="Logout">
-	    	</form>
-	    </td>
-        </tr>
-    {{end}}
-</table>
+	<h1>{{.Username}}</h1>
+	<table>
+	    <caption>Sessions</caption>
+	    <tr>
+	        <th>Key</th>
+	        <th>Expires</th>
+	    </tr>
+	    {{range .Sessions}}
+	        <tr>
+	            <td>{{.Key}}</td>
+	            <td>{{.Expire}}</td>
+		    <td>
+		    	<form action="/logout/" method="POST">
+			<input type="hidden" value="{{.Key}}" name="session-key">
+		    	<input type="submit" value="Logout">
+		    	</form>
+		    </td>
+	        </tr>
+	    {{end}}
+	</table>
 {{else}}
-<h2>Login</h2>
-<form method="post">
-        <label for="username">Username</label><br>
-        <input id="username" type="text" name="username"><br>
-        <label for="password">Password</label><br>
-        <input id="password" type="password" name="password"><br>
-        <label for="captcha">Captcha</label><br>
-        <img style="background-color:white;" src="/captcha/{{ .Key }}.png"><br>
-        <input type="hidden" name="key" value="{{ .Key }}"><br>
-        <input id="captcha" type="text" name="code"><br>
-        <input type="submit" value="Login">
-    </form>
+	<h2>Login</h2>
+	<style>
+		.target:target
+		{
+			display:unset;
+		}
+		.target
+		{
+			display:none;
+		}
+	</style>
+	<form method="post">
+	        <label for="username">Username</label><br>
+	        <input id="username" type="text" name="username"><br>
+	        <label for="password">Password</label><br>
+	        <input id="password" type="password" name="password"><br>
+	        <label for="captcha">Captcha</label><br>
+	        <img style="background-color:white;" src="/captcha/{{ .Key }}.png"><br>
+	        <input type="hidden" name="key" value="{{ .Key }}"><br>
+	        <input id="captcha" type="text" name="code"><br>
+	        <input type="submit" value="Login">
+	</form>
+	<p class="target" id="username">Username or password was incorrect</p>
+	<p class="target" id="captcha">Captcha was incorrect</p>
 {{end}}
 </div>
 {{template "baseEnd"}}
