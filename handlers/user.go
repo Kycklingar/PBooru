@@ -244,11 +244,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Expire time.Time
 		}
 		p := struct {
-			Username string
+			User	*DM.User
 			Key      string
 			Sessions []s
 		}{}
-		p.Username = user.QName(DM.DB)
+		//p.Username = user.QName(DM.DB)
+		p.User = user
+
+		user.QID(DM.DB)
+		user.QName(DM.DB)
+		user.QFlag(DM.DB)
 
 		if user.QID(DM.DB) <= 0 {
 			p.Key = captcha.New()

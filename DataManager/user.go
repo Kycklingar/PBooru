@@ -168,6 +168,19 @@ func (p *Pool) Add(postID, position int) error {
 	return err
 }
 
+type flag int
+// Upload
+// Comics 
+// Banning
+// Delete
+// Tags (parents/alias)
+// 
+
+
+func (f flag) IsAdmin() bool {
+	return f&0x01 != 0
+}
+
 func (u *User) QID(q querier) int {
 	if u.ID != 0 {
 		return u.ID
@@ -237,7 +250,7 @@ func (u *User) SetName(name string) {
 
 func (u *User) QFlag(q querier) int {
 	if u.Flag != -1 {
-		return u.Flag
+		return int(u.Flag)
 	}
 	if u.QID(q) == 0 {
 		return -1
@@ -247,7 +260,7 @@ func (u *User) QFlag(q querier) int {
 	if err != nil {
 		log.Print(err)
 	}
-	return u.Flag
+	return int(u.Flag)
 }
 
 func (u *User) Salt(q querier) string {
