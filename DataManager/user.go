@@ -181,6 +181,19 @@ func (f flag) IsAdmin() bool {
 	return f&0x01 != 0
 }
 
+type flag int
+// Upload
+// Comics 
+// Banning
+// Delete
+// Tags (parents/alias)
+// 
+
+
+func (f flag) IsAdmin() bool {
+	return f&0x01 != 0
+}
+
 func (u *User) QID(q querier) int {
 	if u.ID != 0 {
 		return u.ID
