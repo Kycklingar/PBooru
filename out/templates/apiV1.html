@@ -157,6 +157,7 @@
                             <th>Arg</th>
                             <th>Type</th>
                             <th>Required</th>
+			    <th>Description</th>
                             <tr>
                                 <td>
                                     <b>tags</b>
@@ -166,10 +167,40 @@
                             </tr>
                             <tr>
                                 <td>
-                                    <b>offset</b>
-                                    <td>Integer</td>
-                                    <td>No</td>
+                                    <b>filter</b>
                                 </td>
+                                <td>String</td>
+                                <td>No</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>unless</b>
+                                </td>
+                                <td>String</td>
+                                <td>No</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>limit</b>
+                                </td>
+                                <td>Integer</td>
+                                <td>No</td>
+				<td>0 - 100</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>offset</b>
+				</td>
+                                <td>Integer</td>
+                                <td>No</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>order</b>
+				</td>
+                                <td>String</td>
+                                <td>No</td>
+				<td>Possible values: "asc", "desc", "random"<br>Default: "desc"</td>
                             </tr>
 			    <tr>
 			    	<td>
