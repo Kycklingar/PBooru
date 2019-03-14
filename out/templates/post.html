@@ -4,7 +4,7 @@
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
         
-        {{if ne .User.Flag -1}}
+        {{if .User.Flag.Upload}}
 	<details>
 	<summary>Edit Post</summary>
         	<div id="editPostForm">
@@ -16,7 +16,7 @@
         	        <input type="submit" value="Submit edit">
         	    </form>
         	    <script type="text/javascript" src="/static/suggestions.js"></script>
-        	    {{if eq .User.Flag 1}}
+        	    {{if .User.Flag.Delete}}
         	    <form method="POST" action="/deletepost">
         	        <h3>Delete Post</h3>
         	        <input type="hidden" name="postid" value="{{.Post.ID}}">

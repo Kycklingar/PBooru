@@ -6,7 +6,7 @@ import (
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
-	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, timestamp FROM tag_history ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset))
+	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM tag_history ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset))
 	if err != nil {
 		log.Print(err)
 		return nil

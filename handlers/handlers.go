@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
 type Config struct {
@@ -252,8 +253,8 @@ func init() {
 		user, info := getUser(w, r)
 		p := struct {
 			UserInfo UserInfo
-			User     User
-		}{info, tUser(user)}
+			User     *DM.User
+		}{info, user}
 
 		renderTemplate(w, "admin", p)
 	})

@@ -88,7 +88,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if user.QFlag(DM.DB) != DM.AdmFAdmin {
+	if !user.QFlag(DM.DB).Tags() {
 		http.Error(w, "Only admins can do that", http.StatusForbidden)
 		return
 	}
