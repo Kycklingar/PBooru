@@ -187,6 +187,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
 	filterStr := r.FormValue("filter")
 	unlessStr := r.FormValue("unless")
+	limitStr := r.FormValue("limit")
 	order := r.FormValue("order")
 	offsetStr := r.FormValue("offset")
 	offset, err := strconv.Atoi(offsetStr)
@@ -211,9 +212,16 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc = DM.CachedPostCollector(pc)
 
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 50
+	} else {
+		limit = DM.Larg(10, DM.Smal(100, limit))
+	}
+
 	var AP APIv1Posts
 
-	for _, post := range pc.Search(30, 30*offset) {
+	for _, post := range pc.Search(limit, limit*offset) {
 		APp, err := DMToAPIPost(post, combineTags)
 		if err != nil {
 			log.Print(err)
