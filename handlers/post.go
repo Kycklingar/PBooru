@@ -335,12 +335,6 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		user, _ := getUser(w, r)
 		user.QFlag(DM.DB)
-		fmt.Println(user.Flag())
-		fmt.Println(user.Flag().Upload())
-		fmt.Println(user.Flag().Comics())
-		fmt.Println(user.Flag().Banning())
-		fmt.Println(user.Flag().Delete())
-		fmt.Println(user.Flag().Special())
 		renderTemplate(w, "upload", user)
 	} else if r.Method == http.MethodPost {
 		user, _ := getUser(w, r)
@@ -397,14 +391,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		// userinfo := userCookies(w, r)
-		// user := DM.NewUser()
-		// user.Session().Get(userinfo.SessionToken)
-
 		user, _ := getUser(w, r)
 
 		if !user.QFlag(DM.DB).Delete() {
-			http.Error(w, "you must be loggedin as an administrator to do that", http.StatusInternalServerError)
+			http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusInternalServerError)
 			return
 		}
 
@@ -426,6 +416,12 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+	if !u.QFlag(DM.DB).Delete() {
+		http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusBadRequest)
 		return
 	}
 

@@ -35,12 +35,12 @@ type User struct {
 type flag int
 
 const (
-	flagUpload  = 0x01
-	flagComics  = 0x02
-	flagBanning = 0x04
-	flagDelete  = 0x08
-	flagTags    = 0x16
-	flagSpecial = 0x32
+	flagUpload  = 1
+	flagComics  = 2
+	flagBanning = 4
+	flagDelete  = 8
+	flagTags    = 16
+	flagSpecial = 32
 
 	flagAll = 0xff
 )
@@ -374,7 +374,7 @@ func (u User) Register(name, password string) error {
 		return txError(tx, errors.New("Username already exist"))
 	}
 
-	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined) VALUES($1, $2, $3, CURRENT_TIMESTAMP)", u.Name, u.passwordHash, u.salt)
+	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.flag)
 
 	if err != nil {
 		log.Print(err)
