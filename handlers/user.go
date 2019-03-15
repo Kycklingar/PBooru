@@ -10,12 +10,6 @@ import (
 	"github.com/dchest/captcha"
 )
 
-type User struct {
-	ID   int
-	Name string
-	Flag int
-}
-
 type UserInfo struct {
 	IpfsDaemon       string
 	Limit            int
@@ -24,10 +18,6 @@ type UserInfo struct {
 	SessionToken     string
 	ThumbHover       bool
 	ThumbHoverFull   bool
-}
-
-func tUser(u *DM.User) User {
-	return User{u.QID(DM.DB), u.QName(DM.DB), u.QFlag(DM.DB)}
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -47,12 +37,15 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type page struct {
-		User        User
+		User        *DM.User
 		UserInfo    UserInfo
-		Profile     User
+		Profile     *DM.User
 		RecentPosts []*DM.Post
 	}
-	var p = page{User: tUser(u), UserInfo: ui, Profile: tUser(profile)}
+	var p = page{User: u, UserInfo: ui, Profile: profile}
+	u.QName(DM.DB)
+	profile.QName(DM.DB)
+	profile.QFlag(DM.DB)
 
 	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {
@@ -81,13 +74,15 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type page struct {
-		User     User
+		User     *DM.User
 		UserInfo UserInfo
-		Profile  User
+		Profile  *DM.User
 		Pools    []*DM.Pool
 	}
 
-	var p = page{User: tUser(u), UserInfo: ui, Profile: tUser(profile), Pools: profile.QPools(DM.DB)}
+	var p = page{User: u, UserInfo: ui, Profile: profile, Pools: profile.QPools(DM.DB)}
+	u.QName(DM.DB)
+	profile.QName(DM.DB)
 
 	for _, pool := range p.Pools {
 		pool.QPosts(DM.DB)
@@ -244,11 +239,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Expire time.Time
 		}
 		p := struct {
-			Username string
+			User     *DM.User
 			Key      string
 			Sessions []s
 		}{}
-		p.Username = user.QName(DM.DB)
+		//p.Username = user.QName(DM.DB)
+		p.User = user
+
+		user.QID(DM.DB)
+		user.QName(DM.DB)
+		user.QFlag(DM.DB)
 
 		if user.QID(DM.DB) <= 0 {
 			p.Key = captcha.New()

@@ -16,7 +16,6 @@ import (
 
 func NewUser() *User {
 	var u User
-	u.Flag = -1
 	u.Session = &Session{}
 	return &u
 }
@@ -27,10 +26,47 @@ type User struct {
 	passwordHash string
 	salt         string
 	Joined       time.Time
-	Flag         int
+	flag         *flag
 	Session      *Session
 
 	Pools []*Pool
+}
+
+type flag int
+
+const (
+	flagUpload  = 1
+	flagComics  = 2
+	flagBanning = 4
+	flagDelete  = 8
+	flagTags    = 16
+	flagSpecial = 32
+
+	flagAll = 0xff
+)
+
+func (f flag) Upload() bool {
+	return f&flagUpload != 0
+}
+
+func (f flag) Comics() bool {
+	return f&flagComics != 0
+}
+
+func (f flag) Banning() bool {
+	return f&flagBanning != 0
+}
+
+func (f flag) Delete() bool {
+	return f&flagDelete != 0
+}
+
+func (f flag) Tags() bool {
+	return f&flagTags != 0
+}
+
+func (f flag) Special() bool {
+	return f&flagSpecial != 0
 }
 
 type Pool struct {
@@ -235,19 +271,32 @@ func (u *User) SetName(name string) {
 	u.Name = name
 }
 
-func (u *User) QFlag(q querier) int {
-	if u.Flag != -1 {
-		return u.Flag
+func (u *User) Flag() flag {
+	if u.flag != nil {
+		return *u.flag
+	}
+	return flag(0)
+}
+
+func (u *User) SetFlag(f flag) {
+	u.flag = &f
+}
+
+func (u *User) QFlag(q querier) flag {
+	if u.flag != nil {
+		return *u.flag
 	}
 	if u.QID(q) == 0 {
-		return -1
+		return flag(0)
 	}
 
-	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.Flag)
+	var f flag
+	u.flag = &f
+	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.flag)
 	if err != nil {
 		log.Print(err)
 	}
-	return u.Flag
+	return *u.flag
 }
 
 func (u *User) Salt(q querier) string {
@@ -300,6 +349,8 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 
+	u.SetFlag(flag(CFG.StdUserFlag))
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
 	if err != nil {
 		return err
@@ -323,7 +374,7 @@ func (u User) Register(name, password string) error {
 		return txError(tx, errors.New("Username already exist"))
 	}
 
-	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined) VALUES($1, $2, $3, CURRENT_TIMESTAMP)", u.Name, u.passwordHash, u.salt)
+	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.flag)
 
 	if err != nil {
 		log.Print(err)
@@ -392,7 +443,7 @@ func (u *User) QPools(q querier) []*Pool {
 //}
 
 func (u *User) Sessions(q querier) []*Session {
-	rows, err := q.Query("SELECT * FROM sessions WHERE user_id=$1", u.QID(q))
+	rows, err := q.Query("SELECT user_id, sesskey, to_char(expire, 'YYYY-MM-DD HH24:MI:SS') FROM sessions WHERE user_id=$1", u.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -408,7 +459,7 @@ func (u *User) Sessions(q querier) []*Session {
 			return nil
 		}
 
-		s.expire, err = time.Parse(postgresqlTimestamp, t)
+		s.expire, err = time.Parse(sqlite3Timestamp, t)
 		if err != nil {
 			log.Println(err)
 		}

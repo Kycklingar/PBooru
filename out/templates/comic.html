@@ -1,7 +1,7 @@
 {{template "base" .Base}}
 
 <div>
-        {{if eq .User.Flag 1}}
+        {{if .User.Flag.Comics}}
         <div class="text-panel">
         <form method="post" action="/comic/add">
             <input type="hidden" name="comicid" value="{{.Comic.ID}}">

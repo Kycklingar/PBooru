@@ -1,7 +1,7 @@
 {{template "base" }}
 <div class="text-panel">
-{{if .Username}}
-	<h1>{{.Username}}</h1>
+{{if .User.ID}}
+	<h1>{{.User.Name}}</h1>
 	<table>
 	    <caption>Sessions</caption>
 	    <tr>

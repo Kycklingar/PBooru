@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
 type Config struct {
@@ -250,10 +251,11 @@ func init() {
 	Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
 		user, info := getUser(w, r)
+		user.QFlag(DM.DB)
 		p := struct {
 			UserInfo UserInfo
-			User     User
-		}{info, tUser(user)}
+			User     *DM.User
+		}{info, user}
 
 		renderTemplate(w, "admin", p)
 	})
