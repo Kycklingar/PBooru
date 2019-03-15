@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	h "github.com/kycklingar/PBooru/handlers"
@@ -55,6 +57,8 @@ func main() {
 	generateFileSize := flag.Bool("gen-filesize", false, "Generate file sizes on posts with 0 filesize")
 	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
 
+	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
+
 	flag.Parse()
 
 	if *checkThumbSupport {
@@ -75,6 +79,29 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *updateUserFlags {
+		oldStr := flag.Arg(0)
+		newStr := flag.Arg(1)
+
+		old, err := strconv.Atoi(oldStr)
+		if err != nil {
+			fmt.Println("<Old> expected a number, got:", oldStr)
+			return
+		}
+
+		new, err := strconv.Atoi(newStr)
+		if err != nil {
+			fmt.Println("<New> expected a number, got:", newStr)
+			return
+		}
+
+		if err := DM.UpdateUserFlags(new, old); err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
 
 	if *generateFileDim {
 		DM.GenerateFileDimensions()

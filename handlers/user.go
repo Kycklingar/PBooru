@@ -238,7 +238,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Expire time.Time
 		}
 		p := struct {
-			User	*DM.User
+			User     *DM.User
 			Key      string
 			Sessions []s
 		}{}

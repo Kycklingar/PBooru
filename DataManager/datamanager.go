@@ -172,7 +172,7 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 
 			u := NewUser()
-			u.SetFlag(flag(0xff))
+			u.SetFlag(flag(flagAll))
 			u.Name = "admin"
 			var err error
 			u.salt, err = createSalt()
@@ -628,6 +628,11 @@ func GenerateFileDimensions() {
 	}
 }
 
+func UpdateUserFlags(newFlag, oldFlag int) error {
+	_, err := DB.Exec("UPDATE users SET adminflag = $1 WHERE adminflag = $2", newFlag, oldFlag)
+	return err
+}
+
 type Config struct {
 	//Database string
 	ConnectionString string
@@ -635,6 +640,7 @@ type Config struct {
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
+	StdUserFlag      int
 }
 
 func (c *Config) Default() {
@@ -643,6 +649,7 @@ func (c *Config) Default() {
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
+	c.StdUserFlag = flagUpload
 }
 
 var CFG *Config

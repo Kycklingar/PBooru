@@ -35,12 +35,14 @@ type User struct {
 type flag int
 
 const (
-	flagUpload = 0x01
-	flagComics = 0x02
+	flagUpload  = 0x01
+	flagComics  = 0x02
 	flagBanning = 0x04
-	flagDelete = 0x08
-	flagTags = 0x16
+	flagDelete  = 0x08
+	flagTags    = 0x16
 	flagSpecial = 0x32
+
+	flagAll = 0xff
 )
 
 func (f flag) Upload() bool {
@@ -202,8 +204,6 @@ func (p *Pool) Add(postID, position int) error {
 	return err
 }
 
-
-
 func (u *User) QID(q querier) int {
 	if u.ID != 0 {
 		return u.ID
@@ -282,7 +282,7 @@ func (u *User) SetFlag(f flag) {
 	u.flag = &f
 }
 
-func (u *User) QFlag(q querier) flag{
+func (u *User) QFlag(q querier) flag {
 	if u.flag != nil {
 		return *u.flag
 	}
@@ -348,6 +348,8 @@ func (u User) Register(name, password string) error {
 	if err != nil {
 		return err
 	}
+
+	u.SetFlag(flag(CFG.StdUserFlag))
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
 	if err != nil {
