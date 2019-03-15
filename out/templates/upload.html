@@ -3,8 +3,6 @@
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
     {{else if .Flag.Upload}}
-    <h3>Insufficient priviliges. Want 'Upload'<h3>
-    {{else}}
     <form enctype="multipart/form-data" method="POST">
         <label for="file">File</label>
         <br>
@@ -35,6 +33,8 @@
         <p>Use comma "," or newlines as delimiter</p>
         <p>Tags may have spaces</p>
         <p>Example tag string: "gender:female, creator:nightfaux, species:renamon, ass, my super tag, pussy"</p>
+    {{else}}
+    <h3>Insufficient priviliges. Want "Upload"<h3>
     {{end}}
 </div>
 {{ template "baseEnd" }}

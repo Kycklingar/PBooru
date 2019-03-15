@@ -342,6 +342,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "You must login in order to upload", http.StatusForbidden)
 			return
 		}
+		user.QFlag(DM.DB)
 
 		if !user.Flag().Upload() {
 			http.Error(w, "Insufficient priviliges, Upload needed", http.StatusForbidden)
