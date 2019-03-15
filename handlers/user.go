@@ -45,6 +45,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
 	profile.QName(DM.DB)
+	profile.QFlag(DM.DB)
 
 	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {

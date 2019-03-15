@@ -1,5 +1,5 @@
 {{template "base"}}
-{{if eq .User.Flag 1}}
+{{if .User.Flag.Special}}
 <style>
         h4{
             margin:4px;
@@ -680,7 +680,7 @@
 </script>
 {{else}}
 <div class="text-panel">
-    <p>Admin Only Area</p>
+    <p>Admin Only Area :)</p>
 </div>
 {{end}}
 {{template "baseEnd"}}

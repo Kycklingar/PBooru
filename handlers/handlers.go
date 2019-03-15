@@ -251,6 +251,7 @@ func init() {
 	Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
 		user, info := getUser(w, r)
+		user.QFlag(DM.DB)
 		p := struct {
 			UserInfo UserInfo
 			User     *DM.User

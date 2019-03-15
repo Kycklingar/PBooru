@@ -636,11 +636,11 @@ func UpdateUserFlags(newFlag, oldFlag int) error {
 type Config struct {
 	//Database string
 	ConnectionString string
+	StdUserFlag      int
 	UseMFS           bool
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
-	StdUserFlag      int
 }
 
 func (c *Config) Default() {
