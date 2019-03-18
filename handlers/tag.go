@@ -152,6 +152,7 @@ type TagHistoryPage struct {
 	Base     base
 	History  []*DM.TagHistory
 	UserInfo UserInfo
+	Pageinator Pageination
 }
 
 func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
