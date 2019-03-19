@@ -41,6 +41,35 @@ type Post struct {
 	description *string
 }
 
+func NewReport() Report {
+	return Report{Post: NewPost(), Reporter: NewUser()}
+}
+
+type Report struct {
+	Post        *Post
+	Reporter    *User
+	Reason      int
+	Description string
+}
+
+func (r Report) Submit() error {
+	if r.Post.ID <= 0 {
+		return errors.New("no Post.ID in report")
+	}
+
+	if r.Reporter.ID <= 0 {
+		return errors.New("no Reporter.ID in report")
+	}
+
+	_, err := DB.Exec("INSERT INTO reports(post_id, reporter, reason, description) VALUES($1, $2, $3, $4)", r.Post.ID, r.Reporter.ID, r.Reason, r.Description)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func (p *Post) QID(q querier) int {
 	if p.ID != 0 {
 		return p.ID

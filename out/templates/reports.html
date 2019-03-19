@@ -1,0 +1,24 @@
+{{template "base"}}
+	<div class="text-panel">
+		<h1>Recent reports</h1>
+	</div>
+{{template "baseEnd"}}
+
+{{define "reportForm"}}
+<form method="POST" action="/post/report/">
+	<h4>Report</h4>
+	<input type="hidden" name="post-id" value="{{.}}">
+	<select name="reason">
+		<option value="0">Unspecified</option>
+		<option value="1">Spam</option>
+		<option value="2">Unfit for site</option>
+		<option value="3">Duplicate</option>
+		<option value="4">Broken post</option>
+	</select>
+	<br>
+	<label for="description">Description</label>
+	<br>
+	<input id="description" type="text" name="description">
+	<input type="submit">
+</form>
+{{end}}
