@@ -12,6 +12,12 @@
 				<td><a href="/user/{{.Reporter.ID}}">{{.Reporter.Name}}</a></td>
 				<td>{{template "reportReason" .Reason}}</td>
 				<td>{{.Description}}</td>
+				<td>
+					<form action="/reports/delete/" method="POST">
+						<input type="hidden" name="report-id" value="{{.ID}}">
+						<input type="submit" value="Delete">
+					</form>
+				</td>
 			</tr>
 			{{end}}
 		</table>

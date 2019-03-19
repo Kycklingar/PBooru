@@ -37,6 +37,34 @@ func reportsHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "reports", p)
 }
 
+func reportDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	u, _ := getUser(w, r)
+
+	if !u.QFlag(DM.DB).Special() {
+		http.Error(w, "insufficent privileges. Want 'Special'", http.StatusBadRequest)
+		return
+	}
+
+	rid, err := strconv.Atoi(r.FormValue("report-id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var rep = DM.NewReport()
+	rep.ID = rid
+
+	err = rep.Delete(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
 func reportPostHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 

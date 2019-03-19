@@ -18,7 +18,7 @@ type Report struct {
 }
 
 func GetReports(q querier) ([]*Report, error) {
-	rows, err := q.Query("SELECT id, post_id, reporter, reason, description FROM reports ORDER BY id DESC LIMIT 10")
+	rows, err := q.Query("SELECT id, post_id, reporter, reason, description FROM reports ORDER BY id DESC LIMIT 25")
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -39,6 +39,15 @@ func GetReports(q querier) ([]*Report, error) {
 	}
 
 	return reports, nil
+}
+
+func (r Report) Delete(q querier) error {
+	if r.ID <= 0 {
+		return errors.New("report.ID <= 0")
+	}
+
+	_, err := q.Exec("DELETE FROM reports WHERE id = $1", r.ID)
+	return err
 }
 
 func (r Report) Submit() error {
