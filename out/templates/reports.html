@@ -20,15 +20,17 @@
 
 {{define "reportReason"}}
 	{{if eq . 0}}
-	Unspecified
+		Unspecified
 	{{else if eq . 1}}
-	Spam
+		Spam
 	{{else if eq . 2}}
-	Unfit for site
+		Unfit for site
 	{{else if eq . 3}}
-	Duplicate
+		Duplicate
 	{{else if eq . 4}}
-	Broken post
+		Broken post
+	{{else}}
+		{{.}}
 	{{end}}
 {{end}}
 
