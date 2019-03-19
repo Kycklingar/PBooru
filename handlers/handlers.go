@@ -225,6 +225,7 @@ func init() {
 	Handlers["/post/"] = makeStatHandler(PostHandler)
 	Handlers["/post/report/"] = reportPostHandler
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
+	Handlers["/reports/"] = makeStatHandler(reportsHandler)
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)
 	Handlers["/upload"] = makeStatHandler(UploadHandler)
 	Handlers["/upload/"] = makeStatHandler(UploadHandler)

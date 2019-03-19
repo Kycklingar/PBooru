@@ -1,8 +1,36 @@
 {{template "base"}}
 	<div class="text-panel">
 		<h1>Recent reports</h1>
+		<table>
+			<th>Post</th>
+			<th>User</th>
+			<th>Reason</th>
+			<th>Description</th>
+			{{range .Reports}}
+			<tr>
+				<td><a href="/post/{{.Post.ID}}">{{.Post.ID}}</a></td>
+				<td><a href="/user/{{.Reporter.ID}}">{{.Reporter.Name}}</a></td>
+				<td>{{template "reportReason" .Reason}}</td>
+				<td>{{.Description}}</td>
+			</tr>
+			{{end}}
+		</table>
 	</div>
 {{template "baseEnd"}}
+
+{{define "reportReason"}}
+	{{if eq . 0}}
+	Unspecified
+	{{else if eq . 1}}
+	Spam
+	{{else if eq . 2}}
+	Unfit for site
+	{{else if eq . 3}}
+	Duplicate
+	{{else if eq . 4}}
+	Broken post
+	{{end}}
+{{end}}
 
 {{define "reportForm"}}
 <form method="POST" action="/post/report/">
