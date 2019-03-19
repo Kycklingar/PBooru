@@ -16,6 +16,7 @@ import (
 	"github.com/frustra/bbcode"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
 func NewPost() *Post {
@@ -292,7 +293,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		}
 
 		file.Seek(0, 0)
-		width, height, _ := getDimensions(file)
+		width, height, _ := image.GetDimensions(file)
 
 		tx, err = DB.Begin()
 		if err != nil {

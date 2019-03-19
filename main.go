@@ -12,6 +12,7 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	h "github.com/kycklingar/PBooru/handlers"
+	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
 var gConf config
@@ -62,7 +63,7 @@ func main() {
 	flag.Parse()
 
 	if *checkThumbSupport {
-		DM.ThumbnailerInstalled()
+		image.ThumbnailerInstalled()
 		return
 	}
 

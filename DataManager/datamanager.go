@@ -12,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/kycklingar/PBooru/DataManager/image"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -604,7 +605,7 @@ func GenerateFileDimensions() {
 				continue
 			}
 
-			width, height, err := getDimensions(file)
+			width, height, err := image.GetDimensions(file)
 			file.Close()
 			if err != nil {
 				log.Println(err)
