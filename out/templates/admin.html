@@ -144,7 +144,7 @@
             }
         }
         var fd = new FormData(caller)
-        req.open("POST", "/api/v1/posts?offset=" + offset, true)
+        req.open("POST", "/api/v1/posts?inclTags=1&offset=" + offset, true)
         req.send(fd)
     }
 
@@ -168,7 +168,10 @@
 	    {
             	for(let i = 0; i < post.Tags.length; i++)
             	{
-            	    ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
+			if(post.Tags[i].Namespace == "none")
+            	    		ret += post.Tags[i].Tag + "\n"
+			else
+            	    		ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
             	}
 	    }
             return ret
@@ -354,7 +357,7 @@
         label.innerText = post.ID
         let inp = document.createElement("input")
         inp.type = "text"
-        getDupInfo(e.getAttribute("postid"), inp)
+        //getDupInfo(e.getAttribute("postid"), inp)
 
         e.appendChild(div)
         e.appendChild(label)
