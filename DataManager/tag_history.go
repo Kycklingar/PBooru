@@ -28,6 +28,34 @@ func GetTagHistory(limit, offset int) []*TagHistory {
 	return thr
 }
 
+func GetUserTagHistory(limit, offset, userID int) ([]*TagHistory, int) {
+	var total int
+	err := DB.QueryRow("SELECT count(*) FROM tag_history WHERE user_id = $1", userID).Scan(&total)
+	if err != nil {
+		return nil, 0
+	}
+	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM tag_history WHERE user_id = $1 ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset), userID)
+	if err != nil {
+		log.Print(err)
+		return nil, 0
+	}
+	defer rows.Close()
+
+	var thr []*TagHistory
+
+	for rows.Next() {
+		th := NewTagHistory()
+
+		err = rows.Scan(&th.id, &th.User.ID, &th.Post.ID, &th.Timestamp)
+		if err != nil {
+			log.Print(err)
+			return nil, 0
+		}
+		thr = append(thr, th)
+	}
+	return thr, total
+}
+
 func NewTagHistory() *TagHistory {
 	return &TagHistory{User: NewUser(), Post: NewPost()}
 }

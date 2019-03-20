@@ -234,14 +234,18 @@ func init() {
 	Handlers["/options/"] = makeStatHandler(OptionsHandler)
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
+
 	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
 	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
 	Handlers["/user/pools/"] = makeStatHandler(UserPoolsHandler)
 	Handlers["/user/pools/append/"] = makeStatHandler(UserPoolAppendHandler)
 	Handlers["/user/pools/add/"] = makeStatHandler(UserPoolAddHandler)
+
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)
+
 	Handlers["/deletepost"] = makeStatHandler(RemovePostHandler)
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)

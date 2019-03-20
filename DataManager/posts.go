@@ -25,6 +25,20 @@ func NewPost() *Post {
 	return &p
 }
 
+func CachedPost(p *Post) *Post {
+	if n := C.Cache.Get("PST", strconv.Itoa(p.ID)); n != nil{
+		tp, ok := n.(*Post)
+		if !ok {
+			log.Println("cached variable not typeof *Post")
+		return tp
+		}
+	} else {
+		C.Cache.Set("PST", strconv.Itoa(p.ID), p)
+	}
+
+	return p
+}
+
 type Thumb struct {
 	Hash string
 	Size int

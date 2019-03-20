@@ -4,6 +4,7 @@ import (
 	"fmt"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"net/http"
+	"log"
 	"strconv"
 	"time"
 
@@ -55,6 +56,60 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "user", p)
+}
+
+func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	paths := splitURI(r.URL.Path)
+	if len(paths) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(paths[2])
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var page = 1
+	if len(paths) >= 4 {
+		page, _ = strconv.Atoi(paths[3])
+		page = DM.Larg(1, page)
+	}
+
+
+	var p TagHistoryPage
+	p.UserInfo = userCookies(w, r)
+
+	const pageLimit = 5
+	var total int
+	p.History, total = DM.GetUserTagHistory(pageLimit, (page-1)*pageLimit, userID)
+	p.Pageinator = pageinate(total, pageLimit, page, 20)
+
+	for _, h := range p.History {
+		for _, e := range h.QETags(DM.DB) {
+			e.Tag.QID(DM.DB)
+			e.Tag = DM.CachedTag(e.Tag)
+			e.Tag.QTag(DM.DB)
+			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
+		}
+		h.Post.QID(DM.DB)
+		h.Post = DM.CachedPost(h.Post)
+
+		h.Post.QHash(DM.DB)
+		h.Post.QThumbnails(DM.DB)
+		h.Post.QMime(DM.DB).QName(DM.DB)
+		h.Post.QMime(DM.DB).QType(DM.DB)
+
+		h.User.QName(DM.DB)
+		h.User.QID(DM.DB)
+		h.User.QFlag(DM.DB)
+	}
+
+	p.Base.Title = "Tag History"
+
+	renderTemplate(w, "taghistory", p)
 }
 
 func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {

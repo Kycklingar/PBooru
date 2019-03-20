@@ -1,0 +1,39 @@
+{{define "pageinate"}}
+	<div class="nolink" id="pageinator">
+	
+	{{ if ne 0 $.Pageinator.Prev}}
+	    <a href="./{{.Pageinator.First}}">
+	        First
+	    </a>
+	
+	    <a href="./{{$.Pageinator.Prev}}" id="prev">
+	        Previous
+	    </a>
+	{{ end }}
+	{{ range .Pageinator.Pages }}
+	    <span>
+	        {{ if eq $.Pageinator.Current . }}
+	        <span style="font-size:25px;">
+	            {{.}}
+	        </span>
+	        {{ else }}
+	        <a href="./{{.}}">
+	            {{.}}
+	        </a>
+	        {{ end }}
+	    </span>
+	{{ end }}
+	{{ if ne 0 $.Pageinator.Next}}
+	    <a href="./{{.Pageinator.Next}}">
+	        Next
+	    </a>
+	    <a href="./{{.Pageinator.Last}}">
+	        Last
+	    </a>
+	{{ end }}
+	
+	<br>
+	<br>
+	<br>
+	</div>
+{{end}}
