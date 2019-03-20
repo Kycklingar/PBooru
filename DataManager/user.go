@@ -3,6 +3,7 @@ package DataManager
 import (
 	"container/list"
 	"crypto/rand"
+	"strconv"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,6 +20,20 @@ func NewUser() *User {
 	var u User
 	u.Session = &Session{}
 	return &u
+}
+
+func CachedUser(u *User) *User {
+	if n := C.Cache.Get("USR", strconv.Itoa(u.ID)); n != nil {
+		cu, ok := n.(*User)
+		if !ok {
+			log.Println("not a *User in cache")
+			return u
+		}
+		return cu
+	} else {
+		C.Cache.Set("USR", strconv.Itoa(u.ID), u)
+	}
+	return u
 }
 
 type User struct {

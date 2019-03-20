@@ -3,10 +3,11 @@
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
-        
-        {{if .User.Flag.Upload}}
+
+	{{if .User.ID}}
 	<details>
 	<summary>Edit Post</summary>
+        {{if .User.Flag.Upload}}
         	<div id="editPostForm">
         	    <form method="POST">
         	        <p>Add tags</p>
@@ -33,6 +34,11 @@
         	    </form>
         	    {{end}}
         	</div>
+	{{end}}
+	</details>
+	<details>
+	<summary>Report post</summary>
+		{{template "reportForm" .Post.ID}}
 	</details>
 	{{with .User.Pools}}
 	<details>
