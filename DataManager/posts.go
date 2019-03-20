@@ -27,11 +27,11 @@ func NewPost() *Post {
 }
 
 func CachedPost(p *Post) *Post {
-	if n := C.Cache.Get("PST", strconv.Itoa(p.ID)); n != nil{
+	if n := C.Cache.Get("PST", strconv.Itoa(p.ID)); n != nil {
 		tp, ok := n.(*Post)
 		if !ok {
 			log.Println("cached variable not typeof *Post")
-		return tp
+			return tp
 		}
 	} else {
 		C.Cache.Set("PST", strconv.Itoa(p.ID), p)
