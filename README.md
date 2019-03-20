@@ -11,6 +11,8 @@ The Permanent Booru is an image board web server which takes leverage of the dec
 [ImageMagick](https://imagemagick.org)
 
 #### Optional
+[FFmpeg](https://ffmpeg.org/) For video thumbnails
+
 [Mupdf](https://mupdf.com) For pdf and epub thumbnails
 
 [Gnome-epub-thumbnailer](https://github.com/GNOME/gnome-epub-thumbnailer) For mobi thumbnails

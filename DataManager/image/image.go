@@ -25,6 +25,22 @@ func ThumbnailerInstalled() {
 		fmt.Print("Found!\n")
 	}
 
+	fmt.Println("Checking if ffmpeg is installed.. ")
+	cmd = exec.Command("ffmpeg", "-version")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install ffmpeg from https://ffmpeg.org/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
+	fmt.Println("Checking if ffprobe is installed.. ")
+	cmd = exec.Command("ffprobe", "-version")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install ffprobe from https://ffmpeg.org/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
 	fmt.Println("Checking if mutool is installed..")
 	cmd = exec.Command("mutool", "-v")
 	if err := cmd.Run(); err != nil {
