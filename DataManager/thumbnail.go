@@ -1,7 +1,9 @@
 package DataManager
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"image/png"
 	"io"
@@ -11,8 +13,8 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
-func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
-	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, thumbnailSize)
+func makeThumbnail(file io.ReadSeeker, size int) (string, error) {
+	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size)
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -24,11 +26,69 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 		return "", err
 	}
 
-	if CFG.UseMFS {
-		err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumbnailSize, "/"), thumbHash, true)
+	if thumbHash == "" {
+		return "", errors.New("thumbhash is empty")
 	}
 
-	return thumbHash, err
+	if CFG.UseMFS {
+		if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thumbHash, true); err != nil {
+			log.Println(err)
+			return "", err
+		}
+	}
+
+	return thumbHash, nil
+
+}
+
+func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
+	var largestThumbnailSize int
+	for _, size := range CFG.ThumbnailSizes {
+		if largestThumbnailSize < size {
+			largestThumbnailSize = size
+		}
+	}
+
+	b, err := image.MakeThumbnail(file, "PNG", largestThumbnailSize)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	var f = bytes.NewReader(b.Bytes())
+
+	var thumbs []Thumb
+
+	for _, size := range CFG.ThumbnailSizes {
+		f.Seek(0, 0)
+		buf, err := image.MakeThumbnail(f, CFG.ThumbnailFormat, size)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		thumbHash, err := ipfsAdd(buf)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		if thumbHash == "" {
+			log.Println("thumbhash is empty")
+			continue
+		}
+
+		if CFG.UseMFS {
+			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thumbHash, true); err != nil {
+				log.Println(err)
+				return nil, err
+			}
+		}
+
+		thumbs = append(thumbs, Thumb{Hash: thumbHash, Size: size})
+	}
+
+	return thumbs, nil
 }
 
 func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {

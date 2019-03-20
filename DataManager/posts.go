@@ -278,18 +278,10 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 			}
 		}
 
-		for _, dim := range CFG.ThumbnailSizes {
-			file.Seek(0, 0)
-			thash, err := makeThumbnail(file, dim)
-			if err != nil {
-				log.Println(err)
-				break // It is better to add faulty file than it is to lose it forever.
-				//return err
-			}
-			if thash == "" {
-				continue
-			}
-			p.thumbnails = append(p.thumbnails, Thumb{Hash: thash, Size: dim})
+		file.Seek(0, 0)
+		p.thumbnails, err = makeThumbnails(file)
+		if err != nil {
+			log.Println(err)
 		}
 
 		file.Seek(0, 0)

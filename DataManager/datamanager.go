@@ -441,32 +441,35 @@ func GenerateThumbnail(postID int) error {
 		return err
 	}
 
-	for _, size := range CFG.ThumbnailSizes {
-		file := ipfsCat(hash)
-		if file == nil {
-			log.Println("File is nil")
-			continue
-		}
+	file := ipfsCat(hash)
+	if file == nil {
+		return errors.New("File is nil")
+	}
 
-		var b bytes.Buffer
-		b.ReadFrom(file)
+	var b bytes.Buffer
+	b.ReadFrom(file)
 
-		file.Close()
+	file.Close()
 
-		f := bytes.NewReader(b.Bytes())
-		thash, err := makeThumbnail(f, size)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
+	f := bytes.NewReader(b.Bytes())
 
-		_, err = DB.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, size, thash)
+	thumbs, err := makeThumbnails(f)
+	if err != nil {
+		return err
+	}
+
+	if thumbs == nil || len(thumbs) <= 0 {
+		return errors.New("no thumbnails returned from makeThumbnails")
+	}
+
+	for _, thumb := range thumbs {
+		_, err = DB.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 
-	return err
+	return nil
 }
 
 func GenerateThumbnails(size int) {
