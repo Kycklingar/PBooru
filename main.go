@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/image"
 	h "github.com/kycklingar/PBooru/handlers"
 )
 
@@ -62,7 +63,7 @@ func main() {
 	flag.Parse()
 
 	if *checkThumbSupport {
-		DM.ThumbnailerInstalled()
+		image.ThumbnailerInstalled()
 		return
 	}
 
