@@ -2,12 +2,12 @@ package image
 
 import (
 	"bytes"
-	"strings"
 	"fmt"
 	"io"
 	"log"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 )
 

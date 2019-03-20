@@ -11,8 +11,8 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
-	h "github.com/kycklingar/PBooru/handlers"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	h "github.com/kycklingar/PBooru/handlers"
 )
 
 var gConf config

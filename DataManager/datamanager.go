@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
