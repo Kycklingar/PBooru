@@ -25,13 +25,13 @@ func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) 
 		log.Println(string(b), err)
 	}
 
-	r, err := regexp.Compile("(\\d+:\\d+:\\d+.\\d+)")
+	r, err := regexp.Compile("(Duration: \\d+:\\d+:\\d+.\\d+)")
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	duration := r.FindString(string(b))
+	duration := strings.Replace(r.FindString(string(b)), "Duration: ", "", 1)
 	duration = strings.Replace(duration, ":", "h", 1)
 	duration = strings.Replace(duration, ":", "m", 1)
 	duration = strings.Replace(duration, ".", "s", 1)
@@ -42,9 +42,11 @@ func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) 
 		return nil, err
 	}
 
-	t = t / 2
+	if t <= 0 {
+		return nil, fmt.Errorf("video has no duration %s", duration)
+	}
 
-	//mid := fmt.Sprintf("%d:%d:%d.%d", int(t.Hours()), int(t.Minutes()), int(t.Seconds()), t / time.Millisecond)
+	t = t / 2
 
 	args = []string{
 		"-hide_banner",
@@ -68,7 +70,6 @@ func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) 
 		log.Println(err)
 		return nil, err
 	}
-
 	defer stdout.Close()
 
 	err = cmd.Start()
