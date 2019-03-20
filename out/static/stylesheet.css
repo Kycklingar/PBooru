@@ -110,6 +110,16 @@ li
     /*border: 1px solid red;*/
 }
 
+.thumbnail.video .overlay
+{
+	position:absolute;
+	background-image:url(/static/video.png);
+	background-repeat:no-repeat;
+	background-position:bottom right;
+	height:100%;
+	width:100%;
+}
+
 .thumbnail img
 {
     position: absolute;
