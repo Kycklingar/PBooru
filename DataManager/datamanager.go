@@ -3,6 +3,7 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"io/ioutil"
 	"math/rand"
 	"strings"
@@ -73,6 +74,9 @@ func Setup(iApi string) {
 
 	go sessionGC()
 	go updateCounter()
+	if err = cacheAllMimes(); err != nil {
+		log.Println(err)
+	}
 
 	rand.Seed(time.Now().UnixNano())
 

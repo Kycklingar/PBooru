@@ -78,6 +78,17 @@
             	    <input type="radio" name="order" value="" checked> Descending<br>
             	    <input type="radio" name="order" value="asc"> Ascending<br>
             	    <input type="radio" name="order" value="random"> Random<br>
+		    <label>Mimes:</label>
+		    <br>
+		    {{range $k, $v := .Mimes}}
+		    	<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
+			<ul>
+		    	{{range $v}}
+		    		<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
+			{{end}}
+			</ul>
+		    {{end}}
+
             	</div>
 	    </details>
         </form>

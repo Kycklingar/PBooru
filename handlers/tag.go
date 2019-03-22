@@ -14,6 +14,8 @@ type Sidebar struct {
 	Query      string
 	Filter     string
 	Unless     string
+
+	Mimes map[string][]*DM.Mime
 }
 
 const tagLimit = 200
