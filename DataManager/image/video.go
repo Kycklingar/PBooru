@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -12,9 +14,23 @@ import (
 )
 
 func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) {
+	tmpFile, err := ioutil.TempFile("", "pbooru-temp")
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err = io.Copy(tmpFile, file); err != nil {
+		log.Println(err)
+		tmpFile.Close()
+		return nil, err
+	}
+	tmpFile.Close()
+
 	args := []string{
 		"-hide_banner",
-		"-",
+		tmpFile.Name(),
 	}
 
 	cmd := exec.Command("ffprobe", args...)
@@ -51,7 +67,7 @@ func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) 
 	args = []string{
 		"-hide_banner",
 		"-i",
-		"-",
+		tmpFile.Name(),
 		"-f",
 		"mjpeg",
 		"-vframes",
