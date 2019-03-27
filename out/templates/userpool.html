@@ -3,11 +3,34 @@
 <div class="text-panel">
 	<h3>{{.Pool.User.Name}} - {{.Pool.Title}}</h3>
 	<p>{{.Pool.Description}}</p>
+	{{if eq .User.ID .Pool.User.ID}}
+	<form>
+		<input type="hidden" name="edit">
+		<input type="submit" value="Edit">
+	</form>
+	{{end}}
+	{{if .Edit}}
+	<form method="POST" action="/user/pool/remove/">
+	<input type="hidden" name="pool-id" value="{{.Pool.ID}}">
+	{{end}}
 	<div id="posts">
 	{{range .Pool.Posts}}
+		<div>
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+		{{if $.Edit}}
+		<div>
+			<label>Remove</label>
+			<input type="checkbox" name="post-id" value="{{.Post.ID}}">
+		</div>
+		{{end}}
+		</div>
 	{{end}}
 	</div>
+
+	{{if .Edit}}
+	<input type="submit">
+	</form>
+	{{end}}
 </div>
 
 {{template "baseEnd"}}
