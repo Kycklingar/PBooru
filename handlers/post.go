@@ -407,9 +407,17 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var post DM.Post
+		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		post.Delete(DM.DB)
+		if post.QDeleted(DM.DB) >= 1 {
+			if err = post.UnDelete(DM.DB); err != nil {
+				log.Println(err)
+			}
+		} else {
+			if err = post.Delete(DM.DB); err != nil {
+				log.Println(err)
+			}
+		}
 	}
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
