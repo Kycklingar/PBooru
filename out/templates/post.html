@@ -5,56 +5,55 @@
         {{ template "inner sidebar" .Sidebar}}
 
 	{{if .User.ID}}
-	<details>
-	<summary>Edit Post</summary>
-        {{if .User.Flag.Upload}}
-        	<div id="editPostForm">
-        	    <form method="POST">
-        	        <p>Add tags</p>
-        	        <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
-        	        <p>Remove tags</p>
-        	        <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
-        	        <input type="submit" value="Submit edit">
-        	    </form>
-        	    <script type="text/javascript" src="/static/suggestions.js"></script>
-        	    {{if .User.Flag.Delete}}
-        	    <form method="POST" action="/deletepost">
-        	        <h3>Delete Post</h3>
-        	        <input type="hidden" name="postid" value="{{.Post.ID}}">
-        	        <input type="submit" value="Delete/Undelete">
-        	    </form>
-        	    <form method="POST" action="/dups/add/">
-        	        <p>New Duplicate</p>
-        	        <input type="hidden" name="postid" value="{{.Post.ID}}">
-        	        <p>Dup post id</p>
-        	        <input type="text" name="duppostid">
-        	        <p>Level {{if ge .Dups.Level 1}}({{.Dups.Level}}){{end}}</p>
-        	        <input type="text" name="level">
-        	        <input type="submit">
-        	    </form>
-        	    {{end}}
-        	</div>
-	{{end}}
-	</details>
-	<details>
-	<summary>Report post</summary>
-		{{template "reportForm" .Post.ID}}
-	</details>
-	{{with .User.Pools}}
-	<details>
-		<summary>Add to pool</summary>
-		<form method="POST" action="/user/pools/append/">
-			<input type="hidden" name="post-id" value="{{$.Post.ID}}">
-			<select style="min-width:100%;" name="pool-id">
-				{{range .}}
-				<option value="{{.ID}}">{{.Title}}</option>
-				{{end}}
-			</select>
-			<input type="submit" value="Add">
-		</form>
-	</details>
-	{{end}}
-
+		<details>
+		<summary>Edit Post</summary>
+        		<div id="editPostForm">
+        			{{if .User.Flag.Tagging}}
+        		    		<form method="POST">
+        		    		    <p>Add tags</p>
+        		    		    <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
+        		    		    <p>Remove tags</p>
+        		    		    <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
+        		    		    <input type="submit" value="Submit edit">
+        		    		</form>
+        		    		<script type="text/javascript" src="/static/suggestions.js"></script>
+			    	{{end}}
+        			{{if .User.Flag.Delete}}
+        		    		<form method="POST" action="/deletepost">
+        		    		    <h3>Delete Post</h3>
+        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
+        		    		    <input type="submit" value="Delete/Undelete">
+        		    		</form>
+        		    		<form method="POST" action="/dups/add/">
+        		    		    <p>New Duplicate</p>
+        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
+        		    		    <p>Dup post id</p>
+        		    		    <input type="text" name="duppostid">
+        		    		    <p>Level {{if ge .Dups.Level 1}}({{.Dups.Level}}){{end}}</p>
+        		    		    <input type="text" name="level">
+        		    		    <input type="submit">
+        		    		</form>
+        		    	{{end}}
+        		</div>
+		</details>
+		<details>
+		<summary>Report post</summary>
+			{{template "reportForm" .Post.ID}}
+		</details>
+		{{with .User.Pools}}
+		<details>
+			<summary>Add to pool</summary>
+			<form method="POST" action="/user/pools/append/">
+				<input type="hidden" name="post-id" value="{{$.Post.ID}}">
+				<select style="min-width:100%;" name="pool-id">
+					{{range .}}
+					<option value="{{.ID}}">{{.Title}}</option>
+					{{end}}
+				</select>
+				<input type="submit" value="Add">
+			</form>
+		</details>
+		{{end}}
         {{end}}
 	
     </div>

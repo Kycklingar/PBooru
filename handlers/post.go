@@ -79,6 +79,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 			return
 		}
+		if !user.QFlag(DM.DB).Tagging() {
+			http.Error(w, "Insufficent privileges. Want 'Tagging'", http.StatusBadRequest)
+			return
+		}
 
 		tagStrAdd := r.FormValue("addtags")
 		tagStrRem := r.FormValue("remtags")

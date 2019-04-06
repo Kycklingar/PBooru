@@ -51,15 +51,20 @@ type User struct {
 type flag int
 
 const (
-	flagUpload  = 1
-	flagComics  = 2
-	flagBanning = 4
-	flagDelete  = 8
-	flagTags    = 16
-	flagSpecial = 32
+	flagTagging = 1
+	flagUpload  = 2
+	flagComics  = 4
+	flagBanning = 8
+	flagDelete  = 16
+	flagTags    = 32
+	flagSpecial = 64
 
 	flagAll = 0xff
 )
+
+func (f flag) Tagging() bool {
+	return f&flagTagging != 0
+}
 
 func (f flag) Upload() bool {
 	return f&flagUpload != 0
