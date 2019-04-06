@@ -185,6 +185,24 @@ func (u *User) QFlag(q querier) flag {
 	return *u.flag
 }
 
+func (u *User) Voted(q querier, p *Post) bool {
+	if p.QID(q) <= 0 {
+		return false
+	}
+
+	if u.QID(q) <= 0 {
+		return false
+	}
+
+	var v int
+
+	if err := q.QueryRow("SELECT count(*) FROM post_score_mapping WHERE post_id = $1 AND user_id = $2", p.ID, u.ID).Scan(&v); err != nil{
+		log.Println(err)
+		return false
+	}
+	return v > 0
+}
+
 func (u *User) Salt(q querier) string {
 	return u.salt
 }
