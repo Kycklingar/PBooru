@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS post_score_mapping(
+	id SERIAL PRIMARY KEY,
 	post_id INTEGER NOT NULL REFERENCES posts(id),
 	user_id INTEGER NOT NULL REFERENCES users(id),
 	CONSTRAINT post_user UNIQUE (post_id, user_id)

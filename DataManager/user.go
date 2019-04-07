@@ -318,6 +318,29 @@ func (u *User) QPools(q querier) []*Pool {
 	return u.Pools
 }
 
+func (u *User) RecentVotes(q querier, limit int) (posts []*Post) {
+	rows, err := q.Query("SELECT post_id FROM post_score_mapping WHERE user_id = $1 ORDER BY id DESC LIMIT $2", u.QID(DB), limit)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p = NewPost()
+		if err = rows.Scan(&p.ID); err != nil {
+			log.Println(err)
+			return
+		}
+		posts = append(posts, p)
+	}
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+	}
+
+	return
+}
+
 //func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {
 //	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset*limit)
 //	if err != nil {
