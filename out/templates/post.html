@@ -3,7 +3,7 @@
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
-
+	<br>
 	{{if .User.ID}}
 		<form action="/post/vote/" method="POST">
 			<input type="hidden" name="post-id" value="{{.Post.ID}}">
