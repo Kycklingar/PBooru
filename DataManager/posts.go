@@ -450,6 +450,11 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 
 		at = append(at, b)
 
+		parents := a.Tag.Parents(q)
+		if parents != nil {
+			at = append(at, parents...)
+		}
+
 	}
 
 	var rt []*Tag
@@ -498,7 +503,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.AddToPost(q, p)
 
 	for _, tag := range rt {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $1, $3)", historyID, tag.QID(q), -1)
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
 		if err != nil {
 			return err
 		}
