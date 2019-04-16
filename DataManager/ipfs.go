@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 )
 
 var ipfsAPI = "http://localhost:5001/api/v0/"
@@ -101,14 +102,16 @@ func ipfsAdd(file io.Reader) (string, error) {
 
 func mfsCP(dir, mhash string, flush bool) error {
 	directory := dir + mhash[len(mhash)-2:] + "/"
-
+	var err error
 	if mfsExists(directory) != nil {
 		if err := mfsMkdir(directory); err != nil {
 			log.Println(err)
 			return err
 		}
-	} else if mfsExists(directory+mhash) == nil {
+	} else if err = mfsExists(directory + mhash); err == nil {
 		return nil
+	} else if err.Error() == "no entries" {
+		return err
 	}
 
 	var fl string
@@ -157,12 +160,21 @@ func mfsExists(dir string) error {
 
 	b := bytes.Buffer{}
 	b.ReadFrom(res.Body)
+
+	if res.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("HTTP Error %d, %s", res.StatusCode, string(b.Bytes())))
+	}
+
 	v := make(map[string]interface{})
 	json.Unmarshal(b.Bytes(), &v)
 
 	if v["Type"] == "error" {
 		return errors.New(fmt.Sprint("Path doesn't exist")) //"File doesn't match hash:", v["Hash"], hash))
 	}
+	if _, ok := v["Entries"]; !ok {
+		return errors.New("no entries")
+	}
+
 	return nil
 }
 
@@ -235,7 +247,7 @@ func ipfsCat(hash string) io.ReadCloser {
 	cl := http.Client{}
 	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil
 	}
 
@@ -248,4 +260,28 @@ func ipfsCat(hash string) io.ReadCloser {
 	}
 
 	return res.Body
+}
+
+func ipfsSize(hash string) int64 {
+	if len(hash) < 46 {
+		return 0
+	}
+
+	cl := http.Client{}
+	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+	res.Body.Close()
+
+	sizeStr := res.Header.Get("X-Content-Length")
+
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	return size
 }

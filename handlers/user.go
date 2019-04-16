@@ -1,20 +1,15 @@
 package handlers
 
 import (
-	"fmt"
-	DM "github.com/kycklingar/PBooru/DataManager"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	DM "github.com/kycklingar/PBooru/DataManager"
+
 	"github.com/dchest/captcha"
 )
-
-type User struct {
-	ID   int
-	Name string
-	Flag int
-}
 
 type UserInfo struct {
 	IpfsDaemon       string
@@ -26,8 +21,94 @@ type UserInfo struct {
 	ThumbHoverFull   bool
 }
 
-func tUser(u *DM.User) User {
-	return User{u.QID(DM.DB), u.QName(DM.DB), u.QFlag(DM.DB)}
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	u, ui := getUser(w, r)
+	profile := u
+
+	paths := splitURI(r.URL.Path)
+	if len(paths) >= 2 {
+		uid, err := strconv.Atoi(paths[1])
+		if err != nil {
+			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
+			return
+		}
+
+		profile = DM.NewUser()
+		profile.SetID(uid)
+	}
+
+	type page struct {
+		User        *DM.User
+		UserInfo    UserInfo
+		Profile     *DM.User
+		RecentPosts []*DM.Post
+	}
+	var p = page{User: u, UserInfo: ui, Profile: profile}
+	u.QName(DM.DB)
+	profile.QName(DM.DB)
+	profile.QFlag(DM.DB)
+
+	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
+	for _, post := range p.RecentPosts {
+		post.QHash(DM.DB)
+		post.QThumbnails(DM.DB)
+		post.QDeleted(DM.DB)
+	}
+
+	renderTemplate(w, "user", p)
+}
+
+func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	paths := splitURI(r.URL.Path)
+	if len(paths) < 3 {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(paths[2])
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var page = 1
+	if len(paths) >= 4 {
+		page, _ = strconv.Atoi(paths[3])
+		page = DM.Larg(1, page)
+	}
+
+	var p TagHistoryPage
+	p.UserInfo = userCookies(w, r)
+
+	const pageLimit = 5
+	var total int
+	p.History, total = DM.GetUserTagHistory(pageLimit, (page-1)*pageLimit, userID)
+	p.Pageinator = pageinate(total, pageLimit, page, 20)
+
+	for _, h := range p.History {
+		for _, e := range h.QETags(DM.DB) {
+			e.Tag.QID(DM.DB)
+			e.Tag = DM.CachedTag(e.Tag)
+			e.Tag.QTag(DM.DB)
+			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
+		}
+		h.Post.QID(DM.DB)
+		h.Post = DM.CachedPost(h.Post)
+
+		h.Post.QHash(DM.DB)
+		h.Post.QThumbnails(DM.DB)
+		h.Post.QMime(DM.DB).QName(DM.DB)
+		h.Post.QMime(DM.DB).QType(DM.DB)
+
+		h.User.QName(DM.DB)
+		h.User.QID(DM.DB)
+		h.User.QFlag(DM.DB)
+	}
+
+	p.Base.Title = "Tag History"
+
+	renderTemplate(w, "taghistory", p)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +117,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 
 		if !verifyCaptcha(w, r) {
-			http.Error(w, "Captcha was incorrect. Try again!", http.StatusBadRequest)
+			http.Redirect(w, r, "./#err-captcha", http.StatusSeeOther)
 			return
 		}
 
@@ -44,8 +125,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		err := user.Login(DM.DB, username, password)
 		if err != nil {
-			fmt.Println(err.Error())
-			http.Error(w, "Login failed", http.StatusInternalServerError)
+			//log.Println(err)
+			//http.Error(w, "Login failed", http.StatusInternalServerError)
+			http.Redirect(w, r, "./#err-username", http.StatusSeeOther)
 			return
 		}
 		//s := user.Session()
@@ -63,11 +145,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			Expire time.Time
 		}
 		p := struct {
-			Username string
+			User     *DM.User
 			Key      string
 			Sessions []s
 		}{}
-		p.Username = user.QName(DM.DB)
+		//p.Username = user.QName(DM.DB)
+		p.User = user
+
+		user.QID(DM.DB)
+		user.QName(DM.DB)
+		user.QFlag(DM.DB)
 
 		if user.QID(DM.DB) <= 0 {
 			p.Key = captcha.New()
@@ -86,12 +173,23 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := getUser(w, r)
+	if r.Method == http.MethodPost {
+		sessKey := r.FormValue("session-key")
+		if len(sessKey) <= 0 {
+			http.Error(w, "no session key", http.StatusBadRequest)
+			return
+		}
 
-	setC(w, "session", "")
+		u := DM.NewUser()
+		u.Session.Get(DM.DB, sessKey)
 
-	if user.QID(DM.DB) > 0 {
-		user.Logout(DM.DB)
+		u.Logout(DM.DB)
+	} else {
+		user, _ := getUser(w, r)
+		if user.QID(DM.DB) > 0 {
+			user.Logout(DM.DB)
+		}
+		setC(w, "session", "")
 	}
 
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
@@ -113,7 +211,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 
 		if !verifyCaptcha(w, r) {
-			http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)
+			//http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)
+			http.Redirect(w, r, "./#err-captcha", http.StatusSeeOther)
 			return
 		}
 

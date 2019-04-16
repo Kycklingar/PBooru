@@ -12,7 +12,7 @@ import (
 
 type comicsPage struct {
 	Comics     []*DM.Comic
-	User       User
+	User       *DM.User
 	UserInfo   UserInfo
 	Pageinator Pageination
 	Time       string
@@ -86,7 +86,8 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var u *DM.User
 	u, p.UserInfo = getUser(w, r)
-	p.User = tUser(u)
+	u.QFlag(DM.DB)
+	p.User = u
 	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "comics", p)
@@ -97,7 +98,7 @@ type comicPage struct {
 	Comic   *DM.Comic
 	Chapter *DM.Chapter
 
-	User     User
+	User     *DM.User
 	UserInfo UserInfo
 	Full     bool
 	Time     string
@@ -184,8 +185,9 @@ func ComicHandler(w http.ResponseWriter, r *http.Request) {
 
 	var u *DM.User
 	u, p.UserInfo = getUser(w, r)
+	u.QFlag(DM.DB)
 
-	p.User = tUser(u)
+	p.User = u
 	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "comic", p)
@@ -197,7 +199,7 @@ func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, _ := getUser(w, r)
-	if u.QFlag(DM.DB) != DM.AdmFAdmin {
+	if !u.QFlag(DM.DB).Comics() {
 		http.Error(w, errMustBeAdmin, http.StatusBadRequest)
 		return
 	}
@@ -266,7 +268,7 @@ func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if user.QFlag(DM.DB) != DM.AdmFAdmin {
+	if !user.QFlag(DM.DB).Comics() {
 		http.Error(w, errMustBeAdmin, http.StatusBadRequest)
 		return
 	}

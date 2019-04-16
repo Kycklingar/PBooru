@@ -18,7 +18,7 @@ type Postpage struct {
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
 	Sidebar  Sidebar
-	User     User
+	User     *DM.User
 	UserInfo UserInfo
 	Time     string
 }
@@ -79,6 +79,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 			return
 		}
+		if !user.QFlag(DM.DB).Tagging() {
+			http.Error(w, "Insufficent privileges. Want 'Tagging'", http.StatusBadRequest)
+			return
+		}
 
 		tagStrAdd := r.FormValue("addtags")
 		tagStrRem := r.FormValue("remtags")
@@ -99,14 +103,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var pp Postpage
 	p := DM.NewPost()
 
-	var u *DM.User
-	u, pp.UserInfo = getUser(w, r)
-	pp.User = tUser(u)
+	pp.User, pp.UserInfo = getUser(w, r)
+
+	pp.User.QID(DM.DB)
+	pp.User.QFlag(DM.DB)
+	pp.User.QPools(DM.DB)
 
 	uri := splitURI(r.URL.Path)
 
 	// Valid Uris: 	post/1
-	//				post/hash/Qm...
+	//		post/hash/Qm...
 	if len(uri) <= 1 {
 		notFoundHandler(w, r)
 		return
@@ -143,9 +149,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
 	p.QID(DM.DB)
+	p.QSize(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
 	p.QThumbnails(DM.DB)
+	p.QDescription(DM.DB)
 
 	pp.Post = p
 
@@ -330,16 +338,23 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		user, _ := getUser(w, r)
-		renderTemplate(w, "upload", tUser(user))
+		user.QFlag(DM.DB)
+		renderTemplate(w, "upload", user)
 	} else if r.Method == http.MethodPost {
 		user, _ := getUser(w, r)
 		if user.QID(DM.DB) == 0 {
 			http.Error(w, "You must login in order to upload", http.StatusForbidden)
 			return
 		}
+		user.QFlag(DM.DB)
+
+		if !user.Flag().Upload() {
+			http.Error(w, "Insufficient priviliges, Upload needed", http.StatusForbidden)
+			return
+		}
 		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
 		r.ParseMultipartForm(50 << 20)
-		file, _, err := r.FormFile("file")
+		file, fh, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
 			return
@@ -365,7 +380,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		post := DM.NewPost()
 
-		err = post.New(file, tagString, contentType, user)
+		err = post.New(file, fh.Size, tagString, contentType, user)
 		if err != nil {
 			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
 			log.Println(err)
@@ -381,18 +396,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		// userinfo := userCookies(w, r)
-		// user := DM.NewUser()
-		// user.Session().Get(userinfo.SessionToken)
-
 		user, _ := getUser(w, r)
 
-		if user.QFlag(DM.DB) == -1 {
-			http.Error(w, "retrieving adminflag failed", http.StatusInternalServerError)
-			return
-		}
-		if user.QFlag(DM.DB) != DM.AdmFAdmin {
-			http.Error(w, "you must be loggedin as an administrator to do that", http.StatusInternalServerError)
+		if !user.QFlag(DM.DB).Delete() {
+			http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusInternalServerError)
 			return
 		}
 
@@ -404,9 +411,17 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var post DM.Post
+		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		post.Delete(DM.DB)
+		if post.QDeleted(DM.DB) >= 1 {
+			if err = post.UnDelete(DM.DB); err != nil {
+				log.Println(err)
+			}
+		} else {
+			if err = post.Delete(DM.DB); err != nil {
+				log.Println(err)
+			}
+		}
 	}
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
@@ -414,6 +429,12 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+	if !u.QFlag(DM.DB).Delete() {
+		http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusBadRequest)
 		return
 	}
 

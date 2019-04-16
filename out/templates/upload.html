@@ -2,7 +2,7 @@
 <div class="text-panel">
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
-    {{else}}
+    {{else if .Flag.Upload}}
     <form enctype="multipart/form-data" method="POST">
         <label for="file">File</label>
         <br>
@@ -30,10 +30,11 @@
         </p>
         <p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
         <p>Tags and namespaces may not be longer than 64 characters respectively</p>
-        <p>Use comma "," as delimiter</p>
+        <p>Use comma "," or newlines as delimiter</p>
         <p>Tags may have spaces</p>
         <p>Example tag string: "gender:female, creator:nightfaux, species:renamon, ass, my super tag, pussy"</p>
-        <p>DO NOT FORGET THE COMMAS!</p>
+    {{else}}
+    <h3>Insufficient priviliges. Want "Upload"<h3>
     {{end}}
 </div>
 {{ template "baseEnd" }}

@@ -53,7 +53,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: Put in config file
 const (
 	defaultPostsPerPage     = 24
-	defaultImageSize        = 250
+	defaultImageSize        = 256
 	defaultMinThumbnailSize = 0
 	pageCount               = 30
 	maxTagsPerPage          = 50
@@ -173,13 +173,14 @@ func splitURI(uri string) []string {
 
 type Comment struct {
 	ID   int
-	User User
+	User *DM.User
 	Text string
 	Time string
 }
 
 func tComment(c *DM.Comment) Comment {
-	return Comment{c.ID, tUser(c.User), c.Text, c.Time}
+	c.User.QName(DM.DB)
+	return Comment{c.ID, c.User, c.Text, c.Time}
 }
 
 func tComments(cm []*DM.Comment) (r []Comment) {
@@ -190,7 +191,7 @@ func tComments(cm []*DM.Comment) (r []Comment) {
 }
 
 func tPostComment(c *DM.PostComment) Comment {
-	return Comment{c.ID, tUser(c.User), c.Text, c.Time}
+	return Comment{c.ID, c.User, c.Text, c.Time}
 }
 
 func tPostComments(cm []*DM.PostComment) (r []Comment) {

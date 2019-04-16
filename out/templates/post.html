@@ -3,46 +3,59 @@
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
-        
-        {{if ne .User.Flag -1}}
-        <script>
-            function toggleEdit()
-            {
-                document.getElementById("editPostForm").style.display = "inline"
-                
-                input = document.getElementById("remtagsinput")
-            }
-        </script>
-        <div onclick="toggleEdit()">
-            Edit Post
-        </div>
-        <div id="editPostForm" style="display:none">
-            <form method="POST">
-                <p>Add tags</p>
-                <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
-                <p>Remove tags</p>
-                <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
-                <input type="submit" value="Submit edit">
-            </form>
-            <script type="text/javascript" src="/static/suggestions.js"></script>
-            {{if eq .User.Flag 1}}
-            <form method="POST" action="/deletepost">
-                <h3>Delete Post</h3>
-                <input type="hidden" name="postid" value="{{.Post.ID}}">
-                <input type="submit">
-            </form>
-            <form method="POST" action="/dups/add/">
-                <p>New Duplicate</p>
-                <input type="hidden" name="postid" value="{{.Post.ID}}">
-                <p>Dup post id</p>
-                <input type="text" name="duppostid">
-                <p>Level {{if ge .Dups.Level 1}}({{.Dups.Level}}){{end}}</p>
-                <input type="text" name="level">
-                <input type="submit">
-            </form>
-            {{end}}
-        </div>
+
+	{{if .User.ID}}
+		<details>
+		<summary>Edit Post</summary>
+        		<div id="editPostForm">
+        			{{if .User.Flag.Tagging}}
+        		    		<form method="POST">
+        		    		    <p>Add tags</p>
+        		    		    <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
+        		    		    <p>Remove tags</p>
+        		    		    <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
+        		    		    <input type="submit" value="Submit edit">
+        		    		</form>
+        		    		<script type="text/javascript" src="/static/suggestions.js"></script>
+			    	{{end}}
+        			{{if .User.Flag.Delete}}
+        		    		<form method="POST" action="/deletepost">
+        		    		    <h3>Delete Post</h3>
+        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
+        		    		    <input type="submit" value="Delete/Undelete">
+        		    		</form>
+        		    		<form method="POST" action="/dups/add/">
+        		    		    <p>New Duplicate</p>
+        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
+        		    		    <p>Dup post id</p>
+        		    		    <input type="text" name="duppostid">
+        		    		    <p>Level {{if ge .Dups.Level 1}}({{.Dups.Level}}){{end}}</p>
+        		    		    <input type="text" name="level">
+        		    		    <input type="submit">
+        		    		</form>
+        		    	{{end}}
+        		</div>
+		</details>
+		<details>
+		<summary>Report post</summary>
+			{{template "reportForm" .Post.ID}}
+		</details>
+		{{with .User.Pools}}
+		<details>
+			<summary>Add to pool</summary>
+			<form method="POST" action="/user/pools/append/">
+				<input type="hidden" name="post-id" value="{{$.Post.ID}}">
+				<select style="min-width:100%;" name="pool-id">
+					{{range .}}
+					<option value="{{.ID}}">{{.Title}}</option>
+					{{end}}
+				</select>
+				<input type="submit" value="Add">
+			</form>
+		</details>
+		{{end}}
         {{end}}
+	
     </div>
     <div id="post">
 	{{if eq .Post.Mime.Type "image"}}
@@ -50,17 +63,19 @@
             <script>
                 function resize(caller)
                 {
-                    if (caller.style.maxWidth == ""){
+                    if (caller.style.maxWidth == "unset"){
                         caller.style.maxWidth = "100%";
-                        caller.style.maxHeight = "100%";
                     }else{
-                        caller.style.maxWidth = null;
-                        caller.style.maxHeight = null;
+                        caller.style.maxWidth = "unset";
                     }
                     
                 }
             </script>
-            <img onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+            <img id="fullsize" onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+	    <h4>
+	    	<a href="#fullsize">Fullsize</a>
+	    	<a href="#">Shrink to fit</a>
+	    </h4>
         </div>
         {{else if eq .Post.Mime.Type "video"}}
         <div>
@@ -74,9 +89,15 @@
 	</div>
         {{end}}
         <div style="padding-left: 4px;">
-            <a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>
-                <h3>Download</h3>
-            </a>
+	    <h3>
+            	<a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>Download</a>
+	    </h3>
+	    {{with .Post.Description}}
+		<div class="panel">
+	    		<h3>Description</h3>
+	    		<p>{{.}}</p>
+		</div>
+	    {{end}}
             <h4>ID:{{ .Post.ID }}</h4>
             <h4>{{ .Post.Hash }}</h4>
 		{{with .Post.Thumbnails}}
@@ -88,6 +109,7 @@
 			</ul>
 		{{end}}
             <p>{{ .Post.Mime.Str }}</p>
+	    <p>{{ .Post.SizePretty }}</p>
             {{ if .Post.Deleted }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
             <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
 

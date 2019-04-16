@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
 type Config struct {
@@ -190,6 +191,13 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "404", nil)
 }
 
+func wrap2(x, y string, xv, yv interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		x: xv,
+		y: yv,
+	}
+}
+
 func init() {
 	stat.init()
 
@@ -197,7 +205,8 @@ func init() {
 	Templates.Funcs(template.FuncMap{
 		"noescape":  func(x string) template.HTML { return template.HTML(x) },
 		"urlEncode": UrlEncode,
-		"urlDecode": UrlDecode})
+		"urlDecode": UrlDecode,
+		"wrap2":     wrap2})
 
 	tmpls, err := loadTemplates("./templates/")
 	if err != nil {
@@ -214,7 +223,10 @@ func init() {
 
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
+	Handlers["/post/report/"] = reportPostHandler
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
+	Handlers["/reports/"] = makeStatHandler(reportsHandler)
+	Handlers["/reports/delete/"] = reportDeleteHandler
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)
 	Handlers["/upload"] = makeStatHandler(UploadHandler)
 	Handlers["/upload/"] = makeStatHandler(UploadHandler)
@@ -222,9 +234,19 @@ func init() {
 	Handlers["/options/"] = makeStatHandler(OptionsHandler)
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
+
+	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
+	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
+	Handlers["/user/pool/remove/"] = makeStatHandler(editUserPoolHandler)
+	Handlers["/user/pools/"] = makeStatHandler(UserPoolsHandler)
+	Handlers["/user/pools/append/"] = makeStatHandler(UserPoolAppendHandler)
+	Handlers["/user/pools/add/"] = makeStatHandler(UserPoolAddHandler)
+
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)
+
 	Handlers["/deletepost"] = makeStatHandler(RemovePostHandler)
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
@@ -232,14 +254,16 @@ func init() {
 	Handlers["/comic/add"] = makeStatHandler(ComicAddHandler)
 	Handlers["/comic/edit"] = makeStatHandler(EditComicHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
+	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 
 	Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
 		user, info := getUser(w, r)
+		user.QFlag(DM.DB)
 		p := struct {
 			UserInfo UserInfo
-			User     User
-		}{info, tUser(user)}
+			User     *DM.User
+		}{info, user}
 
 		renderTemplate(w, "admin", p)
 	})
