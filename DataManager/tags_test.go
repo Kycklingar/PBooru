@@ -28,18 +28,13 @@ func TestAddParent(t *testing.T) {
 		t.Error(err)
 	}
 
-
 	// Add child tag to a post and check if the parent is addedd to
 	p := testNewPost(t)
 
-
 	u := NewUser()
 	u.ID = 1
-	if err = p.EditTagsQ(DB, u, "tag b", ""); err != nil{
+	if err = p.EditTagsQ(DB, u, "tag b", ""); err != nil {
 		t.Fatal(err)
 	}
 
-	
-
 }
-
