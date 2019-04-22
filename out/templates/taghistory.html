@@ -14,6 +14,10 @@
                 </tr>
             {{end}}
             </table>
+	    <form action="/taghistory/reverse/" method="POST">
+		<input type="hidden" name="taghistory-id" value="{{.ID}}">
+		<input type="submit" value="Reverse">
+	    </form>
         {{end}}
 </div>
 

@@ -177,6 +177,36 @@ type TagHistoryPage struct {
 	Pageinator Pageination
 }
 
+func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		u, _ := getUser(w, r)
+
+		if !u.QFlag(DM.DB).Delete() {
+			http.Error(w, "Insufficent privileges. Want \"delete\"", http.StatusBadRequest)
+			return
+		}
+		var (
+			th = DM.NewTagHistory()
+			err error
+		)
+
+		th.ID, err = strconv.Atoi(r.FormValue("taghistory-id"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = th.Reverse()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
 func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	var p TagHistoryPage
 

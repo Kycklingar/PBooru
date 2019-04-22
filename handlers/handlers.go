@@ -234,6 +234,7 @@ func init() {
 	Handlers["/options/"] = makeStatHandler(OptionsHandler)
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
+	Handlers["/taghistory/reverse/"] = makeStatHandler(ReverseTagHistoryHandler)
 
 	Handlers["/user/"] = makeStatHandler(UserHandler)
 	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
