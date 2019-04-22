@@ -29,7 +29,7 @@
     <li>
         <div id="c{{.ID}}" class="comment">
             <b>
-            <span class="comment-username">{{if .User.ID}}{{.User.Name}}{{else}}Anonymous{{end}}</span>
+            <span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
             <span class="comment-id">#{{.ID}}</span>
             <span class="comment-time">{{.Time}}</span>
             </b>

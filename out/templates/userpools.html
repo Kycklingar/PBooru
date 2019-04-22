@@ -1,0 +1,36 @@
+{{ template "base"}}
+
+<div class="text-panel">
+<h3>Pools of {{.Profile.Name}}</h3>
+	{{if eq .Profile.ID .User.ID}}
+	<details>
+	<summary>New Pool</summary>
+		<form method="POST" action="/user/pools/add/">
+			<label for="title">Title</label>
+			<br>
+			<input type="text" id="title" name="title">
+			<br>
+			<label for="description">Description</label>
+			<br>
+			<input type="text" id="description" name="description">
+			<br>
+			<input type="submit">
+		</form>
+	</details>
+	{{end}}
+	<ul>
+		{{range .Pools}}
+		<li>
+			<h3><a href="/user/pool/{{.ID}}/">{{.Title}}</a></h3>
+			<p>{{.Description}}</p>
+			<div class="comic-strip">
+			{{range .PostsLimit 5}}
+				{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+			{{end}}
+			</div>
+		</li>
+		{{end}}
+	</ul>
+</div>
+
+{{template "baseEnd"}}

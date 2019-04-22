@@ -1,0 +1,32 @@
+{{template "base"}}
+
+<div class="text-panel">
+	{{if .Profile.ID}}
+		<div>
+			<h2>{{.Profile.Name}}</h2>
+			{{if .Profile.Flag.Special}}
+			<p style="color:#ff2d2d;text-shadow:2px 2px 2px black;">Admin</p>
+			{{end}}
+		</div>
+		<div>
+			<h3><a href="/user/pools/{{.Profile.ID}}">Pools</a></h3>
+		</div>
+		<div>
+			<h4>Recent uploads</h4>
+			<div class="comic-strip">
+				{{range .RecentPosts}}
+					{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+				{{end}}
+			</div>
+		</div>
+	{{end}}
+	{{if .User.ID}}
+		<h2><a href="/logout/">Logout</a></h2>
+		<h3><a href="/login/">Sessions</a></h3>
+	{{else}}
+		<h2><a href="/login/">Login</a></h2>
+		<h2><a href="/register/">Register</a></h2>
+	{{end}}
+</div>
+
+{{template "baseEnd"}}

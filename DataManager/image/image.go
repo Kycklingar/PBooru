@@ -1,9 +1,9 @@
-package DataManager
+package image
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"image/png"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Nr90/imgsim"
 	"github.com/kycklingar/mimemagic"
 )
 
@@ -22,6 +21,22 @@ func ThumbnailerInstalled() {
 	cmd := exec.Command("convert", "-version")
 	if err := cmd.Run(); err != nil {
 		fmt.Print("Not found in '$PATH'! Install instructions can be found https://www.imagemagick.org/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
+	fmt.Println("Checking if ffmpeg is installed.. ")
+	cmd = exec.Command("ffmpeg", "-version")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install ffmpeg from https://ffmpeg.org/\n")
+	} else {
+		fmt.Print("Found!\n")
+	}
+
+	fmt.Println("Checking if ffprobe is installed.. ")
+	cmd = exec.Command("ffprobe", "-version")
+	if err := cmd.Run(); err != nil {
+		fmt.Print("Not found in '$PATH'! Install ffprobe from https://ffmpeg.org/\n")
 	} else {
 		fmt.Print("Found!\n")
 	}
@@ -43,14 +58,14 @@ func ThumbnailerInstalled() {
 	}
 }
 
-func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
+func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize int) (*bytes.Buffer, error) {
 	var err error
 
 	buffer := make([]byte, 512)
 	_, err = file.Read(buffer)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return nil, err
 	}
 
 	mime := mimemagic.MatchMagic(buffer)
@@ -68,31 +83,25 @@ func makeThumbnail(file io.ReadSeeker, thumbnailSize int) (string, error) {
 		} else if strings.Contains(mime.MediaType(), "epub") {
 			m = "epub"
 		}
-		b, err = mupdf(file, m, CFG.ThumbnailFormat, thumbnailSize)
+		b, err = mupdf(file, m, thumbnailFormat, thumbnailSize)
 	case "application/x-mobipocket-ebook":
-		b, err = gnomeMobi(file, CFG.ThumbnailFormat, thumbnailSize)
+		b, err = gnomeMobi(file, thumbnailFormat, thumbnailSize)
 	default:
 		if strings.Contains(mime.MediaType(), "image") {
-			b, err = magickResize(file, CFG.ThumbnailFormat, thumbnailSize)
+			b, err = magickResize(file, thumbnailFormat, thumbnailSize)
+		} else if strings.Contains(mime.MediaType(), "video") {
+			b, err = ffmpeg(file, thumbnailFormat, thumbnailSize)
 		} else {
-			return "", nil
+			return nil, errors.New("unsupported mime")
 		}
 	}
 
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return nil, err
 	}
 
-	thumbHash, err := ipfsAdd(b)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumbnailSize, "/"), thumbHash, true)
-
-	return thumbHash, err
+	return b, nil
 }
 
 func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
@@ -139,111 +148,50 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 	return &buf, nil
 }
 
-func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error) {
-	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
-	if err != nil {
-		log.Println(err)
-		return nil, err
-
-	}
-	defer os.RemoveAll(tmpdir)
-
-	var tmpbuf bytes.Buffer
-	tmpbuf.ReadFrom(file)
-
-	err = ioutil.WriteFile(fmt.Sprintf("%s/file.%s", tmpdir, mime), tmpbuf.Bytes(), 0660)
-
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
+func GetDimensions(file io.Reader) (int, int, error) {
 	args := []string{
-		"draw",
-		"-o",
-		"",
-		"-F",
-		"png",
-		fmt.Sprintf("%s/file.%s", tmpdir, mime),
-		"1",
+		"-ping",
+		"-format",
+		"%wx%h",
+		"-[0]",
 	}
 
-	cmd := exec.Command("mutool", args...)
-
-	var b, er bytes.Buffer
-	cmd.Stdout = &b
-	cmd.Stderr = &er
-
-	err = cmd.Run()
-	if err != nil {
-		log.Println(b.String(), er.String(), err)
-		return nil, err
-	}
-
-	f := bytes.NewReader(b.Bytes())
-	return magickResize(f, format, size)
-}
-
-func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
-	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
+	cmd := exec.Command("identify", args...)
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return 0, 0, err
 	}
-	defer os.RemoveAll(tmpdir)
 
-	var tmpbuf bytes.Buffer
-	tmpbuf.ReadFrom(file)
+	go func() {
+		defer stdin.Close()
+		_, err = io.Copy(stdin, file)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s/file.%s", tmpdir, "mobi"), tmpbuf.Bytes(), 0660)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println(string(out), err)
+		return 0, 0, err
+	}
+
+	wh := strings.Split(string(out), "x")
+	if len(wh) != 2 {
+		return 0, 0, errors.New("No width/height " + string(out))
+	}
+
+	width, err := strconv.Atoi(wh[0])
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return 0, 0, err
 	}
-
-	args := []string{
-		"-s",
-		strconv.Itoa(2048),
-		fmt.Sprintf("%s/file.mobi", tmpdir),
-		fmt.Sprintf("%s/out.png", tmpdir),
-	}
-
-	cmd := exec.Command("gnome-mobi-thumbnailer", args...)
-
-	var b, er bytes.Buffer
-	cmd.Stdout = &b
-	cmd.Stderr = &er
-
-	err = cmd.Run()
-	if err != nil {
-		log.Println(b.String(), er.String(), err)
-		return nil, err
-	}
-
-	f, err := os.Open(filepath.Join(tmpdir, "out.png"))
-
+	height, err := strconv.Atoi(wh[1])
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return 0, 0, err
 	}
 
-	defer f.Close()
-
-	return magickResize(f, format, size)
-}
-
-func dHash(file io.Reader) uint64 {
-	b, err := magickResize(file, "png", 1024)
-	if err != nil {
-		log.Println(err)
-		return 0
-	}
-
-	img, err := png.Decode(b)
-	if err != nil {
-		log.Println(err)
-		return 0
-	}
-	hash := imgsim.DifferenceHash(img)
-	return uint64(hash)
+	return width, height, nil
 }

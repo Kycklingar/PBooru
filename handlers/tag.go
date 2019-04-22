@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	"log"
 	"net/http"
 	"strconv"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 )
 
 type Sidebar struct {
@@ -109,8 +110,8 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if user.QFlag(DM.DB) != DM.AdmFAdmin {
-		http.Error(w, "Only admins can do that", http.StatusForbidden)
+	if !user.QFlag(DM.DB).Tags() {
+		http.Error(w, "Insufficient privileges. Want \"Tags\"", http.StatusForbidden)
 		return
 	}
 
@@ -170,9 +171,10 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type TagHistoryPage struct {
-	Base     base
-	History  []*DM.TagHistory
-	UserInfo UserInfo
+	Base       base
+	History    []*DM.TagHistory
+	UserInfo   UserInfo
+	Pageinator Pageination
 }
 
 func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {

@@ -8,17 +8,32 @@ import (
 	"fmt"
 	"log"
 	mrand "math/rand"
+	"strconv"
 	"sync"
 	"time"
 
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func NewUser() *User {
 	var u User
-	u.AdmFlag = -1
 	u.Session = &Session{}
 	return &u
+}
+
+func CachedUser(u *User) *User {
+	if n := C.Cache.Get("USR", strconv.Itoa(u.ID)); n != nil {
+		cu, ok := n.(*User)
+		if !ok {
+			log.Println("not a *User in cache")
+			return u
+		}
+		return cu
+	} else {
+		C.Cache.Set("USR", strconv.Itoa(u.ID), u)
+	}
+	return u
 }
 
 type User struct {
@@ -27,8 +42,52 @@ type User struct {
 	passwordHash string
 	salt         string
 	Joined       time.Time
-	AdmFlag      int
+	flag         *flag
 	Session      *Session
+
+	Pools []*Pool
+}
+
+type flag int
+
+const (
+	flagTagging = 1
+	flagUpload  = 2
+	flagComics  = 4
+	flagBanning = 8
+	flagDelete  = 16
+	flagTags    = 32
+	flagSpecial = 64
+
+	flagAll = 0xff
+)
+
+func (f flag) Tagging() bool {
+	return f&flagTagging != 0
+}
+
+func (f flag) Upload() bool {
+	return f&flagUpload != 0
+}
+
+func (f flag) Comics() bool {
+	return f&flagComics != 0
+}
+
+func (f flag) Banning() bool {
+	return f&flagBanning != 0
+}
+
+func (f flag) Delete() bool {
+	return f&flagDelete != 0
+}
+
+func (f flag) Tags() bool {
+	return f&flagTags != 0
+}
+
+func (f flag) Special() bool {
+	return f&flagSpecial != 0
 }
 
 func (u *User) QID(q querier) int {
@@ -52,6 +111,34 @@ func (u *User) SetID(id int) {
 	u.ID = id
 }
 
+func (u *User) RecentPosts(q querier, limit int) []*Post {
+	rows, err := q.Query("SELECT id FROM posts WHERE uploader = $1 ORDER BY id DESC LIMIT $2", u.QID(q), limit)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+
+	var posts []*Post
+
+	for rows.Next() {
+		var p = NewPost()
+		err = rows.Scan(&p.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		posts = append(posts, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return posts
+}
+
 func (u *User) QName(q querier) string {
 	if u.Name != "" {
 		return u.Name
@@ -70,19 +157,32 @@ func (u *User) SetName(name string) {
 	u.Name = name
 }
 
-func (u *User) QFlag(q querier) int {
-	if u.AdmFlag != -1 {
-		return u.AdmFlag
+func (u *User) Flag() flag {
+	if u.flag != nil {
+		return *u.flag
+	}
+	return flag(0)
+}
+
+func (u *User) SetFlag(f flag) {
+	u.flag = &f
+}
+
+func (u *User) QFlag(q querier) flag {
+	if u.flag != nil {
+		return *u.flag
 	}
 	if u.QID(q) == 0 {
-		return -1
+		return flag(0)
 	}
 
-	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.AdmFlag)
+	var f flag
+	u.flag = &f
+	err := q.QueryRow("SELECT adminflag FROM users WHERE id=$1", u.QID(q)).Scan(&u.flag)
 	if err != nil {
 		log.Print(err)
 	}
-	return u.AdmFlag
+	return *u.flag
 }
 
 func (u *User) Salt(q querier) string {
@@ -135,6 +235,8 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 
+	u.SetFlag(flag(CFG.StdUserFlag))
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
 	if err != nil {
 		return err
@@ -147,7 +249,7 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 	var id int
-	err = tx.QueryRow("SELECT id FROM users WHERE username=LOWER($1)", u.Name).Scan(&id)
+	err = tx.QueryRow("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", u.Name).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 		return txError(tx, err)
@@ -158,7 +260,7 @@ func (u User) Register(name, password string) error {
 		return txError(tx, errors.New("Username already exist"))
 	}
 
-	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined) VALUES($1, $2, $3, CURRENT_TIMESTAMP)", u.Name, u.passwordHash, u.salt)
+	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.flag)
 
 	if err != nil {
 		log.Print(err)
@@ -170,8 +272,64 @@ func (u User) Register(name, password string) error {
 	return err
 }
 
+func (u *User) QPools(q querier) []*Pool {
+	if u.Pools != nil {
+		return u.Pools
+	}
+
+	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1", u.QID(q))
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p Pool
+		err = rows.Scan(&p.ID, &p.Title, &p.Description)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+
+		p.User = u
+
+		u.Pools = append(u.Pools, &p)
+	}
+
+	return u.Pools
+}
+
+//func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {
+//	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset*limit)
+//	if err != nil {
+//		log.Println(err)
+//		return nil
+//	}
+//	defer rows.Close()
+//
+//	var pools []*Pool
+//	for rows.Next() {
+//		var pool Pool
+//		pool.User = u
+//		err = rows.Scan(&pool.ID, &pool.Title, &pool.Description)
+//		if err != nil {
+//			log.Println(err)
+//			return nil
+//		}
+//		pools = append(pools, &pool)
+//	}
+//
+//	if rows.Err() != nil {
+//		log.Println(rows.Err())
+//		return nil
+//	}
+//
+//	return pools
+//}
+
 func (u *User) Sessions(q querier) []*Session {
-	rows, err := q.Query("SELECT * FROM sessions WHERE user_id=$1", u.QID(q))
+	rows, err := q.Query("SELECT user_id, sesskey, to_char(expire, 'YYYY-MM-DD HH24:MI:SS') FROM sessions WHERE user_id=$1", u.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -187,7 +345,7 @@ func (u *User) Sessions(q querier) []*Session {
 			return nil
 		}
 
-		s.expire, err = time.Parse(postgresqlTimestamp, t)
+		s.expire, err = time.Parse(sqlite3Timestamp, t)
 		if err != nil {
 			log.Println(err)
 		}

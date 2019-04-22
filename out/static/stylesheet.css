@@ -6,9 +6,30 @@ body
     color:#AAA;
 }
 
+
 #comic-container h1, #comic-container h2
 {
     text-shadow: 3px 3px #213;
+}
+
+.comic-strip
+{
+	display: flex;
+	margin: 1em;
+}
+
+.comic-strip .thumbnail
+{
+	width:auto;
+	height:auto;
+}
+
+.comic-strip .thumbnail img
+{
+	position:relative;
+	top:auto;
+	left:auto;
+	transform:none;
 }
 
 #pageinator a:hover
@@ -83,17 +104,27 @@ li
 {
     position: relative;
     margin:3px;
-    width:250px;
-    height:250px;
+    width:256px;
+    height:256px;
     word-wrap: break-word;
     /*border: 1px solid red;*/
+}
+
+.thumbnail.video .overlay
+{
+	position:absolute;
+	background-image:url(/static/video.png);
+	background-repeat:no-repeat;
+	background-position:bottom right;
+	height:100%;
+	width:100%;
 }
 
 .thumbnail img
 {
     position: absolute;
-    max-width:250px;
-    max-height:250px;
+    max-width:256px;
+    max-height:256px;
 
     top: 50%;
     left: 50%;
@@ -151,6 +182,16 @@ li
     color:#000;
 }
 
+#post #fullsize
+{
+	max-width: 100%;
+}
+
+#post #fullsize:target
+{
+	max-width: unset;
+}
+
 #posts-container
 {
     /* background-color:green; */
@@ -178,24 +219,6 @@ li
     
 }
 
-#advanced-search
-{
-    display: none;
-    background-color:#778;
-    color: #000;
-    font-size:14px;
-    word-break: keep-all;
-}
-
-#advanced-search input
-{
-    width:auto;
-}
-
-#advanced-search:target
-{
-    display: block;
-}
 
 #stbox
 {
@@ -350,6 +373,11 @@ li
     padding: 3px;
 }
 
+.comment-username a:visited, .comment-username a:link
+{
+    color: black;
+}
+
 .comment:target
 {
     box-shadow: 0px 0px 5px 5px #DBD;
@@ -402,8 +430,8 @@ li
 
 .comic-thumb img
 {
-    max-width:250px;
-    max-height:250px;
+    max-width:256px;
+    max-height:256px;
 }
 
 .cpage
@@ -445,4 +473,17 @@ li
     {
         opacity: 0.9;
     };
+}
+
+#advanced-search
+{
+    background-color:#778;
+    color: #000;
+    font-size:14px;
+    box-shadow: 3px 3px #213;
+}
+
+#advanced-search input
+{
+    width:auto;
 }

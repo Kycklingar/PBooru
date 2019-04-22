@@ -100,7 +100,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		combineTags = true
 	}
 
-	AP, err := DMToAPIPost(p, combineTags)
+	AP, err := DMToAPIPost(p, true, combineTags)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -151,14 +151,18 @@ func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, dp)
 }
 
-func DMToAPIPost(p *DM.Post, combineTagNamespace bool) (APIv1Post, error) {
+func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
+
 	tc := DM.TagCollector{}
-	// err := tc.GetFromPost(DM.DB, *p)
-	err := tc.GetPostTags(DM.DB, p)
-	if err != nil {
-		return AP, err
+
+	if includeTags {
+		err := tc.GetPostTags(DM.DB, p)
+		if err != nil {
+			return AP, err
+		}
 	}
+
 	p.QThumbnails(DM.DB)
 	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB), ThumbHashes: p.Thumbnails(), Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
 
@@ -187,6 +191,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
 	filterStr := r.FormValue("filter")
 	unlessStr := r.FormValue("unless")
+	limitStr := r.FormValue("limit")
 	order := r.FormValue("order")
 	offsetStr := r.FormValue("offset")
 	offset, err := strconv.Atoi(offsetStr)
@@ -197,6 +202,11 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	var combineTags bool
 	if len(r.FormValue("combTagNamespace")) > 0 {
 		combineTags = true
+	}
+
+	var includeTags bool
+	if len(r.FormValue("inclTags")) > 0 {
+		includeTags = true
 	}
 
 	bm := BM.Begin()
@@ -211,12 +221,17 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc = DM.CachedPostCollector(pc)
 
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 50
+	} else {
+		limit = DM.Larg(10, DM.Smal(100, limit))
+	}
+
 	var AP APIv1Posts
 
-	AP.TotalPosts = pc.TotalPosts
-
-	for _, post := range pc.Search(30, 30*offset) {
-		APp, err := DMToAPIPost(post, combineTags)
+	for _, post := range pc.Search(limit, limit*offset) {
+		APp, err := DMToAPIPost(post, includeTags, combineTags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
@@ -224,6 +239,8 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		AP.Posts = append(AP.Posts, APp)
 	}
+
+	AP.TotalPosts = pc.TotalPosts
 
 	AP.Generated = bm.End(false).Seconds()
 	jsonEncode(w, AP)
@@ -323,7 +340,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, pst := range posts {
 		var ps APIv1Post
-		if ps, err = DMToAPIPost(pst, combineTags); err != nil {
+		if ps, err = DMToAPIPost(pst, true, combineTags); err != nil {
 			APIError(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}
