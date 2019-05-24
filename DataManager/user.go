@@ -196,7 +196,7 @@ func (u *User) Voted(q querier, p *Post) bool {
 
 	var v int
 
-	if err := q.QueryRow("SELECT count(*) FROM post_score_mapping WHERE post_id = $1 AND user_id = $2", p.ID, u.ID).Scan(&v); err != nil{
+	if err := q.QueryRow("SELECT count(*) FROM post_score_mapping WHERE post_id = $1 AND user_id = $2", p.ID, u.ID).Scan(&v); err != nil {
 		log.Println(err)
 		return false
 	}

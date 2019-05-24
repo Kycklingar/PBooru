@@ -90,22 +90,22 @@ func (p *Post) QHash(q querier) string {
 		// 	p = t.(*Post)
 		// 	return p.Hash
 		// }
-	//	if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
-	//		switch cp := c.(type) {
-	//		case *Post:
-	//			*p = *cp
-	//			if p.Hash != "" {
-	//				return p.Hash
-	//			}
-	//		}
-	//	}
+		//	if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
+		//		switch cp := c.(type) {
+		//		case *Post:
+		//			*p = *cp
+		//			if p.Hash != "" {
+		//				return p.Hash
+		//			}
+		//		}
+		//	}
 
 		err := q.QueryRow("SELECT multihash FROM posts WHERE id=$1", p.ID).Scan(&p.Hash)
 		if err != nil {
 			log.Print(err)
 			return ""
 		}
-	//	C.Cache.Set("PST", strconv.Itoa(p.ID), p)
+		//	C.Cache.Set("PST", strconv.Itoa(p.ID), p)
 	}
 
 	return p.Hash
