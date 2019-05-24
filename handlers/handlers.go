@@ -224,6 +224,7 @@ func init() {
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
 	Handlers["/post/report/"] = reportPostHandler
+	Handlers["/post/vote/"] = PostVoteHandler
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/reports/"] = makeStatHandler(reportsHandler)
 	Handlers["/reports/delete/"] = reportDeleteHandler
@@ -238,6 +239,7 @@ func init() {
 	Handlers["/user/"] = makeStatHandler(UserHandler)
 	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
 	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
+	Handlers["/user/pool/remove/"] = makeStatHandler(editUserPoolHandler)
 	Handlers["/user/pools/"] = makeStatHandler(UserPoolsHandler)
 	Handlers["/user/pools/append/"] = makeStatHandler(UserPoolAppendHandler)
 	Handlers["/user/pools/add/"] = makeStatHandler(UserPoolAddHandler)

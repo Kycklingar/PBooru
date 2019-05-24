@@ -32,6 +32,10 @@
     <button onclick="postDupChanges()">Submit Duplicates</button>
 </div>
 <div class="separator">
+	<h4>Delete</h4>
+	<button onClick="deletePosts()">Delete</button>
+</div>
+<div class="separator">
     <h4>Tags</h4>
     <form id="newtagsform" onsubmit="postTags(); return false">
         <textarea class="stinput" name="addtags"></textarea>
@@ -357,7 +361,7 @@
         label.innerText = post.ID
         let inp = document.createElement("input")
         inp.type = "text"
-        //getDupInfo(e.getAttribute("postid"), inp)
+        getDupInfo(e.getAttribute("postid"), inp)
 
         e.appendChild(div)
         e.appendChild(label)
@@ -427,6 +431,43 @@
         for (i = 0; i < selectedPosts.length; i++) {
             selectionDiv.appendChild(selectedPosts[i])
         }
+    }
+
+    function deletePosts() 
+    {
+    	function d(posts, index)
+	{
+		if(index >= posts.length)
+		{
+			alert("Finished")
+			return
+		}
+		let req = new XMLHttpRequest()
+		req.onreadystatechange = function(){
+			if(this.readyState == 4)
+			{
+				if(this.status != 200)
+				{
+					console.log(this.status, this.responseText)
+					alert("Error, check log")
+					return
+				} else
+				{
+					console.log(this.status)
+				}
+				posts[index].style.border = "solid 1px red"
+				d(posts, index + 1)
+			}
+		}
+		let postID = posts[index].getAttribute("postid")
+		console.log("working on postid ", postID)
+		let fd = new FormData()
+		fd.append("postid", postID)
+		req.open("POST", "/deletepost", true)
+		req.send(fd)
+	}
+
+	d(selectedPosts, 0)
     }
 
     function postTags(){

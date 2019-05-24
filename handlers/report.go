@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	DM "github.com/kycklingar/PBooru/DataManager"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"fmt"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
 func reportsHandler(w http.ResponseWriter, r *http.Request) {
@@ -100,4 +101,3 @@ func reportPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprint(w, "Thank you for the report, an admin will soon review the post")
 }
-

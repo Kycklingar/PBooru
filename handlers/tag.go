@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	"log"
 	"net/http"
 	"strconv"
+
+	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 )
 
 type Sidebar struct {
@@ -151,9 +152,9 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type TagHistoryPage struct {
-	Base     base
-	History  []*DM.TagHistory
-	UserInfo UserInfo
+	Base       base
+	History    []*DM.TagHistory
+	UserInfo   UserInfo
 	Pageinator Pageination
 }
 

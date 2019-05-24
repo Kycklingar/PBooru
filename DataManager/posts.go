@@ -23,6 +23,7 @@ func NewPost() *Post {
 	var p Post
 	p.Mime = NewMime()
 	p.Deleted = -1
+	p.Score = -1
 	return &p
 }
 
@@ -52,6 +53,7 @@ type Post struct {
 	Mime       *Mime
 	Deleted    int
 	Size       int64
+	Score      int
 
 	description *string
 }
@@ -88,22 +90,22 @@ func (p *Post) QHash(q querier) string {
 		// 	p = t.(*Post)
 		// 	return p.Hash
 		// }
-		if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
-			switch cp := c.(type) {
-			case *Post:
-				*p = *cp
-				if p.Hash != "" {
-					return p.Hash
-				}
-			}
-		}
+		//	if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
+		//		switch cp := c.(type) {
+		//		case *Post:
+		//			*p = *cp
+		//			if p.Hash != "" {
+		//				return p.Hash
+		//			}
+		//		}
+		//	}
 
 		err := q.QueryRow("SELECT multihash FROM posts WHERE id=$1", p.ID).Scan(&p.Hash)
 		if err != nil {
 			log.Print(err)
 			return ""
 		}
-		C.Cache.Set("PST", strconv.Itoa(p.ID), p)
+		//	C.Cache.Set("PST", strconv.Itoa(p.ID), p)
 	}
 
 	return p.Hash
@@ -227,6 +229,42 @@ func (p *Post) QSize(q querier) int64 {
 		log.Println(err)
 	}
 	return p.Size
+}
+
+func (p *Post) QScore(q querier) int {
+	if p.Score >= 0 {
+		return p.Score
+	}
+
+	if p.QID(q) <= 0 {
+		return 0
+	}
+
+	err := q.QueryRow("SELECT score FROM posts WHERE id = $1", p.ID).Scan(&p.Score)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return p.Score
+}
+
+func (p *Post) Vote(q querier, u *User) error {
+	if p.QID(q) <= 0 {
+		return errors.New("no post-id")
+	}
+
+	if u.QID(q) <= 0 {
+		return errors.New("no user-id")
+	}
+
+	if _, err := q.Exec("SELECT FROM post_vote_update($1, $2)", p.ID, u.ID); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	p.Score = -1
+
+	return nil
 }
 
 func (p *Post) SizePretty() string {
@@ -971,7 +1009,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 	}
 
 	switch strings.ToUpper(order) {
-	case "ASC", "DESC":
+	case "ASC", "DESC", "SCORE":
 		pc.order = strings.ToUpper(order)
 	case "RANDOM":
 		pc.order = strings.ToUpper(order) + "()"
@@ -1034,11 +1072,13 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return nil
 	}
 
-	rand := func(pre, order string) string {
+	orderF := func(pre, order string) string {
 		if order == "RANDOM()" {
 			return order
+		} else if order == "SCORE" {
+			return fmt.Sprint("(", pre, "score,", pre, "id) ", "DESC")
 		}
-		return fmt.Sprintf(pre, order)
+		return fmt.Sprint(pre, "id ", order)
 	}
 
 	// emptyRand := func(pre, str string) string {
@@ -1126,7 +1166,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			mimeStr = "AND p1." + mimeStr
 		}
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, rand("p1.id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1,", pc.order))
 
 		//fmt.Println(str)
 
@@ -1182,7 +1222,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			mimeStr = "AND p1." + mimeStr
 		}
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, rand("id %s", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("", pc.order))
 
 		//fmt.Println(str)
 
@@ -1234,7 +1274,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false %s ORDER BY %s LIMIT $1 OFFSET $2", mimeStr, rand("id %s", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false %s ORDER BY %s LIMIT $1 OFFSET $2", mimeStr, orderF("", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err

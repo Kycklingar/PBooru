@@ -51,15 +51,20 @@ type User struct {
 type flag int
 
 const (
-	flagUpload  = 1
-	flagComics  = 2
-	flagBanning = 4
-	flagDelete  = 8
-	flagTags    = 16
-	flagSpecial = 32
+	flagTagging = 1
+	flagUpload  = 2
+	flagComics  = 4
+	flagBanning = 8
+	flagDelete  = 16
+	flagTags    = 32
+	flagSpecial = 64
 
 	flagAll = 0xff
 )
+
+func (f flag) Tagging() bool {
+	return f&flagTagging != 0
+}
 
 func (f flag) Upload() bool {
 	return f&flagUpload != 0
@@ -83,141 +88,6 @@ func (f flag) Tags() bool {
 
 func (f flag) Special() bool {
 	return f&flagSpecial != 0
-}
-
-type Pool struct {
-	ID          int
-	User        *User
-	Title       string
-	Description string
-
-	Posts []PoolMapping
-}
-
-func NewPool() *Pool {
-	var p Pool
-	p.User = NewUser()
-
-	return &p
-}
-
-type PoolMapping struct {
-	Post     *Post
-	Position int
-}
-
-func (p *Pool) QTitle(q querier) string {
-	if len(p.Title) > 0 {
-		return p.Title
-	}
-
-	if p.ID == 0 {
-		return ""
-	}
-
-	err := q.QueryRow("SELECT title FROM user_pools WHERE id = $1", p.ID).Scan(&p.Title)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	return p.Title
-}
-
-func (p *Pool) QUser(q querier) *User {
-	if p.User.QID(q) != 0 {
-		return p.User
-	}
-
-	if p.ID == 0 {
-		return p.User
-	}
-
-	err := q.QueryRow("SELECT user_id FROM user_pools WHERE id = $1", p.ID).Scan(&p.User.ID)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return p.User
-}
-
-func (p *Pool) QDescription(q querier) string {
-	if len(p.Description) > 0 {
-		return p.Description
-	}
-
-	if p.ID == 0 {
-		return ""
-	}
-
-	err := q.QueryRow("SELECT description FROM user_pools WHERE id = $1", p.ID).Scan(&p.Description)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	return p.Description
-}
-
-func (p *Pool) QPosts(q querier) error {
-	if len(p.Posts) > 0 {
-		return nil
-	}
-	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1 ORDER BY position, post_id DESC", p.ID)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var pm PoolMapping
-		pm.Post = NewPost()
-		err = rows.Scan(&pm.Post.ID, &pm.Position)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-
-		p.Posts = append(p.Posts, pm)
-	}
-
-	return rows.Err()
-}
-
-func (p *Pool) PostsLimit(limit int) []PoolMapping {
-	return p.Posts[:Smal(limit, len(p.Posts))]
-}
-
-func (p *Pool) Save(q querier) error {
-	if len(p.Title) <= 0 {
-		return errors.New("Title cannot be empty")
-	}
-
-	if p.User.QID(q) == 0 {
-		return errors.New("No user in pool")
-	}
-
-	_, err := q.Exec("INSERT INTO user_pools(user_id, title, description) VALUES($1, $2, $3)", p.User.QID(q), p.Title, p.Description)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
-}
-
-func (p *Pool) Add(postID, position int) error {
-	if p.ID <= 0 {
-		return errors.New("Pool id is 0")
-	}
-
-	if postID <= 0 {
-		return errors.New("Post id is < 0")
-	}
-
-	_, err := DB.Exec("INSERT INTO pool_mappings(pool_id, post_id, position) VALUES($1, $2, $3)", p.ID, postID, position)
-	return err
 }
 
 func (u *User) QID(q querier) int {
@@ -313,6 +183,24 @@ func (u *User) QFlag(q querier) flag {
 		log.Print(err)
 	}
 	return *u.flag
+}
+
+func (u *User) Voted(q querier, p *Post) bool {
+	if p.QID(q) <= 0 {
+		return false
+	}
+
+	if u.QID(q) <= 0 {
+		return false
+	}
+
+	var v int
+
+	if err := q.QueryRow("SELECT count(*) FROM post_score_mapping WHERE post_id = $1 AND user_id = $2", p.ID, u.ID).Scan(&v); err != nil {
+		log.Println(err)
+		return false
+	}
+	return v > 0
 }
 
 func (u *User) Salt(q querier) string {
@@ -428,6 +316,29 @@ func (u *User) QPools(q querier) []*Pool {
 	}
 
 	return u.Pools
+}
+
+func (u *User) RecentVotes(q querier, limit int) (posts []*Post) {
+	rows, err := q.Query("SELECT post_id FROM post_score_mapping WHERE user_id = $1 ORDER BY id DESC LIMIT $2", u.QID(DB), limit)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p = NewPost()
+		if err = rows.Scan(&p.ID); err != nil {
+			log.Println(err)
+			return
+		}
+		posts = append(posts, p)
+	}
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+	}
+
+	return
 }
 
 //func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {

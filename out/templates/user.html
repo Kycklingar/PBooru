@@ -19,6 +19,17 @@
 				{{end}}
 			</div>
 		</div>
+		{{with .RecentVotes}}
+		<div>
+			<h4>Recent votes</h4>
+			<div class="comic-strip">
+				{{range .}}
+					{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+				{{end}}
+			</div>
+		</div>
+		{{end}}
+
 	{{end}}
 	{{if .User.ID}}
 		<h2><a href="/logout/">Logout</a></h2>

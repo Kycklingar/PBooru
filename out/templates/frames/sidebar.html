@@ -73,11 +73,12 @@
             <details>
 	    	<summary style="font-size:14px;">Advanced</summary>
             	<div id="advanced-search">
-            	    <label>Order:</label>
+            	    <span>Order:</span>
             	    <br>
-            	    <input type="radio" name="order" value="" checked> Descending<br>
-            	    <input type="radio" name="order" value="asc"> Ascending<br>
-            	    <input type="radio" name="order" value="random"> Random<br>
+            	    <input id="order-desc" type="radio" name="order" value="" checked> <label for="order-desc">Descending</label><br>
+            	    <input id="order-asc" type="radio" name="order" value="asc"> <label for="order-asc">Ascending</label><br>
+            	    <input id="order-rand" type="radio" name="order" value="random"> <label for="order-rand">Random</label><br>
+		    <input id="order-score" type="radio" name="order" value="score"> <label for="order-score">Score</label><br>
 		    <label>Mimes:</label>
 		    <br>
 		    {{range $k, $v := .Mimes}}
@@ -88,7 +89,6 @@
 			{{end}}
 			</ul>
 		    {{end}}
-
             	</div>
 	    </details>
         </form>
