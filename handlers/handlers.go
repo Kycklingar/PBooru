@@ -264,7 +264,13 @@ func init() {
 		p := struct {
 			UserInfo UserInfo
 			User     *DM.User
-		}{info, user}
+			Mimes    map[string][]*DM.Mime
+		}{info, user, make(map[string][]*DM.Mime)}
+		
+
+		for _, mime := range DM.Mimes {
+			p.Mimes[mime.Type] = append(p.Mimes[mime.Type], mime)
+		}
 
 		renderTemplate(w, "admin", p)
 	})

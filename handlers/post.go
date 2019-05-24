@@ -14,7 +14,7 @@ import (
 type Postpage struct {
 	Base     base
 	Post     *DM.Post
-	Voted	bool
+	Voted    bool
 	Comments []*DM.PostComment
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
@@ -103,7 +103,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var pp Postpage
 	pp.Sidebar.Mimes = make(map[string][]*DM.Mime)
-	for _, mime := range DM.Mimes{
+	for _, mime := range DM.Mimes {
 		pp.Sidebar.Mimes[mime.Type] = append(pp.Sidebar.Mimes[mime.Type], mime)
 	}
 	p := DM.NewPost()
