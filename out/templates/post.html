@@ -3,8 +3,13 @@
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
-
+	<br>
 	{{if .User.ID}}
+		<form action="/post/vote/" method="POST">
+			<input type="hidden" name="post-id" value="{{.Post.ID}}">
+			<span>Score:</span>
+			<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
+		</form>
 		<details>
 		<summary>Edit Post</summary>
         		<div id="editPostForm">
@@ -54,7 +59,9 @@
 			</form>
 		</details>
 		{{end}}
-        {{end}}
+	{{else}}
+		<div>Score: {{.Post.Score}}</div>
+	{{end}}
 	
     </div>
     <div id="post">

@@ -185,6 +185,24 @@ func (u *User) QFlag(q querier) flag {
 	return *u.flag
 }
 
+func (u *User) Voted(q querier, p *Post) bool {
+	if p.QID(q) <= 0 {
+		return false
+	}
+
+	if u.QID(q) <= 0 {
+		return false
+	}
+
+	var v int
+
+	if err := q.QueryRow("SELECT count(*) FROM post_score_mapping WHERE post_id = $1 AND user_id = $2", p.ID, u.ID).Scan(&v); err != nil {
+		log.Println(err)
+		return false
+	}
+	return v > 0
+}
+
 func (u *User) Salt(q querier) string {
 	return u.salt
 }
@@ -298,6 +316,29 @@ func (u *User) QPools(q querier) []*Pool {
 	}
 
 	return u.Pools
+}
+
+func (u *User) RecentVotes(q querier, limit int) (posts []*Post) {
+	rows, err := q.Query("SELECT post_id FROM post_score_mapping WHERE user_id = $1 ORDER BY id DESC LIMIT $2", u.QID(DB), limit)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p = NewPost()
+		if err = rows.Scan(&p.ID); err != nil {
+			log.Println(err)
+			return
+		}
+		posts = append(posts, p)
+	}
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+	}
+
+	return
 }
 
 //func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {

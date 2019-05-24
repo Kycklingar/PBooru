@@ -285,3 +285,38 @@ func ipfsSize(hash string) int64 {
 
 	return size
 }
+
+func ipfsUpgradeCidBase32(hash string) (string, error) {
+	cl := http.Client{}
+	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cid/base32?arg=%s", hash))
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	defer res.Body.Close()
+
+	b := bytes.Buffer{}
+	b.ReadFrom(res.Body)
+
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("HTTP Status %d: %s", res.StatusCode, string(b.Bytes()))
+	}
+
+	var m struct {
+		CidStr    string
+		Formatted string
+		ErrorMsg  string
+	}
+
+	json.Unmarshal(b.Bytes(), &m)
+
+	if m.ErrorMsg != "" {
+		return "", fmt.Errorf("IPFS Error: %s", m.ErrorMsg)
+	}
+
+	if m.Formatted == "" {
+		return "", fmt.Errorf("No formatted hash returned")
+	}
+
+	return m.Formatted, nil
+}

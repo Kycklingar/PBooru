@@ -42,6 +42,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		UserInfo    UserInfo
 		Profile     *DM.User
 		RecentPosts []*DM.Post
+		RecentVotes []*DM.Post
 	}
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
@@ -50,6 +51,13 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {
+		post.QHash(DM.DB)
+		post.QThumbnails(DM.DB)
+		post.QDeleted(DM.DB)
+	}
+
+	p.RecentVotes = profile.RecentVotes(DM.DB, 5)
+	for _, post := range p.RecentVotes {
 		post.QHash(DM.DB)
 		post.QThumbnails(DM.DB)
 		post.QDeleted(DM.DB)

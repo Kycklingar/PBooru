@@ -14,6 +14,7 @@ import (
 type Postpage struct {
 	Base     base
 	Post     *DM.Post
+	Voted	bool
 	Comments []*DM.PostComment
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
@@ -146,16 +147,20 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 
+	p.QID(DM.DB)
+	p = DM.CachedPost(p)
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
-	p.QID(DM.DB)
 	p.QSize(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)
 	p.QMime(DM.DB).QName(DM.DB)
 	p.QThumbnails(DM.DB)
 	p.QDescription(DM.DB)
+	p.QScore(DM.DB)
 
 	pp.Post = p
+
+	pp.Voted = pp.User.Voted(DM.DB, p)
 
 	var tc DM.TagCollector
 	err = tc.GetPostTags(DM.DB, p)
@@ -212,6 +217,32 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+
+	postID, err := strconv.Atoi(r.FormValue("post-id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var post = DM.NewPost()
+	post.ID = postID
+	post = DM.CachedPost(post)
+
+	if err = post.Vote(DM.DB, u); err != nil {
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {

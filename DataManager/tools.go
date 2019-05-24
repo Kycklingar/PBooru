@@ -356,6 +356,74 @@ func GenerateThumbnails(size int) {
 	}
 }
 
+func UpgradePostCids() {
+	fmt.Println("Upgrading post cids to base32")
+
+	type P struct {
+		id   int
+		hash string
+	}
+
+	query := func(tx *sql.Tx) []P {
+		rows, err := tx.Query("SELECT id, multihash FROM posts WHERE LENGTH(multihash) < 50 ORDER BY id ASC LIMIT 10000")
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		var posts []P
+
+		for rows.Next() {
+			var p P
+			err = rows.Scan(&p.id, &p.hash)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+
+			posts = append(posts, p)
+		}
+
+		return posts
+	}
+
+	for {
+		var tx, err = DB.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		posts := query(tx)
+		if len(posts) <= 0 {
+			fmt.Println("All done!")
+			tx.Commit()
+			break
+		}
+
+		for _, post := range posts {
+
+			fmt.Print("Working on ", post.id, " ", post.hash, " -> ")
+			base32, err := ipfsUpgradeCidBase32(post.hash)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+
+			fmt.Println(base32)
+
+			_, err = tx.Exec("UPDATE posts SET multihash = $1 WHERE id =$2", base32, post.id)
+			if err != nil {
+				tx.Rollback()
+				log.Fatal(err)
+			}
+
+		}
+
+		tx.Commit()
+	}
+}
+
 func GenerateFileDimensions() {
 	type P struct {
 		id   int
