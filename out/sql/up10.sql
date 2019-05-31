@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN blacklist TEXT NOT NULL DEFAULT '';

@@ -29,9 +29,11 @@ func CachedUser(u *User) *User {
 			log.Println("not a *User in cache")
 			return u
 		}
+		fmt.Println("Got cached user", cu.ID)
 		return cu
 	} else {
 		C.Cache.Set("USR", strconv.Itoa(u.ID), u)
+		fmt.Println("Set user in cache", u.ID)
 	}
 	return u
 }
@@ -39,6 +41,9 @@ func CachedUser(u *User) *User {
 type User struct {
 	ID           int
 	Name         string
+
+	blacklist *string
+
 	passwordHash string
 	salt         string
 	Joined       time.Time
@@ -155,6 +160,41 @@ func (u *User) QName(q querier) string {
 
 func (u *User) SetName(name string) {
 	u.Name = name
+}
+
+func (u *User) QBlacklist(q querier)string {
+	if u.ID == 0 {
+		return ""
+	}
+
+	if u.blacklist != nil {
+		return *u.blacklist
+	}
+
+	var s string
+
+	err := q.QueryRow("SELECT blacklist FROM users WHERE id = $1", u.ID).Scan(&s)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	u.blacklist = &s
+	return *u.blacklist
+}
+
+func (u *User) SetBlacklist(q querier, blacklist string) error {
+	if u.ID == 0 {
+		return errors.New("User is not logged in!")
+	}
+
+	if _, err := q.Exec("UPDATE users SET blacklist = $1 WHERE id = $2", blacklist, u.ID); err != nil {
+		return err
+	}
+
+	u.blacklist = &blacklist
+
+	return nil
 }
 
 func (u *User) Flag() flag {

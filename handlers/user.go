@@ -23,6 +23,7 @@ type UserInfo struct {
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	u, ui := getUser(w, r)
+	u = DM.CachedUser(u)
 	profile := u
 
 	paths := splitURI(r.URL.Path)
@@ -43,9 +44,12 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		Profile     *DM.User
 		RecentPosts []*DM.Post
 		RecentVotes []*DM.Post
+		Blacklist   string
 	}
+
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
+	p.Blacklist = u.QBlacklist(DM.DB)
 	profile.QName(DM.DB)
 	profile.QFlag(DM.DB)
 
@@ -117,6 +121,27 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	p.Base.Title = "Tag History"
 
 	renderTemplate(w, "taghistory", p)
+}
+
+func userBlacklistHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+
+	if u.QID(DM.DB) == 0 {
+		http.Error(w, "Not logged in error", http.StatusBadRequest)
+		return
+	}
+
+	if err := u.SetBlacklist(DM.DB, r.FormValue("blacklist")); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {

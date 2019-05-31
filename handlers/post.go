@@ -14,7 +14,7 @@ import (
 type Postpage struct {
 	Base     base
 	Post     *DM.Post
-	Voted	bool
+	Voted    bool
 	Comments []*DM.PostComment
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic
@@ -250,7 +250,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm := benchmark.Begin()
 
-	p.User = userCookies(w, r)
+	var user *DM.User
+	user, p.User = getUser(w, r)
+	user = DM.CachedUser(user)
 
 	pageLimit := p.User.Limit
 
@@ -315,8 +317,10 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("Before posts")
 
+	blacklist := user.QBlacklist(DM.DB)
+
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
+	err = pc.Get(tagString, p.Sidebar.Filter+","+blacklist, p.Sidebar.Unless, order)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)

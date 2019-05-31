@@ -32,6 +32,10 @@
 
 	{{end}}
 	{{if .User.ID}}
+		<form action="/user/blacklist/" method="POST">
+			<textarea name="blacklist">{{.Blacklist}}</textarea>
+			<input type="submit">
+		</form>
 		<h2><a href="/logout/">Logout</a></h2>
 		<h3><a href="/login/">Sessions</a></h3>
 	{{else}}
