@@ -223,7 +223,7 @@ func (c *Config) Default() {
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
-	c.StdUserFlag = flagUpload
+	c.StdUserFlag = flagTagging | flagUpload
 }
 
 var CFG *Config
