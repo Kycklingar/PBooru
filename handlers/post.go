@@ -14,7 +14,7 @@ import (
 type Postpage struct {
 	Base     base
 	Post     *DM.Post
-	Voted	bool
+	Voted    bool
 	Comments []*DM.PostComment
 	Dups     *DM.Duplicate
 	Comics   []*DM.Comic

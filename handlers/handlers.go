@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -91,12 +92,12 @@ func (e *statElement) inc(path []string) {
 }
 
 func (e *statElement) print(i int) string {
-	str := fmt.Sprintf("%s [%d]\n<ol>", e.name, e.count)
+	str := fmt.Sprintf("%s [%d]\n<ul>", html.EscapeString(e.name), e.count)
 	for _, el := range e.elements {
-		str += fmt.Sprintf("<li value=\"%d\">%s</li>", el.count, el.print(i+1))
+		str += fmt.Sprintf("<li>%s</li>", el.print(i+1))
 	}
 
-	return fmt.Sprint(str, "</ol>")
+	return fmt.Sprint(str, "</ul>")
 }
 
 func (e *statElement) Print() string {
