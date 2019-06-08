@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -35,6 +36,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 		profile = DM.NewUser()
 		profile.SetID(uid)
+		profile = DM.CachedUser(profile)
 	}
 
 	type page struct {
@@ -46,6 +48,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
+	u.QFlag(DM.DB)
 	profile.QName(DM.DB)
 	profile.QFlag(DM.DB)
 
@@ -201,6 +204,47 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
+}
+
+func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+
+	if !u.QFlag(DM.DB).Special() {
+		http.Error(w, ErrPriv("Special"), http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(r.FormValue("user-id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+	fmt.Println(id)
+
+	newFlag, err := strconv.Atoi(r.FormValue("flag"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	user := DM.NewUser()
+	user.ID = id
+	user = DM.CachedUser(user)
+
+	if err = user.SetFlag(DM.DB, newFlag); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {

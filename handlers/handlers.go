@@ -42,6 +42,12 @@ const (
 	ErrNotFound = "Not Found"
 )
 
+var (
+	ErrPriv = func(name string) string {
+		return fmt.Sprint("Insufficent privileges. Want: ", name)
+	}
+)
+
 var Handlers map[string]func(http.ResponseWriter, *http.Request)
 
 //var Handlers map[string]http.Handler
@@ -238,6 +244,7 @@ func init() {
 	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
 
 	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/edit/flag/"] = upgradeUserHandler
 	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
 	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
 	Handlers["/user/pool/remove/"] = makeStatHandler(editUserPoolHandler)

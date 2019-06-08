@@ -164,8 +164,24 @@ func (u *User) Flag() flag {
 	return flag(0)
 }
 
-func (u *User) SetFlag(f flag) {
-	u.flag = &f
+func (u *User) SetFlag(q querier, f int) error{
+	if u.ID <= 0 {
+		return errors.New("No user to set flag on")
+	}
+
+	_, err := q.Exec("UPDATE users SET adminflag = $1 WHERE id = $2", f, u.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if u.flag == nil {
+		u.flag = new(flag)
+	}
+
+	*u.flag = flag(f)
+
+	return nil
 }
 
 func (u *User) QFlag(q querier) flag {
@@ -253,7 +269,8 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 
-	u.SetFlag(flag(CFG.StdUserFlag))
+	u.flag = new(flag) //(CFG.StdUserFlag))
+	*u.flag = flag(CFG.StdUserFlag)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
 	if err != nil {
