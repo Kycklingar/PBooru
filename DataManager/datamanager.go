@@ -169,7 +169,8 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 
 			u := NewUser()
-			u.SetFlag(flag(flagAll))
+			u.flag = new(flag)
+			*u.flag = flag(flag(flagAll))
 			u.Name = "admin"
 			var err error
 			u.salt, err = createSalt()

@@ -203,6 +203,18 @@ li
     font-size:18px;
 }
 
+.privileges p
+{
+	text-shadow:2px 2px 2px white;
+	display:inline;
+}
+
+.privileges .p-special
+{
+	color:#ff2d2d;
+	text-shadow:2px 2px 2px black;
+}
+
 #sidebar
 {
     /* background-color:yellowgreen; */

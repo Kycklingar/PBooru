@@ -44,6 +44,7 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 		}
 		if userID != nil {
 			c.User.ID = *userID
+			c.User = CachedUser(c.User)
 		}
 		cm.Comments = append(cm.Comments, c)
 	}

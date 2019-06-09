@@ -22,7 +22,7 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		profile = DM.NewUser()
-		profile.SetID(uid)
+		profile.SetID(DM.DB, uid)
 	}
 
 	type page struct {
