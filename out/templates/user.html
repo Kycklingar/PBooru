@@ -2,8 +2,8 @@
 
 <div class="text-panel">
 	{{if .Profile.ID}}
-		<div>
-			<h2>{{.Profile.Name}}</h2>
+		<div id="profile-id">
+			<h2>{{.Profile.Name}} <span style="font-size: .7em; color:grey; text-shadow:1px 1px 1px black;">{{.Profile.Title}}</span></h2>
 			<div class="privileges">
 				<h4>Privileges</h4>
 			{{if .Profile.Flag.Special}}
@@ -67,13 +67,25 @@
 
 		<p><a href="/user/taghistory/{{.Profile.ID}}/">Tag history</a></p>
 
+	{{else if .User.ID}}
+		No user by that ID
 	{{end}}
-	{{if .User.ID}}
-		<h2><a href="/logout/">Logout</a></h2>
-		<h3><a href="/login/">Sessions</a></h3>
+	{{define "login-panel"}}
+		{{if .ID}}
+			<h2><a href="/logout/">Logout</a></h2>
+			<h3><a href="/login/">Sessions</a></h3>
+		{{else}}
+			<h2><a href="/login/">Login</a></h2>
+			<h2><a href="/register/">Register</a></h2>
+		{{end}}
+	{{end}}
+
+	{{if eq .User.ID .Profile.ID}}
+		{{template "login-panel" .User}}
 	{{else}}
-		<h2><a href="/login/">Login</a></h2>
-		<h2><a href="/register/">Register</a></h2>
+		</div>
+		<div class="text-panel">
+		{{template "login-panel" .User}}
 	{{end}}
 </div>
 {{template "baseEnd"}}

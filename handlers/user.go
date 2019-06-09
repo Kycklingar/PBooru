@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -35,7 +34,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		profile = DM.NewUser()
-		profile.SetID(uid)
+		profile.SetID(DM.DB, uid)
 		profile = DM.CachedUser(profile)
 	}
 
@@ -222,15 +221,14 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.FormValue("user-id"))
 	if err != nil {
 		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		http.Error(w, "Invalid user ID. Not an integer", http.StatusBadRequest)
 		return
 	}
-	fmt.Println(id)
 
 	newFlag, err := strconv.Atoi(r.FormValue("flag"))
 	if err != nil {
 		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		http.Error(w, "Invalid flag. Not an integer", http.StatusBadRequest)
 		return
 	}
 
