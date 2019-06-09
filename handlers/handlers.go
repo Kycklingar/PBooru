@@ -316,7 +316,9 @@ func loadTemplates(path string) ([]string, error) {
 			names = append(names, n...)
 		} else {
 			// fmt.Println(p.Name())
-			names = append(names, path+"/"+p.Name())
+			if len(p.Name()) >= 5 && p.Name()[len(p.Name())-5:] == ".html" {
+				names = append(names, path+"/"+p.Name())
+			}
 		}
 	}
 	return names, nil
