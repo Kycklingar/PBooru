@@ -259,6 +259,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
+		passVerify := r.FormValue("password-verify")
+
+		if password != passVerify {
+			http.Redirect(w, r, "./#err-verify", http.StatusSeeOther)
+			return
+		}
 
 		if !verifyCaptcha(w, r) {
 			//http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)

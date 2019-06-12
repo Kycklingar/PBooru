@@ -7,6 +7,8 @@
 	    <input type="text" name="username"><br>
 	    <label for="password">Password</label><br>
 	    <input type="password" name="password"><br>
+	    <label for="password-verify">Verify password</label><br>
+	    <input type="password" name="password-verify"><br>
 	    <label for="captcha">Captcha</label><br>
 	    <img style="background-color:white;" src="/captcha/{{ . }}.png"><br>
 	    <input type="hidden" name="key" value="{{ . }}"><br>
@@ -24,5 +26,6 @@
 		}
 	</style>
 	<p class="target" id="err-captcha">Captcha was incorrect</p>
+	<p class="target" id="err-verify">Password missmatch</p>
 </div>
 {{template "baseEnd"}}
