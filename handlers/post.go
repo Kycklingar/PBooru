@@ -121,7 +121,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(uri[1])
 		if err != nil {
 			notFoundHandler(w, r)
-			fmt.Println("Failed converting string to int")
+			//fmt.Println("Failed converting string to int")
 			return
 		}
 
