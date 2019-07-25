@@ -1,0 +1,18 @@
+{{template "base"}}
+
+<div class="text-panel">
+	<table>
+		<th>From</th>
+		<th>Subject</th>
+		<th>Date</th>
+		{{range .}}
+		<tr>
+			<td><a href="/user/{{.Sender.ID}}">{{.Sender.Name}}</a></td>
+			<td><a href="/user/message/{{.ID}}">{{with .Title}}{{.}}{{else}}<i>No Subject</i>{{end}}</a></td>
+			<td>{{.Date}}</td>
+		</tr>
+		{{end}}
+	</table>
+</div>
+
+{{template "baseEnd"}}

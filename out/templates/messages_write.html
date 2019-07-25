@@ -1,0 +1,11 @@
+{{template "base"}}
+
+<form class="block" method="POST">
+	<label>{{.Recipient.Name}}</label>
+	<input type="hidden" name="recipient" value="{{.Recipient.ID}}">
+	<input type="text" name="title" placeholder="Title">
+	<textarea type="text" name="message" placeholder="Message"></textarea>
+	<input type="submit" value="Send">
+</form>
+
+{{template "baseEnd"}}

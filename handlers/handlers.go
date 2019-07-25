@@ -252,6 +252,11 @@ func init() {
 	Handlers["/user/pools/append/"] = makeStatHandler(UserPoolAppendHandler)
 	Handlers["/user/pools/add/"] = makeStatHandler(UserPoolAddHandler)
 
+	Handlers["/user/message/"] = makeStatHandler(messageHandler)
+	Handlers["/user/messages/"] = makeStatHandler(allMessagesHandler)
+	Handlers["/user/messages/sent/"] = makeStatHandler(sentMessagesHandler)
+	Handlers["/user/messages/new/"] = sendMessageHandler
+
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)

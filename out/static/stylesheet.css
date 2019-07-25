@@ -6,6 +6,10 @@ body
     color:#AAA;
 }
 
+form input 
+{
+	display:block;
+}
 
 #comic-container h1, #comic-container h2
 {
@@ -98,6 +102,20 @@ li
 
 #content img
 {
+}
+
+.message
+{
+	border:solid;
+	background-color:grey;
+	color:black;
+	padding:2em;
+}
+
+.message-text
+{
+	border:dotted;
+	padding:1em;
 }
 
 .thumbnail

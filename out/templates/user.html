@@ -36,6 +36,13 @@
 					<input type="submit">
 				</form>
 			{{end}}
+			{{if .User.ID}}
+			{{if ne .User.ID .Profile.ID}}
+			<div>
+				<h3><a href="/user/messages/new/?recipient={{.Profile.ID}}">Send Message</a></h3>
+			</div>
+			{{end}}
+			{{end}}
 			</div>
 		</div>
 
