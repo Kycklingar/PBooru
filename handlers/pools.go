@@ -22,7 +22,7 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		profile = DM.NewUser()
-		profile.SetID(uid)
+		profile.SetID(DM.DB, uid)
 	}
 
 	type page struct {
@@ -198,7 +198,7 @@ func UserPoolAppendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = pool.Add(postID, 0)
+	err = pool.Add(postID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -57,6 +57,7 @@ func main() {
 	calcChecksums := flag.Bool("calc-checksums", false, "Calculate the checksums of all posts")
 	generateFileSize := flag.Bool("gen-filesize", false, "Generate file sizes on posts with 0 filesize")
 	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
+	upgradePostCids := flag.Bool("upgrade-post-cids", false, "Upgrade post cids to base32")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -80,6 +81,11 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *upgradePostCids {
+		DM.UpgradePostCids()
+		return
+	}
 
 	if *updateUserFlags {
 		oldStr := flag.Arg(0)

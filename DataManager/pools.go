@@ -83,7 +83,7 @@ func (p *Pool) QPosts(q querier) error {
 	if len(p.Posts) > 0 {
 		return nil
 	}
-	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1 ORDER BY position, post_id DESC", p.ID)
+	rows, err := q.Query("SELECT post_id, position FROM pool_mappings WHERE pool_id = $1 ORDER BY (position, post_id) DESC", p.ID)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -127,7 +127,7 @@ func (p *Pool) Save(q querier) error {
 	return nil
 }
 
-func (p *Pool) Add(postID, position int) error {
+func (p *Pool) Add(postID int) error {
 	if p.ID <= 0 {
 		return errors.New("Pool id is 0")
 	}
@@ -136,7 +136,7 @@ func (p *Pool) Add(postID, position int) error {
 		return errors.New("Post id is < 0")
 	}
 
-	_, err := DB.Exec("INSERT INTO pool_mappings(pool_id, post_id, position) VALUES($1, $2, $3)", p.ID, postID, position)
+	_, err := DB.Exec("INSERT INTO pool_mappings(pool_id, post_id, position) VALUES($1, $2, COALESCE((SELECT MAX(position) + 1 FROM pool_mappings WHERE pool_id = $3), 0))", p.ID, postID, p.ID)
 	return err
 }
 

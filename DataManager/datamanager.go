@@ -169,7 +169,8 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 
 			u := NewUser()
-			u.SetFlag(flag(flagAll))
+			u.flag = new(flag)
+			*u.flag = flag(flag(flagAll))
 			u.Name = "admin"
 			var err error
 			u.salt, err = createSalt()
@@ -223,7 +224,7 @@ func (c *Config) Default() {
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
-	c.StdUserFlag = flagUpload
+	c.StdUserFlag = flagTagging | flagUpload
 }
 
 var CFG *Config

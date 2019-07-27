@@ -34,7 +34,8 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		profile = DM.NewUser()
-		profile.SetID(uid)
+		profile.SetID(DM.DB, uid)
+		profile = DM.CachedUser(profile)
 	}
 
 	type page struct {
@@ -42,14 +43,23 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		UserInfo    UserInfo
 		Profile     *DM.User
 		RecentPosts []*DM.Post
+		RecentVotes []*DM.Post
 	}
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
+	u.QFlag(DM.DB)
 	profile.QName(DM.DB)
 	profile.QFlag(DM.DB)
 
 	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {
+		post.QHash(DM.DB)
+		post.QThumbnails(DM.DB)
+		post.QDeleted(DM.DB)
+	}
+
+	p.RecentVotes = profile.RecentVotes(DM.DB, 5)
+	for _, post := range p.RecentVotes {
 		post.QHash(DM.DB)
 		post.QThumbnails(DM.DB)
 		post.QDeleted(DM.DB)
@@ -195,6 +205,46 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }
 
+func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	u, _ := getUser(w, r)
+
+	if !u.QFlag(DM.DB).Special() {
+		http.Error(w, ErrPriv("Special"), http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(r.FormValue("user-id"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid user ID. Not an integer", http.StatusBadRequest)
+		return
+	}
+
+	newFlag, err := strconv.Atoi(r.FormValue("flag"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid flag. Not an integer", http.StatusBadRequest)
+		return
+	}
+
+	user := DM.NewUser()
+	user.ID = id
+	user = DM.CachedUser(user)
+
+	if err = user.SetFlag(DM.DB, newFlag); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
 func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {
 	ui := userCookies(w, r)
 	user := DM.NewUser()
@@ -209,6 +259,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
+		passVerify := r.FormValue("password-verify")
+
+		if password != passVerify {
+			http.Redirect(w, r, "./#err-verify", http.StatusSeeOther)
+			return
+		}
 
 		if !verifyCaptcha(w, r) {
 			//http.Error(w, "Captcha was incorrect. Try again", http.StatusBadRequest)

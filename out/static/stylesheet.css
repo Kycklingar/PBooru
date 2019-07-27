@@ -37,7 +37,7 @@ body
     text-decoration-line: underline;
 }
 
-ul
+ul#commentlist
 {
     padding:10px;
     margin:0px;
@@ -201,6 +201,18 @@ li
 {
     color:#AAA;
     font-size:18px;
+}
+
+.privileges p
+{
+	text-shadow:2px 2px 2px white;
+	display:inline;
+}
+
+.privileges .p-special
+{
+	color:#ff2d2d;
+	text-shadow:2px 2px 2px black;
 }
 
 #sidebar

@@ -3,10 +3,15 @@
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
-
+	<br>
 	{{if .User.ID}}
+		<form action="/post/vote/" method="POST">
+			<input type="hidden" name="post-id" value="{{.Post.ID}}">
+			<span>Score:</span>
+			<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
+		</form>
 		<details>
-		<summary>Edit Post</summary>
+		<summary onclick="swapInput()">Edit Post</summary>
         		<div id="editPostForm">
         			{{if .User.Flag.Tagging}}
         		    		<form method="POST">
@@ -36,6 +41,17 @@
         		    	{{end}}
         		</div>
 		</details>
+		<script>
+		var lastInput = document.getElementById("remtagsinput")
+
+		function swapInput()
+		{
+			console.log(input, lastInput)
+			let tmp = lastInput
+			lastInput = input
+			input = tmp
+		}
+		</script>
 		<details>
 		<summary>Report post</summary>
 			{{template "reportForm" .Post.ID}}
@@ -54,7 +70,9 @@
 			</form>
 		</details>
 		{{end}}
-        {{end}}
+	{{else}}
+		<div>Score: {{.Post.Score}}</div>
+	{{end}}
 	
     </div>
     <div id="post">

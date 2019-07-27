@@ -44,6 +44,7 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 		}
 		if userID != nil {
 			c.User.ID = *userID
+			c.User = CachedUser(c.User)
 		}
 		cm.Comments = append(cm.Comments, c)
 	}
@@ -57,7 +58,7 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 
 func compileBBCode(q querier, text, daemon string) string {
 	// This is ugly as shit and probably ripe for abuse :)
-	reg, err := regexp.Compile("#([0-9]+)\\b(\\s+|$)")
+	reg, err := regexp.Compile("#([0-9]+)\\b(\\s|$)")
 	if err != nil {
 		log.Println(err)
 		return text

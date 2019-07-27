@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -39,6 +40,12 @@ var CFG *Config
 const (
 	ErrInternal = "Internal Server Error"
 	ErrNotFound = "Not Found"
+)
+
+var (
+	ErrPriv = func(name string) string {
+		return fmt.Sprint("Insufficent privileges. Want: ", name)
+	}
 )
 
 var Handlers map[string]func(http.ResponseWriter, *http.Request)
@@ -91,12 +98,12 @@ func (e *statElement) inc(path []string) {
 }
 
 func (e *statElement) print(i int) string {
-	str := fmt.Sprintf("%s [%d]\n<ol>", e.name, e.count)
+	str := fmt.Sprintf("%s [%d]\n<ul>", html.EscapeString(e.name), e.count)
 	for _, el := range e.elements {
-		str += fmt.Sprintf("<li value=\"%d\">%s</li>", el.count, el.print(i+1))
+		str += fmt.Sprintf("<li>%s</li>", el.print(i+1))
 	}
 
-	return fmt.Sprint(str, "</ol>")
+	return fmt.Sprint(str, "</ul>")
 }
 
 func (e *statElement) Print() string {
@@ -224,6 +231,7 @@ func init() {
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
 	Handlers["/post/report/"] = reportPostHandler
+	Handlers["/post/vote/"] = PostVoteHandler
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/reports/"] = makeStatHandler(reportsHandler)
 	Handlers["/reports/delete/"] = reportDeleteHandler
@@ -237,6 +245,7 @@ func init() {
 	Handlers["/taghistory/reverse/"] = makeStatHandler(ReverseTagHistoryHandler)
 
 	Handlers["/user/"] = makeStatHandler(UserHandler)
+	Handlers["/user/edit/flag/"] = upgradeUserHandler
 	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
 	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
 	Handlers["/user/pool/remove/"] = makeStatHandler(editUserPoolHandler)
@@ -308,7 +317,9 @@ func loadTemplates(path string) ([]string, error) {
 			names = append(names, n...)
 		} else {
 			// fmt.Println(p.Name())
-			names = append(names, path+"/"+p.Name())
+			if len(p.Name()) >= 5 && p.Name()[len(p.Name())-5:] == ".html" {
+				names = append(names, path+"/"+p.Name())
+			}
 		}
 	}
 	return names, nil
