@@ -24,6 +24,7 @@ func NewPost() *Post {
 	p.Mime = NewMime()
 	p.Deleted = -1
 	p.Score = -1
+	p.editCount = -1
 	return &p
 }
 
@@ -56,6 +57,8 @@ type Post struct {
 	Score      int
 
 	description *string
+
+	editCount int
 }
 
 func (p *Post) QID(q querier) int {
@@ -265,6 +268,50 @@ func (p *Post) Vote(q querier, u *User) error {
 	p.Score = -1
 
 	return nil
+}
+
+func (p *Post) QTagHistoryCount(q querier) (int, error) {
+	if p.editCount >= 0 {
+		return p.editCount, nil
+	}
+
+	if p.QID(q) <= 0 {
+		return 0, errors.New("no id specified")
+	}
+
+	err := q.QueryRow("SELECT count(*) FROM tag_history WHERE post_id = $1", p.ID).Scan(&p.editCount)
+
+	return p.editCount, err
+}
+
+func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
+	if p.QID(q) <= 0 {
+		return nil, errors.New("no post id specified")
+	}
+	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ths []*TagHistory
+
+	for rows.Next() {
+		var th = NewTagHistory()
+		if err = rows.Scan(&th.ID, &th.User.ID, &th.Timestamp); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		th.Post = p
+
+		ths = append(ths, th)
+	}
+
+	err = rows.Err()
+
+	return ths, err
 }
 
 func (p *Post) SizePretty() string {

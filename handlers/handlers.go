@@ -230,6 +230,7 @@ func init() {
 
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
+	Handlers["/post/taghistory/"] = postHistoryHandler
 	Handlers["/post/report/"] = reportPostHandler
 	Handlers["/post/vote/"] = PostVoteHandler
 	Handlers["/posts"] = makeStatHandler(PostsHandler)

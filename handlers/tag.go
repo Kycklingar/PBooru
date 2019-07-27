@@ -175,6 +175,7 @@ type TagHistoryPage struct {
 	History    []*DM.TagHistory
 	UserInfo   UserInfo
 	Pageinator Pageination
+	User *DM.User
 }
 
 func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
