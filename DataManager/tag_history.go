@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
@@ -124,6 +127,9 @@ func (th *TagHistory) Reverse() error {
 	for _, et := range etags {
 		resetCacheTag(et.Tag.QID(DB))
 	}
+
+	// Reset post cache
+	C.Cache.Purge("TC", strconv.Itoa(th.Post.QID(DB)))
 
 	return nil
 }
