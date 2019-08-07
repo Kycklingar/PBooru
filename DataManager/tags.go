@@ -529,9 +529,9 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		var rows *sql.Rows
 		var err error
 		if tag.QNamespace(q).QNamespace(q) == "none" {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE tag LIKE($1) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		} else {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE namespace_id=$1 AND tag LIKE($2) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
 		}
 		if err != nil {
 			log.Print(err)
