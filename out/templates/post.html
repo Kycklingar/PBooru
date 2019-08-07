@@ -12,6 +12,7 @@
 		</form>
 		<details>
 		<summary onclick="swapInput()">Edit Post</summary>
+			<br><a style="color:#AAA" href="/post/taghistory/{{.Post.ID}}/">Tag History</a>
         		<div id="editPostForm">
         			{{if .User.Flag.Tagging}}
         		    		<form method="POST">
