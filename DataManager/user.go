@@ -112,17 +112,17 @@ func (u *User) QID(q querier) int {
 func (u *User) Title() string {
 	ec := u.tagEditCount(DB)
 	var title string
-	switch{
-		case ec > 100000:
-			title = "Archivist"
-		case ec > 10000:
-			title = "Godlike"
-		case ec > 1000:
-			title = "Respectable"
-		case ec > 100:
-			title = "Tagger"
-		case ec > 10:
-			title = "Contributor"
+	switch {
+	case ec > 100000:
+		title = "Archivist"
+	case ec > 10000:
+		title = "Godlike"
+	case ec > 1000:
+		title = "Respectable"
+	case ec > 100:
+		title = "Tagger"
+	case ec > 10:
+		title = "Contributor"
 	}
 
 	return title
@@ -207,7 +207,7 @@ func (u *User) Flag() flag {
 	return flag(0)
 }
 
-func (u *User) SetFlag(q querier, f int) error{
+func (u *User) SetFlag(q querier, f int) error {
 	if u.ID <= 0 {
 		return errors.New("No user to set flag on")
 	}

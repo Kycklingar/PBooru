@@ -504,12 +504,7 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	thp.Pageinator = pageinate(totalEdits, limit, page, 10)
 	thp.User = u
 
-	for _, ht := range thp.History {
-		ht.User = DM.CachedUser(ht.User)
-		ht.User.QName(DM.DB)
-
-		ht.Post = DM.CachedPost(ht.Post)
-	}
+	preloadTagHistory(thp.History)
 
 	renderTemplate(w, "taghistory", thp)
 }

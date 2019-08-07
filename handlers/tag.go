@@ -175,7 +175,7 @@ type TagHistoryPage struct {
 	History    []*DM.TagHistory
 	UserInfo   UserInfo
 	Pageinator Pageination
-	User *DM.User
+	User       *DM.User
 }
 
 func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -187,7 +187,7 @@ func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var (
-			th = DM.NewTagHistory()
+			th  = DM.NewTagHistory()
 			err error
 		)
 
@@ -213,7 +213,16 @@ func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.UserInfo = userCookies(w, r)
 	p.History = DM.GetTagHistory(10, 0)
-	for _, h := range p.History {
+
+	preloadTagHistory(p.History)
+
+	p.Base.Title = "Tag History"
+
+	renderTemplate(w, "taghistory", p)
+}
+
+func preloadTagHistory(histories []*DM.TagHistory) {
+	for _, h := range histories {
 		for _, e := range h.QETags(DM.DB) {
 			e.Tag.QID(DM.DB)
 			e.Tag.QTag(DM.DB)
@@ -229,7 +238,4 @@ func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		h.User.QID(DM.DB)
 		h.User.QFlag(DM.DB)
 	}
-	p.Base.Title = "Tag History"
-
-	renderTemplate(w, "taghistory", p)
 }

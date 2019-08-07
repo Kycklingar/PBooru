@@ -619,7 +619,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 			}
 		}
 
-		for _, pa := range b.Parents(q){
+		for _, pa := range b.Parents(q) {
 			var tmp int
 			err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), pa.QID(q)).Scan(&tmp)
 			if err == nil && tmp > 0 {
@@ -629,10 +629,8 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 				return err
 			}
 
-
 			at = append(at, pa)
 		}
-
 
 		var tmp int
 		err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
