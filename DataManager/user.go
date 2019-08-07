@@ -45,6 +45,8 @@ type User struct {
 	flag         *flag
 	Session      *Session
 
+	editCount *int
+
 	Pools []*Pool
 }
 
@@ -107,8 +109,49 @@ func (u *User) QID(q querier) int {
 	return u.ID
 }
 
-func (u *User) SetID(id int) {
-	u.ID = id
+func (u *User) Title() string {
+	ec := u.tagEditCount(DB)
+	var title string
+	switch {
+	case ec > 100000:
+		title = "Archivist"
+	case ec > 10000:
+		title = "Godlike"
+	case ec > 1000:
+		title = "Respectable"
+	case ec > 100:
+		title = "Tagger"
+	case ec > 10:
+		title = "Contributor"
+	}
+
+	return title
+}
+
+func (u *User) tagEditCount(q querier) int {
+	if u.editCount != nil {
+		return *u.editCount
+	}
+	u.editCount = new(int)
+	err := q.QueryRow("SELECT count(*) FROM tag_history th JOIN edited_tags et ON th.id = et.history_id WHERE th.user_id = $1", u.QID(q)).Scan(u.editCount)
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	return *u.editCount
+}
+
+func (u *User) SetID(q querier, id int) error {
+	if u.ID > 0 {
+		return nil
+	}
+	if err := q.QueryRow("SELECT id FROM users WHERE id = $1", id).Scan(&u.ID); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 func (u *User) RecentPosts(q querier, limit int) []*Post {
@@ -164,8 +207,24 @@ func (u *User) Flag() flag {
 	return flag(0)
 }
 
-func (u *User) SetFlag(f flag) {
-	u.flag = &f
+func (u *User) SetFlag(q querier, f int) error {
+	if u.ID <= 0 {
+		return errors.New("No user to set flag on")
+	}
+
+	_, err := q.Exec("UPDATE users SET adminflag = $1 WHERE id = $2", f, u.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if u.flag == nil {
+		u.flag = new(flag)
+	}
+
+	*u.flag = flag(f)
+
+	return nil
 }
 
 func (u *User) QFlag(q querier) flag {
@@ -253,7 +312,8 @@ func (u User) Register(name, password string) error {
 		return err
 	}
 
-	u.SetFlag(flag(CFG.StdUserFlag))
+	u.flag = new(flag) //(CFG.StdUserFlag))
+	*u.flag = flag(CFG.StdUserFlag)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
 	if err != nil {

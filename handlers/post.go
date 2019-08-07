@@ -125,7 +125,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(uri[1])
 		if err != nil {
 			notFoundHandler(w, r)
-			fmt.Println("Failed converting string to int")
+			//fmt.Println("Failed converting string to int")
 			return
 		}
 
@@ -498,6 +498,58 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	u, ui := getUser(w, r)
+	u = DM.CachedUser(u)
+
+	u.QFlag(DM.DB)
+
+	spl := splitURI(r.URL.Path)
+	if len(spl) < 3 {
+		notFoundHandler(w, r)
+		return
+	}
+
+	id, err := strconv.Atoi(spl[2])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	const limit = 10
+	page, _ := strconv.Atoi("page")
+
+	post := DM.NewPost()
+	post.ID = id
+
+	post = DM.CachedPost(post)
+
+	totalEdits, err := post.QTagHistoryCount(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	ths, err := post.TagHistory(DM.DB, limit, page*limit)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var thp TagHistoryPage
+	thp.Base.Title = fmt.Sprint("Tag History for ", post.ID)
+	thp.History = ths
+	thp.UserInfo = ui
+	thp.Pageinator = pageinate(totalEdits, limit, page, 10)
+	thp.User = u
+
+	preloadTagHistory(thp.History)
+
+	renderTemplate(w, "taghistory", thp)
 }
 
 func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {

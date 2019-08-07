@@ -9,7 +9,6 @@ func TestAliasSave(t *testing.T) {
 	if db == nil {
 		t.Error("Failed to open testdb")
 	}
-	defer db.Close()
 
 	a := NewAlias()
 	a.Tag.Tag = "tag"

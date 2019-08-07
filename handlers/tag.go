@@ -24,14 +24,18 @@ const tagLimit = 200
 func TagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		type P struct {
+			Query     string
 			Tags      []*DM.Tag
 			Tag       *DM.Tag
 			To        *DM.Tag
 			From      []*DM.Tag
+			Parents   []*DM.Tag
+			Children  []*DM.Tag
 			Paginator Pageination
 		}
 		var p P
 
+		tagStr := r.FormValue("tag")
 		currPage := 1
 		var err error
 		f := splitURI(r.URL.Path)
@@ -45,7 +49,15 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 		bm := benchmark.Begin()
 		var tc DM.TagCollector
-		err = tc.Get(tagLimit, (currPage-1)*tagLimit)
+
+		if len(tagStr) > 0 {
+			tc.Parse(tagStr)
+			tc = tc.SuggestedTags(DM.DB)
+			p.Query = "?tag=" + tagStr
+		} else {
+			err = tc.Get(tagLimit, (currPage-1)*tagLimit)
+		}
+
 		for _, t := range tc.Tags {
 			t.QNamespace(DM.DB).QNamespace(DM.DB)
 		}
@@ -54,6 +66,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
+
 		p.Tags = tc.Tags
 
 		if len(f) >= 3 && f[2] != "" {
@@ -63,22 +76,30 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			preload := func(tags ...*DM.Tag) {
+				for _, tag := range tags {
+					tag.QID(DM.DB)
+					tag.QTag(DM.DB)
+					tag.QNamespace(DM.DB).QNamespace(DM.DB)
+				}
+			}
+
 			a := DM.NewAlias()
 			a.Tag.SetID(tagID)
-			a.Tag.QTag(DM.DB)
-			a.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
+			preload(a.Tag)
 
 			p.Tag = a.Tag
 			p.From = a.QFrom(DM.DB)
-			for _, f := range p.From {
-				f.QID(DM.DB)
-				f.QTag(DM.DB)
-				f.QNamespace(DM.DB).QNamespace(DM.DB)
-			}
+			preload(p.From...)
+
 			p.To = a.QTo(DM.DB)
-			p.To.QID(DM.DB)
-			p.To.QTag(DM.DB)
-			p.To.QNamespace(DM.DB).QNamespace(DM.DB)
+			preload(p.To)
+
+			p.Parents = p.Tag.Parents(DM.DB)
+			preload(p.Parents...)
+
+			p.Children = p.Tag.Children(DM.DB)
+			preload(p.Children...)
 
 			bm.End(performBenchmarks)
 		}
@@ -156,6 +177,37 @@ type TagHistoryPage struct {
 	History    []*DM.TagHistory
 	UserInfo   UserInfo
 	Pageinator Pageination
+	User       *DM.User
+}
+
+func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		u, _ := getUser(w, r)
+
+		if !u.QFlag(DM.DB).Delete() {
+			http.Error(w, "Insufficent privileges. Want \"delete\"", http.StatusBadRequest)
+			return
+		}
+		var (
+			th  = DM.NewTagHistory()
+			err error
+		)
+
+		th.ID, err = strconv.Atoi(r.FormValue("taghistory-id"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = th.Reverse()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +215,16 @@ func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.UserInfo = userCookies(w, r)
 	p.History = DM.GetTagHistory(10, 0)
-	for _, h := range p.History {
+
+	preloadTagHistory(p.History)
+
+	p.Base.Title = "Tag History"
+
+	renderTemplate(w, "taghistory", p)
+}
+
+func preloadTagHistory(histories []*DM.TagHistory) {
+	for _, h := range histories {
 		for _, e := range h.QETags(DM.DB) {
 			e.Tag.QID(DM.DB)
 			e.Tag.QTag(DM.DB)
@@ -179,7 +240,4 @@ func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		h.User.QID(DM.DB)
 		h.User.QFlag(DM.DB)
 	}
-	p.Base.Title = "Tag History"
-
-	renderTemplate(w, "taghistory", p)
 }

@@ -173,7 +173,8 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 
 			u := NewUser()
-			u.SetFlag(flag(flagAll))
+			u.flag = new(flag)
+			*u.flag = flag(flag(flagAll))
 			u.Name = "admin"
 			var err error
 			u.salt, err = createSalt()
@@ -187,7 +188,7 @@ func updateCode(ver int, tx *sql.Tx) error {
 			}
 			u.passwordHash = string(hash)
 
-			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.Flag)
+			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.Flag())
 			if err != nil {
 				return err
 			}
@@ -227,7 +228,7 @@ func (c *Config) Default() {
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
-	c.StdUserFlag = flagUpload
+	c.StdUserFlag = flagTagging | flagUpload
 }
 
 var CFG *Config

@@ -1,8 +1,12 @@
 package DataManager
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
@@ -18,7 +22,7 @@ func GetTagHistory(limit, offset int) []*TagHistory {
 	for rows.Next() {
 		th := NewTagHistory()
 
-		err = rows.Scan(&th.id, &th.User.ID, &th.Post.ID, &th.Timestamp)
+		err = rows.Scan(&th.ID, &th.User.ID, &th.Post.ID, &th.Timestamp)
 		if err != nil {
 			log.Print(err)
 			return nil
@@ -46,7 +50,7 @@ func GetUserTagHistory(limit, offset, userID int) ([]*TagHistory, int) {
 	for rows.Next() {
 		th := NewTagHistory()
 
-		err = rows.Scan(&th.id, &th.User.ID, &th.Post.ID, &th.Timestamp)
+		err = rows.Scan(&th.ID, &th.User.ID, &th.Post.ID, &th.Timestamp)
 		if err != nil {
 			log.Print(err)
 			return nil, 0
@@ -61,7 +65,7 @@ func NewTagHistory() *TagHistory {
 }
 
 type TagHistory struct {
-	id int
+	ID int
 
 	User      *User
 	Post      *Post
@@ -70,21 +74,80 @@ type TagHistory struct {
 	ETags []*EditedTag
 }
 
-func (th *TagHistory) ID(q querier) int {
-	if th.id != 0 {
-		return th.id
+func (th *TagHistory) Reverse() error {
+	if th.ID <= 0 {
+		return errors.New("no taghistory id to reverse")
 	}
 
-	if th.User.QID(q) == 0 || th.Post.QID(q) == 0 {
-		return 0
-	}
-
-	err := q.QueryRow("SELECT id FROM tag_history WHERE user_id=$1 AND post_id=$2", th.User.QID(q), th.Post.QID(q)).Scan(&th.id)
+	tx, err := DB.Begin()
 	if err != nil {
-		log.Print(err)
-		return 0
+		log.Println(err)
+		return err
 	}
-	return th.id
+
+	etags := th.QETags(tx)
+	th.QPost(tx)
+
+	if th.Post.QID(tx) <= 0 {
+		return txError(tx, errors.New("taghistory post has no id"))
+	}
+
+	for _, et := range etags {
+		if et.Tag.QID(tx) == 0 {
+			return txError(tx, errors.New("tag has no id!"))
+		}
+
+		if et.Direction {
+			_, err = tx.Exec("DELETE FROM post_tag_mappings WHERE post_id = $1 AND tag_id = $2", th.Post.QID(tx), et.Tag.QID(tx))
+		} else {
+			_, err = tx.Exec("INSERT INTO post_tag_mappings (post_id, tag_id) VALUES($1, $2) ON CONFLICT DO NOTHING", th.Post.QID(tx), et.Tag.QID(tx))
+		}
+
+		if err != nil {
+			log.Println(err)
+			return txError(tx, err)
+		}
+	}
+
+	if _, err = tx.Exec("DELETE FROM edited_tags WHERE history_id = $1", th.ID); err != nil {
+		log.Println(err)
+		return txError(tx, err)
+	}
+
+	if _, err = tx.Exec("DELETE FROM tag_history WHERE id = $1", th.ID); err != nil {
+		log.Println(err)
+		return txError(tx, err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	for _, et := range etags {
+		resetCacheTag(et.Tag.QID(DB))
+	}
+
+	// Reset post cache
+	C.Cache.Purge("TC", strconv.Itoa(th.Post.QID(DB)))
+
+	return nil
+}
+
+func (th *TagHistory) QPost(q querier) error {
+	if th.ID <= 0 {
+		return errors.New("taghistory has no ID")
+	}
+
+	return q.QueryRow("SELECT post_id FROM tag_history WHERE id = $1", th.ID).Scan(&th.Post.ID)
+}
+
+func (th *TagHistory) QUser(q querier) error {
+	if th.ID <= 0 {
+		return errors.New("taghistory has no ID")
+	}
+
+	return q.QueryRow("SELECT user_id FROM tag_history WHERE id = $1", th.ID).Scan(&th.User.ID)
 }
 
 func (th *TagHistory) QETags(q querier) []*EditedTag {
@@ -92,11 +155,11 @@ func (th *TagHistory) QETags(q querier) []*EditedTag {
 		return th.ETags
 	}
 
-	if th.ID(q) == 0 {
+	if th.ID == 0 {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT tag_id, direction FROM edited_tags WHERE history_id=$1", th.ID(q))
+	rows, err := q.Query("SELECT tag_id, direction FROM edited_tags WHERE history_id=$1", th.ID)
 	if err != nil {
 		return nil
 	}
