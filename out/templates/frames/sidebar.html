@@ -79,16 +79,18 @@
             	    <input id="order-asc" type="radio" name="order" value="asc"> <label for="order-asc">Ascending</label><br>
             	    <input id="order-rand" type="radio" name="order" value="random"> <label for="order-rand">Random</label><br>
 		    <input id="order-score" type="radio" name="order" value="score"> <label for="order-score">Score</label><br>
-		    <label>Mimes:</label>
-		    <br>
-		    {{range $k, $v := .Mimes}}
-		    	<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
-			<ul>
-		    	{{range $v}}
-		    		<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
-			{{end}}
-			</ul>
-		    {{end}}
+		    <details>
+		    	<summary>Mimes:</summary>
+		    	<br>
+		    	{{range $k, $v := .Mimes}}
+		    		<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
+		    	    <ul>
+		    		{{range $v}}
+		    			<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
+		    	    {{end}}
+		    	    </ul>
+		    	{{end}}
+		    </details>
             	</div>
 	    </details>
         </form>
