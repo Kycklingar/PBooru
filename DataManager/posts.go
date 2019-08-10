@@ -850,7 +850,7 @@ type PostCollector struct {
 	TotalPosts int
 
 	mimeIDs []int
-	order string
+	order   string
 
 	tagLock sync.Mutex
 	pl      sync.RWMutex
@@ -975,7 +975,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 	}
 
 	// Check if the mime id exist in the db
-	for _, mime := range Mimes{
+	for _, mime := range Mimes {
 		if in(mime.ID, mimeIDs) {
 			pc.mimeIDs = append(pc.mimeIDs, mime.ID)
 		}
@@ -1045,7 +1045,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	// 	return fmt.Sprintf(pre, str)
 	// }
 
-	//fmt.Println(rand("test %s", pc.order))
+	//fmt.Println(orderF("test %s", pc.order))
 
 	//pc.id = tagString
 
@@ -1123,7 +1123,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			mimeStr = "AND p1." + mimeStr
 		}
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1,", pc.order))
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1.", pc.order))
 
 		//fmt.Println(str)
 
@@ -1226,8 +1226,6 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		} else {
 			pc.TotalPosts = GetTotalPosts()
 		}
-
-
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)

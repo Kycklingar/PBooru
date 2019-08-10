@@ -11,7 +11,7 @@ var Mimes []*Mime
 func MimeIDsFromType(mslice []string) []int {
 	var mimeIDs []int
 	for _, mtype := range mslice {
-		for _, mime := range Mimes{
+		for _, mime := range Mimes {
 			if mtype == mime.Type {
 				mimeIDs = append(mimeIDs, mime.ID)
 			}

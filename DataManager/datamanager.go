@@ -3,8 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
