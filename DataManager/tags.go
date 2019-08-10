@@ -76,11 +76,21 @@ func (t *Tag) QNamespace(q querier) *Namespace {
 	if t.Namespace.QID(q) != 0 {
 		return t.Namespace
 	}
-	if t.QID(q) != 0 {
+
+	if t.QID(q) != 0 && t.Namespace.ID == 0 {
 		err := q.QueryRow("SELECT namespace_id FROM tags WHERE id=$1", t.ID).Scan(&t.Namespace.ID)
 		if err != nil {
 			log.Print(err)
 		}
+	}
+
+	//fmt.Print("NSPID ", t.Namespace.ID)
+	if n := C.Cache.Get("NSPID", strconv.Itoa(t.Namespace.ID)); n != nil {
+		t.Namespace = n.(*Namespace)
+		//fmt.Println("Got")
+	} else {
+		C.Cache.Set("NSPID", strconv.Itoa(t.Namespace.ID), t.Namespace)
+		//fmt.Println("Gottn't")
 	}
 
 	return t.Namespace
@@ -401,6 +411,8 @@ func (tc *TagCollector) Get(limit, offset int) error {
 		if err != nil {
 			return err
 		}
+		tag = CachedTag(tag)
+		tag.Namespace = CachedNamespace(tag.Namespace)
 		tc.Tags = append(tc.Tags, tag)
 	}
 	err = rows.Err()
@@ -433,6 +445,7 @@ func (tc *TagCollector) GetFromPost(q querier, p Post) error {
 		if err != nil {
 			return err
 		}
+		tag = CachedTag(tag)
 		tc.Tags = append(tc.Tags, tag)
 	}
 	return rows.Err()
@@ -546,6 +559,8 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 				log.Print(err)
 				break
 			}
+			t = CachedTag(t)
+			t.Namespace = CachedNamespace(t.Namespace)
 			//fmt.Println(cnt)
 			newTags = append(newTags, t)
 		}

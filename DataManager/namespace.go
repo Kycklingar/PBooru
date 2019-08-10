@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"strconv"
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
@@ -60,15 +61,26 @@ func (n *Namespace) QNamespace(q querier) string {
 		return ""
 	}
 
-	if t := C.Cache.Get("NSP", n.Namespace); t != nil {
-		if ns, ok := t.(*Namespace); ok {
-			*n = *ns
-		}
-	} else {
-		C.Cache.Set("NSP", n.Namespace, n)
-	}
+	//fmt.Println("namespace queried")
+
+	//if t := C.Cache.Get("NSP", n.Namespace); t != nil {
+	//	if ns, ok := t.(*Namespace); ok {
+	//		*n = *ns
+	//	}
+	//	return n.Namespace
+	//} else {
+	//	C.Cache.Set("NSP", n.Namespace, n)
+	//}
 
 	return n.Namespace
+}
+
+func CachedNamespace(n *Namespace) *Namespace {
+	if cn := C.Cache.Get("NSPID", strconv.Itoa(n.ID)); cn != nil {
+		return cn.(*Namespace)
+	}
+	C.Cache.Set("NSPID", strconv.Itoa(n.ID), n)
+	return n
 }
 
 func (n *Namespace) GetCache() bool {

@@ -1270,7 +1270,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 		return pc.tags
 	}
 	//fmt.Println(pc.id)
-	var allTagIds [][]int
+	var allTags []*Tag
 
 	if pc.idStr() == "-1" {
 		return nil
@@ -1288,34 +1288,29 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 		if err != nil {
 			continue
 		}
-		var ids []int
-		for _, tag := range ptc.Tags {
-			ids = append(ids, tag.QID(DB))
-		}
-		allTagIds = append(allTagIds, ids)
+		allTags = append(allTags, ptc.Tags...)
 	}
 	pc.pl.RUnlock()
 
 	type tagMap struct {
-		id    int
+		//id    int
+		tag   *Tag
 		count int
 	}
 
 	// Count all tags
-	var tagIDArr []tagMap
-	for _, idSet := range allTagIds {
-		for _, id := range idSet {
-			newID := true
-			for i, id2 := range tagIDArr {
-				if id == id2.id {
-					tagIDArr[i].count++
-					newID = false
-					break
-				}
+	var countMap []tagMap
+	for _, tag := range allTags {
+		newTag := true
+		for i, counted := range countMap {
+			if counted.tag == tag {
+				countMap[i].count++
+				newTag = false
+				break
 			}
-			if newID {
-				tagIDArr = append(tagIDArr, tagMap{id, 1})
-			}
+		}
+		if newTag {
+			countMap = append(countMap, tagMap{tag, 1})
 		}
 	}
 
@@ -1323,11 +1318,11 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	swapped := true
 	for swapped {
 		swapped = false
-		for i := 1; i < len(tagIDArr); i++ {
-			if tagIDArr[i-1].count < tagIDArr[i].count {
-				tmp := tagIDArr[i]
-				tagIDArr[i] = tagIDArr[i-1]
-				tagIDArr[i-1] = tmp
+		for i := 1; i < len(countMap); i++ {
+			if countMap[i-1].count < countMap[i].count {
+				tmp := countMap[i]
+				countMap[i] = countMap[i-1]
+				countMap[i-1] = tmp
 				swapped = true
 			}
 		}
@@ -1337,24 +1332,14 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.tags = nil
 	// Retrive and append the tags
 	arrLimit := maxTags
-	if len(tagIDArr) < arrLimit {
-		arrLimit = len(tagIDArr)
+	if len(countMap) < arrLimit {
+		arrLimit = len(countMap)
 	}
 	for i := 0; i < arrLimit; i++ {
-		t := NewTag()
-		t.SetID(tagIDArr[i].id)
-
-		pc.tags = append(pc.tags, t)
-		//p.Sidebar.Tags = append(p.Sidebar.Tags, tagstruct{Tag{t.Tag(), t.Namespace().Namespace()}, tagIDArr[i].count})
+		tag := countMap[i].tag
+		tag.QNamespace(DB).QNamespace(DB)
+		pc.tags = append(pc.tags, tag)
 	}
-
-	// err = tx.Commit()
-	// if err != nil {
-	// 	log.Print(err)
-	// }
-	// tx = nil
-
-	//C.Cache.Set("PC", pc.idStr(), pc)
 
 	return pc.tags
 }

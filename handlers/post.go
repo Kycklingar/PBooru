@@ -167,9 +167,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	pp.Voted = pp.User.Voted(DM.DB, p)
 
 	var tc DM.TagCollector
-	err = tc.GetPostTags(DM.DB, p)
+	//err = tc.GetPostTags(DM.DB, p)
+	err = tc.GetFromPost(DM.DB, *p)
 	if err != nil {
 		log.Print(err)
+	}
+
+	for _, tag := range tc.Tags {
+		tag.QTag(DM.DB)
+		tag.QCount(DM.DB)
+		tag.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
 	pp.Sidebar.Tags = tc.Tags
@@ -386,13 +393,18 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		p.SuggestedTags = append(p.SuggestedTags, t)
 	}
 
-	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
-	for i := range p.Sidebar.Tags {
-		p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
-		p.Sidebar.Tags[i].QTag(DM.DB)
-		p.Sidebar.Tags[i].QCount(DM.DB)
-		p.Sidebar.Tags[i].QNamespace(DM.DB).SetCache()
-		p.Sidebar.Tags[i].QNamespace(DM.DB).QNamespace(DM.DB)
+	//p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
+	sidebarTags := pc.Tags(maxTagsPerPage)
+	p.Sidebar.Tags = make([]*DM.Tag, len(sidebarTags))
+	for i, tag := range sidebarTags {
+		//p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
+		tag.QTag(DM.DB)
+		tag.QCount(DM.DB)
+		tag.Namespace.QNamespace(DM.DB)
+
+		//fmt.Println(tag.Tag, tag.Namespace)
+
+		p.Sidebar.Tags[i] = tag
 	}
 
 	bm.Split("Retrieved and appended tags")

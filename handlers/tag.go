@@ -56,15 +56,15 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			p.Query = "?tag=" + tagStr
 		} else {
 			err = tc.Get(tagLimit, (currPage-1)*tagLimit)
+			if err != nil {
+				http.Error(w, "Oops", http.StatusInternalServerError)
+				log.Print(err)
+				return
+			}
 		}
 
 		for _, t := range tc.Tags {
 			t.QNamespace(DM.DB).QNamespace(DM.DB)
-		}
-		if err != nil {
-			http.Error(w, "Oops", http.StatusInternalServerError)
-			log.Print(err)
-			return
 		}
 
 		p.Tags = tc.Tags
