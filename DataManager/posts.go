@@ -368,7 +368,6 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 	var tx *sql.Tx
 
 	if p.QID(DB) == 0 {
-
 		if CFG.UseMFS {
 			file.Seek(0, 0)
 			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
@@ -850,6 +849,7 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
+	mimeIDs []int
 	order string
 
 	tagLock sync.Mutex
@@ -868,9 +868,7 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
-	//var tagIDs []int
-
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, mimeIDs []int) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -976,23 +974,15 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-	//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-	//		tmp, ok := t.(*PostCollector)
-	//		if ok {
-	//			*pc = *tmp
-	//			// pc.posts = tmp.posts
-	//			// pc.id = tmp.ID
-	//			// pc.TotalPosts = tmp.TotalPosts
-	//			// pc.tags = tmp.tags
-	//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-	//			// 	return nil
-	//			// }
-	//		}
-	//	} else {
-	//		C.Cache.Set("PC", pc.idStr(), pc)
-	//	}
+	// Check if the mime id exist in the db
+	for _, mime := range Mimes{
+		if in(mime.ID, mimeIDs) {
+			pc.mimeIDs = append(pc.mimeIDs, mime.ID)
+		}
+	}
+	sort.Ints(pc.mimeIDs)
 
-	return nil //pc.search(10, 0)
+	return nil
 }
 
 func (pc *PostCollector) idStr() string {
@@ -1016,9 +1006,15 @@ func (pc *PostCollector) idStr() string {
 		str = fmt.Sprint(str+" ", i)
 	}
 
-	str += pc.order
+	str += " -"
+	for _, mimeID := range pc.mimeIDs {
+		str = fmt.Sprint(str+" ", mimeID)
+	}
+
+	str += " - " + pc.order
+
 	str = strings.TrimSpace(str)
-	// fmt.Println("PCSTR", str)
+	//fmt.Println("PCSTR", str)
 	return str
 }
 
@@ -1066,6 +1062,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		return nil
 	}
 
+	var mimeStr string
+	if len(pc.mimeIDs) > 0 {
+		mimeStr = "mime_id IN("
+		for _, m := range pc.mimeIDs {
+			mimeStr += fmt.Sprint(m, ",")
+		}
+
+		mimeStr = mimeStr[:len(mimeStr)-1] + ")"
+	}
+
+	//fmt.Println(mimeStr)
+
 	if len(pc.id) > 0 {
 		var innerStr string
 		var endStr = "WHERE "
@@ -1111,14 +1119,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, orderF("p1.", pc.order))
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND p1." + mimeStr
+		}
+
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1,", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
 			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Print(err)
@@ -1163,14 +1175,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, orderF("", pc.order))
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND p1." + mimeStr
+		}
+
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
 			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Print(err)
@@ -1189,11 +1205,33 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			return err
 		}
 	} else {
-		pc.TotalPosts = GetTotalPosts()
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND " + mimeStr
+
+			if pc.TotalPosts <= 0 {
+				c := pc.ccGet()
+				if c < 0 {
+					count := fmt.Sprintf("SELECT count(*) FROM posts WHERE deleted = false %s", mimeStr)
+
+					err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+					if err != nil {
+						log.Println(err)
+						return err
+					}
+					pc.ccSet(pc.TotalPosts)
+				} else {
+					pc.TotalPosts = c
+				}
+			}
+		} else {
+			pc.TotalPosts = GetTotalPosts()
+		}
+
+
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", orderF("", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false %s ORDER BY %s LIMIT $1 OFFSET $2", mimeStr, orderF("", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err

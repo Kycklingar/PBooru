@@ -102,6 +102,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 
 	var pp Postpage
+	pp.Sidebar.Mimes = make(map[string][]*DM.Mime)
+	for _, mime := range DM.Mimes {
+		pp.Sidebar.Mimes[mime.Type] = append(pp.Sidebar.Mimes[mime.Type], mime)
+	}
 	p := DM.NewPost()
 
 	pp.User, pp.UserInfo = getUser(w, r)
@@ -247,6 +251,7 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	var p PostsPage
+	p.Sidebar.Mimes = make(map[string][]*DM.Mime)
 
 	bm := benchmark.Begin()
 
@@ -275,6 +280,36 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
 
+	for _, mime := range DM.Mimes {
+		p.Sidebar.Mimes[mime.Type] = append(p.Sidebar.Mimes[mime.Type], mime)
+	}
+
+	mimeGroups := r.Form["mime-type"]
+
+	mimeIDs := DM.MimeIDsFromType(mimeGroups)
+
+	mimes := r.Form["mime"]
+	for _, mime := range mimes {
+		id, err := strconv.Atoi(mime)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		contains := func(s []int, i int) bool {
+			for _, x := range s {
+				if x == i {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		if !contains(mimeIDs, id) {
+			mimeIDs = append(mimeIDs, id)
+		}
+	}
+
 	type arg struct {
 		name  string
 		value string
@@ -284,6 +319,14 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	args = append(args, arg{"filter", p.Sidebar.Filter})
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
+
+	for _, group := range mimeGroups {
+		args = append(args, arg{"mime-type", group})
+	}
+
+	for _, mimeID := range mimes {
+		args = append(args, arg{"mime", mimeID})
+	}
 
 	argString := func(arguments []arg) string {
 		var str string
@@ -316,7 +359,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)

@@ -24,6 +24,17 @@
         <input type="radio" id="inp-desc" name="order" value="desc" checked><label for="inp-desc">Descending</label><br>
         <input type="radio" id="inp-asc" name="order" value="asc"><label for="inp-asc">Ascending</label><br>
         <input type="radio" id="inp-rand" name="order" value="random"><label for="inp-rand">Random</label><br>
+        <input type="radio" id="inp-score" name="order" value="score"><label for="inp-score">Score</label><br>
+	<br>
+	{{range $k, $v := .Mimes}}
+		<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
+	    <ul>
+		{{range $v}}
+			<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
+	    {{end}}
+	    </ul>
+	{{end}}
+	<br>
         <input type="submit" value="Search">
     </form>
 </div>
