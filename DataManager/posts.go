@@ -548,7 +548,7 @@ func (p *Post) Delete(q querier) error {
 	totalPosts = 0
 
 	tc := TagCollector{}
-	if err = tc.GetFromPost(q, *p); err != nil {
+	if err = tc.GetFromPost(q, p); err != nil {
 		log.Print(err)
 		return err
 	}
@@ -572,7 +572,7 @@ func (p *Post) UnDelete(q querier) error {
 	totalPosts = 0
 
 	tc := TagCollector{}
-	if err = tc.GetFromPost(q, *p); err != nil {
+	if err = tc.GetFromPost(q, p); err != nil {
 		log.Print(err)
 		return err
 	}
@@ -1284,7 +1284,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.pl.RLock()
 	for _, post := range pc.posts[0] {
 		var ptc TagCollector
-		err := ptc.GetFromPost(DB, *post)
+		err := ptc.GetFromPost(DB, post)
 		if err != nil {
 			continue
 		}

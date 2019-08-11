@@ -428,7 +428,7 @@ func (tc *TagCollector) Total() int {
 	return total
 }
 
-func (tc *TagCollector) GetFromPost(q querier, p Post) error {
+func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 	if p.QID(q) == 0 {
 		return errors.New("post invalid")
 	}

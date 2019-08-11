@@ -167,9 +167,13 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Voted = pp.User.Voted(DM.DB, p)
 
+	dup := DM.NewDuplicate()
+	dup.Post = p
+	dp := dup.BestPost(DM.DB)
+
 	var tc DM.TagCollector
-	//err = tc.GetPostTags(DM.DB, p)
-	err = tc.GetFromPost(DM.DB, *p)
+
+	err = tc.GetFromPost(DM.DB, dp)
 	if err != nil {
 		log.Print(err)
 	}
@@ -189,7 +193,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Comics = p.Comics(DM.DB)
+	pp.Comics = dp.Comics(DM.DB)
 	for _, c := range pp.Comics {
 		c.QID(DM.DB)
 		c.QTitle(DM.DB)

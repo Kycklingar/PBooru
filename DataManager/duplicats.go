@@ -213,7 +213,7 @@ func (d *Duplicate) Save() error {
 
 		// Collect all tags from all posts in this duplicate and add them to the superior post
 		var tc TagCollector
-		err := tc.GetFromPost(tx, *p)
+		err := tc.GetFromPost(tx, p)
 		if err != nil {
 			log.Print(err)
 			return txError(tx, err)
