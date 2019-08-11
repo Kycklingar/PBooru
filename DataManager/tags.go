@@ -25,11 +25,18 @@ type Tag struct {
 	Count     int
 }
 
+//var tagCacheLock sync.RWMutex
+
 func CachedTag(t *Tag) *Tag {
+	//tagCacheLock.RLock()
 	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
+		//tagCacheLock.RUnlock()
 		return ct.(*Tag)
 	}
+	//tagCacheLock.RUnlock()
+	//tagCacheLock.Lock()
 	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+	//tagCacheLock.Unlock()
 	return t
 }
 
@@ -64,7 +71,7 @@ func (t *Tag) QTag(q querier) string {
 	if t.ID == 0 {
 		return ""
 	}
-	err := q.QueryRow("SELECT tag, nspace FROM tags JOIN namespaces ON namespaces.id = tags.namespace_id WHERE tags.id=$1", t.ID).Scan(&t.Tag, &t.Namespace.Namespace)
+	err := q.QueryRow("SELECT tag FROM tags WHERE tags.id=$1", t.ID).Scan(&t.Tag)
 	if err != nil {
 		log.Print(err)
 		return ""
@@ -84,14 +91,7 @@ func (t *Tag) QNamespace(q querier) *Namespace {
 		}
 	}
 
-	//fmt.Print("NSPID ", t.Namespace.ID)
-	if n := C.Cache.Get("NSPID", strconv.Itoa(t.Namespace.ID)); n != nil {
-		t.Namespace = n.(*Namespace)
-		//fmt.Println("Got")
-	} else {
-		C.Cache.Set("NSPID", strconv.Itoa(t.Namespace.ID), t.Namespace)
-		//fmt.Println("Gottn't")
-	}
+	t.Namespace = CachedNamespace(t.Namespace)
 
 	return t.Namespace
 }
@@ -399,7 +399,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) Get(limit, offset int) error {
-	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags ORDER BY id LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		return err
 	}
@@ -528,7 +528,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 	var ntc TagCollector
 	for _, tag := range tc.Tags {
-		if c := C.Cache.Get("ST", tag.QNamespace(q).QNamespace(q)+":"+tag.QTag(q)); c != nil {
+		if c := C.Cache.Get("ST", tag.Namespace.Namespace+":"+tag.Tag); c != nil {
 			//fmt.Println("Cache ST")
 			switch m := c.(type) {
 			case []*Tag:
@@ -541,10 +541,10 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 
 		var rows *sql.Rows
 		var err error
-		if tag.QNamespace(q).QNamespace(q) == "none" {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+		if tag.Namespace.Namespace == "none" {
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
 		} else {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.Namespace.QID(q), "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
 		}
 		if err != nil {
 			log.Print(err)
@@ -565,7 +565,7 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 			newTags = append(newTags, t)
 		}
 		rows.Close()
-		C.Cache.Set("ST", tag.QNamespace(q).QNamespace(q)+":"+tag.QTag(q), newTags)
+		C.Cache.Set("ST", tag.Namespace.Namespace+":"+tag.Tag, newTags)
 		ntc.Tags = append(ntc.Tags, newTags...)
 	}
 	return ntc

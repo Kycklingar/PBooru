@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
@@ -174,9 +175,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, tag := range tc.Tags {
-		tag.QTag(DM.DB)
-		tag.QCount(DM.DB)
-		tag.QNamespace(DM.DB).QNamespace(DM.DB)
+	      tag.QTag(DM.DB)
+	      tag.QCount(DM.DB)
+	      tag.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
 	pp.Sidebar.Tags = tc.Tags
@@ -217,6 +218,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sortTags(pp.Sidebar.Tags)
+
 	pp.Dups = p.Duplicate()
 	pp.Dups.QID(DM.DB)
 	for _, p := range pp.Dups.QPosts(DM.DB) {
@@ -228,6 +231,27 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func sortTags(tags []*DM.Tag) {
+	for i := 0; i < len(tags); i++ {
+		for j := len(tags) - 1; j > i; j-- {
+			tag1 := tags[i].Namespace.Namespace + ":" + tags[i].Tag
+			tag2 := tags[j].Namespace.Namespace + ":" + tags[j].Tag
+			if tags[i].Namespace.Namespace == "none" {
+				tag1 = tags[i].Tag
+			}
+			if tags[j].Namespace.Namespace == "none" {
+				tag2 = tags[j].Tag
+			}
+
+			if strings.Compare(tag1, tag2) == 1 {
+				tmp := tags[i]
+				tags[i] = tags[j]
+				tags[j] = tmp
+			}
+		}
+	}
 }
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -389,7 +413,8 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tc.Parse(tagString)
 
 	for _, t := range tc.SuggestedTags(DM.DB).Tags {
-		t.Namespace.QNamespace(DM.DB)
+		t.QTag(DM.DB)
+		t.QNamespace(DM.DB).QNamespace(DM.DB)
 		p.SuggestedTags = append(p.SuggestedTags, t)
 	}
 
@@ -400,7 +425,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		//p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
 		tag.QTag(DM.DB)
 		tag.QCount(DM.DB)
-		tag.Namespace.QNamespace(DM.DB)
+		tag.QNamespace(DM.DB).QNamespace(DM.DB)
 
 		//fmt.Println(tag.Tag, tag.Namespace)
 

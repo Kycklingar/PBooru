@@ -14,6 +14,27 @@ func NewNamespace() *Namespace {
 	return &Namespace{}
 }
 
+//var namespaceCacheLock sync.RWMutex
+
+func CachedNamespace(n *Namespace) *Namespace {
+	if n.ID <= 0 {
+		return n
+	}
+	//namespaceCacheLock.RLock()
+	if cn := C.Cache.Get("NSPID", strconv.Itoa(n.ID)); cn != nil {
+		//fmt.Println("Got cached namespace: ", cn.(*Namespace))
+		//namespaceCacheLock.RUnlock()
+		return cn.(*Namespace)
+	}
+
+	//namespaceCacheLock.RUnlock()
+	//namespaceCacheLock.Lock()
+	//fmt.Println("Set namespace cache: ", n)
+	C.Cache.Set("NSPID", strconv.Itoa(n.ID), n)
+	//namespaceCacheLock.Unlock()
+	return n
+}
+
 type Namespace struct {
 	ID        int
 	Namespace string
@@ -61,7 +82,7 @@ func (n *Namespace) QNamespace(q querier) string {
 		return ""
 	}
 
-	//fmt.Println("namespace queried")
+	//fmt.Println("namespace queried", n)
 
 	//if t := C.Cache.Get("NSP", n.Namespace); t != nil {
 	//	if ns, ok := t.(*Namespace); ok {
@@ -73,14 +94,6 @@ func (n *Namespace) QNamespace(q querier) string {
 	//}
 
 	return n.Namespace
-}
-
-func CachedNamespace(n *Namespace) *Namespace {
-	if cn := C.Cache.Get("NSPID", strconv.Itoa(n.ID)); cn != nil {
-		return cn.(*Namespace)
-	}
-	C.Cache.Set("NSPID", strconv.Itoa(n.ID), n)
-	return n
 }
 
 func (n *Namespace) GetCache() bool {

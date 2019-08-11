@@ -64,6 +64,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, t := range tc.Tags {
+			t.QTag(DM.DB)
 			t.QNamespace(DM.DB).QNamespace(DM.DB)
 		}
 

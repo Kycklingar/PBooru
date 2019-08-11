@@ -1337,7 +1337,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	}
 	for i := 0; i < arrLimit; i++ {
 		tag := countMap[i].tag
-		tag.QNamespace(DB).QNamespace(DB)
+		//tag.QNamespace(DB).QNamespace(DB)
 		pc.tags = append(pc.tags, tag)
 	}
 
