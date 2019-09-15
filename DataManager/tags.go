@@ -3,6 +3,7 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -24,11 +25,18 @@ type Tag struct {
 	Count     int
 }
 
+//var tagCacheLock sync.RWMutex
+
 func CachedTag(t *Tag) *Tag {
+	//tagCacheLock.RLock()
 	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
+		//tagCacheLock.RUnlock()
 		return ct.(*Tag)
 	}
+	//tagCacheLock.RUnlock()
+	//tagCacheLock.Lock()
 	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+	//tagCacheLock.Unlock()
 	return t
 }
 
@@ -63,7 +71,7 @@ func (t *Tag) QTag(q querier) string {
 	if t.ID == 0 {
 		return ""
 	}
-	err := q.QueryRow("SELECT tag, nspace FROM tags JOIN namespaces ON namespaces.id = tags.namespace_id WHERE tags.id=$1", t.ID).Scan(&t.Tag, &t.Namespace.Namespace)
+	err := q.QueryRow("SELECT tag FROM tags WHERE tags.id=$1", t.ID).Scan(&t.Tag)
 	if err != nil {
 		log.Print(err)
 		return ""
@@ -75,12 +83,15 @@ func (t *Tag) QNamespace(q querier) *Namespace {
 	if t.Namespace.QID(q) != 0 {
 		return t.Namespace
 	}
-	if t.QID(q) != 0 {
+
+	if t.QID(q) != 0 && t.Namespace.ID == 0 {
 		err := q.QueryRow("SELECT namespace_id FROM tags WHERE id=$1", t.ID).Scan(&t.Namespace.ID)
 		if err != nil {
 			log.Print(err)
 		}
 	}
+
+	t.Namespace = CachedNamespace(t.Namespace)
 
 	return t.Namespace
 }
@@ -109,7 +120,7 @@ func (t *Tag) Save(q querier) error {
 	}
 
 	if t.Tag == "" {
-		return errors.New("tag: not enough arguments")
+		return errors.New(fmt.Sprintf("tag: not enough arguments. Expected Tag got '%s'", t.Tag))
 	}
 
 	if t.Namespace.QID(q) == 0 {
@@ -196,6 +207,73 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 	resetCacheTag(parentID)
 	resetCacheTag(childID)
 	return nil
+}
+
+func (t *Tag) Parents(q querier) []*Tag {
+	if t.QID(q) <= 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", t.QID(q))
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return nil
+	}
+	defer rows.Close()
+
+	var tags []*Tag
+	for rows.Next() {
+		nt := NewTag()
+		err = rows.Scan(&nt.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		tags = append(tags, nt)
+	}
+
+	if rows.Err() != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return tags
+}
+
+func (t *Tag) Children(q querier) []*Tag {
+	if t.QID(q) <= 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT child_id FROM parent_tags WHERE parent_id = $1", t.QID(q))
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return nil
+	}
+	defer rows.Close()
+
+	var tags []*Tag
+	for rows.Next() {
+		nt := NewTag()
+		err = rows.Scan(&nt.ID)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+
+		tags = append(tags, nt)
+	}
+
+	if rows.Err() != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return tags
 }
 
 type TagCollector struct {
@@ -321,7 +399,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) Get(limit, offset int) error {
-	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags ORDER BY id LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		return err
 	}
@@ -333,6 +411,8 @@ func (tc *TagCollector) Get(limit, offset int) error {
 		if err != nil {
 			return err
 		}
+		tag = CachedTag(tag)
+		tag.Namespace = CachedNamespace(tag.Namespace)
 		tc.Tags = append(tc.Tags, tag)
 	}
 	err = rows.Err()
@@ -348,7 +428,7 @@ func (tc *TagCollector) Total() int {
 	return total
 }
 
-func (tc *TagCollector) GetFromPost(q querier, p Post) error {
+func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 	if p.QID(q) == 0 {
 		return errors.New("post invalid")
 	}
@@ -365,6 +445,7 @@ func (tc *TagCollector) GetFromPost(q querier, p Post) error {
 		if err != nil {
 			return err
 		}
+		tag = CachedTag(tag)
 		tc.Tags = append(tc.Tags, tag)
 	}
 	return rows.Err()
@@ -447,7 +528,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 	var ntc TagCollector
 	for _, tag := range tc.Tags {
-		if c := C.Cache.Get("ST", tag.QNamespace(q).QNamespace(q)+":"+tag.QTag(q)); c != nil {
+		if c := C.Cache.Get("ST", tag.Namespace.Namespace+":"+tag.Tag); c != nil {
 			//fmt.Println("Cache ST")
 			switch m := c.(type) {
 			case []*Tag:
@@ -460,10 +541,10 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 
 		var rows *sql.Rows
 		var err error
-		if tag.QNamespace(q).QNamespace(q) == "none" {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE tag LIKE($1) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+		if tag.Namespace.Namespace == "none" {
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
 		} else {
-			rows, err = q.Query("SELECT tag, namespace_id FROM tags WHERE namespace_id=$1 AND tag LIKE($2) ORDER BY count DESC LIMIT 10", tag.QNamespace(q).QID(q), "%"+strings.Replace(tag.QTag(q), "%", "\\%", -1)+"%")
+			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.Namespace.QID(q), "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
 		}
 		if err != nil {
 			log.Print(err)
@@ -473,16 +554,18 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		for rows.Next() {
 			t := NewTag()
 			//var cnt int
-			err = rows.Scan(&t.Tag, &t.Namespace.ID)
+			err = rows.Scan(&t.ID, &t.Tag, &t.Namespace.ID)
 			if err != nil {
 				log.Print(err)
 				break
 			}
+			t = CachedTag(t)
+			t.Namespace = CachedNamespace(t.Namespace)
 			//fmt.Println(cnt)
 			newTags = append(newTags, t)
 		}
 		rows.Close()
-		C.Cache.Set("ST", tag.QNamespace(q).QNamespace(q)+":"+tag.QTag(q), newTags)
+		C.Cache.Set("ST", tag.Namespace.Namespace+":"+tag.Tag, newTags)
 		ntc.Tags = append(ntc.Tags, newTags...)
 	}
 	return ntc

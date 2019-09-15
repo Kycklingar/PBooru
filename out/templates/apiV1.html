@@ -200,7 +200,23 @@
 				</td>
                                 <td>String</td>
                                 <td>No</td>
-				<td>Possible values: "asc", "desc", "random"<br>Default: "desc"</td>
+				<td>Possible values: "asc", "desc", "random", "score"<br>Default: "desc"</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>mime-type</b>
+				</td>
+                                <td>String</td>
+                                <td>No</td>
+				<td>Example values: "image", "video"</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <b>mime</b>
+				</td>
+                                <td>String</td>
+                                <td>No</td>
+				<td>Example values: "png", "gif", "mp4"</td>
                             </tr>
 			    <tr>
 			    	<td>
@@ -247,6 +263,8 @@
                             <li>
                                 /api/v1/posts?tags=example:tag,another:tag&offset=2
                             </li>
+			    <li>
+			    	/api/v1/posts?mime-type=video&mime=png&mime=gif
                         </ul>
                     </ul>
                 </div>

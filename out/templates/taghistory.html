@@ -2,19 +2,31 @@
 
 <div class="text-panel">
     <h3>Tag History</h3>
-        {{range .History}}
-            <h4>{{.User.Name}} - {{.Timestamp}}</h4>
-            <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                <img style="max-width:100px;max-height:100px;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 100}}">
-            </a>
-            <table>    
-            {{range .ETags}}
-                <tr>
-                    <td>{{if .Direction}}+{{else}}-{{end}}{{template "tagSpan" .Tag}}</td>
-                </tr>
-            {{end}}
-            </table>
-        {{end}}
+    	{{with .History}}
+        	{{range .}}
+        	    <h4>{{.User.Name}} - {{.Timestamp}}</h4>
+        	    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+        	        <img style="max-width:100px;max-height:100px;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 100}}">
+        	    </a>
+        	    <table>    
+        	    {{range .ETags}}
+        	        <tr>
+        	            <td>{{if .Direction}}+{{else}}-{{end}}{{template "tagSpan" .Tag}}</td>
+        	        </tr>
+        	    {{end}}
+        	    </table>
+		    {{if $.User}}
+		    	{{if $.User.Flag.Delete}}
+		    	<form action="/taghistory/reverse/" method="POST">
+		    	    <input type="hidden" name="taghistory-id" value="{{.ID}}">
+		    	    <input type="submit" value="Reverse">
+		    	</form>
+		    	{{end}}
+		    {{end}}
+        	{{end}}
+	{{else}}
+		<h2>Nothing Here!</h2>
+	{{end}}
 </div>
 
 <div class="nolink" id="pageinator">

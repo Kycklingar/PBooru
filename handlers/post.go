@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
@@ -102,6 +103,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 
 	var pp Postpage
+	pp.Sidebar.Mimes = make(map[string][]*DM.Mime)
+	for _, mime := range DM.Mimes {
+		pp.Sidebar.Mimes[mime.Type] = append(pp.Sidebar.Mimes[mime.Type], mime)
+	}
 	p := DM.NewPost()
 
 	pp.User, pp.UserInfo = getUser(w, r)
@@ -162,10 +167,21 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Voted = pp.User.Voted(DM.DB, p)
 
+	dup := DM.NewDuplicate()
+	dup.Post = p
+	dp := dup.BestPost(DM.DB)
+
 	var tc DM.TagCollector
-	err = tc.GetPostTags(DM.DB, p)
+
+	err = tc.GetFromPost(DM.DB, dp)
 	if err != nil {
 		log.Print(err)
+	}
+
+	for _, tag := range tc.Tags {
+	      tag.QTag(DM.DB)
+	      tag.QCount(DM.DB)
+	      tag.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
 	pp.Sidebar.Tags = tc.Tags
@@ -177,7 +193,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Comics = p.Comics(DM.DB)
+	pp.Comics = dp.Comics(DM.DB)
 	for _, c := range pp.Comics {
 		c.QID(DM.DB)
 		c.QTitle(DM.DB)
@@ -206,6 +222,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sortTags(pp.Sidebar.Tags)
+
 	pp.Dups = p.Duplicate()
 	pp.Dups.QID(DM.DB)
 	for _, p := range pp.Dups.QPosts(DM.DB) {
@@ -217,6 +235,27 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func sortTags(tags []*DM.Tag) {
+	for i := 0; i < len(tags); i++ {
+		for j := len(tags) - 1; j > i; j-- {
+			tag1 := tags[i].Namespace.Namespace + ":" + tags[i].Tag
+			tag2 := tags[j].Namespace.Namespace + ":" + tags[j].Tag
+			if tags[i].Namespace.Namespace == "none" {
+				tag1 = tags[i].Tag
+			}
+			if tags[j].Namespace.Namespace == "none" {
+				tag2 = tags[j].Tag
+			}
+
+			if strings.Compare(tag1, tag2) == 1 {
+				tmp := tags[i]
+				tags[i] = tags[j]
+				tags[j] = tmp
+			}
+		}
+	}
 }
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +286,7 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	var p PostsPage
+	p.Sidebar.Mimes = make(map[string][]*DM.Mime)
 
 	bm := benchmark.Begin()
 
@@ -275,6 +315,36 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
 
+	for _, mime := range DM.Mimes {
+		p.Sidebar.Mimes[mime.Type] = append(p.Sidebar.Mimes[mime.Type], mime)
+	}
+
+	mimeGroups := r.Form["mime-type"]
+
+	mimeIDs := DM.MimeIDsFromType(mimeGroups)
+
+	mimes := r.Form["mime"]
+	for _, mime := range mimes {
+		id, err := strconv.Atoi(mime)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		contains := func(s []int, i int) bool {
+			for _, x := range s {
+				if x == i {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		if !contains(mimeIDs, id) {
+			mimeIDs = append(mimeIDs, id)
+		}
+	}
+
 	type arg struct {
 		name  string
 		value string
@@ -284,6 +354,14 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	args = append(args, arg{"filter", p.Sidebar.Filter})
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
+
+	for _, group := range mimeGroups {
+		args = append(args, arg{"mime-type", group})
+	}
+
+	for _, mimeID := range mimes {
+		args = append(args, arg{"mime", mimeID})
+	}
 
 	argString := func(arguments []arg) string {
 		var str string
@@ -316,7 +394,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order)
+	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
@@ -339,17 +417,23 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tc.Parse(tagString)
 
 	for _, t := range tc.SuggestedTags(DM.DB).Tags {
-		t.Namespace.QNamespace(DM.DB)
+		t.QTag(DM.DB)
+		t.QNamespace(DM.DB).QNamespace(DM.DB)
 		p.SuggestedTags = append(p.SuggestedTags, t)
 	}
 
-	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
-	for i := range p.Sidebar.Tags {
-		p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
-		p.Sidebar.Tags[i].QTag(DM.DB)
-		p.Sidebar.Tags[i].QCount(DM.DB)
-		p.Sidebar.Tags[i].QNamespace(DM.DB).SetCache()
-		p.Sidebar.Tags[i].QNamespace(DM.DB).QNamespace(DM.DB)
+	//p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
+	sidebarTags := pc.Tags(maxTagsPerPage)
+	p.Sidebar.Tags = make([]*DM.Tag, len(sidebarTags))
+	for i, tag := range sidebarTags {
+		//p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
+		tag.QTag(DM.DB)
+		tag.QCount(DM.DB)
+		tag.QNamespace(DM.DB).QNamespace(DM.DB)
+
+		//fmt.Println(tag.Tag, tag.Namespace)
+
+		p.Sidebar.Tags[i] = tag
 	}
 
 	bm.Split("Retrieved and appended tags")
@@ -455,6 +539,58 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	u, ui := getUser(w, r)
+	u = DM.CachedUser(u)
+
+	u.QFlag(DM.DB)
+
+	spl := splitURI(r.URL.Path)
+	if len(spl) < 3 {
+		notFoundHandler(w, r)
+		return
+	}
+
+	id, err := strconv.Atoi(spl[2])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	const limit = 10
+	page, _ := strconv.Atoi("page")
+
+	post := DM.NewPost()
+	post.ID = id
+
+	post = DM.CachedPost(post)
+
+	totalEdits, err := post.QTagHistoryCount(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	ths, err := post.TagHistory(DM.DB, limit, page*limit)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var thp TagHistoryPage
+	thp.Base.Title = fmt.Sprint("Tag History for ", post.ID)
+	thp.History = ths
+	thp.UserInfo = ui
+	thp.Pageinator = pageinate(totalEdits, limit, page, 10)
+	thp.User = u
+
+	preloadTagHistory(thp.History)
+
+	renderTemplate(w, "taghistory", thp)
 }
 
 func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {

@@ -24,6 +24,7 @@ func NewPost() *Post {
 	p.Mime = NewMime()
 	p.Deleted = -1
 	p.Score = -1
+	p.editCount = -1
 	return &p
 }
 
@@ -56,6 +57,8 @@ type Post struct {
 	Score      int
 
 	description *string
+
+	editCount int
 }
 
 func (p *Post) QID(q querier) int {
@@ -267,6 +270,50 @@ func (p *Post) Vote(q querier, u *User) error {
 	return nil
 }
 
+func (p *Post) QTagHistoryCount(q querier) (int, error) {
+	if p.editCount >= 0 {
+		return p.editCount, nil
+	}
+
+	if p.QID(q) <= 0 {
+		return 0, errors.New("no id specified")
+	}
+
+	err := q.QueryRow("SELECT count(*) FROM tag_history WHERE post_id = $1", p.ID).Scan(&p.editCount)
+
+	return p.editCount, err
+}
+
+func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
+	if p.QID(q) <= 0 {
+		return nil, errors.New("no post id specified")
+	}
+	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ths []*TagHistory
+
+	for rows.Next() {
+		var th = NewTagHistory()
+		if err = rows.Scan(&th.ID, &th.User.ID, &th.Timestamp); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		th.Post = p
+
+		ths = append(ths, th)
+	}
+
+	err = rows.Err()
+
+	return ths, err
+}
+
 func (p *Post) SizePretty() string {
 	const unit = 1000
 	if p.Size < unit {
@@ -321,7 +368,6 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 	var tx *sql.Tx
 
 	if p.QID(DB) == 0 {
-
 		if CFG.UseMFS {
 			file.Seek(0, 0)
 			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
@@ -502,7 +548,7 @@ func (p *Post) Delete(q querier) error {
 	totalPosts = 0
 
 	tc := TagCollector{}
-	if err = tc.GetFromPost(q, *p); err != nil {
+	if err = tc.GetFromPost(q, p); err != nil {
 		log.Print(err)
 		return err
 	}
@@ -526,7 +572,7 @@ func (p *Post) UnDelete(q querier) error {
 	totalPosts = 0
 
 	tc := TagCollector{}
-	if err = tc.GetFromPost(q, *p); err != nil {
+	if err = tc.GetFromPost(q, p); err != nil {
 		log.Print(err)
 		return err
 	}
@@ -572,14 +618,26 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 			}
 		}
 
+		for _, pa := range b.Parents(q) {
+			var tmp int
+			err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), pa.QID(q)).Scan(&tmp)
+			if err == nil && tmp > 0 {
+				continue // Tag is already on this post
+			} else if err != nil && err != sql.ErrNoRows {
+				log.Println(err)
+				return err
+			}
+
+			at = append(at, pa)
+		}
+
 		var tmp int
-		err = q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
+		err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
 		if err == nil && tmp > 0 {
 			continue // Tag is already on this post
 		}
 
 		at = append(at, b)
-
 	}
 
 	var rt []*Tag
@@ -628,7 +686,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 	addTags.AddToPost(q, p)
 
 	for _, tag := range rt {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $1, $3)", historyID, tag.QID(q), -1)
+		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
 		if err != nil {
 			return err
 		}
@@ -647,120 +705,18 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) err
 }
 
 func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
-	var addTags TagCollector
-	err := addTags.Parse(tagStrAdd)
-	if err != nil {
-		//log.Print(err)
-	}
-	var remTags TagCollector
-	err = remTags.Parse(tagStrRem)
-	if err != nil {
-		//log.Print(err)
-	}
-
-	if len(addTags.Tags) < 1 && len(remTags.Tags) < 1 {
-		return errors.New("no tags in edit")
-	}
-
 	tx, err := DB.Begin()
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-	q := tx
-	//p.setQ(tx)
 
-	var at []*Tag
-	for _, t := range addTags.Tags {
-		a := NewAlias()
-		a.Tag = t
-		//a.setQ(tx)
-		b := a.QTo(tx)
-		if b.QID(tx) == 0 {
-			b = t
-		}
-
-		if b.QID(tx) == 0 {
-			err = b.Save(tx)
-			if err != nil {
-				log.Print(err)
-				return txError(tx, err)
-			}
-		}
-
-		var tmp int
-		err = tx.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
-		if err == nil && tmp > 0 {
-			continue // Tag is already on this post
-		}
-
-		at = append(at, b)
-
-	}
-
-	var rt []*Tag
-	for _, t := range remTags.Tags {
-		a := NewAlias()
-		a.Tag = t
-		b := a.QTo(tx)
-		if b.QID(tx) == 0 {
-			b = t
-		}
-
-		if b.QID(tx) == 0 {
-			continue
-		}
-
-		var exist int
-		err := tx.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
-		if err != nil || exist == 0 {
-			// Tag does not exist on this post
-			continue
-		}
-
-		rt = append(rt, b)
-	}
-
-	if len(at) < 1 && len(rt) < 1 {
-		return txError(tx, errors.New("no tags in edit"))
-	}
-
-	addTags.Tags = at
-	remTags.Tags = rt
-	var historyID int
-	err = tx.QueryRow("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP) RETURNING id", user.QID(q), p.QID(q)).Scan(&historyID)
-	if err != nil {
+	if err = p.EditTagsQ(tx, user, tagStrAdd, tagStrRem); err != nil {
 		log.Println(err)
 		return txError(tx, err)
 	}
 
-	for _, tag := range at {
-		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
-		if err != nil {
-			log.Println(err)
-			return txError(tx, err)
-		}
-	}
-	addTags.AddToPost(tx, p)
-
-	for _, tag := range rt {
-		_, err = tx.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
-		if err != nil {
-			return txError(tx, err)
-		}
-	}
-	err = remTags.RemoveFromPost(tx, p)
-	if err != nil {
-		log.Print(err)
-		return txError(tx, err)
-	}
-
-	err = tx.Commit()
-
-	// p.setQ(nil)
-
-	C.Cache.Purge("TC", strconv.Itoa(p.QID(DB)))
-
-	return err
+	return tx.Commit()
 }
 
 func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
@@ -893,7 +849,8 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
-	order string
+	mimeIDs []int
+	order   string
 
 	tagLock sync.Mutex
 	pl      sync.RWMutex
@@ -911,9 +868,7 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string) error {
-	//var tagIDs []int
-
+func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, mimeIDs []int) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -1019,23 +974,15 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 		pc.order = "DESC"
 	}
 
-	//	if t := C.Cache.Get("PC", pc.idStr()); t != nil {
-	//		tmp, ok := t.(*PostCollector)
-	//		if ok {
-	//			*pc = *tmp
-	//			// pc.posts = tmp.posts
-	//			// pc.id = tmp.ID
-	//			// pc.TotalPosts = tmp.TotalPosts
-	//			// pc.tags = tmp.tags
-	//			// if ok2 := tmp.GetW(ulimit, uoffset); ok2 != nil {
-	//			// 	return nil
-	//			// }
-	//		}
-	//	} else {
-	//		C.Cache.Set("PC", pc.idStr(), pc)
-	//	}
+	// Check if the mime id exist in the db
+	for _, mime := range Mimes {
+		if in(mime.ID, mimeIDs) {
+			pc.mimeIDs = append(pc.mimeIDs, mime.ID)
+		}
+	}
+	sort.Ints(pc.mimeIDs)
 
-	return nil //pc.search(10, 0)
+	return nil
 }
 
 func (pc *PostCollector) idStr() string {
@@ -1059,9 +1006,15 @@ func (pc *PostCollector) idStr() string {
 		str = fmt.Sprint(str+" ", i)
 	}
 
-	str += pc.order
+	str += " -"
+	for _, mimeID := range pc.mimeIDs {
+		str = fmt.Sprint(str+" ", mimeID)
+	}
+
+	str += " - " + pc.order
+
 	str = strings.TrimSpace(str)
-	// fmt.Println("PCSTR", str)
+	//fmt.Println("PCSTR", str)
 	return str
 }
 
@@ -1092,7 +1045,7 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	// 	return fmt.Sprintf(pre, str)
 	// }
 
-	//fmt.Println(rand("test %s", pc.order))
+	//fmt.Println(orderF("test %s", pc.order))
 
 	//pc.id = tagString
 
@@ -1108,6 +1061,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	if ok := pc.GetW(ulimit, uoffset); ok != nil {
 		return nil
 	}
+
+	var mimeStr string
+	if len(pc.mimeIDs) > 0 {
+		mimeStr = "mime_id IN("
+		for _, m := range pc.mimeIDs {
+			mimeStr += fmt.Sprint(m, ",")
+		}
+
+		mimeStr = mimeStr[:len(mimeStr)-1] + ")"
+	}
+
+	//fmt.Println(mimeStr)
 
 	if len(pc.id) > 0 {
 		var innerStr string
@@ -1154,14 +1119,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		}
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, orderF("p1.", pc.order))
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND p1." + mimeStr
+		}
+
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1.", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
 			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Print(err)
@@ -1206,14 +1175,18 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
 		innerStr += blt + endStr
 
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, orderF("", pc.order))
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND p1." + mimeStr
+		}
+
+		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("", pc.order))
 
 		//fmt.Println(str)
 
 		if pc.TotalPosts <= 0 {
 			c := pc.ccGet()
 			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s AND p1.deleted = false", innerStr)
+				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
 				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Print(err)
@@ -1232,11 +1205,31 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			return err
 		}
 	} else {
-		pc.TotalPosts = GetTotalPosts()
+		if len(pc.mimeIDs) > 0 {
+			mimeStr = "AND " + mimeStr
+
+			if pc.TotalPosts <= 0 {
+				c := pc.ccGet()
+				if c < 0 {
+					count := fmt.Sprintf("SELECT count(*) FROM posts WHERE deleted = false %s", mimeStr)
+
+					err = DB.QueryRow(count).Scan(&pc.TotalPosts)
+					if err != nil {
+						log.Println(err)
+						return err
+					}
+					pc.ccSet(pc.TotalPosts)
+				} else {
+					pc.TotalPosts = c
+				}
+			}
+		} else {
+			pc.TotalPosts = GetTotalPosts()
+		}
 
 		var err error
 		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false ORDER BY %s LIMIT $1 OFFSET $2", orderF("", pc.order))
+		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false %s ORDER BY %s LIMIT $1 OFFSET $2", mimeStr, orderF("", pc.order))
 		rows, err = DB.Query(query, limit, offset)
 		if err != nil {
 			return err
@@ -1277,7 +1270,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 		return pc.tags
 	}
 	//fmt.Println(pc.id)
-	var allTagIds [][]int
+	var allTags []*Tag
 
 	if pc.idStr() == "-1" {
 		return nil
@@ -1291,38 +1284,33 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.pl.RLock()
 	for _, post := range pc.posts[0] {
 		var ptc TagCollector
-		err := ptc.GetFromPost(DB, *post)
+		err := ptc.GetFromPost(DB, post)
 		if err != nil {
 			continue
 		}
-		var ids []int
-		for _, tag := range ptc.Tags {
-			ids = append(ids, tag.QID(DB))
-		}
-		allTagIds = append(allTagIds, ids)
+		allTags = append(allTags, ptc.Tags...)
 	}
 	pc.pl.RUnlock()
 
 	type tagMap struct {
-		id    int
+		//id    int
+		tag   *Tag
 		count int
 	}
 
 	// Count all tags
-	var tagIDArr []tagMap
-	for _, idSet := range allTagIds {
-		for _, id := range idSet {
-			newID := true
-			for i, id2 := range tagIDArr {
-				if id == id2.id {
-					tagIDArr[i].count++
-					newID = false
-					break
-				}
+	var countMap []tagMap
+	for _, tag := range allTags {
+		newTag := true
+		for i, counted := range countMap {
+			if counted.tag == tag {
+				countMap[i].count++
+				newTag = false
+				break
 			}
-			if newID {
-				tagIDArr = append(tagIDArr, tagMap{id, 1})
-			}
+		}
+		if newTag {
+			countMap = append(countMap, tagMap{tag, 1})
 		}
 	}
 
@@ -1330,11 +1318,11 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	swapped := true
 	for swapped {
 		swapped = false
-		for i := 1; i < len(tagIDArr); i++ {
-			if tagIDArr[i-1].count < tagIDArr[i].count {
-				tmp := tagIDArr[i]
-				tagIDArr[i] = tagIDArr[i-1]
-				tagIDArr[i-1] = tmp
+		for i := 1; i < len(countMap); i++ {
+			if countMap[i-1].count < countMap[i].count {
+				tmp := countMap[i]
+				countMap[i] = countMap[i-1]
+				countMap[i-1] = tmp
 				swapped = true
 			}
 		}
@@ -1344,24 +1332,14 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.tags = nil
 	// Retrive and append the tags
 	arrLimit := maxTags
-	if len(tagIDArr) < arrLimit {
-		arrLimit = len(tagIDArr)
+	if len(countMap) < arrLimit {
+		arrLimit = len(countMap)
 	}
 	for i := 0; i < arrLimit; i++ {
-		t := NewTag()
-		t.SetID(tagIDArr[i].id)
-
-		pc.tags = append(pc.tags, t)
-		//p.Sidebar.Tags = append(p.Sidebar.Tags, tagstruct{Tag{t.Tag(), t.Namespace().Namespace()}, tagIDArr[i].count})
+		tag := countMap[i].tag
+		//tag.QNamespace(DB).QNamespace(DB)
+		pc.tags = append(pc.tags, tag)
 	}
-
-	// err = tx.Commit()
-	// if err != nil {
-	// 	log.Print(err)
-	// }
-	// tx = nil
-
-	//C.Cache.Set("PC", pc.idStr(), pc)
 
 	return pc.tags
 }

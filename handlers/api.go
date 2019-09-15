@@ -199,6 +199,32 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
+	mimeGroups := r.Form["mime-type"]
+
+	mimeIDs := DM.MimeIDsFromType(mimeGroups)
+
+	mimes := r.Form["mime"]
+	for _, mime := range mimes {
+		id, err := strconv.Atoi(mime)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		contains := func(s []int, i int) bool {
+			for _, x := range s {
+				if x == i {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		if !contains(mimeIDs, id) {
+			mimeIDs = append(mimeIDs, id)
+		}
+	}
+
 	var combineTags bool
 	if len(r.FormValue("combTagNamespace")) > 0 {
 		combineTags = true
@@ -212,7 +238,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagStr, filterStr, unlessStr, order)
+	err = pc.Get(tagStr, filterStr, unlessStr, order, mimeIDs)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)

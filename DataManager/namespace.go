@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"strconv"
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
@@ -11,6 +12,27 @@ import (
 
 func NewNamespace() *Namespace {
 	return &Namespace{}
+}
+
+//var namespaceCacheLock sync.RWMutex
+
+func CachedNamespace(n *Namespace) *Namespace {
+	if n.ID <= 0 {
+		return n
+	}
+	//namespaceCacheLock.RLock()
+	if cn := C.Cache.Get("NSPID", strconv.Itoa(n.ID)); cn != nil {
+		//fmt.Println("Got cached namespace: ", cn.(*Namespace))
+		//namespaceCacheLock.RUnlock()
+		return cn.(*Namespace)
+	}
+
+	//namespaceCacheLock.RUnlock()
+	//namespaceCacheLock.Lock()
+	//fmt.Println("Set namespace cache: ", n)
+	C.Cache.Set("NSPID", strconv.Itoa(n.ID), n)
+	//namespaceCacheLock.Unlock()
+	return n
 }
 
 type Namespace struct {
@@ -60,13 +82,16 @@ func (n *Namespace) QNamespace(q querier) string {
 		return ""
 	}
 
-	if t := C.Cache.Get("NSP", n.Namespace); t != nil {
-		if ns, ok := t.(*Namespace); ok {
-			*n = *ns
-		}
-	} else {
-		C.Cache.Set("NSP", n.Namespace, n)
-	}
+	//fmt.Println("namespace queried", n)
+
+	//if t := C.Cache.Get("NSP", n.Namespace); t != nil {
+	//	if ns, ok := t.(*Namespace); ok {
+	//		*n = *ns
+	//	}
+	//	return n.Namespace
+	//} else {
+	//	C.Cache.Set("NSP", n.Namespace, n)
+	//}
 
 	return n.Namespace
 }

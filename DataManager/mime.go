@@ -6,6 +6,41 @@ import (
 	"strings"
 )
 
+var Mimes []*Mime
+
+func MimeIDsFromType(mslice []string) []int {
+	var mimeIDs []int
+	for _, mtype := range mslice {
+		for _, mime := range Mimes {
+			if mtype == mime.Type {
+				mimeIDs = append(mimeIDs, mime.ID)
+			}
+		}
+	}
+	return mimeIDs
+}
+
+func cacheAllMimes() error {
+	rows, err := DB.Query("SELECT id, mime, type FROM mime_type")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m = NewMime()
+		err = rows.Scan(&m.ID, &m.Name, &m.Type)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		Mimes = append(Mimes, m)
+	}
+
+	return rows.Err()
+}
+
 func NewMime() *Mime {
 	return &Mime{}
 }
@@ -80,6 +115,8 @@ func (m *Mime) Save(q querier) error {
 	if err != nil {
 		return err
 	}
+
+	Mimes = append(Mimes, m)
 
 	return nil
 }
