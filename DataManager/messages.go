@@ -3,6 +3,7 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -13,13 +14,13 @@ type Message struct {
 	Recipient *User
 
 	Title string
-	Text string
+	Text  string
 
 	Date string
 }
 
-func NewMessage()Message {
-	return Message{Sender:NewUser(), Recipient:NewUser()}
+func NewMessage() Message {
+	return Message{Sender: NewUser(), Recipient: NewUser()}
 }
 
 func (m Message) Send() error {
@@ -40,10 +41,65 @@ func (m Message) Send() error {
 	return nil
 }
 
+func (m *Message) QText(q querier) error {
+	if m.ID <= 0 {
+		return errors.New("No message id")
+	}
+
+	if err := q.QueryRow("SELECT text FROM message message WHERE id = $1", m.ID).Scan(&m.Text); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *Message) QSender(q querier) error {
+	if m.ID <= 0 {
+		return errors.New("No message id")
+	}
+
+	return q.QueryRow("SELECT sender FROM message WHERE id = $1", m.ID).Scan(&m.Sender.ID)
+}
+
+func (m *Message) QRecipient(q querier) error {
+	if m.ID <= 0 {
+		return errors.New("No message id")
+	}
+
+	return q.QueryRow("SELECT recipient FROM message WHERE id = $1", m.ID).Scan(&m.Recipient.ID)
+}
+
+func (m *Message) SetRead(q querier) error {
+	if m.ID <= 0 {
+		return errors.New("No message id")
+	}
+	_, err := q.Exec("INSERT INTO messages_read (message_id) VALUES($1)", m.ID)
+	return err
+}
+
 type messages struct {
 	All    []Message
 	Unread []Message
 	Sent   []Message
+}
+
+func (m *messages) SetRead(q querier, msg *Message) error {
+	fmt.Println(len(m.Unread), m)
+	for i, _ := range m.Unread {
+		fmt.Println("Searching for:", msg.ID)
+		if m.Unread[i].ID == msg.ID {
+			if err := m.Unread[i].SetRead(q); err != nil {
+				return err
+			}
+			// Remove message from unread list
+			fmt.Println("Removing message", msg.ID)
+			m.Unread = append(m.Unread[:i], m.Unread[i+1:]...)
+			break
+		}
+	}
+
+	return nil
 }
 
 func (u *User) QUnreadMessages(q querier) error {
@@ -51,7 +107,7 @@ func (u *User) QUnreadMessages(q querier) error {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, sender, recipient, text, date FROM message m LEFT JOIN messages_read mr ON m.id = mr.message_id WHERE m.recipient = $1 AND mr.id IS NULL", u.ID)
+	rows, err := q.Query("SELECT id, sender, recipient, title, text, date FROM message m LEFT JOIN messages_read mr ON m.id = mr.message_id WHERE m.recipient = $1 AND mr.message_id IS NULL", u.ID)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -111,7 +167,7 @@ func buildMessages(rows *sql.Rows) ([]Message, error) {
 
 	for rows.Next() {
 		var m Message
-		m.Sender= NewUser()
+		m.Sender = NewUser()
 		m.Recipient = NewUser()
 
 		if err := rows.Scan(&m.ID, &m.Sender.ID, &m.Recipient.ID, &m.Title, &m.Text, &m.Date); err != nil {

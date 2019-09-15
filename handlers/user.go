@@ -44,6 +44,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		Profile     *DM.User
 		RecentPosts []*DM.Post
 		RecentVotes []*DM.Post
+		NewMessages int
 	}
 	var p = page{User: u, UserInfo: ui, Profile: profile}
 	u.QName(DM.DB)
@@ -64,6 +65,9 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		post.QThumbnails(DM.DB)
 		post.QDeleted(DM.DB)
 	}
+
+	p.User.QUnreadMessages(DM.DB)
+	p.NewMessages = len(p.User.Messages.Unread)
 
 	renderTemplate(w, "user", p)
 }

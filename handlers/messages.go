@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -44,6 +46,14 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	u.QUnreadMessages(DM.DB)
+	if err = u.Messages.SetRead(DM.DB, msg); err != nil {
+		log.Println(err)
+	}
+
+	msg.Sender.QID(DM.DB)
+	msg.Sender.QName(DM.DB)
+
 	renderTemplate(w, "message", msg)
 }
 
@@ -57,12 +67,29 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i, _ := range u.Messages.All{
+	for i, _ := range u.Messages.All {
 		u.Messages.All[i].Recipient.QName(DM.DB)
 		u.Messages.All[i].Sender.QName(DM.DB)
 	}
 
 	renderTemplate(w, "messages", u.Messages.All)
+}
+
+func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	u, _ := getUser(w, r)
+
+	if err := u.QUnreadMessages(DM.DB); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	for i, _ := range u.Messages.Unread {
+		u.Messages.Unread[i].Recipient.QName(DM.DB)
+		u.Messages.Unread[i].Sender.QName(DM.DB)
+	}
+
+	renderTemplate(w, "messages", u.Messages.Unread)
 }
 
 func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +102,7 @@ func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i, _ := range u.Messages.Sent{
+	for i, _ := range u.Messages.Sent {
 		u.Messages.Sent[i].Recipient.QName(DM.DB)
 		u.Messages.Sent[i].Sender.QName(DM.DB)
 	}
@@ -84,26 +111,6 @@ func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	var id int
-
-	recipient := DM.NewUser()
-
-
-	if id, err = strconv.Atoi(r.FormValue("recipient")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err = recipient.SetID(DM.DB, id); err != nil {
-		http.Error(w, "No recipient by that id", http.StatusBadRequest)
-		return
-	}
-
-	recipient = DM.CachedUser(recipient)
-	recipient.QName(DM.DB)
-
 	if r.Method == http.MethodPost {
 		u, _ := getUser(w, r)
 		var m = DM.NewMessage()
@@ -128,7 +135,69 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	type P struct {
 		Recipient *DM.User
+		Prefill   string
 	}
 
-	renderTemplate(w, "messages_write", P{recipient})
+	var p P
+
+	var err error
+	var id int
+
+	replyToID, _ := strconv.Atoi(r.FormValue("reply-to"))
+	if replyToID > 0 {
+		u, _ := getUser(w, r)
+		msg, err := getReply(u, replyToID)
+		if err != nil && err == msgInvalidReply {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if err != nil {
+			log.Println(err)
+			http.Error(w, ErrInternal, http.StatusInternalServerError)
+			return
+		}
+
+		p.Prefill = fmt.Sprintf("\n\n%s Said:\n%s", msg.Sender.Name, msg.Text)
+		p.Recipient = msg.Sender
+	} else {
+		recipient := DM.NewUser()
+		if id, err = strconv.Atoi(r.FormValue("recipient")); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err = recipient.SetID(DM.DB, id); err != nil {
+			http.Error(w, "No recipient by that id", http.StatusBadRequest)
+			return
+		}
+
+		recipient = DM.CachedUser(recipient)
+		recipient.QName(DM.DB)
+		p.Recipient = recipient
+	}
+
+	renderTemplate(w, "messages_write", p)
+}
+
+var msgInvalidReply = errors.New("You may only reply to messages sent to you!")
+
+func getReply(user *DM.User, messageID int) (DM.Message, error) {
+	msg := DM.NewMessage()
+	msg.ID = messageID
+	if err := msg.QText(DM.DB); err != nil {
+		log.Println(err)
+		return msg, err
+	}
+
+	msg.QRecipient(DM.DB)
+	msg.Recipient = DM.CachedUser(msg.Recipient)
+	if msg.Recipient.ID != user.ID {
+		return msg, msgInvalidReply
+	}
+
+	msg.QSender(DM.DB)
+	msg.Sender = DM.CachedUser(msg.Sender)
+
+	msg.Sender.QName(DM.DB)
+
+	return msg, nil
 }

@@ -1,6 +1,13 @@
 {{template "base"}}
 
 <div class="text-panel">
+	<div>
+		<h3><a href="/">All messages</a></h3>
+		<h3><b>New messages</b></h3>
+		<h3><a href="/">Read messages</a></h3>
+	</div>
+
+	{{define "messages"}}
 	<table>
 		<th>From</th>
 		<th>Subject</th>
@@ -13,6 +20,9 @@
 		</tr>
 		{{end}}
 	</table>
+	{{end}}
+
+	{{template "messages" .}}
 </div>
 
 {{template "baseEnd"}}

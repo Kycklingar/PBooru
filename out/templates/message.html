@@ -1,8 +1,10 @@
 {{template "base"}}
 
 <div class="message">
+	<div>From: <a href="/user/{{.Sender.ID}}/">{{.Sender.Name}}</a></div>
 	<h3>{{.Title}}</h3>
 	<p class="message-text">{{.Text}}</p>
+	<div><a href="/user/messages/new/?reply-to={{.ID}}">Reply</a></div>
 </div>
 
 {{template "baseEnd"}}
