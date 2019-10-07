@@ -1,0 +1,30 @@
+{{template "base"}}
+
+<div class="text-panel">
+	<div>
+		<h3><a href="/user/messages/">All messages</a>{{.AllMessagesCount}}</h3>
+		<h3><a href="/user/messages/new">New messages</a>{{.NewMessagesCount}}</h3>
+		<h3><a href="/user/messages/sent/">Sent Messages</a>{{.SentMessagesCount}}</h3>
+	</div>
+
+	{{define "messages"}}
+	<table>
+		<th>From</th>
+		<th>To</th>
+		<th>Subject</th>
+		<th>Date</th>
+		{{range .Messages}}
+		<tr>
+			<td><a href="/user/{{.Sender.ID}}">{{.Sender.Name}}</a></td>
+			<td><a href="/user/{{.Recipient.ID}}">{{.Recipient.Name}}</a></td>
+			<td><a href="/user/message/{{.ID}}">{{with .Title}}{{.}}{{else}}<i>No Subject</i>{{end}}</a></td>
+			<td>{{.Date}}</td>
+		</tr>
+		{{end}}
+	</table>
+	{{end}}
+
+	{{template "messages" .}}
+</div>
+
+{{template "baseEnd"}}

@@ -19,6 +19,11 @@ import (
 func NewUser() *User {
 	var u User
 	u.Session = &Session{}
+	u.Messages = &messages{}
+	u.Messages.All = nil
+	u.Messages.Sent = nil
+	u.Messages.Unread = nil
+
 	return &u
 }
 
@@ -44,6 +49,8 @@ type User struct {
 	Joined       time.Time
 	flag         *flag
 	Session      *Session
+
+	Messages *messages
 
 	editCount *int
 

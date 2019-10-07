@@ -179,9 +179,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, tag := range tc.Tags {
-	      tag.QTag(DM.DB)
-	      tag.QCount(DM.DB)
-	      tag.QNamespace(DM.DB).QNamespace(DM.DB)
+		tag.QTag(DM.DB)
+		tag.QCount(DM.DB)
+		tag.QNamespace(DM.DB).QNamespace(DM.DB)
 	}
 
 	pp.Sidebar.Tags = tc.Tags
