@@ -20,6 +20,13 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = u.QSentMessages(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	uri := splitURI(r.URL.Path)
 	if len(uri) < 3 {
 		http.Error(w, "No message id specified", http.StatusBadRequest)
@@ -41,10 +48,20 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+
+	if msg == nil {
+		for _, message := range u.Messages.Sent{
+			if message.ID == msgID {
+				msg = &message
+				break
+			}
+		}
+	}
 	if msg == nil {
 		http.Error(w, "Could not find message", http.StatusBadRequest)
 		return
 	}
+
 
 	u.QUnreadMessages(DM.DB)
 	if err = u.Messages.SetRead(DM.DB, msg); err != nil {
@@ -55,6 +72,14 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	msg.Sender.QName(DM.DB)
 
 	renderTemplate(w, "message", msg)
+}
+
+type messagesPage struct {
+	AllMessagesCount int
+	NewMessagesCount int
+	SentMessagesCount int
+
+	Messages []DM.Message
 }
 
 func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +97,14 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		u.Messages.All[i].Sender.QName(DM.DB)
 	}
 
-	renderTemplate(w, "messages", u.Messages.All)
+	var p = messagesPage{
+		AllMessagesCount: len(u.Messages.All),
+		NewMessagesCount: len(u.Messages.Unread),
+		SentMessagesCount: len(u.Messages.Sent),
+		Messages: u.Messages.All,
+	}
+
+	renderTemplate(w, "messages", p)
 }
 
 func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +121,14 @@ func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		u.Messages.Unread[i].Sender.QName(DM.DB)
 	}
 
-	renderTemplate(w, "messages", u.Messages.Unread)
+	var p = messagesPage{
+		AllMessagesCount: len(u.Messages.All),
+		NewMessagesCount: len(u.Messages.Unread),
+		SentMessagesCount: len(u.Messages.Sent),
+		Messages: u.Messages.Unread,
+	}
+
+	renderTemplate(w, "messages", p)
 }
 
 func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +146,14 @@ func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		u.Messages.Sent[i].Sender.QName(DM.DB)
 	}
 
-	renderTemplate(w, "messages", u.Messages.Sent)
+	var p = messagesPage{
+		AllMessagesCount: len(u.Messages.All),
+		NewMessagesCount: len(u.Messages.Unread),
+		SentMessagesCount: len(u.Messages.Sent),
+		Messages: u.Messages.Sent,
+	}
+
+	renderTemplate(w, "messages", p)
 }
 
 func sendMessageHandler(w http.ResponseWriter, r *http.Request) {

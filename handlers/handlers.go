@@ -259,6 +259,7 @@ func init() {
 	Handlers["/user/messages/"] = makeStatHandler(allMessagesHandler)
 	Handlers["/user/messages/sent/"] = makeStatHandler(sentMessagesHandler)
 	Handlers["/user/messages/new/"] = makeStatHandler(newMessagesHandler)
+	//Handlers["/user/messages/read/"] = makeStatHandler(readMessagesHandler)
 
 	Handlers["/login/"] = makeStatHandler(LoginHandler)
 	Handlers["/logout/"] = makeStatHandler(LogoutHandler)

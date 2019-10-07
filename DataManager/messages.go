@@ -107,7 +107,7 @@ func (u *User) QUnreadMessages(q querier) error {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, sender, recipient, title, text, date FROM message m LEFT JOIN messages_read mr ON m.id = mr.message_id WHERE m.recipient = $1 AND mr.message_id IS NULL", u.ID)
+	rows, err := q.Query("SELECT id, sender, recipient, title, text, to_char(date, 'YYYY-MM-DD HH24:MI:SS') FROM message m LEFT JOIN messages_read mr ON m.id = mr.message_id WHERE m.recipient = $1 AND mr.message_id IS NULL", u.ID)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -127,7 +127,7 @@ func (u *User) QAllMessages(q querier) error {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, sender, recipient, title, text, date FROM message m LEFT JOIN messages ms ON m.id = ms.message_id WHERE m.recipient = $1", u.ID)
+	rows, err := q.Query("SELECT id, sender, recipient, title, text, to_char(date, 'YYYY-MM-DD HH24:MI:SS') FROM message m LEFT JOIN messages ms ON m.id = ms.message_id WHERE m.recipient = $1", u.ID)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -147,7 +147,7 @@ func (u *User) QSentMessages(q querier) error {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, sender, recipient, title, text, date FROM message m LEFT JOIN messages_sent ms ON m.id = ms.message_id WHERE m.sender = $1", u.ID)
+	rows, err := q.Query("SELECT id, sender, recipient, title, text, to_char(date, 'YYYY-MM-DD HH24:MI:SS') FROM message m LEFT JOIN messages_sent ms ON m.id = ms.message_id WHERE m.sender = $1", u.ID)
 	if err != nil {
 		log.Println(err)
 		return err
