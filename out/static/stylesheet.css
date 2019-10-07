@@ -6,7 +6,7 @@ body
     color:#AAA;
 }
 
-form input 
+form.block input 
 {
 	display:block;
 }
