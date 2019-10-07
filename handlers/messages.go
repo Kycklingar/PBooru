@@ -48,9 +48,8 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-
 	if msg == nil {
-		for _, message := range u.Messages.Sent{
+		for _, message := range u.Messages.Sent {
 			if message.ID == msgID {
 				msg = &message
 				break
@@ -62,7 +61,6 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	u.QUnreadMessages(DM.DB)
 	if err = u.Messages.SetRead(DM.DB, msg); err != nil {
 		log.Println(err)
@@ -71,21 +69,38 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	msg.Sender.QID(DM.DB)
 	msg.Sender.QName(DM.DB)
 
+	msg.Recipient.QID(DM.DB)
+	msg.Recipient.QName(DM.DB)
+
 	renderTemplate(w, "message", msg)
 }
 
 type messagesPage struct {
-	AllMessagesCount int
-	NewMessagesCount int
+	AllMessagesCount  int
+	NewMessagesCount  int
 	SentMessagesCount int
 
 	Messages []DM.Message
 }
 
+func loadAllMessages(u *DM.User) error {
+	if err := u.QAllMessages(DM.DB); err != nil {
+		return err
+	}
+	if err := u.QSentMessages(DM.DB); err != nil {
+		return err
+	}
+	if err := u.QUnreadMessages(DM.DB); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	err := u.QAllMessages(DM.DB)
+	err := loadAllMessages(u)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,10 +113,10 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p = messagesPage{
-		AllMessagesCount: len(u.Messages.All),
-		NewMessagesCount: len(u.Messages.Unread),
+		AllMessagesCount:  len(u.Messages.All),
+		NewMessagesCount:  len(u.Messages.Unread),
 		SentMessagesCount: len(u.Messages.Sent),
-		Messages: u.Messages.All,
+		Messages:          u.Messages.All,
 	}
 
 	renderTemplate(w, "messages", p)
@@ -110,7 +125,7 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	if err := u.QUnreadMessages(DM.DB); err != nil {
+	if err := loadAllMessages(u); err != nil {
 		log.Println(err)
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
@@ -122,10 +137,10 @@ func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p = messagesPage{
-		AllMessagesCount: len(u.Messages.All),
-		NewMessagesCount: len(u.Messages.Unread),
+		AllMessagesCount:  len(u.Messages.All),
+		NewMessagesCount:  len(u.Messages.Unread),
 		SentMessagesCount: len(u.Messages.Sent),
-		Messages: u.Messages.Unread,
+		Messages:          u.Messages.Unread,
 	}
 
 	renderTemplate(w, "messages", p)
@@ -134,7 +149,7 @@ func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
 func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	err := u.QSentMessages(DM.DB)
+	err := loadAllMessages(u)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -147,10 +162,10 @@ func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p = messagesPage{
-		AllMessagesCount: len(u.Messages.All),
-		NewMessagesCount: len(u.Messages.Unread),
+		AllMessagesCount:  len(u.Messages.All),
+		NewMessagesCount:  len(u.Messages.Unread),
 		SentMessagesCount: len(u.Messages.Sent),
-		Messages: u.Messages.Sent,
+		Messages:          u.Messages.Sent,
 	}
 
 	renderTemplate(w, "messages", p)
@@ -176,6 +191,7 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		sentMessagesHandler(w, r)
 		return
 	}
 

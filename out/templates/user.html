@@ -39,11 +39,11 @@
 			{{if .User.ID}}
 			{{if ne .User.ID .Profile.ID}}
 			<div>
-				<h3><a href="/user/messages/new/?recipient={{.Profile.ID}}">Send Message</a></h3>
+				<h3><a href="/user/message/new/?recipient={{.Profile.ID}}">Send Message</a></h3>
 			</div>
 			{{else}}
 			<div>
-				<h3><a href="/user/messages/">Messages ({{.NewMessages}})</a></h3>
+				<h3><a href="/user/messages/new/">Messages ({{.NewMessages}})</a></h3>
 			</div>
 			{{end}}
 			{{end}}

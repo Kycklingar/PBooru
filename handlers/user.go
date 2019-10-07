@@ -255,6 +255,8 @@ func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {
 	user.Session.Get(DM.DB, ui.SessionToken)
 	if user.QID(DM.DB) == 0 {
 		remC(w, "session")
+	} else {
+		user = DM.CachedUser(user)
 	}
 	return user, ui
 }

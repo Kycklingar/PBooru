@@ -3,7 +3,6 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 )
 
@@ -33,6 +32,8 @@ func (m Message) Send() error {
 		log.Println(err)
 		return err
 	}
+
+	m.Recipient = CachedUser(m.Recipient)
 
 	m.Recipient.Messages.All = nil
 	m.Recipient.Messages.Unread = nil
@@ -85,15 +86,15 @@ type messages struct {
 }
 
 func (m *messages) SetRead(q querier, msg *Message) error {
-	fmt.Println(len(m.Unread), m)
+	//fmt.Println(len(m.Unread), m)
 	for i, _ := range m.Unread {
-		fmt.Println("Searching for:", msg.ID)
+		//fmt.Println("Searching for:", msg.ID)
 		if m.Unread[i].ID == msg.ID {
 			if err := m.Unread[i].SetRead(q); err != nil {
 				return err
 			}
 			// Remove message from unread list
-			fmt.Println("Removing message", msg.ID)
+			//fmt.Println("Removing message", msg.ID)
 			m.Unread = append(m.Unread[:i], m.Unread[i+1:]...)
 			break
 		}
