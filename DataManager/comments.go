@@ -64,6 +64,12 @@ func compileBBCode(q querier, text, daemon string) string {
 		return text
 	}
 
+	gt, err := regexp.Compile("(?m)^>.*")
+	if err != nil {
+		log.Println(err)
+		return text
+	}
+
 	cmp := bbcode.NewCompiler(true, true)
 	cmp.SetTag("img", nil)
 	cmp.SetTag("post", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
@@ -97,7 +103,17 @@ func compileBBCode(q querier, text, daemon string) string {
 		a.Attrs["href"] = ref
 		return a, true
 	})
+	cmp.SetTag("greentext", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		val := node.GetOpeningTag().Value
+		a := bbcode.NewHTMLTag("")
+		a.Name = "span"
+		a.Attrs["class"] = "greentext"
+		a.Attrs["sl"] = val
+		return a, true
+	})
+
 	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref] ")
+	out = gt.ReplaceAllString(out, "[greentext]$0[/greentext]")
 	return cmp.Compile(out)
 }
 

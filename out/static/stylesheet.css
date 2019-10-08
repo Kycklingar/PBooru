@@ -11,6 +11,11 @@ form.block input
 	display:block;
 }
 
+.greentext
+{
+	color:#c8c246;
+}
+
 #comic-container h1, #comic-container h2
 {
     text-shadow: 3px 3px #213;
