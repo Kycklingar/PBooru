@@ -3,7 +3,7 @@
 <form class="block" method="POST">
 	<label>Send message to: {{.Recipient.Name}}</label>
 	<input type="hidden" name="recipient" value="{{.Recipient.ID}}">
-	<input type="text" name="title" placeholder="Title">
+	<input type="text" name="title" placeholder="Title" value="{{.PrefillTitle}}">
 	<textarea rows="24" cols="80" type="text" name="message" placeholder="Message">{{.Prefill}}</textarea>
 	<input type="submit" value="Send">
 </form>

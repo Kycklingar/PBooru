@@ -197,6 +197,7 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	type P struct {
 		Recipient *DM.User
+		PrefillTitle string
 		Prefill   string
 	}
 
@@ -219,6 +220,14 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		p.Prefill = fmt.Sprintf("\n\n%s Said:\n%s", msg.Sender.Name, msg.Text)
+
+		p.PrefillTitle = fmt.Sprint("RE: ", func()string{
+			if len(msg.Title) <= 0 {
+				return "No Subject"
+			}
+			return msg.Title
+			}())
+
 		p.Recipient = msg.Sender
 	} else {
 		recipient := DM.NewUser()
@@ -249,6 +258,7 @@ func getReply(user *DM.User, messageID int) (DM.Message, error) {
 		log.Println(err)
 		return msg, err
 	}
+	msg.QTitle(DM.DB)
 
 	msg.QRecipient(DM.DB)
 	msg.Recipient = DM.CachedUser(msg.Recipient)

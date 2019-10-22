@@ -42,12 +42,25 @@ func (m Message) Send() error {
 	return nil
 }
 
+func (m *Message) QTitle(q querier) error {
+	if m.ID <= 0 {
+		return errors.New("No message id")
+	}
+
+	if err := q.QueryRow("SELECT title FROM message WHERE id = $1", m.ID).Scan(&m.Title); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func (m *Message) QText(q querier) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
 
-	if err := q.QueryRow("SELECT text FROM message message WHERE id = $1", m.ID).Scan(&m.Text); err != nil {
+	if err := q.QueryRow("SELECT text FROM message WHERE id = $1", m.ID).Scan(&m.Text); err != nil {
 		log.Println(err)
 		return err
 	}
