@@ -121,6 +121,7 @@ li
 {
 	border:dotted;
 	padding:1em;
+	white-space:pre;
 }
 
 .thumbnail
