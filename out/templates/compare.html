@@ -1,0 +1,120 @@
+{{template "base"}}
+
+<style>
+	#image-wraper
+	{
+		white-space:nowrap;
+	}
+
+	#image-wraper .default img:target
+	{
+		position:absolute;
+		height:100%;
+		left:50%;
+		transform: translateX(-50%);
+	}
+
+	#image-wraper .zoom5x img
+	{
+		display:none;
+	}
+
+	#image-wraper .zoom5x img:target
+	{
+		position:absolute;
+		top:0px;
+		left:0px;
+		display:inherit;
+		transform: scale(5);
+		transform-origin: top left;
+		image-rendering: crisp-edges;
+		filter: contrast(2);
+	}
+
+	#interface
+	{
+		position: fixed;
+		bottom: 1em; 
+		border: solid black;
+		background-color: rgba(50, 50, 50, 0.75);
+		overflow:auto;
+		max-width:99%;
+		text-shadow: 2px 2px 1px black;
+	}
+
+	#interface form
+	{
+		margin:0px;
+	}
+
+	#interface p
+	{
+		margin:2px;
+	}
+	
+	#interface span
+	{
+		display: table-cell;
+	}
+
+	.thumb-button
+	{
+		position: absolute;
+		background-color: rgba(50, 50, 50, 0.25);
+		margin:10px;
+		text-align:center;
+		text-shadow: 2px 2px 1px black;
+	}
+
+	a, a :visited
+	{
+		color:inherit;
+	}
+</style>
+
+<div>
+	<h3>EZ compare™</h3>
+
+	<div id="image-wraper">
+		{{range .Posts}}
+		<span class="default">
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
+		</span>
+		<span class="zoom5x">
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
+		</span>
+		{{end}}
+	</div>
+</div>
+
+<details id="interface">
+<summary>Interface</summary>
+	<form>
+		<input type="number" name="post-id" placeholder="Post ID">
+		{{range .Posts}}
+		<input type="hidden" name="post-id" value="{{.ID}}">
+		{{end}}
+		<input type="submit" value="Add post to compare">
+	</form>
+	{{range .Posts}}
+	<span>
+		<div style="position:relative;">
+			<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 100}}">
+			<a class="thumb-button" href="#img-{{.ID}}" style="top:0px; left:0px; right:0px; bottom:50%;">Fit</a>
+			<a class="thumb-button" href="#zoom-{{.ID}}" style="top:50%; left:0px; right:0px; bottom:0px">Zoom</a>
+		</div>
+		<div>
+			<p>ID: <a href="/post/{{.ID}}/{{.Hash}}/">{{.ID}}</a></p>
+			<p>Mime: {{.Mime.Type}} / {{.Mime.Name}}
+			<p>Size: {{.SizePretty}}</p>
+			{{with .Dimension}}
+			<p>Dimensions: {{.Width}}x{{.Height}}</p>
+			{{else}}
+			<p>No dimensional data</p>
+			{{end}}
+		</div>
+	</span>
+	{{end}}
+</details>
+
+{{template "baseEnd"}}

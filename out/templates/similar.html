@@ -1,0 +1,26 @@
+{{template "base"}}
+
+<style>
+	#content>form>span
+	{
+		display: inline-block;
+	}
+</style>
+
+<div id="content">
+	<form action="/compare/">
+	{{range .Posts}}
+		<span>
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+		<input type="checkbox" name="post-id" value="{{.ID}}">
+		</span>
+	{{end}}
+
+	<br>
+	<input type="submit" value="Compare">
+	</form>
+
+</div>
+
+
+{{template "baseEnd"}}
