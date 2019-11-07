@@ -16,6 +16,18 @@
         }
     </style>
 
+    <style>
+	.controlls>div 
+	{
+		display:inline-block;
+	}
+	.controlls input, textarea 
+	{
+		display:block;
+		margin:2px;
+	}
+    </style>
+
 <div class="separator">
     <form id="searchinput" onsubmit="newSearch(this);return false">
         <input id="inputtags" class="stinput" type="text" name="tags" placeholder="Search">
@@ -41,34 +53,36 @@
         <input type="submit" value="Search">
     </form>
 </div>
-<div class="separator">
-    <h4>Dups</h4>
-    <button onclick="postDupChanges()">Submit Duplicates</button>
-</div>
-<div class="separator">
-	<h4>Delete</h4>
-	<button onClick="deletePosts()">Delete</button>
-</div>
-<div class="separator">
-    <h4>Tags</h4>
-    <form id="newtagsform" onsubmit="postTags(); return false">
-        <textarea class="stinput" name="addtags"></textarea>
-        <textarea class="stinput" name="remtags"></textarea>
-        <input type="submit" value="Submit Tags">
-    </form>
-</div>
-<div class="separator">
-    <h4>Comic</h4>
-    <form id="comicpageform" onsubmit="postComicPages(); return false">
-        <label>ComicID</label>
-        <input type="number" id="comicidinput" name="comicid">
-        <label>ChapterID</label>
-        <input type="number" id="chapteridinput" name="chapterid">
-        <input type="submit">
-    </form>
-</div>
-<div class="separator">
-	<button onclick="openComparePage()">Compare</button>
+<div class="separator controlls">
+	<div>
+	    <h4>Dups</h4>
+	    <button onclick="postDupChanges()">Submit Duplicates</button>
+	</div>
+	<div>
+		<h4>Delete</h4>
+		<button onClick="deletePosts()">Delete</button>
+	</div>
+	<div>
+	    <h4>Tags</h4>
+	    <form id="newtagsform" onsubmit="postTags(); return false">
+	        <textarea class="stinput" name="addtags"></textarea>
+	        <textarea class="stinput" name="remtags"></textarea>
+	        <input type="submit" value="Submit Tags">
+	    </form>
+	</div>
+	<div>
+	    <h4>Comic</h4>
+	    <form id="comicpageform" onsubmit="postComicPages(); return false">
+	        <label>ComicID</label>
+	        <input type="number" id="comicidinput" name="comicid">
+	        <label>ChapterID</label>
+	        <input type="number" id="chapteridinput" name="chapterid">
+	        <input type="submit">
+	    </form>
+	</div>
+	<div>
+		<button onclick="openComparePage()">Compare</button>
+	</div>
 </div>
 <div>
     <div style="border:dotted; display:flex; flex-flow:row wrap;" id="postlist">
@@ -326,6 +340,7 @@
             // img.style.maxHeight = UserInfo.ThumbSize
             let a = document.createElement("a")
             a.href = "/post/" + post.ID
+	    a.target = "_blank"
             a.appendChild(img)
             div.appendChild(a)
         }
