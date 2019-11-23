@@ -314,10 +314,12 @@
         // div.style.height = UserInfo.ThumbSize
         div.title = function(){
             let ret = ""
-            for(let i = 0; i < post.Tags.length; i++)
-            {
-                ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
-            }
+	    if (post.Tags != null) {
+            	for(let i = 0; i < post.Tags.length; i++)
+            	{
+            	    ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
+            	}
+	    }
             return ret
         }()
         
@@ -328,6 +330,7 @@
             d.innerText = post.Mime
             let a = document.createElement("a")
             a.href = "/post/" + post.ID
+	    a.target = "_blank"
             a.appendChild(d)
             div.appendChild(a)
         }
