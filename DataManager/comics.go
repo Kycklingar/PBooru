@@ -249,17 +249,24 @@ func (c *Comic) QChapterCount(q querier) int {
 	return c.ChapterCount
 }
 
-func (c *Comic) Save(q querier) error {
+func (c *Comic) Save(q querier, user *User) error {
 	if c.QID(q) != 0 {
 		return errors.New("Comic already exist")
 	}
+
 	if c.QTitle(q) == "" {
 		return errors.New("Title is empty")
 	}
+
 	err := q.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNING id", c.QTitle(q)).Scan(&c.ID)
 	if err != nil {
 		log.Print(err)
 		return err
+	}
+
+	err = c.log(q, lCreate, user)
+	if err != nil {
+		log.Println(err)
 	}
 
 	return err
@@ -352,7 +359,7 @@ func (c *Chapter) QPageCount(q querier) int {
 	return c.PageCount
 }
 
-func (c *Chapter) Save(q querier) error {
+func (c *Chapter) Save(q querier, user *User) error {
 	if c.QID(q) != 0 {
 		return errors.New("Chapter already exist")
 	}
@@ -367,7 +374,15 @@ func (c *Chapter) Save(q querier) error {
 		return errors.New("order is 0")
 	}
 
-	_, err := q.Exec("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES($1, $2, $3)", c.Comic.QID(q), c.Order, c.QTitle(q))
+	err := q.QueryRow("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES($1, $2, $3) RETURNING id", c.Comic.QID(q), c.Order, c.QTitle(q)).Scan(&c.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if err = c.log(q, lCreate, user); err != nil {
+		log.Println(err)
+	}
 
 	C.Cache.Purge("CCH", strconv.Itoa(c.QID(q)))
 
@@ -439,6 +454,11 @@ func newComicPost() *ComicPost {
 	cp.Order = 0
 	return &cp
 }
+func NewComicPost() *ComicPost {
+	var cp ComicPost
+	cp.Order = 0
+	return &cp
+}
 
 type ComicPost struct {
 	ID      int
@@ -453,43 +473,136 @@ func (p *ComicPost) QID(q querier) int {
 		return p.ID
 	}
 
-	err := q.QueryRow("SELECT id FROM comic_mappings WHERE comic_id=$1 AND post_id=$2", p.Comic.QID(q), p.Post.QID(q)).Scan(&p.ID)
+	err := q.QueryRow("SELECT id FROM comic_mappings WHERE comic_id=$1 AND chapter_id = $2 AND post_id=$3", p.Comic.QID(q), p.Chapter.QID(q), p.Post.QID(q)).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 	}
 	return p.ID
 }
 
+func (p *ComicPost) QChapter(q querier) error {
+	if p.Chapter != nil {
+		return nil
+	}
+
+	var chapter Chapter
+	if err := q.QueryRow("SELECT chapter_id FROM comic_mappings WHERE id = $1", p.ID).Scan(&chapter.ID); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	p.Chapter = &chapter
+
+	return nil
+}
+
+func (p *ComicPost) QComic(q querier) error {
+	if p.Comic != nil {
+		return nil
+	}
+
+	comic := NewComic()
+	if err := q.QueryRow("SELECT comic_id FROM comic_mappings WHERE id = $1", p.ID).Scan(&comic.ID); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	p.Comic = comic
+
+	return nil
+}
+
+func (p *ComicPost) QPost(q querier) error {
+	if p.Post != nil {
+		return nil
+	}
+
+	var post = NewPost()
+
+	if err := q.QueryRow("SELECT post_id FROM comic_mappings WHERE id = $1", p.ID).Scan(&post.ID); err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	p.Post = post
+
+	return nil
+}
+
 func (p *ComicPost) QOrder(q querier) int {
+	if p.Order >= 0 {
+		return p.Order
+	}
+	if err := q.QueryRow("SELECT post_order FROM comic_mappings WHERE id = $1", p.ID).Scan(&p.Order); err != nil {
+		log.Println(err)
+	}
 	return p.Order
 }
 
-func (p *ComicPost) Save(q querier, overwrite bool) error {
-	if p.Post.QID(q) == 0 {
-		return fmt.Errorf("Invalid post")
+func (p *ComicPost) Save(user *User, overwrite bool) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return err
 	}
-	if p.Comic.QID(q) == 0 {
-		return fmt.Errorf("Invalid comic")
+
+	defer tx.Commit()
+
+	if !user.QFlag(tx).Comics() {
+		return fmt.Errorf("Action not allowed from this user")
 	}
-	if p.Chapter.QID(q) == 0 {
+
+	if p.Chapter.QID(tx) == 0 {
 		return fmt.Errorf("Invalid Chapter")
 	}
 
-	if overwrite && p.QID(q) != 0 {
-		_, err := q.Exec("UPDATE comic_mappings SET post_order=$1, Chapter_id=$2 WHERE comic_id=$3 AND post_id=$4", p.Order, p.Chapter.QID(q), p.Comic.QID(q), p.Post.QID(q))
+
+
+	if overwrite && p.QID(tx) != 0 {
+		_, err := tx.Exec("UPDATE comic_mappings SET post_order=$1, Chapter_id=$2 WHERE id = $3", p.Order, p.Chapter.QID(tx), p.ID)
 		if err != nil {
 			log.Print(err)
+			tx.Rollback()
 			return err
 		}
+
+		p.QComic(tx)
+		p.Comic.QID(tx)
+		p.QChapter(tx)
+		p.Chapter.QID(tx)
+		p.QPost(tx)
+		p.Post.QID(tx)
+
+		if err = p.log(tx, lUpdate, user); err != nil {
+			log.Println(err)
+			tx.Rollback()
+			return err
+		}
+
 	} else {
-		_, err := q.Exec("INSERT INTO comic_mappings(comic_id, post_id, post_order, Chapter_id) Values($1, $2, $3, $4)", p.Comic.QID(q), p.Post.QID(q), p.Order, p.Chapter.QID(q))
+		if p.Post.QID(tx) == 0 {
+			return fmt.Errorf("Invalid post")
+		}
+
+		if p.Comic.QID(tx) == 0 {
+			return fmt.Errorf("Invalid comic")
+		}
+
+		err := tx.QueryRow("INSERT INTO comic_mappings(comic_id, post_id, post_order, Chapter_id) Values($1, $2, $3, $4) RETURNING id", p.Comic.QID(tx), p.Post.QID(tx), p.Order, p.Chapter.QID(tx)).Scan(&p.ID)
 		if err != nil {
 			log.Print(err)
+			tx.Rollback()
+			return err
+		}
+
+		if err = p.log(tx, lCreate, user); err != nil {
+			log.Println(err)
+			tx.Rollback()
 			return err
 		}
 	}
 
-	C.Cache.Purge("CCH", strconv.Itoa(p.Chapter.QID(q)))
+	C.Cache.Purge("CCH", strconv.Itoa(p.Chapter.QID(tx)))
 
 	return nil
 }
@@ -506,5 +619,6 @@ func (p *ComicPost) replacePost(q querier, new *Post) error {
 		log.Print(err)
 		return err
 	}
+
 	return nil
 }

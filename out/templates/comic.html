@@ -48,13 +48,12 @@
                     el[i].innerHTML += `
                         <form method="post" action="/comic/edit">
                             <input type="hidden" name="editpost" value="true">
-                            <input type="hidden" name="comicid" value="`+ {{.Comic.ID}} +`">
-                            <input type="hidden" name="postid" value="`+ el[i].getAttribute("postid") +`">
+                            <input type="hidden" name="cp-id" value="`+ el[i].getAttribute("cpid") +`">
                             <label>Page</label>
                             <input type="text" name="order" value="`+ el[i].getAttribute("page") +`">
                             <br>
                                 {{range .Comic.Chapters}}
-                                <input type="radio" name="chapterid" value="{{.Order}}" ` + checked(el[i], {{.Order}}) + `>{{.Order}}{{if .Title}} -- {{.Title}}{{end}}<br>
+                                <input type="radio" name="chapter-id" value="{{.ID}}" ` + checked(el[i], {{.Order}}) + `>{{.Order}}{{if .Title}} -- {{.Title}}{{end}}<br>
                                 {{end}}
                             <input type="submit">
                         </form>
@@ -73,7 +72,7 @@
             <h3>Chapter {{.Chapter.Order}}{{if .Chapter.Title}} - {{.Chapter.Title}}{{end}}</h3>
             <h4>Pages: {{.Chapter.PageCount}}</h4>
             {{range .Chapter.Posts}}
-                <div class="comic-page" page="{{.Order}}" postid="{{.Post.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
+                <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
                     <!-- <div class="centHorizont"> -->
                     <div>
                         <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">

@@ -20,6 +20,12 @@ type comicsPage struct {
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		user, _ := getUser(w, r)
+		if !user.QFlag(DM.DB).Comics() {
+			http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+			return
+		}
+
 		title := r.FormValue("title")
 		if title == "" {
 			http.Error(w, "Title cant be empty", http.StatusBadRequest)
@@ -28,7 +34,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 		c := DM.NewComic()
 		c.SetTitle(title)
-		err := c.Save(DM.DB)
+		err := c.Save(DM.DB, user)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Oops", http.StatusInternalServerError)
@@ -200,7 +206,7 @@ func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	u, _ := getUser(w, r)
 	if !u.QFlag(DM.DB).Comics() {
-		http.Error(w, errMustBeAdmin, http.StatusBadRequest)
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 		return
 	}
 	cIDStr := r.FormValue("comicid")
@@ -252,7 +258,7 @@ func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
 
 	cp.Order = pOrder
 
-	err = cp.Save(DM.DB, true)
+	err = cp.Save(u, true)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "error", http.StatusInternalServerError)
@@ -269,7 +275,7 @@ func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 	if !user.QFlag(DM.DB).Comics() {
-		http.Error(w, errMustBeAdmin, http.StatusBadRequest)
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 		return
 	}
 
@@ -302,7 +308,7 @@ func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 		ch.Title = title
 		ch.Order = order
 
-		err = ch.Save(DM.DB)
+		err = ch.Save(DM.DB, user)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Oops", http.StatusInternalServerError)
@@ -310,56 +316,36 @@ func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d", cID, order), http.StatusSeeOther)
 	} else if r.FormValue("editpost") == "true" {
-		cIDStr := r.FormValue("comicid")
-		pIDStr := r.FormValue("postid")
-		orderStr := r.FormValue("order")
-		chIDStr := r.FormValue("chapterid")
-
-		cID, err := strconv.Atoi(cIDStr)
-		if err != nil {
-			http.Error(w, "comicid not integer", http.StatusBadRequest)
-			return
-		}
-		pID, err := strconv.Atoi(pIDStr)
-		if err != nil {
-			http.Error(w, "postid not integer", http.StatusBadRequest)
-			return
-		}
-		order, err := strconv.Atoi(orderStr)
+		order, err := strconv.Atoi(r.FormValue("order"))
 		if err != nil {
 			http.Error(w, "order not integer", http.StatusBadRequest)
 			return
 		}
-		chID, err := strconv.Atoi(chIDStr)
+		chID, err := strconv.Atoi(r.FormValue("chapter-id"))
 		if err != nil {
-			http.Error(w, "chapterid not integer", http.StatusBadRequest)
+			http.Error(w, "chapter-id not integer", http.StatusBadRequest)
 			return
 		}
 
-		c := DM.NewComic()
-		if err = c.SetID(cID); err != nil {
-			log.Print(err)
-			http.Error(w, "comic doesn't exist", http.StatusBadRequest)
+		cpID, err := strconv.Atoi(r.FormValue("cp-id"))
+		if err != nil {
+			http.Error(w, "cp-id not integer", http.StatusBadRequest)
 			return
 		}
 
-		ch := c.Chapter(DM.DB, chID)
-		if ch == nil {
-			http.Error(w, "Chapter doesn't exist", http.StatusBadRequest)
-			return
-		}
-
-		cp := ch.NewComicPost()
-		cp.Post.SetID(DM.DB, pID)
+		cp := DM.NewComicPost()
+		cp.ID = cpID
+		cp.QChapter(DM.DB)
+		cp.Chapter.ID = chID
 		cp.Order = order
 
-		err = cp.Save(DM.DB, true)
+		err = cp.Save(user, true)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d", cID, cp.Chapter.QOrder(DM.DB)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprint(r.Referer(), "../", chID), http.StatusSeeOther)
 	}
 }

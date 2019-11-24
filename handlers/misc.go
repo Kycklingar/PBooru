@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"math"
@@ -15,6 +16,10 @@ import (
 const (
 	errMustBeAdmin = "Must be logged in as an admin"
 )
+
+func lackingPermissions(priv string) string {
+	return fmt.Sprintf("Insufficient privileges. Want %s", priv)
+}
 
 var Templates *template.Template
 
