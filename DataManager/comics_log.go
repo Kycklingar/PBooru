@@ -21,7 +21,7 @@ func (c *Comic) log(q querier, action logAction, user *User) error {
 		c.ID,
 		user.ID,
 		c.Title,
-		)
+	)
 	return err
 }
 
@@ -42,7 +42,7 @@ func (ch *Chapter) log(q querier, action logAction, user *User) error {
 		ch.Comic.ID,
 		ch.Order,
 		ch.Title,
-		)
+	)
 	return err
 }
 
@@ -63,7 +63,6 @@ func (cp *ComicPost) log(q querier, action logAction, user *User) error {
 		cp.Post.ID,
 		cp.Chapter.ID,
 		cp.Order,
-		)
+	)
 	return err
 }
-

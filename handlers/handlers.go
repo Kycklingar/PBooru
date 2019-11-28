@@ -205,15 +205,28 @@ func wrap2(x, y string, xv, yv interface{}) map[string]interface{} {
 	}
 }
 
+func add(x, y int) int {
+	return x + y
+}
+
+func mul(x, y int) int {
+	return x * y
+}
+
 func init() {
 	stat.init()
 
 	Templates = template.New("")
-	Templates.Funcs(template.FuncMap{
-		"noescape":  func(x string) template.HTML { return template.HTML(x) },
-		"urlEncode": UrlEncode,
-		"urlDecode": UrlDecode,
-		"wrap2":     wrap2})
+	Templates.Funcs(
+		template.FuncMap{
+			"noescape":  func(x string) template.HTML { return template.HTML(x) },
+			"urlEncode": UrlEncode,
+			"urlDecode": UrlDecode,
+			"wrap2":     wrap2,
+			"add":	add,
+			"mul":	mul,
+			},
+		)
 
 	tmpls, err := loadTemplates("./templates/")
 	if err != nil {
@@ -268,7 +281,7 @@ func init() {
 	Handlers["/deletepost"] = makeStatHandler(RemovePostHandler)
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
-	Handlers["/comic/"] = makeStatHandler(ComicHandler)
+	Handlers["/comic/"] = makeStatHandler(comicHandler)
 	Handlers["/comic/add"] = makeStatHandler(ComicAddHandler)
 	Handlers["/comic/edit"] = makeStatHandler(EditComicHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })

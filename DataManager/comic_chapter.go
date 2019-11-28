@@ -1,0 +1,188 @@
+package DataManager
+
+import (
+	"database/sql"
+	"errors"
+	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+)
+
+func NewChapter() *Chapter {
+	return &Chapter{}
+}
+
+func newChapter() *Chapter {
+	var c Chapter
+	c.Comic = NewComic()
+	return &c
+}
+
+type Chapter struct {
+	ID        int
+	Comic     *Comic
+	Title     string
+	Order     int
+	PageCount int
+
+	Posts []*ComicPost
+}
+
+func (c *Chapter) QID(q querier) int {
+	if c.ID != 0 {
+		return c.ID
+	}
+	if c.Comic.QID(q) == 0 {
+		return 0
+	}
+	if c.Order == 0 {
+		return 0
+	}
+
+	err := q.QueryRow("SELECT id FROM comic_Chapter WHERE comic_id=$1 AND c_order=$2", c.Comic.QID(q), c.QOrder(q)).Scan(&c.ID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Print(err)
+	}
+	return c.ID
+}
+
+func (c *Chapter) SetID(id int) {
+	c.ID = id
+}
+
+func (c *Chapter) QTitle(q querier) string {
+	if c.Title != "" {
+		return c.Title
+	}
+	if c.QID(q) == 0 {
+		return ""
+	}
+
+	err := q.QueryRow("SELECT title FROM comic_Chapter WHERE id=$1", c.QID(q)).Scan(&c.Title)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return c.Title
+}
+
+func (c *Chapter) QOrder(q querier) int {
+	if c.Order != 0 {
+		return c.Order
+	}
+	if c.QID(q) == 0 {
+		return 0
+	}
+
+	err := q.QueryRow("SELECT c_order FROM comic_Chapter WHERE id=$1", c.QID(q)).Scan(&c.Order)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return c.Order
+}
+
+func (c *Chapter) QPageCount(q querier) int {
+	if c.PageCount > 0 {
+		return c.PageCount
+	}
+	c.PageCount = len(c.Posts)
+	if c.PageCount > 0 {
+		return c.PageCount
+	}
+
+	if err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	return c.PageCount
+}
+
+func (c *Chapter) Save(q querier, user *User) error {
+	if c.QID(q) != 0 {
+		return errors.New("Chapter already exist")
+	}
+
+	if c.Comic.QID(q) == 0 {
+		return errors.New("comic id not set")
+	}
+	// if c.Title() == "" {
+	// 	return errors.New("title is empty")
+	// }
+	if c.QOrder(q) == 0 {
+		return errors.New("order is 0")
+	}
+
+	err := q.QueryRow("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES($1, $2, $3) RETURNING id", c.Comic.QID(q), c.Order, c.QTitle(q)).Scan(&c.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if err = c.log(q, lCreate, user); err != nil {
+		log.Println(err)
+	}
+
+	C.Cache.Purge("CCH", strconv.Itoa(c.QID(q)))
+
+	return err
+}
+
+func (c *Chapter) QPosts(q querier) []*ComicPost {
+	if c.QID(q) == 0 {
+		return nil
+	}
+	if len(c.Posts) > 0 {
+		return c.Posts
+	}
+
+	if m := C.Cache.Get("CCH", strconv.Itoa(c.QID(q))); m != nil {
+		switch mm := m.(type) {
+		case *Chapter:
+			*c = *mm
+			return c.Posts
+		}
+	}
+
+	str := "SELECT id, post_id, post_order FROM comic_mappings WHERE Chapter_id=$1 ORDER BY post_order"
+	rows, err := q.Query(str, c.QID(q))
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+	defer rows.Close()
+
+	//var cps []*ComicPost
+
+	for rows.Next() {
+		cp := newComicPost()
+		cp.Chapter = c
+		err = rows.Scan(&cp.ID, &cp.Post.ID, &cp.Order)
+		if err != nil {
+			log.Print(err)
+			return nil
+		}
+		c.Posts = append(c.Posts, cp)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+
+	C.Cache.Set("CCH", strconv.Itoa(c.QID(q)), c)
+	return c.Posts
+}
+
+func (c *Chapter) PostsLimit(limit int) []*ComicPost {
+	return c.QPosts(DB)[:max(limit, len(c.QPosts(DB)))]
+}
+
+func (c *Chapter) NewComicPost() *ComicPost {
+	cp := newComicPost()
+	cp.Comic = c.Comic
+	cp.Chapter = c
+	return cp
+}

@@ -430,7 +430,8 @@ li
     /* background-color: #556; */
     display: flex;
     margin:1em;
-    
+    position:relative;
+    height:300px;
 }
 
 .comic-page
@@ -445,6 +446,11 @@ li
 {
     margin:3px;
     word-break: break-all;
+}
+
+.comic-thumb:hover
+{
+	z-index:10;
 }
 
 .deleted

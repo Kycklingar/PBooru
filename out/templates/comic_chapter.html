@@ -1,0 +1,80 @@
+{{template "base" .Base}}
+
+{{if .User.Flag.Comics}}
+<details>
+<summary>Add a post</summary>
+	<div class="text-panel">
+		<form method="post" action="/comic/add">
+		    <input type="hidden" name="comicid" value="{{.Chapter.Comic.ID}}">
+		    <input placeholder="Post ID" type="number" name="postid">
+		    <br>
+		    <br>
+		    <input placeholder="Page" type="number" name="postorder">
+		    <br>
+		    <br>
+		    {{range .Chapter.Comic.Chapters}}
+		    <input type="radio" name="chapterid" value="{{.Order}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}</br>
+		    {{end}}
+		    <input type="submit">
+		</form>
+	</div>
+</details>
+{{end}}
+
+<div id="comic-container">
+	<h1>{{.Chapter.Comic.Title}}</h1>
+	<div>
+	    <h3>Chapter {{.Chapter.Order}}{{with .Chapter.Title}} - {{.}}{{end}}</h3>
+	    <h4>Pages: {{.Chapter.PageCount}}</h4>
+	    {{range .Chapter.Posts}}
+	        <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
+	            <div>
+	                <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+	                    <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
+	                </a>
+	                <br>
+	                <p>Page:{{.Order}}</p>
+	            </div>
+		    {{if and $.EditMode $.User.Flag.Comics}}
+			<details>
+			<summary>Edit</summary>
+				<form method="post" action="/comic/edit">
+					<input type="hidden" name="editpost" value="true">
+					<input type="hidden" name="cp-id" value="{{.Chapter.ID}}">
+					<br>
+					<label>Page</label>
+					<br>
+					<input type="number" value="{{.Order}}" name="order">
+					<br>
+					<br>
+					<label>Chapter</label>
+					<br>
+					{{range $.Chapter.Comic.Chapters}}
+		   				<input type="radio" name="chapter-id" value="{{.ID}}" {{if eq .ID $.Chapter.ID}}checked{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}
+						<br>
+					{{end}}
+					<input type="submit">
+				</form>
+			</details>
+		    {{end}}
+	        </div>
+	    {{end}}
+	    {{with .Chapter.Comic.Chapters}}
+	    <div class="text-panel">
+	        <ul>
+	            {{range .}}
+	            <li>
+	                <a href="{{.Order}}">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
+	            </li>
+	            {{end}}
+	        </ul>
+	    </div>
+	    {{end}}
+	</div>
+</div>    
+
+{{template "userSettings" .UserInfo}}
+
+{{template "benchmark" .Time}}
+
+{{template "baseEnd"}}

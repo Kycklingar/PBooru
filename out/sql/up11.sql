@@ -1,4 +1,4 @@
-CREATE TABLE log_comic_page (
+CREATE TABLE IF NOT EXISTS log_comic_page (
 	id SERIAL PRIMARY KEY,
 	action INTEGER NOT NULL,
 	comic_page_id INTEGER NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE log_comic_page (
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE log_comic (
+CREATE TABLE IF NOT EXISTS log_comic (
 	id SERIAL PRIMARY KEY,
 	action INTEGER NOT NULL,
 	comic_id INTEGER NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE log_comic (
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE log_chapter (
+CREATE TABLE IF NOT EXISTS log_chapter (
 	id SERIAL PRIMARY KEY,
 	action INTEGER NOT NULL,
 	chapter_id INTEGER NOT NULL,
@@ -30,3 +30,19 @@ CREATE TABLE log_chapter (
 );
 
 
+ALTER TABLE comic_mappings DROP COLUMN IF EXISTS comic_id;
+
+CREATE OR REPLACE FUNCTION update_comic_order()
+RETURNS trigger AS $$
+BEGIN
+	UPDATE comics
+	SET modified = CURRENT_TIMESTAMP
+	WHERE id = (
+		SELECT comic_id
+		FROM comic_chapter
+		WHERE id = NEW.chapter_id
+		);
+	return NEW;
+END;
+$$
+LANGUAGE 'plpgsql';
