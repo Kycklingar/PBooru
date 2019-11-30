@@ -54,11 +54,17 @@ type Post struct {
 	Mime       *Mime
 	Deleted    int
 	Size       int64
+	Dimension *dimension
 	Score      int
 
 	description *string
 
 	editCount int
+}
+
+type dimension struct {
+	Width int
+	Height int
 }
 
 func (p *Post) QID(q querier) int {
@@ -232,6 +238,24 @@ func (p *Post) QSize(q querier) int64 {
 		log.Println(err)
 	}
 	return p.Size
+}
+
+func (p *Post) QDimensions(q querier) error{
+	if p.Dimension != nil {
+		return nil
+	}
+
+	var dim dimension
+
+	err := q.QueryRow("SELECT width, height FROM post_info WHERE post_id = $1", p.ID).Scan(&dim.Width, &dim.Height)
+	if err != nil {
+		//log.Println(err)
+		return err
+	}
+
+	p.Dimension = &dim
+
+	return nil
 }
 
 func (p *Post) QScore(q querier) int {

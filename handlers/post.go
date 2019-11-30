@@ -688,27 +688,32 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := post.FindSimilar(DM.DB, dist)
+	var p struct {
+		Posts    []*DM.Post
+		UserInfo UserInfo
+
+		Time string
+	}
+
+	p.Posts, err = post.FindSimilar(DM.DB, dist)
 	if err != nil {
 		//http.Error(w, ErrInternal, http.StatusInternalServerError)
 		//return
 	}
 
-	var p PostsPage
+	for i, _ := range p.Posts {
+		p.Posts[i].QID(DM.DB)
+		p.Posts[i] = DM.CachedPost(p.Posts[i])
 
-	for _, pst := range posts {
-		pst.QID(DM.DB)
-		pst.QHash(DM.DB)
-		pst.QThumbnails(DM.DB)
-		pst.QDeleted(DM.DB)
-		pst.QMime(DM.DB).QName(DM.DB)
-		pst.QMime(DM.DB).QType(DM.DB)
-
-		p.Posts = append(p.Posts, pst)
+		p.Posts[i].QHash(DM.DB)
+		p.Posts[i].QThumbnails(DM.DB)
+		p.Posts[i].QDeleted(DM.DB)
+		p.Posts[i].QMime(DM.DB).QName(DM.DB)
+		p.Posts[i].QMime(DM.DB).QType(DM.DB)
 	}
 
-	p.User = userCookies(w, r)
+	p.UserInfo = userCookies(w, r)
 	p.Time = bm.EndStr(performBenchmarks)
 
-	renderTemplate(w, "posts", p)
+	renderTemplate(w, "similar", p)
 }

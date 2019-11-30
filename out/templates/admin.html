@@ -16,11 +16,25 @@
         }
     </style>
 
+    <style>
+	.controlls>div 
+	{
+		display:inline-block;
+	}
+	.controlls input, textarea 
+	{
+		display:block;
+		margin:2px;
+	}
+    </style>
+
 <div class="separator">
     <form id="searchinput" onsubmit="newSearch(this);return false">
-        <input id="inputtags" class="stinput" type="text" name="tags">
-        <input id="inputbltags" class="stinput" type="text" name="filter">
-        <input id="inputunless" class="stinput" type="text" name="unless"><br>
+        <input id="inputtags" class="stinput" type="text" name="tags" placeholder="Search">
+        <input id="inputbltags" class="stinput" type="text" name="filter" placeholder="Filter">
+        <input id="inputunless" class="stinput" type="text" name="unless" placeholder="Unless"><br>
+	<details>
+	<summary>Advanced</summary>
         <input type="radio" id="inp-desc" name="order" value="desc" checked><label for="inp-desc">Descending</label><br>
         <input type="radio" id="inp-asc" name="order" value="asc"><label for="inp-asc">Ascending</label><br>
         <input type="radio" id="inp-rand" name="order" value="random"><label for="inp-rand">Random</label><br>
@@ -34,35 +48,41 @@
 	    {{end}}
 	    </ul>
 	{{end}}
+	</details>
 	<br>
         <input type="submit" value="Search">
     </form>
 </div>
-<div class="separator">
-    <h4>Dups</h4>
-    <button onclick="postDupChanges()">Submit Duplicates</button>
-</div>
-<div class="separator">
-	<h4>Delete</h4>
-	<button onClick="deletePosts()">Delete</button>
-</div>
-<div class="separator">
-    <h4>Tags</h4>
-    <form id="newtagsform" onsubmit="postTags(); return false">
-        <textarea class="stinput" name="addtags"></textarea>
-        <textarea class="stinput" name="remtags"></textarea>
-        <input type="submit" value="Submit Tags">
-    </form>
-</div>
-<div class="separator">
-    <h4>Comic</h4>
-    <form id="comicpageform" onsubmit="postComicPages(); return false">
-        <label>ComicID</label>
-        <input type="number" id="comicidinput" name="comicid">
-        <label>ChapterID</label>
-        <input type="number" id="chapteridinput" name="chapterid">
-        <input type="submit">
-    </form>
+<div class="separator controlls">
+	<div>
+	    <h4>Dups</h4>
+	    <button onclick="postDupChanges()">Submit Duplicates</button>
+	</div>
+	<div>
+		<h4>Delete</h4>
+		<button onClick="deletePosts()">Delete</button>
+	</div>
+	<div>
+	    <h4>Tags</h4>
+	    <form id="newtagsform" onsubmit="postTags(); return false">
+	        <textarea class="stinput" name="addtags"></textarea>
+	        <textarea class="stinput" name="remtags"></textarea>
+	        <input type="submit" value="Submit Tags">
+	    </form>
+	</div>
+	<div>
+	    <h4>Comic</h4>
+	    <form id="comicpageform" onsubmit="postComicPages(); return false">
+	        <label>ComicID</label>
+	        <input type="number" id="comicidinput" name="comicid">
+	        <label>ChapterID</label>
+	        <input type="number" id="chapteridinput" name="chapterid">
+	        <input type="submit">
+	    </form>
+	</div>
+	<div>
+		<button onclick="openComparePage()">Compare</button>
+	</div>
 </div>
 <div>
     <div style="border:dotted; display:flex; flex-flow:row wrap;" id="postlist">
@@ -108,6 +128,21 @@
              this.value +
               "px;}"
         document.getElementById("sizeslidertext").innerText = this.value
+    }
+
+    function openComparePage()
+    {
+    	let f = new FormData()
+    	for(let i = 0; i < selectedPosts.length; i++)
+	{
+		f.append("post-id", selectedPosts[i].getAttribute("postid"))
+	}
+
+	let params = new URLSearchParams(f)
+	console.log(params.toString())
+
+	window.open("/compare/?" + params.toString())
+    	
     }
 
     function updateOffset() {
@@ -279,10 +314,12 @@
         // div.style.height = UserInfo.ThumbSize
         div.title = function(){
             let ret = ""
-            for(let i = 0; i < post.Tags.length; i++)
-            {
-                ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
-            }
+	    if (post.Tags != null) {
+            	for(let i = 0; i < post.Tags.length; i++)
+            	{
+            	    ret += post.Tags[i].Namespace + ":" + post.Tags[i].Tag + "\n"
+            	}
+	    }
             return ret
         }()
         
@@ -293,6 +330,7 @@
             d.innerText = post.Mime
             let a = document.createElement("a")
             a.href = "/post/" + post.ID
+	    a.target = "_blank"
             a.appendChild(d)
             div.appendChild(a)
         }
@@ -305,6 +343,7 @@
             // img.style.maxHeight = UserInfo.ThumbSize
             let a = document.createElement("a")
             a.href = "/post/" + post.ID
+	    a.target = "_blank"
             a.appendChild(img)
             div.appendChild(a)
         }
