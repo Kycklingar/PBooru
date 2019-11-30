@@ -17,7 +17,7 @@
 <div id="comic-container">
 	<h1>{{.Comic.Title}}</h1>
 	{{$PostLimit := 5}}
-	{{if ge (len .Comic.Chapters) 5}}
+	{{if ge (len .Comic.Chapters) 10}}
 	{{$PostLimit = 2}}
 	{{end}}
 	{{range .Comic.Chapters}}
