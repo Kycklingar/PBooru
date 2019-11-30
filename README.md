@@ -22,7 +22,7 @@ Go get and build PBooru
 ```
 go get -u -d github.com/kycklingar/PBooru
 cd $GOPATH/src/github.com/kycklingar/PBooru
-./build.sh
+make
 cp out ~/pbooru
 ```
 
