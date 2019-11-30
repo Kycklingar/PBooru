@@ -84,7 +84,7 @@ func (p *ComicPost) QPost(q querier) error {
 
 	if err := q.QueryRow("SELECT post_id FROM comic_mappings WHERE id = $1", p.ID).Scan(&post.ID); err != nil {
 		log.Println(err)
-		return nil
+		return err
 	}
 
 	p.Post = post
@@ -127,10 +127,12 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 			return err
 		}
 
-		p.Comic.QID(tx)
 		p.QChapter(tx)
 		p.Chapter.QID(tx)
-		p.QPost(tx)
+		if err = p.QPost(tx); err != nil {
+			log.Println(err)
+			return err
+		}
 		p.Post.QID(tx)
 
 		if err = p.log(tx, lUpdate, user); err != nil {
@@ -142,10 +144,6 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 	} else {
 		if p.Post.QID(tx) == 0 {
 			return fmt.Errorf("Invalid post")
-		}
-
-		if p.Comic.QID(tx) == 0 {
-			return fmt.Errorf("Invalid comic")
 		}
 
 		err := tx.QueryRow("INSERT INTO comic_mappings(post_id, post_order, Chapter_id) Values($1, $2, $3) RETURNING id", p.Post.QID(tx), p.Order, p.Chapter.QID(tx)).Scan(&p.ID)

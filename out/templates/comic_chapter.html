@@ -4,16 +4,16 @@
 <details>
 <summary>Add a post</summary>
 	<div class="text-panel">
-		<form method="post" action="/comic/add">
+		<form method="post" action="/comic/page/add/">
 		    <input type="hidden" name="comicid" value="{{.Chapter.Comic.ID}}">
-		    <input placeholder="Post ID" type="number" name="postid">
+		    <input placeholder="Post ID" type="number" name="post-id">
 		    <br>
 		    <br>
-		    <input placeholder="Page" type="number" name="postorder">
+		    <input placeholder="Page" type="number" name="order">
 		    <br>
 		    <br>
 		    {{range .Chapter.Comic.Chapters}}
-		    <input type="radio" name="chapterid" value="{{.Order}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}</br>
+		    <input type="radio" name="chapter-id" value="{{.ID}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}</br>
 		    {{end}}
 		    <input type="submit">
 		</form>
@@ -38,9 +38,8 @@
 		    {{if and $.EditMode $.User.Flag.Comics}}
 			<details>
 			<summary>Edit</summary>
-				<form method="post" action="/comic/edit">
-					<input type="hidden" name="editpost" value="true">
-					<input type="hidden" name="cp-id" value="{{.Chapter.ID}}">
+				<form method="post" action="/comic/page/edit/">
+					<input type="hidden" name="cp-id" value="{{.ID}}">
 					<br>
 					<label>Page</label>
 					<br>

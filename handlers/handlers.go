@@ -282,8 +282,9 @@ func init() {
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
 	Handlers["/comic/"] = makeStatHandler(comicHandler)
-	Handlers["/comic/add"] = makeStatHandler(ComicAddHandler)
-	Handlers["/comic/edit"] = makeStatHandler(EditComicHandler)
+	Handlers["/comic/chapter/add/"] = makeStatHandler(comicAddChapterHandler)
+	Handlers["/comic/page/add/"] = makeStatHandler(comicAddPageHandler)
+	Handlers["/comic/page/edit/"] = makeStatHandler(comicEditPageHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 

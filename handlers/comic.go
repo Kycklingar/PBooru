@@ -195,7 +195,7 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page.Full = len(r.Form["full"]) > 0
-	page.EditMode = len(r.Form["edit-mode"]) > 0
+	page.EditMode = len(r.Form["edit"]) > 0
 
 	page.User, page.UserInfo = getUser(w, r)
 	page.User.QFlag(DM.DB)
@@ -227,170 +227,21 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "comic_chapter", page)
 }
 
-type comicPage struct {
-	Base    base
-	Comic   *DM.Comic
-	Chapter *DM.Chapter
-
-	User     *DM.User
-	UserInfo UserInfo
-	Full     bool
-	Time     string
-}
-
-func ComicHandler(w http.ResponseWriter, r *http.Request) {
-	var p comicPage
-	bm := benchmark.Begin()
-	spl := splitURI(r.URL.EscapedPath())
-	if len(spl) < 2 {
-		notFoundHandler(w, r)
-		return
-	}
-
-	id, err := strconv.Atoi(spl[1])
-	if err != nil {
-		log.Print(err)
-		notFoundHandler(w, r)
-		return
-	}
-
-	p.Comic = DM.NewComic()
-
-	p.Comic.ID = id
-	p.Comic.QID(DM.DB)
-	p.Comic.QTitle(DM.DB)
-	p.Comic.QChapterCount(DM.DB)
-	p.Base.Title = p.Comic.Title
-
-	if len(spl) >= 3 {
-		cOrd, err := strconv.Atoi(spl[2])
+func verifyInteger(r *http.Request, formKey... string) (m map[string]int, err error) {
+	m = make(map[string]int)
+	for _, key := range formKey {
+		var v int
+		v, err = strconv.Atoi(r.FormValue(key))
 		if err != nil {
-			log.Print(err)
-			notFoundHandler(w, r)
 			return
 		}
-
-		chptrs := p.Comic.QChapters(DM.DB)
-		for _, chp := range chptrs {
-			if chp.QOrder(DM.DB) == cOrd {
-				p.Chapter = chp
-				break
-			}
-		}
-		if p.Chapter.ID == 0 {
-			notFoundHandler(w, r)
-			return
-		}
-
-		p.Chapter.QPageCount(DM.DB)
-		p.Chapter.QTitle(DM.DB)
-		p.Chapter.QOrder(DM.DB)
-		for _, cp := range p.Chapter.QPosts(DM.DB) {
-			cp.QID(DM.DB)
-			cp.QOrder(DM.DB)
-			cp.Post.QHash(DM.DB)
-			cp.Post.QThumbnails(DM.DB)
-			cp.Post.QID(DM.DB)
-		}
-
-		p.Base.Title += fmt.Sprint(" - C", p.Chapter.Order)
-		if p.Chapter.Title != "" {
-			p.Base.Title += " - " + p.Chapter.Title
-		}
-	} else {
-
-		for _, c := range p.Comic.QChapters(DM.DB) {
-			c.QPageCount(DM.DB)
-			c.QTitle(DM.DB)
-			c.QOrder(DM.DB)
-			for _, cp := range c.QPosts(DM.DB) {
-				cp.QID(DM.DB)
-				cp.QOrder(DM.DB)
-				cp.Post.QHash(DM.DB)
-				cp.Post.QThumbnails(DM.DB)
-				cp.Post.QID(DM.DB)
-			}
-		}
+		m[key] = v
 	}
 
-	if len(r.FormValue("full")) > 0 {
-		p.Full = true
-	}
-
-	var u *DM.User
-	u, p.UserInfo = getUser(w, r)
-	u.QFlag(DM.DB)
-
-	p.User = u
-	p.Time = bm.EndStr(performBenchmarks)
-
-	renderTemplate(w, "comic_chapter", p)
+	return
 }
 
-func ComicAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
-		return
-	}
-	u, _ := getUser(w, r)
-	if !u.QFlag(DM.DB).Comics() {
-		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
-		return
-	}
-	cIDStr := r.FormValue("comicid")
-	pIDStr := r.FormValue("postid")
-	pOrderStr := r.FormValue("postorder")
-	chIDStr := r.FormValue("chapterid")
-
-	cID, err := strconv.Atoi(cIDStr)
-	if err != nil {
-		http.Error(w, "comicid not a number", http.StatusBadRequest)
-		return
-	}
-	pID, err := strconv.Atoi(pIDStr)
-	if err != nil {
-		http.Error(w, "postid not integer", http.StatusBadRequest)
-		return
-	}
-	pOrder, err := strconv.Atoi(pOrderStr)
-	if err != nil {
-		http.Error(w, "order not integer", http.StatusBadRequest)
-		return
-	}
-	chID, err := strconv.Atoi(chIDStr)
-	if err != nil {
-		http.Error(w, "chapterid not integer", http.StatusBadRequest)
-		return
-	}
-
-	c := DM.NewComic()
-	c.ID = cID
-
-	ch := c.Chapter(DM.DB, chID)
-	if ch == nil {
-		notFoundHandler(w, r)
-		return
-	}
-
-	cp := ch.NewComicPost()
-	err = cp.Post.SetID(DM.DB, pID)
-	if err != nil {
-		http.Error(w, "post doesn't exist", http.StatusBadRequest)
-		return
-	}
-
-	cp.Order = pOrder
-
-	err = cp.Save(u, true)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "error", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-}
-
-func EditComicHandler(w http.ResponseWriter, r *http.Request) {
+func comicAddChapterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w, r)
 		return
@@ -402,72 +253,114 @@ func EditComicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("newchapter") == "true" {
-		cIDStr := r.FormValue("comicid")
-		title := r.FormValue("title")
-		orderStr := r.FormValue("order")
+	const (
+		comicIDKey = "comic-id"
+		titleKey = "title"
+		orderKey = "order"
+	)
 
-		cID, err := strconv.Atoi(cIDStr)
-		if err != nil {
-			http.Error(w, "comicid not integer", http.StatusBadRequest)
-			return
-		}
-
-		order, err := strconv.Atoi(orderStr)
-		if err != nil {
-			http.Error(w, "order not integer", http.StatusBadRequest)
-			return
-		}
-
-		if order < 0 {
-			http.Error(w, "order must be positive", http.StatusBadRequest)
-			return
-		}
-
-		ch := DM.NewChapter()
-		ch.Title = title
-		ch.Order = order
-		ch.Comic = DM.NewComic()
-		ch.Comic.ID = cID
-
-		err = ch.Save(DM.DB, user)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Oops", http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d", cID, order), http.StatusSeeOther)
-	} else if r.FormValue("editpost") == "true" {
-		order, err := strconv.Atoi(r.FormValue("order"))
-		if err != nil {
-			http.Error(w, "order not integer", http.StatusBadRequest)
-			return
-		}
-		chID, err := strconv.Atoi(r.FormValue("chapter-id"))
-		if err != nil {
-			http.Error(w, "chapter-id not integer", http.StatusBadRequest)
-			return
-		}
-
-		cpID, err := strconv.Atoi(r.FormValue("cp-id"))
-		if err != nil {
-			http.Error(w, "cp-id not integer", http.StatusBadRequest)
-			return
-		}
-
-		cp := DM.NewComicPost()
-		cp.ID = cpID
-		cp.QChapter(DM.DB)
-		cp.Chapter.ID = chID
-		cp.Order = order
-
-		err = cp.Save(user, true)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Oops", http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, fmt.Sprint(r.Referer(), "../", chID), http.StatusSeeOther)
+	m, err := verifyInteger(r, comicIDKey, orderKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	chapter := DM.NewChapter()
+	chapter.Comic = DM.NewComic()
+	chapter.Comic.ID = m[comicIDKey]
+	chapter.Order = m[orderKey]
+	chapter.Title = r.FormValue(titleKey)
+	if err = chapter.Save(DM.DB, user); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d/", chapter.Comic.ID, chapter.Order), http.StatusSeeOther)
 }
+
+func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		postKey = "post-id"
+		postOrderKey = "order"
+		chapterIdKey = "chapter-id"
+	)
+
+	m, err := verifyInteger(r, postKey, postOrderKey, chapterIdKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cp := DM.NewComicPost()
+
+	cp.Post = DM.NewPost()
+	cp.Post.ID = m[postKey]
+
+	cp.Chapter = DM.NewChapter()
+	cp.Chapter.ID = m[chapterIdKey]
+
+	cp.Order = m[postOrderKey]
+
+	if err = cp.Save(user, false); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		cpIDKey = "cp-id"
+		postOrderKey = "order"
+		chapterIdKey = "chapter-id"
+	)
+
+	m, err := verifyInteger(r, cpIDKey, postOrderKey, chapterIdKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cp := DM.NewComicPost()
+	cp.ID = m[cpIDKey]
+
+	cp.Chapter = DM.NewChapter()
+	cp.Chapter.ID = m[chapterIdKey]
+	cp.Order = m[postOrderKey]
+
+	if err = cp.Save(user, true); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+

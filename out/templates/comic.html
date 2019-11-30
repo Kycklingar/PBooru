@@ -3,9 +3,8 @@
 {{if .User.Flag.Comics}}
 <details>
 <summary>Create a new chapter</summary>
-	<form method="POST" action="/comic/edit">
-	    <input type="hidden" name="newchapter" value="true">
-	    <input type="hidden" name="comicid" value="{{.Comic.ID}}">
+	<form method="POST" action="/comic/chapter/add/">
+	    <input type="hidden" name="comic-id" value="{{.Comic.ID}}">
 	    <input placeholder="Title" type="text" name="title">
 	    <br>
 	    <input placeholder="Order" type="text" name="order">

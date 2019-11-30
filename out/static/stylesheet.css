@@ -448,11 +448,6 @@ li
     word-break: break-all;
 }
 
-.comic-thumb:hover
-{
-	z-index:10;
-}
-
 .deleted
 {
     border: 2px solid red;
