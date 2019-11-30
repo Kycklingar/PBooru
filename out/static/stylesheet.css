@@ -422,7 +422,7 @@ li
     background-color:#667;
     box-shadow: 3px 3px #213;
     color:#000;
-    margin-bottom:1em;
+    margin:1em;
 }
 
 .cpage-container
@@ -432,6 +432,12 @@ li
     margin:1em;
     position:relative;
     height:300px;
+}
+
+.cpage-container img
+{
+	box-shadow:5px 3px 5px #213;
+	border: 1px solid black;
 }
 
 .comic-page

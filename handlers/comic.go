@@ -79,7 +79,10 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		c.Chapters[0].QOrder(DM.DB)
 		c.Chapters[0].QTitle(DM.DB)
 		c.Chapters[0].QPageCount(DM.DB)
-		for _, p := range c.Chapters[0].QPosts(DM.DB) {
+		for i, p := range c.Chapters[0].QPosts(DM.DB) {
+			if i >= 5 {
+				break
+			}
 			p.QOrder(DM.DB)
 			p.QID(DM.DB)
 			p.Post.QID(DM.DB)

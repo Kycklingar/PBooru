@@ -16,12 +16,16 @@
 
 <div id="comic-container">
 	<h1>{{.Comic.Title}}</h1>
+	{{$PostLimit := 5}}
+	{{if ge (len .Comic.Chapters) 5}}
+	{{$PostLimit = 2}}
+	{{end}}
 	{{range .Comic.Chapters}}
 	<div class="comics-container">
 		<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
 	    	<h4>Pages: {{.PageCount}}</h4>
 	    	<div class="cpage-container">
-		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit $PostLimit)}}
 		</div>
 	</div>
 	{{end}}
@@ -35,7 +39,7 @@
 			{{$offset = add $offset 4}}
 			{{$zindex = add $zindex -1}}
         	    	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-        	            	<img style="border:1px solid black;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
+        	            	<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
         	    	</a>
         	</div>
 	{{end}}

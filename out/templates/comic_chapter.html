@@ -26,11 +26,14 @@
 	<div>
 	    <h3>Chapter {{.Chapter.Order}}{{with .Chapter.Title}} - {{.}}{{end}}</h3>
 	    <h4>Pages: {{.Chapter.PageCount}}</h4>
+	    <form>
+	    	<button type="sumbit" name="full">View full images</button>
+	    </form>
 	    {{range .Chapter.Posts}}
 	        <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
 	            <div>
 	                <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-	                    <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
+	                    <img style="max-width:100%;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
 	                </a>
 	                <br>
 	                <p>Page:{{.Order}}</p>

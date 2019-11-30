@@ -4,9 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"strconv"
-
-	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func NewChapter() *Chapter {
@@ -51,6 +48,24 @@ func (c *Chapter) SetID(id int) {
 	c.ID = id
 }
 
+func (c *Chapter) QComic(q querier) error {
+	if c.Comic != nil {
+		return nil
+	}
+
+	var comic = new(Comic)
+	err := q.QueryRow("SELECT comic_id FROM comic_chapter WHERE id = $1", c.ID).Scan(&comic.ID)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return err
+	}
+
+	c.Comic = comic
+	return nil
+}
+
 func (c *Chapter) QTitle(q querier) string {
 	if c.Title != "" {
 		return c.Title
@@ -92,7 +107,7 @@ func (c *Chapter) QPageCount(q querier) int {
 		return c.PageCount
 	}
 
-	if err := q.QueryRow("SELECT count(1) FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
+	if err := q.QueryRow("SELECT count(*) FROM comic_mappings WHERE chapter_id = $1", c.QID(q)).Scan(&c.PageCount); err != nil {
 		log.Println(err)
 		return 0
 	}
@@ -125,8 +140,6 @@ func (c *Chapter) Save(q querier, user *User) error {
 		log.Println(err)
 	}
 
-	C.Cache.Purge("CCH", strconv.Itoa(c.QID(q)))
-
 	return err
 }
 
@@ -136,14 +149,6 @@ func (c *Chapter) QPosts(q querier) []*ComicPost {
 	}
 	if len(c.Posts) > 0 {
 		return c.Posts
-	}
-
-	if m := C.Cache.Get("CCH", strconv.Itoa(c.QID(q))); m != nil {
-		switch mm := m.(type) {
-		case *Chapter:
-			*c = *mm
-			return c.Posts
-		}
 	}
 
 	str := "SELECT id, post_id, post_order FROM comic_mappings WHERE Chapter_id=$1 ORDER BY post_order"
@@ -172,7 +177,6 @@ func (c *Chapter) QPosts(q querier) []*ComicPost {
 		return nil
 	}
 
-	C.Cache.Set("CCH", strconv.Itoa(c.QID(q)), c)
 	return c.Posts
 }
 

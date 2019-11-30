@@ -773,6 +773,38 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 	return posts, nil
 }
 
+func (p *Post) Chapters(q querier) []*Chapter {
+	if p.QID(q) == 0 {
+		return nil
+	}
+
+	rows, err := q.Query("SELECT chapter_id FROM comic_mappings WHERE post_id = $1", p.ID)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+		return nil
+	}
+
+	defer rows.Close()
+	var chapters []*Chapter
+	for rows.Next() {
+		var c = new(Chapter)
+		if err := rows.Scan(&c.ID); err != nil {
+			log.Println(err)
+			return nil
+		}
+		chapters = append(chapters, c)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return chapters
+}
+
 func (p *Post) Comics(q querier) []*Comic {
 	if p.QID(q) == 0 {
 		return nil

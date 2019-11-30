@@ -161,45 +161,34 @@
 </div>
 
 
-
-
-{{if .Dups.Posts}}
-<div class="comics-container">
-    <h3>Duplicates</h3>
-    <div class="cpage-container">
-        {{range .Dups.Posts}}
-            <a href="/post/{{.ID}}/{{.Hash}}">
-                <div class="comic-thumb">
-                    <img class="{{if .Deleted}}deleted{{end}}{{if eq .ID $.Post.ID}} current{{end}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
-                </div>
-            </a>
-        {{end}}
-    </div>
+{{with .Dups.Posts}}
+<div class="panel text-panel">
+	<h4>Duplicates</h4>
+	<div class="comic-strip">
+	{{range .}}
+		{{if eq .ID $.Post.ID}}
+		<span style="border:1px solid yellow;">
+		{{template "thumbnail" wrap2 "Post" "UserInfo" . $.UserInfo}}
+		</span>
+		{{else}}
+		{{template "thumbnail" wrap2 "Post" "UserInfo" . $.UserInfo}}
+		{{end}}
+	{{end}}
+	</div>
 </div>
 {{end}}
 
-{{if .Comics}}
-<div>
-    {{range .Comics}}
-    <div class="comics-container">
-            <a href="/comic/{{.ID}}">
-                <p>{{.Title}}</p>
-            </a>
-            Pages:{{.PageCount}}        
-            <div class="cpage-container">
-                {{range .ChaptersLimit 1}}
-                    {{range .PostsLimit 5}}
-                        <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                            <div class="comic-thumb" {{if eq .Post.ID $.Post.ID}}style="border-style:solid;border-color:yellow;"{{end}}>
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
-                            </div>
-                        </a>
-                    {{end}}
-                {{end}}
-            </div>
-    </div>
-    {{end}}
-</div>
+{{range .Chapters}}
+	<div class="comics-container">
+		<div>
+			<p><a href="/comic/{{.Comic.ID}}/">{{.Comic.Title}}</a></p>
+			<p><a href="/comic/{{.Comic.ID}}/{{.Order}}/">C{{.Order}}{{with .Title}} - {{.}}{{end}}</a></p>
+			<p>{{.Comic.PageCount}} pages</p>
+		</div>
+		<div class="cpage-container">
+			{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+		</div>
+	</div>
 {{end}}
 
 {{ template "userSettings" .UserInfo}}
