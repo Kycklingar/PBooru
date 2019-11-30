@@ -209,14 +209,14 @@ func (u uri) length() int {
 }
 
 func (u uri) getIntAtIndex(index int) (int, error) {
-	if length := len(u.components); length < index {
+	if length := len(u.components); length <= index {
 		return 0, uriLength{index, length}
 	}
 	return strconv.Atoi(u.components[index])
 }
 
 func (u uri) getAtIndex(index int) (string, error) {
-	if length := len(u.components); length < index {
+	if length := len(u.components); length <= index {
 		return "", uriLength{index, length}
 	}
 

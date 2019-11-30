@@ -18,7 +18,7 @@
 	<h1>{{.Comic.Title}}</h1>
 	{{range .Comic.Chapters}}
 	<div class="comics-container">
-		<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
+		<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
 	    	<h4>Pages: {{.PageCount}}</h4>
 	    	<div class="cpage-container">
 		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}

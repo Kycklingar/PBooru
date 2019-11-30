@@ -22,7 +22,7 @@
 {{end}}
 
 <div id="comic-container">
-	<h1>{{.Chapter.Comic.Title}}</h1>
+	<h1><a style="color:inherit;" href="/comic/{{.Chapter.Comic.ID}}/">{{.Chapter.Comic.Title}}</a></h1>
 	<div>
 	    <h3>Chapter {{.Chapter.Order}}{{with .Chapter.Title}} - {{.}}{{end}}</h3>
 	    <h4>Pages: {{.Chapter.PageCount}}</h4>

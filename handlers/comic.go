@@ -110,6 +110,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	comicID, err := uri.getIntAtIndex(1)
 	if err != nil {
 		notFoundHandler(w, r)
+		return
 	}
 
 	page := struct {
