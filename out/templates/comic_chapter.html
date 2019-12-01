@@ -1,7 +1,7 @@
 {{template "base" .Base}}
 
 {{if .User.Flag.Comics}}
-<details>
+<details {{if .AddPostMode}}open{{end}}>
 <summary>Add a post</summary>
 	<div class="text-panel">
 		<form method="post" action="/comic/page/add/">
@@ -28,6 +28,7 @@
 	    <h4>Pages: {{.Chapter.PageCount}}</h4>
 	    <form>
 	    	<button type="sumbit" name="full">View full images</button>
+		{{if .User.Flag.Comics}}<button type="submit" name="edit-mode">Edit pages</button>{{end}}
 	    </form>
 	    {{range .Chapter.Posts}}
 	        <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
@@ -66,7 +67,7 @@
 	        <ul>
 	            {{range .}}
 	            <li>
-	                <a href="{{.Order}}">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
+	                <a href="/comic/{{.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
 	            </li>
 	            {{end}}
 	        </ul>

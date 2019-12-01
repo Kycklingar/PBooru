@@ -121,10 +121,17 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 		Comic *DM.Comic
 		User  *DM.User
 		UserInfo UserInfo
+		EditMode bool
 	}{}
 
 	page.User, page.UserInfo = getUser(w, r)
 	page.User.QFlag(DM.DB)
+
+	if err := r.ParseForm(); err != nil {
+		log.Println(err)
+	}
+
+	page.EditMode = len(r.Form["edit-mode"]) > 0
 
 	if page.Comic, err = DM.NewComicByID(comicID); err != nil {
 		log.Println(err)
@@ -190,6 +197,7 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 		User *DM.User
 		Full bool
 		EditMode bool
+		AddPostMode bool
 		Time string
 	}{}
 
@@ -199,7 +207,8 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page.Full = len(r.Form["full"]) > 0
-	page.EditMode = len(r.Form["edit"]) > 0
+	page.EditMode = len(r.Form["edit-mode"]) > 0
+	page.AddPostMode = len(r.Form["add-mode"]) > 0
 
 	page.User, page.UserInfo = getUser(w, r)
 	page.User.QFlag(DM.DB)
@@ -276,11 +285,49 @@ func comicAddChapterHandler(w http.ResponseWriter, r *http.Request) {
 	chapter.Title = r.FormValue(titleKey)
 	if err = chapter.Save(DM.DB, user); err != nil {
 		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d/", chapter.Comic.ID, chapter.Order), http.StatusSeeOther)
+}
+
+func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		chapterIDKey = "chapter-id"
+		titleKey = "title"
+		orderKey = "order"
+	)
+
+	m, err := verifyInteger(r, chapterIDKey, orderKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	chapter := DM.NewChapter()
+	chapter.ID = m[chapterIDKey]
+	chapter.QComic(DM.DB)
+	chapter.Order = m[orderKey]
+	chapter.Title = r.FormValue(titleKey)
+	if err = chapter.SaveEdit(DM.DB, user); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -324,6 +371,7 @@ func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Form.Add("add-mode", "")
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 

@@ -16,6 +16,9 @@
 
 <div id="comic-container">
 	<h1>{{.Comic.Title}}</h1>
+	<form>
+		{{if .User.Flag.Comics}}<button type="submit" name="edit-mode">Edit chapters</button>{{end}}
+	</form>
 	{{$PostLimit := 5}}
 	{{if ge (len .Comic.Chapters) 10}}
 	{{$PostLimit = 2}}
@@ -27,6 +30,25 @@
 	    	<div class="cpage-container">
 		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit $PostLimit)}}
 		</div>
+		{{if and $.EditMode $.User.Flag.Comics}}
+			<details>
+			<summary>Edit</summary>
+				<form method="post" action="/comic/chapter/edit/">
+					<input type="hidden" name="chapter-id" value="{{.ID}}">
+					<label>Title</label>
+					<br>
+					<input type="text" name="title" value="{{.Title}}">
+					<br>
+					<br>
+					<label>Order</label>
+					<br>
+					<input type="number" name="order" value="{{.Order}}">
+					<br>
+					<br>
+					<input type="submit">
+				</form>
+			</details>
+		{{end}}
 	</div>
 	{{end}}
 </div>

@@ -123,11 +123,16 @@ func (c *Chapter) Save(q querier, user *User) error {
 	if c.Comic.QID(q) == 0 {
 		return errors.New("comic id not set")
 	}
-	// if c.Title() == "" {
-	// 	return errors.New("title is empty")
-	// }
-	if c.QOrder(q) == 0 {
-		return errors.New("order is 0")
+
+	var count int
+
+	if err := q.QueryRow("SELECT count(*) FROM comic_chapter WHERE comic_id = $1 AND c_order = $2", c.Comic.ID, c.Order).Scan(&count); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if count > 0 {
+		return errors.New("A chapter with that order already exists")
 	}
 
 	err := q.QueryRow("INSERT INTO comic_Chapter(comic_id, c_order, title) VALUES($1, $2, $3) RETURNING id", c.Comic.QID(q), c.Order, c.QTitle(q)).Scan(&c.ID)
@@ -137,6 +142,45 @@ func (c *Chapter) Save(q querier, user *User) error {
 	}
 
 	if err = c.log(q, lCreate, user); err != nil {
+		log.Println(err)
+	}
+
+	return err
+}
+
+func (c *Chapter) SaveEdit(q querier, user *User) error {
+	if c.QID(q) <= 0 {
+		return errors.New("Chapter doesn't exist")
+	}
+
+	if c.Comic.QID(q) <= 0 {
+		return errors.New("Comic doesn't exist")
+	}
+
+	var count int
+
+	if err := q.QueryRow("SELECT count(*) FROM comic_chapter WHERE comic_id = $1 AND c_order = $2", c.Comic.ID, c.Order).Scan(&count); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if count > 0 {
+		return errors.New("A chapter with that order already exists")
+	}
+
+	_, err := q.Exec(
+		"UPDATE comic_chapter SET comic_id = $1, c_order = $2, title = $3 WHERE id = $4",
+		c.Comic.ID,
+		c.Order,
+		c.Title,
+		c.ID,
+		)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if err = c.log(q, lUpdate, user); err != nil{
 		log.Println(err)
 	}
 
