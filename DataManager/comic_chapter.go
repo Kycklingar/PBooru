@@ -174,13 +174,13 @@ func (c *Chapter) SaveEdit(q querier, user *User) error {
 		c.Order,
 		c.Title,
 		c.ID,
-		)
+	)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	if err = c.log(q, lUpdate, user); err != nil{
+	if err = c.log(q, lUpdate, user); err != nil {
 		log.Println(err)
 	}
 

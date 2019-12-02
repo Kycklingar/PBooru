@@ -117,9 +117,9 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := struct {
-		Base  base
-		Comic *DM.Comic
-		User  *DM.User
+		Base     base
+		Comic    *DM.Comic
+		User     *DM.User
 		UserInfo UserInfo
 		EditMode bool
 	}{}
@@ -191,14 +191,14 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 	comic.QChapters(DM.DB)
 
 	page := struct {
-		Base base
-		Chapter *DM.Chapter
-		UserInfo UserInfo
-		User *DM.User
-		Full bool
-		EditMode bool
+		Base        base
+		Chapter     *DM.Chapter
+		UserInfo    UserInfo
+		User        *DM.User
+		Full        bool
+		EditMode    bool
 		AddPostMode bool
-		Time string
+		Time        string
 	}{}
 
 	if err := r.ParseForm(); err != nil {
@@ -240,7 +240,7 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "comic_chapter", page)
 }
 
-func verifyInteger(r *http.Request, formKey... string) (m map[string]int, err error) {
+func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err error) {
 	m = make(map[string]int)
 	for _, key := range formKey {
 		var v int
@@ -268,8 +268,8 @@ func comicAddChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 	const (
 		comicIDKey = "comic-id"
-		titleKey = "title"
-		orderKey = "order"
+		titleKey   = "title"
+		orderKey   = "order"
 	)
 
 	m, err := verifyInteger(r, comicIDKey, orderKey)
@@ -306,8 +306,8 @@ func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 	const (
 		chapterIDKey = "chapter-id"
-		titleKey = "title"
-		orderKey = "order"
+		titleKey     = "title"
+		orderKey     = "order"
 	)
 
 	m, err := verifyInteger(r, chapterIDKey, orderKey)
@@ -343,7 +343,7 @@ func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const (
-		postKey = "post-id"
+		postKey      = "post-id"
 		postOrderKey = "order"
 		chapterIdKey = "chapter-id"
 	)
@@ -388,7 +388,7 @@ func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const (
-		cpIDKey = "cp-id"
+		cpIDKey      = "cp-id"
 		postOrderKey = "order"
 		chapterIdKey = "chapter-id"
 	)
@@ -415,4 +415,3 @@ func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
-

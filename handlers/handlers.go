@@ -223,10 +223,10 @@ func init() {
 			"urlEncode": UrlEncode,
 			"urlDecode": UrlDecode,
 			"wrap2":     wrap2,
-			"add":	add,
-			"mul":	mul,
-			},
-		)
+			"add":       add,
+			"mul":       mul,
+		},
+	)
 
 	tmpls, err := loadTemplates("./templates/")
 	if err != nil {

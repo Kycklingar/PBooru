@@ -54,7 +54,7 @@ type Post struct {
 	Mime       *Mime
 	Deleted    int
 	Size       int64
-	Dimension *dimension
+	Dimension  *dimension
 	Score      int
 
 	description *string
@@ -63,7 +63,7 @@ type Post struct {
 }
 
 type dimension struct {
-	Width int
+	Width  int
 	Height int
 }
 
@@ -240,7 +240,7 @@ func (p *Post) QSize(q querier) int64 {
 	return p.Size
 }
 
-func (p *Post) QDimensions(q querier) error{
+func (p *Post) QDimensions(q querier) error {
 	if p.Dimension != nil {
 		return nil
 	}
