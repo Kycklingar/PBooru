@@ -34,6 +34,8 @@
 			<details>
 			<summary>Edit</summary>
 				<form method="post" action="/comic/chapter/edit/">
+					<label>Chapter ID: <b>{{.ID}}</b></label>
+					<br>
 					<input type="hidden" name="chapter-id" value="{{.ID}}">
 					<label>Title</label>
 					<br>
