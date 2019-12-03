@@ -290,6 +290,7 @@ func init() {
 	Handlers["/comic/chapter/edit/"] = makeStatHandler(comicEditChapterHandler)
 	Handlers["/comic/page/add/"] = makeStatHandler(comicAddPageHandler)
 	Handlers["/comic/page/edit/"] = makeStatHandler(comicEditPageHandler)
+	Handlers["/comic/page/delete/"] = makeStatHandler(comicDeletePageHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 

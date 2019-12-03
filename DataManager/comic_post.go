@@ -119,48 +119,59 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 		return fmt.Errorf("Invalid Chapter")
 	}
 
-	if overwrite && p.QID(tx) != 0 {
-		_, err := tx.Exec("UPDATE comic_mappings SET post_order=$1, Chapter_id=$2 WHERE id = $3", p.Order, p.Chapter.QID(tx), p.ID)
-		if err != nil {
-			log.Print(err)
-			tx.Rollback()
-			return err
-		}
+	if p.Post.QID(tx) == 0 {
+		return fmt.Errorf("Invalid post")
+	}
 
-		p.QChapter(tx)
-		p.Chapter.QID(tx)
-		if err = p.QPost(tx); err != nil {
-			log.Println(err)
-			return err
-		}
-		p.Post.QID(tx)
+	err = tx.QueryRow("INSERT INTO comic_mappings(post_id, post_order, Chapter_id) Values($1, $2, $3) RETURNING id", p.Post.QID(tx), p.Order, p.Chapter.QID(tx)).Scan(&p.ID)
+	if err != nil {
+		log.Print(err)
+		tx.Rollback()
+		return err
+	}
 
-		if err = p.log(tx, lUpdate, user); err != nil {
-			log.Println(err)
-			tx.Rollback()
-			return err
-		}
-
-	} else {
-		if p.Post.QID(tx) == 0 {
-			return fmt.Errorf("Invalid post")
-		}
-
-		err := tx.QueryRow("INSERT INTO comic_mappings(post_id, post_order, Chapter_id) Values($1, $2, $3) RETURNING id", p.Post.QID(tx), p.Order, p.Chapter.QID(tx)).Scan(&p.ID)
-		if err != nil {
-			log.Print(err)
-			tx.Rollback()
-			return err
-		}
-
-		if err = p.log(tx, lCreate, user); err != nil {
-			log.Println(err)
-			tx.Rollback()
-			return err
-		}
+	if err = p.log(tx, lCreate, user); err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return err
 	}
 
 	C.Cache.Purge("CCH", strconv.Itoa(p.Chapter.QID(tx)))
+
+	return nil
+}
+
+func (p *ComicPost) SaveEdit(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	defer tx.Commit()
+
+	if !user.QFlag(tx).Comics() {
+		return fmt.Errorf("Action not allowed from this user")
+	}
+
+	_, err = tx.Exec(
+		"UPDATE comic_mappings SET post_order = $1, post_id = $2, Chapter_id = $3 WHERE id = $4",
+		p.Order,
+		p.Post.ID,
+		p.Chapter.ID,
+		p.ID,
+	)
+	if err != nil {
+		log.Print(err)
+		tx.Rollback()
+		return err
+	}
+
+	if err = p.log(tx, lUpdate, user); err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return err
+	}
 
 	return nil
 }
@@ -177,6 +188,44 @@ func (p *ComicPost) replacePost(q querier, new *Post) error {
 		log.Print(err)
 		return err
 	}
+
+	return nil
+}
+
+func (p *ComicPost) Delete(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	var def func() error
+	def = tx.Rollback
+	defer func() {
+		def()
+		return
+	}()
+
+	if err = p.QPost(tx); err != nil {
+		return err
+	}
+	if err = p.QChapter(tx); err != nil {
+		return err
+	}
+	p.QOrder(tx)
+
+	_, err = tx.Exec("DELETE FROM comic_mappings WHERE id = $1", p.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	if err = p.log(tx, lRemove, user); err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return err
+	}
+
+	def = tx.Commit
 
 	return nil
 }

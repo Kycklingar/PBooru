@@ -19,6 +19,58 @@
 		</form>
 	</div>
 </details>
+<script>
+	let button = document.createElement("button")
+	let store = window.localStorage
+
+	button.innerText = "Add to quickadd"
+
+	let chapters = JSON.parse(store.getItem("chapters"))
+	if (chapters != null)
+	{
+		for (let i = 0; i < chapters.length; i++)
+		{
+			if (chapters[i].ID == {{.Chapter.ID}})
+			{
+				button.innerText = "Remove from quickadd"
+				break
+			}
+		}
+	}
+
+	button.onclick = function() {
+		let chapters = JSON.parse(store.getItem("chapters"))
+
+		if (chapters != null)
+		{
+			for (let i = 0; i < chapters.length; i++)
+			{
+				if (chapters[i].ID == {{.Chapter.ID}})
+				{
+					chapters.splice(i, 1)
+					store.setItem("chapters", JSON.stringify(chapters))
+					button.innerText = "Add to quickadd"
+					return
+				}
+			}
+		}
+
+		chapter = {
+			"comicTitle":{{.Chapter.Comic.Title}},
+			"title":{{with .Chapter.Title}}{{.}}{{else}}{{.Chapter.Order}}{{end}},
+			"ID":{{.Chapter.ID}},
+		}
+		if (chapters == null) {
+			chapters = [chapter]
+		}else {
+			chapters.push(chapter)
+		}
+		button.innerText = "Remove from quickadd"
+		store.setItem("chapters", JSON.stringify(chapters))
+	}
+
+	document.body.appendChild(button)
+</script>
 {{end}}
 
 <div id="comic-container">
@@ -45,6 +97,10 @@
 				<form method="post" action="/comic/page/edit/">
 					<input type="hidden" name="cp-id" value="{{.ID}}">
 					<br>
+					<label>Post ID</label>
+					<br>
+					<input type="number" value="{{.Post.ID}}" name="post-id">
+					<br>
 					<label>Page</label>
 					<br>
 					<input type="number" value="{{.Order}}" name="order">
@@ -57,6 +113,10 @@
 						<br>
 					{{end}}
 					<input type="submit">
+				</form>
+				<form method="post" action="/comic/page/delete/">
+					<input type="hidden" name="cp-id" value="{{.ID}}">
+					<input type="submit" value="Delete">
 				</form>
 			</details>
 		    {{end}}

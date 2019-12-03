@@ -390,10 +390,52 @@ func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 	const (
 		cpIDKey      = "cp-id"
 		postOrderKey = "order"
+		postIDKey    = "post-id"
 		chapterIdKey = "chapter-id"
 	)
 
-	m, err := verifyInteger(r, cpIDKey, postOrderKey, chapterIdKey)
+	m, err := verifyInteger(r, cpIDKey, postOrderKey, postIDKey, chapterIdKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cp := DM.NewComicPost()
+	cp.ID = m[cpIDKey]
+	cp.Post = DM.NewPost()
+	cp.Post.ID = m[postIDKey]
+
+	cp.Chapter = DM.NewChapter()
+	cp.Chapter.ID = m[chapterIdKey]
+	cp.Order = m[postOrderKey]
+
+	if err = cp.SaveEdit(user); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func comicDeletePageHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		cpIDKey = "cp-id"
+	)
+
+	m, err := verifyInteger(r, cpIDKey)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -403,11 +445,7 @@ func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 	cp := DM.NewComicPost()
 	cp.ID = m[cpIDKey]
 
-	cp.Chapter = DM.NewChapter()
-	cp.Chapter.ID = m[chapterIdKey]
-	cp.Order = m[postOrderKey]
-
-	if err = cp.Save(user, true); err != nil {
+	if err = cp.Delete(user); err != nil {
 		log.Println(err)
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return

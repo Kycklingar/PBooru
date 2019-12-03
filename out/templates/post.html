@@ -57,6 +57,33 @@
 		<summary>Report post</summary>
 			{{template "reportForm" .Post.ID}}
 		</details>
+		<details id="quickadd" style="display:none">
+		<summary>Add to chapter</summary>
+			<form style="width:min-content" method="post" action="/comic/page/add/">
+				<br>
+				<input type="hidden" name="post-id" value="{{.Post.ID}}">
+				<select id="quickadd-chapter" name="chapter-id"></select>
+				<input style="margin:2px; padding:3px 0px;" placeholder="Page" type="number" name="order">
+				<input type="submit" value="Add to chapter">
+			</form>
+			<script>
+				let store = window.localStorage
+				let chapters = JSON.parse(store.getItem("chapters"))
+				
+				let sel = document.getElementById("quickadd-chapter")
+				let det = document.getElementById("quickadd")
+
+				for(let i = 0; i < chapters.length; i++)
+				{
+					det.style = "display:inherit"
+					let op = document.createElement("option")
+					op.value = chapters[i].ID
+					op.innerText = chapters[i].comicTitle + " / " + chapters[i].title
+					sel.appendChild(op)
+					console.log(op)
+				}
+			</script>
+		</details>
 		{{with .User.Pools}}
 		<details>
 			<summary>Add to pool</summary>
