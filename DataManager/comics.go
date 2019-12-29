@@ -175,25 +175,106 @@ func (c *Comic) QChapterCount(q querier) int {
 	return c.ChapterCount
 }
 
-func (c *Comic) Save(q querier, user *User) error {
-	if c.QID(q) != 0 {
+func (c *Comic) Save(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	var a func() error
+	a = tx.Rollback
+
+	defer func() {
+		a()
+	}()
+
+	if c.QID(tx) != 0 {
 		return errors.New("Comic already exist")
 	}
 
-	if c.QTitle(q) == "" {
+	if c.QTitle(tx) == "" {
 		return errors.New("Title is empty")
 	}
 
-	err := q.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNING id", c.QTitle(q)).Scan(&c.ID)
+	err = tx.QueryRow("INSERT INTO comics(title) VALUES($1) RETURNING id", c.QTitle(tx)).Scan(&c.ID)
 	if err != nil {
 		log.Print(err)
 		return err
 	}
 
-	err = c.log(q, lCreate, user)
+	err = c.log(tx, lCreate, user)
 	if err != nil {
 		log.Println(err)
 	}
 
+	a = tx.Commit
+
 	return err
+}
+
+func (c *Comic) SaveEdit(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	var a func() error
+	a = tx.Rollback
+
+	defer func() {
+		a()
+	}()
+
+	if c.QID(tx) <= 0 {
+		return errors.New(fmt.Sprint("Invalid comic id: ", c.ID))
+	}
+
+	err = c.log(tx, lUpdate, user)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE comics SET title = $1 WHERE id = $2", c.Title, c.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	a = tx.Commit
+
+	return nil
+}
+
+func (c *Comic) Delete(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	var a func() error
+	a = tx.Rollback
+
+	defer func() {
+		a()
+	}()
+
+	if c.QID(tx) <= 0 {
+		return errors.New(fmt.Sprint("Invalid comic id: ", c.ID))
+	}
+
+	if err = c.log(tx, lRemove, user); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM comics WHERE id = $1", c.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	a = tx.Commit
+
+	return nil
 }

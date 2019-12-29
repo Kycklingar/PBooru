@@ -16,6 +16,7 @@ type comicsPage struct {
 	UserInfo   UserInfo
 	Pageinator Pageination
 	Time       string
+	Edit bool
 }
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +35,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 		c := DM.NewComic()
 		c.Title = title
-		err := c.Save(DM.DB, user)
+		err := c.Save(user)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Oops", http.StatusInternalServerError)
@@ -43,12 +44,13 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/comic/%d", c.QID(DM.DB)), http.StatusSeeOther)
 		return
 	}
-	splt := splitURI(r.RequestURI)
 	var err error
 
+	uri := uriSplitter(r)
+
 	offset := 1
-	if len(splt) >= 2 {
-		offset, err = strconv.Atoi(splt[1])
+	if uri.length() >= 2 {
+		offset, err = uri.getIntAtIndex(1)
 		if err != nil {
 			http.Error(w, "Invalid Path", http.StatusBadRequest)
 			return
@@ -57,6 +59,14 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 
 	var p comicsPage
+
+	if err = r.ParseForm(); err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+
+	p.Edit = len(r.Form["edit"]) >= 1
 
 	var cc DM.ComicCollector
 	err = cc.Get(5, (offset-1)*5)
@@ -103,6 +113,20 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func comicHandler(w http.ResponseWriter, r *http.Request) {
+	page := struct {
+		Base     base
+		Comic    *DM.Comic
+		User     *DM.User
+		UserInfo UserInfo
+		EditMode bool
+	}{}
+
+	page.User, page.UserInfo = getUser(w, r)
+	if !page.User.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
 	uri := uriSplitter(r)
 
 	if uri.length() >= 3 {
@@ -116,16 +140,6 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page := struct {
-		Base     base
-		Comic    *DM.Comic
-		User     *DM.User
-		UserInfo UserInfo
-		EditMode bool
-	}{}
-
-	page.User, page.UserInfo = getUser(w, r)
-	page.User.QFlag(DM.DB)
 
 	if err := r.ParseForm(); err != nil {
 		log.Println(err)
@@ -158,6 +172,78 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "comic", page)
+}
+
+func comicDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		comicIDKey = "comic-id"
+	)
+	m, err := verifyInteger(r, comicIDKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	c := DM.NewComic()
+	c.ID = m[comicIDKey]
+
+	if err = c.Delete(user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/comics/", http.StatusSeeOther)
+}
+
+func comicUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		comicIDKey = "comic-id"
+		titleKey = "title"
+	)
+
+	m, err := verifyInteger(r, comicIDKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	comic, err := DM.NewComicByID(m[comicIDKey])
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	comic.Title = r.FormValue(titleKey)
+	if err = comic.SaveEdit(user); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func chapterHandler(w http.ResponseWriter, r *http.Request) {
@@ -322,6 +408,40 @@ func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
 	chapter.Order = m[orderKey]
 	chapter.Title = r.FormValue(titleKey)
 	if err = chapter.SaveEdit(DM.DB, user); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func comicRemoveChapterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		chapterIDKey = "chapter-id"
+	)
+
+	m, err := verifyInteger(r, chapterIDKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	chapter := DM.NewChapter()
+	chapter.ID = m[chapterIDKey]
+
+	if err = chapter.Delete(user); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

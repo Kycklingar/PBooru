@@ -9,6 +9,10 @@
 		<input type="submit">
 	</form>
 </details>
+<form>
+	<input type="hidden" name="edit">
+	<input type="submit" value="Edit">
+</form>
 {{end}}
 
 {{range .Comics}}
@@ -22,6 +26,22 @@
         	<div class="cpage-container">
         		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
 		</div>
+	{{end}}
+
+	{{if $.Edit}}
+	<details>
+	<summary>Edit</summary>
+	<form action="/comic/edit/" method="POST">
+		<input type="hidden" name="comic-id" value="{{.ID}}">
+		<label>Title</label><br>
+		<input type="text" name="title" value="{{.Title}}"><br>
+		<input type="submit">
+	</form>
+	<form action="/comic/delete/" method="POST">
+		<input type="hidden" value="{{.ID}}" name="comic-id">
+		<input type="submit" value="Delete">
+	</form>
+	</details>
 	{{end}}
 </div>
 {{end}}

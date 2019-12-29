@@ -49,6 +49,10 @@
 					<br>
 					<input type="submit">
 				</form>
+				<form action="/comic/chapter/delete/" method="POST">
+					<input type="hidden" name="chapter-id" value="{{.ID}}">
+					<input type="submit" value="Delete">
+				</form>
 			</details>
 		{{end}}
 	</div>

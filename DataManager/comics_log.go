@@ -18,14 +18,17 @@ func (c *Comic) log(q querier, action logAction, user *User) error {
 			)
 		VALUES($1, $2, $3, $4)`,
 		action,
-		c.ID,
-		user.ID,
-		c.Title,
+		c.QID(q),
+		user.QID(q),
+		c.QTitle(q),
 	)
 	return err
 }
 
 func (ch *Chapter) log(q querier, action logAction, user *User) error {
+	if err := ch.QComic(q); err != nil {
+		return err
+	}
 	_, err := q.Exec(`
 		INSERT INTO log_chapter(
 			action,
@@ -37,11 +40,11 @@ func (ch *Chapter) log(q querier, action logAction, user *User) error {
 			)
 		VALUES($1, $2, $3, $4, $5, $6)`,
 		action,
-		ch.ID,
-		user.ID,
-		ch.Comic.ID,
-		ch.Order,
-		ch.Title,
+		ch.QID(q),
+		user.QID(q),
+		ch.Comic.QID(q),
+		ch.QOrder(q),
+		ch.QTitle(q),
 	)
 	return err
 }

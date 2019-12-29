@@ -157,14 +157,16 @@ func (c *Chapter) SaveEdit(q querier, user *User) error {
 		return errors.New("Comic doesn't exist")
 	}
 
-	var count int
+	var i int
 
-	if err := q.QueryRow("SELECT count(*) FROM comic_chapter WHERE comic_id = $1 AND c_order = $2", c.Comic.ID, c.Order).Scan(&count); err != nil {
-		log.Println(err)
-		return err
+	if err := q.QueryRow("SELECT id FROM comic_chapter WHERE comic_id = $1 AND c_order = $2", c.Comic.ID, c.Order).Scan(&i); err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+			return err
+		}
 	}
 
-	if count > 0 {
+	if i > 0 && i != c.ID {
 		return errors.New("A chapter with that order already exists")
 	}
 
@@ -185,6 +187,32 @@ func (c *Chapter) SaveEdit(q querier, user *User) error {
 	}
 
 	return err
+}
+
+func (c *Chapter) Delete(user *User) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	var a func() error
+	a = tx.Rollback
+	defer func(){a()}()
+
+	if err = c.log(tx, lRemove, user); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM comic_chapter WHERE id = $1", c.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	a = tx.Commit
+
+	return nil
 }
 
 func (c *Chapter) QPosts(q querier) []*ComicPost {
