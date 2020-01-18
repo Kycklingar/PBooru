@@ -1,0 +1,101 @@
+{{template "base"}}
+
+
+<style>
+	#interface-window
+	{
+		position:fixed;
+		display:flex;
+		background-color:#222B;
+		top:0px;
+		bottom:0px;
+		left:0px;
+		right:0px;
+	}
+
+	#interface-left
+	{
+		background-color:#4445;
+		width:150px;
+		overflow:auto;
+		padding:5px;
+	}
+
+	#interface-left img
+	{
+		width:100%;
+	}
+
+	#interface-right
+	{
+		/*width:100%;*/
+		overflow: auto;
+		width:100%;
+	}
+	#interface-right canvas
+	{
+		position:relative;
+	}
+
+	#interface-float
+	{
+		background-color:#333A;
+		position:fixed;
+		right:0px;
+		bottom:0px;
+		margin:1em;
+	}
+
+	#interface-float span
+	{
+		cursor:pointer;
+	}
+
+	.highlighted
+	{
+		background-color:#222;
+		box-shadow:0px 0px 2px #AAA;
+	}
+</style>
+
+<div id="interface-window">
+	<div id="interface-left"></div>
+	<div id="interface-right">
+		<canvas></canvas>
+	</div>
+</div>
+
+<div id="interface-float">
+	<span id="button-anchor" onclick="anchor()">Anchor</span>
+	<span id="button-fit" onclick="fit()">Fit</span>
+	<br>
+	<span id="scale" style="cursor:inherit">Scale:
+		<span id="button-scale1" class="highlighted" onclick="scale(1)">1x</span>
+		<span id="button-scale2" onclick="scale(2)">2x</span>
+		<span id="button-scale5" onclick="scale(5)">5x</span>
+	</span>
+	<br>
+	<span id="contrast" style="cursor:inherit">Contrast:
+		<span id="button-cont1" class="highlighted" onclick="cont(1)">1x</span>
+		<span id="button-cont2" onclick="cont(2)">2x</span>
+		<span id="button-cont3" onclick="cont(3)">3x</span>
+	</span>
+</div>
+
+<script src="/static/scripts/compare.js"></script>
+<script>
+	gateway = {{.UserInfo.IpfsDaemon}}
+	{{range .Posts}}
+		addPost(postStruct(
+			{{.ID}},
+			{{.Hash}},
+			{{.ClosestThumbnail 100}},
+			{{.Dimension}},//{{with .Dimension}}{"width":{{.Width}},"height":{{.Height}}}{{else}}null{{end}},
+			{{.Size}},
+			{{.Mime}}
+		))
+	{{end}}
+
+</script>
+
+{{template "baseEnd"}}
