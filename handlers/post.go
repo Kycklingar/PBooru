@@ -18,7 +18,8 @@ type Postpage struct {
 	Voted    bool
 	Comments []*DM.PostComment
 	Dups     *DM.Duplicate
-	Comics   []*DM.Comic
+	//Comics   []*DM.Comic
+	Chapters []*DM.Chapter
 	Sidebar  Sidebar
 	User     *DM.User
 	UserInfo UserInfo
@@ -193,24 +194,21 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Comics = dp.Comics(DM.DB)
-	for _, c := range pp.Comics {
-		c.QID(DM.DB)
+	pp.Chapters = dp.Chapters(DM.DB)
+	for _, c := range pp.Chapters {
+		c.QComic(DM.DB)
+		c.Comic.QTitle(DM.DB)
+		c.Comic.QPageCount(DM.DB)
 		c.QTitle(DM.DB)
-		c.QPageCount(DM.DB)
-		if c.QChapterCount(DM.DB) <= 0 {
-			continue
-		}
-		ch := c.QChapters(DM.DB)[0]
-		for i, cp := range ch.QPosts(DM.DB) {
-			if i >= 5 {
+		c.QOrder(DM.DB)
+		for i, p := range c.QPosts(DM.DB) {
+			if i > 5 {
 				break
 			}
-			cp.Post.QID(DM.DB)
-			cp.Post.QThumbnails(DM.DB)
-			cp.Post.QHash(DM.DB)
-			cp.Post.QMime(DM.DB).QName(DM.DB)
-			cp.Post.QMime(DM.DB).QType(DM.DB)
+			p.QOrder(DM.DB)
+			p.QPost(DM.DB)
+			p.Post.QHash(DM.DB)
+			p.Post.QThumbnails(DM.DB)
 		}
 	}
 

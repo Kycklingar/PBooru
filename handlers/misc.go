@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +17,10 @@ import (
 const (
 	errMustBeAdmin = "Must be logged in as an admin"
 )
+
+func lackingPermissions(priv string) string {
+	return fmt.Sprintf("Insufficient privileges. Want %s", priv)
+}
 
 var Templates *template.Template
 
@@ -170,6 +176,51 @@ func OptionsHandler(w http.ResponseWriter, r *http.Request) {
 func splitURI(uri string) []string {
 	str := strings.Trim(uri, "/")
 	return strings.Split(str, "/")
+}
+
+type uri struct {
+	raw        string
+	components []string
+}
+
+func uriSplitter(r *http.Request) uri {
+	return uri{
+		raw: r.URL.EscapedPath(),
+		components: strings.Split(
+			strings.Trim(
+				r.URL.EscapedPath(),
+				"/",
+			),
+			"/",
+		),
+	}
+}
+
+type uriLength struct {
+	index, length int
+}
+
+func (ue uriLength) Error() string {
+	return fmt.Sprintf("index out of bounds. uri length %d, index %d", ue.length, ue.index)
+}
+
+func (u uri) length() int {
+	return len(u.components)
+}
+
+func (u uri) getIntAtIndex(index int) (int, error) {
+	if length := len(u.components); length <= index {
+		return 0, uriLength{index, length}
+	}
+	return strconv.Atoi(u.components[index])
+}
+
+func (u uri) getAtIndex(index int) (string, error) {
+	if length := len(u.components); length <= index {
+		return "", uriLength{index, length}
+	}
+
+	return u.components[index], nil
 }
 
 type Comment struct {
