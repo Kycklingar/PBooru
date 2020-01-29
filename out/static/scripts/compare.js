@@ -21,6 +21,33 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime)
 	}
 }
 
+function submitReport()
+{
+	if (currentPost == null)
+	{
+		alert("No post selected as superior")
+		return
+	}
+
+	let fd = new FormData()
+	for (let i = 0; i < posts.length; i++)
+	{
+		fd.append("post-ids", posts[i].id)
+	}
+
+	fd.append("best-id", currentPost.id)
+
+	let xhr = new XMLHttpRequest()
+
+	xhr.onreadystatechange = function() {
+		if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
+			alert("Thank you for your report")
+	}
+	xhr.open("POST", "/reports/duplicate/", true)
+
+	xhr.send(fd)
+}
+
 function humanFileSize(size) {
 	var i = Math.floor( Math.log(size) / Math.log(1000) );
 	return ( size / Math.pow(1000, i) ).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
@@ -28,19 +55,112 @@ function humanFileSize(size) {
 
 function addPost(post)
 {
+	for(let i = 0; i < posts.length; i++)
+	{
+		if (posts[i].id == post.id)
+			return
+	}
+
 	posts.push(post)
 	leftInterface.appendChild(leftPostElement(post))
+}
+
+function closestThumb(minsize, thumbs)
+{
+	let r = null
+	for(let i = 0; i < thumbs.length; i++)
+	{
+		if (
+			r == null || (
+				thumbs[i].Size > r.Size && r < minsize
+			) || thumbs[i].Size < r.Size
+		)
+			r = thumbs[i]
+	}
+
+	return r.Hash
+}
+
+function mimeObj(mime)
+{
+	let s = mime.split("/")
+	return {"Type":s[0],"Name":s[1]}
+}
+
+function getRemotePost(id)
+{
+	let xhr = new XMLHttpRequest()
+
+	xhr.onreadystatechange = function() {
+		if(xhr.readyState == XMLHttpRequest.DONE)
+		{
+			if(xhr.status == 200)
+			{
+				let j = JSON.parse(xhr.responseText)
+				addPost(
+					postStruct(
+						j.ID,
+						j.Hash,
+						closestThumb(100, j.ThumbHashes),
+						{"Width":100,"Height":100},
+						100,
+						mimeObj(j.Mime)
+					)
+				)
+			}
+			else
+			{
+				alert(xhr.responseText)
+			}
+			
+		}
+	}
+
+	let fd = new FormData()
+	fd.append("id", id)
+	console.log(fd)
+
+	xhr.open("POST", "/api/v1/post", true)
+	xhr.send(fd)
+}
+
+function removePost(id)
+{
+	for (let i = 0; i < posts.length; i++)
+	{
+		if (posts[i].id == id)
+		{
+			posts.splice(i, 1)
+			break
+		}
+	}
+
+	for (let c = leftInterface.firstChild; c != null; c = c.nextSibling)
+	{
+		if (c.postid == id)
+		{
+			leftInterface.removeChild(c)
+			break
+		}
+	}
 }
 
 function leftPostElement(post)
 {
 	let e = document.createElement("div")
 	e.postid = post.id
+	e.draggable = true
+	e.ondragstart = drag
+	//e.ondrop = drop
+	e.ondragover = dragover
+
+	e.addEventListener("drop", drop, true)
 	
 	let img = document.createElement("img")
 	img.src = gateway + "/ipfs/" + post.thumbnail
 
 	img.onclick = function(){renderPost(post)}
+	img.draggable = false
 
 	e.appendChild(img)
 
@@ -56,6 +176,65 @@ function leftPostElement(post)
 	pEl(post.mime.Type + "/" + post.mime.Name , e)
 
 	return e
+}
+
+function drag(e)
+{
+	e.dataTransfer.setData("text/plain", e.target.postid)
+}
+
+function drop(e)
+{
+	e.preventDefault()
+
+	let target = null
+	for(let p = e.target; p != null; p = p.parentElement)
+	{
+		if(p.draggable)
+		{
+			target = p
+			break
+		}
+	}
+
+	let computed = target.offsetHeight + target.offsetTop - target.scrollTop - e.clientY - target.offsetHeight / 2
+	let postid = e.dataTransfer.getData("text")
+	for (let c = leftInterface.firstChild; c != null; c = c.nextSibling)
+	{
+		if (c.postid == postid)
+		{
+			if(computed > 0)
+				leftInterface.insertBefore(c, target)
+			else
+				leftInterface.insertBefore(c, target.nextSibling)
+			break
+		}
+	}
+
+
+	reorderPostsByElements()
+}
+
+function dragover(e)
+{
+	e.preventDefault()
+}
+
+function reorderPostsByElements()
+{
+	let arr = []
+	for (let c = leftInterface.firstChild; c != null; c = c.nextSibling)
+	{
+		for (let i = 0; i < posts.length; i++)
+		{
+			if (c.postid == posts[i].id)
+			{
+				arr.push(posts[i])
+			}
+		}
+	}
+
+	posts = arr
 }
 
 function ipfsLink(hash)

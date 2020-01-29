@@ -1,0 +1,21 @@
+{{template "base"}}
+
+{{range .}}
+<div class="panel">
+	<p>{{.ID}}</p>
+	<a href="/user/{{.Reporter.ID}}/">{{.Reporter.Name}}</a>
+	<p>{{.Timestamp}}</p>
+	{{with .Note}}
+		<p>{{.}}</p>
+	{{end}}
+	{{range .Posts}}
+		<span>
+			<img src="http://localhost:8080/ipfs/{{.Post.ClosestThumbnail 100}}">
+			{{.Score}}
+		</span>
+	{{end}}
+	<a href="/duplicate/report/compare/{{.ID}}">
+</div>
+{{end}}
+
+{{template "baseEnd"}}
