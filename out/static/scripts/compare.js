@@ -41,9 +41,14 @@ function submitReport()
 
 	xhr.onreadystatechange = function() {
 		if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
-			alert("Thank you for your report")
+		{
+			if (this.status == 200)
+				alert("Thank you for your report")
+			else
+				alert(this.status + this.responseText)
+		}
 	}
-	xhr.open("POST", "/reports/duplicate/", true)
+	xhr.open("POST", "/duplicate/report/", true)
 
 	xhr.send(fd)
 }

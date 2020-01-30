@@ -17,7 +17,7 @@ type Postpage struct {
 	Post     *DM.Post
 	Voted    bool
 	Comments []*DM.PostComment
-	Dups     *DM.Duplicate
+	Dupe     DM.Dupe
 	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
@@ -154,6 +154,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	p.QID(DM.DB)
+
+
 	p = DM.CachedPost(p)
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
@@ -166,15 +168,32 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Post = p
 
-	pp.Voted = pp.User.Voted(DM.DB, p)
+	pp.Dupe, err = p.Duplicates(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	dup := DM.NewDuplicate()
-	dup.Post = p
-	dp := dup.BestPost(DM.DB)
+	pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
+
+	pp.Dupe.Post.QHash(DM.DB)
+	pp.Dupe.Post.QDeleted(DM.DB)
+	pp.Dupe.Post.QThumbnails(DM.DB)
+
+	for _, p := range pp.Dupe.Inferior {
+		p.QID(DM.DB)
+		p = DM.CachedPost(p)
+		p.QHash(DM.DB)
+		p.QThumbnails(DM.DB)
+		p.QDeleted(DM.DB)
+	}
+
+	pp.Voted = pp.User.Voted(DM.DB, p)
 
 	var tc DM.TagCollector
 
-	err = tc.GetFromPost(DM.DB, dp)
+	err = tc.GetFromPost(DM.DB, pp.Dupe.Post)
 	if err != nil {
 		log.Print(err)
 	}
@@ -194,7 +213,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Chapters = dp.Chapters(DM.DB)
+	pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
 	for _, c := range pp.Chapters {
 		c.QComic(DM.DB)
 		c.Comic.QTitle(DM.DB)
@@ -222,14 +241,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	sortTags(pp.Sidebar.Tags)
 
-	pp.Dups = p.Duplicate()
-	pp.Dups.QID(DM.DB)
-	for _, p := range pp.Dups.QPosts(DM.DB) {
-		p.QID(DM.DB)
-		p.QHash(DM.DB)
-		p.QThumbnails(DM.DB)
-		p.QDeleted(DM.DB)
-	}
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)

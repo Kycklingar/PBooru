@@ -851,11 +851,15 @@ func (p *Post) Comics(q querier) []*Comic {
 	return comics
 }
 
-func (p *Post) Duplicate() *Duplicate {
-	d := NewDuplicate()
-	d.Post = p
+//func (p *Post) Duplicate() *Duplicate {
+//	d := NewDuplicate()
+//	d.Post = p
+//
+//	return d
+//}
 
-	return d
+func (p *Post) Duplicates(q querier) (Dupe, error) {
+	return getDupeFromPost(q, p)
 }
 
 func (p *Post) NewComment() *PostComment {

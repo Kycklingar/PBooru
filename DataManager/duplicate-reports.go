@@ -22,7 +22,7 @@ type DRPost struct {
 
 func FetchDupReports(limit, offset int) ([]*DupReport, error) {
 	var reports []*DupReport
-	err := func () error {
+	err := func() error {
 		rows, err := DB.Query(`
 			SELECT id, reporter, note, approved, timestamp
 			FROM duplicate_report
