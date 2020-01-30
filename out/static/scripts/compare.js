@@ -40,12 +40,16 @@ function submitReport()
 	let xhr = new XMLHttpRequest()
 
 	xhr.onreadystatechange = function() {
-		if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
+		if (this.readyState == XMLHttpRequest.DONE)
 		{
 			if (this.status == 200)
+			{
 				alert("Thank you for your report")
+			}
 			else
-				alert(this.status + this.responseText)
+			{
+				alert("Error: " + this.status + " " + this.responseText)
+			}
 		}
 	}
 	xhr.open("POST", "/duplicate/report/", true)

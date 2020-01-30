@@ -155,7 +155,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.QID(DM.DB)
 
-
 	p = DM.CachedPost(p)
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
@@ -240,7 +239,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sortTags(pp.Sidebar.Tags)
-
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)

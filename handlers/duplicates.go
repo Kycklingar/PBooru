@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -60,7 +59,6 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			d.Inferior = append(d.Inferior, p)
 		}
 	}
-	fmt.Println(user.QFlag(DM.DB).Delete())
 
 	// Assign duplicates if having sufficient privileges
 	// otherwise submit a report

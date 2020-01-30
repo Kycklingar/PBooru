@@ -11,3 +11,9 @@ CREATE TABLE duplicate_report_posts(
 	post_id INTEGER NOT NULL REFERENCES posts(id),
 	score INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE duplicates (
+	post_id INTEGER NOT NULL REFERENCES posts(id),
+	dup_id INTEGER PRIMARY KEY REFERENCES posts(id),
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

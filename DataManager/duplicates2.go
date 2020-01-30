@@ -1,7 +1,6 @@
 package DataManager
 
 import (
-	"errors"
 	"fmt"
 	"log"
 )
@@ -55,8 +54,6 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		return err
 	}
 
-	fmt.Println(dupe)
-
 	var a func() error
 	a = tx.Rollback
 
@@ -66,18 +63,22 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		}
 	}()
 
-	// TODO:
 	// Handle conflicts
+	if err = conflicts(tx, dupe); err != nil {
+		return err
+	}
 
-	// set (a, b) merge set (c, b)
-	// we don't know wheter c is better than a
-	// require new comparison of a and c
+	dup, err := getDupeFromPost(tx, dupe.Post)
+	if err != nil {
+		return err
+	}
 
-	// set (a, b) merge set (b, c)
-	// we do know a is better than b and c
-	// go ahead
+	dupe.Post = dup.Post
 
-	// confclicts(tx, dupe)
+	if err = updateDupes(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
 
 	var values string
 	for _, p := range dupe.Inferior {
@@ -116,6 +117,13 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	if err = movePoolPosts(tx, dupe); err != nil {
 		log.Println(err)
 		return err
+	}
+
+	for _, p := range dupe.Inferior {
+		if err = p.Delete(tx); err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 
 	// TODO
@@ -239,55 +247,122 @@ func replaceComicPages(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func conflicts(tx querier, dupe Dupe) error {
-	var vals string
+func updateDupes(tx querier, dupe Dupe) error {
 	for _, p := range dupe.Inferior {
-		vals += fmt.Sprint(p.ID, ",")
-	}
-	vals += fmt.Sprint(dupe.Post.ID)
-
-	query := fmt.Sprintf(`
-		SELECT post_id
-		FROM duplicates
-		WHERE dup_id IN(%s)
-		`,
-		vals,
-	)
-
-	rows, err := tx.Query(query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var ids []int
-
-	for rows.Next() {
-		var id int
-		if err = rows.Scan(&id); err != nil {
+		dup, err := getDupeFromPost(tx, p)
+		if err != nil {
 			return err
 		}
 
-		in := func(id int) bool {
-			for _, i := range ids {
-				if i == id {
-					return true
-				}
-			}
-
-			return false
+		_, err = tx.Exec(`
+			UPDATE duplicates
+			SET post_id = $1
+			WHERE post_id = $2
+			`,
+			dupe.Post.ID,
+			dup.Post.ID,
+		)
+		if err != nil {
+			return err
 		}
-
-		if !in(id) {
-			ids = append(ids, id)
-		}
-	}
-
-	// Potential conflict
-	if len(ids) == 1 {
-		return errors.New("ASD")
 	}
 
 	return nil
+}
 
+func conflicts(tx querier, dupe Dupe) error {
+	in := func(dups []Dupe, p *Post) bool {
+		for _, d := range dups {
+			if d.Post.ID == p.ID {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	var newSets []Dupe
+	for _, p := range dupe.Inferior {
+		dup, err := getDupeFromPost(tx, p)
+		if err != nil {
+			return err
+		}
+
+		if !in(newSets, dup.Post) {
+			newSets = append(newSets, dup)
+		}
+	}
+
+	superiors := func() bool {
+		for _, p := range dupe.Inferior {
+			for _, dupSet := range newSets {
+				if dupSet.Post.ID == p.ID {
+					return true
+				}
+			}
+		}
+
+		return false
+	}
+
+	bdupe, err := getDupeFromPost(tx, dupe.Post)
+	if err != nil {
+		return err
+	}
+
+	// There are two sets
+	// A > B
+	// D > E
+
+	// Do these new sets work
+	// B > C
+	// Yes. Replace B with A > C
+	//if bdupe.Post.ID != dupe.Post.ID && superiors() {
+	//	return nil
+	//}
+
+	//// B > D
+	//// Yes. Replace B with A > D
+	//if bdupe.Post.ID != dupe.Post.ID && superiors() {
+	//	return nil
+	//}
+
+	//// C > B
+	//// No. Replace B with A, we don't know if C > A
+	//if len(bdupe.Inferior) <= 0 && !superiors() {
+	//	return error
+	//}
+
+	//// B > E
+	//// No. Replace B with A and E with D, we don't know if A > D
+	//if bdupe.Post.ID != dupe.Post.ID && !superiors() {
+	//	return error
+	//}
+
+	// Will alway result in conflict
+	if !superiors() {
+		var derr DupeConflict
+
+		derr.NeedChecking = append(derr.NeedChecking, bdupe.Post)
+
+		for _, set := range newSets {
+			derr.NeedChecking = append(derr.NeedChecking, set.Post)
+		}
+
+		return derr
+	}
+
+	return nil
+}
+
+type DupeConflict struct {
+	NeedChecking []*Post
+}
+
+func (d DupeConflict) Error() string {
+	var str string
+	for _, p := range d.NeedChecking {
+		str += fmt.Sprint(p.ID, " ")
+	}
+	return fmt.Sprint("Duplicate conflict. Please compare: ", str)
 }
