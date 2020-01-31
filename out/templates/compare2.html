@@ -90,6 +90,10 @@
 
 <script src="/static/scripts/compare.js"></script>
 <script>
+	{{if .Report}}
+		reportID = {{.Report}}
+	{{end}}
+
 	gateway = {{.UserInfo.IpfsDaemon}}
 	{{range .Posts}}
 		addPost(postStruct(

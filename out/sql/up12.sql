@@ -1,18 +1,18 @@
-CREATE TABLE duplicate_report(
+CREATE TABLE IF NOT EXISTS duplicate_report(
 	id SERIAL PRIMARY KEY,
+	post_id INTEGER NOT NULL REFERENCES posts(id),
 	reporter INTEGER NOT NULL REFERENCES users(id),
 	note TEXT,
-	approved INTEGER NOT NULL DEFAULT 0,
+	approved TIMESTAMP DEFAULT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE duplicate_report_posts(
+CREATE TABLE IF NOT EXISTS duplicate_report_posts(
 	report_id INTEGER NOT NULL REFERENCES duplicate_report(id),
-	post_id INTEGER NOT NULL REFERENCES posts(id),
-	score INTEGER NOT NULL DEFAULT 0
+	post_id INTEGER NOT NULL REFERENCES posts(id)
 );
 
-CREATE TABLE duplicates (
+CREATE TABLE IF NOT EXISTS duplicates (
 	post_id INTEGER NOT NULL REFERENCES posts(id),
 	dup_id INTEGER PRIMARY KEY REFERENCES posts(id),
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

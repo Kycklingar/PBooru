@@ -1,20 +1,31 @@
 {{template "base"}}
 
-{{range .}}
-<div class="panel">
-	<p>{{.ID}}</p>
-	<a href="/user/{{.Reporter.ID}}/">{{.Reporter.Name}}</a>
-	<p>{{.Timestamp}}</p>
-	{{with .Note}}
-		<p>{{.}}</p>
+{{range .Reports}}
+<div class="panel dupe-reports">
+	<span>{{.ID}}</span>
+	<span><a href="/user/{{.Reporter.ID}}/">{{.Reporter.Name}}</a></span>
+	<br>
+	{{with .Approved.String}}
+	<span>Processed on {{.}}<span>
+	{{else}}
+	<span>Unprocessed</span>
 	{{end}}
-	{{range .Posts}}
+	<br>
+	<span>{{.Timestamp}}</span>
+	{{with .Note}}
+		<span>{{.}}</span>
+	{{end}}
+	<span>
+	{{template "thumbnail" wrap2 "Post" "UserInfo" .Dupe.Post $.UserInfo}}
+	</span>
+	<div class="comic-strip">
+	{{range .Dupe.Inferior}}
 		<span>
-			<img src="http://localhost:8080/ipfs/{{.Post.ClosestThumbnail 100}}">
-			{{.Score}}
+			{{template "thumbnail" wrap2 "Post" "UserInfo" . $.UserInfo}}
 		</span>
 	{{end}}
-	<a href="/duplicate/report/compare/{{.ID}}">
+	</div>
+	<h4><a href="/duplicate/compare/?report-id={{.ID}}">Compare</a></h4>
 </div>
 {{end}}
 

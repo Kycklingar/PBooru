@@ -19,7 +19,7 @@ type Comment struct {
 	ID   int
 	User *User
 	Text string
-	Time string
+	Time timestamp
 }
 
 // Initialize a new comment
@@ -29,7 +29,7 @@ func NewComment() *Comment {
 
 // Get the latest comments
 func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
-	rows, err := q.Query("SELECT id, user_id, text, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM comment_wall ORDER BY id DESC LIMIT $1", count)
+	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM comment_wall ORDER BY id DESC LIMIT $1", count)
 	if err != nil {
 		return err
 	}

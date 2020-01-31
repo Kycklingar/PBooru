@@ -13,6 +13,8 @@ type comparisonPage struct {
 	UserInfo UserInfo
 
 	Posts []*DM.Post
+
+	Report int
 }
 
 func (c comparisonPage) ColorID(id int) string {

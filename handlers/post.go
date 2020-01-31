@@ -70,6 +70,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		post.QID(DM.DB)
+		post = DM.CachedPost(post)
+
 		if r.FormValue("comment") == "true" {
 			pc := post.NewComment()
 			pc.User = user

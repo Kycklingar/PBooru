@@ -232,7 +232,7 @@ type Comment struct {
 
 func tComment(c *DM.Comment) Comment {
 	c.User.QName(DM.DB)
-	return Comment{c.ID, c.User, c.Text, c.Time}
+	return Comment{c.ID, c.User, c.Text, c.Time.String()}
 }
 
 func tComments(cm []*DM.Comment) (r []Comment) {

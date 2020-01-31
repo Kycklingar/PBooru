@@ -2,6 +2,8 @@ var posts = []
 var gateway = "ass"
 var currentPost = null
 
+var reportID = null
+
 var leftInterface = document.getElementById("interface-left")
 var rightInterface = document.getElementById("interface-right")
 var canvas = rightInterface.children[0]
@@ -36,6 +38,9 @@ function submitReport()
 	}
 
 	fd.append("best-id", currentPost.id)
+
+	if (reportID != null)
+		fd.append("report-id", reportID)
 
 	let xhr = new XMLHttpRequest()
 

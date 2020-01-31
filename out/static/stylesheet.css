@@ -25,6 +25,7 @@ form.block input
 {
 	display: flex;
 	margin: 1em;
+	overflow: auto;
 }
 
 .comic-strip .thumbnail
@@ -494,6 +495,36 @@ li
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.dupe-reports
+{
+	color: black;
+	padding: 1em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+}
+
+.dupe-reports .thumbnail
+{
+	width:auto;
+	height:auto;
+}
+
+.dupe-reports img
+{
+	max-width:100px;
+	max-height:100px;
+	transform:none;
+	left:0px;
+	top:0px;
+	position:relative;
+}
+
+.dupe-reports .comic-strip img
+{
+	max-width:50px;
+	max-height:50px;
 }
 
 @keyframes struggle

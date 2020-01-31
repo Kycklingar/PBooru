@@ -1,9 +1,15 @@
 {{define "thumbnail"}}
 {{with .Post}}
-<a href="/post/{{.ID}}/{{.Hash}}">
 	<div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
-		<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+		<a href="/post/{{.ID}}/{{.Hash}}">
+			{{if .Thumbnails}}
+			<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+			{{else}}
+			<div class="mimetype">
+				<span>{{.Mime.Type}} / {{.Mime.Name}}</span>
+			</div>
+			{{end}}
+		</a>
 	</div>
-</a>
 {{end}}
 {{end}}
