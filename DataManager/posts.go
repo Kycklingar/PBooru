@@ -812,13 +812,27 @@ func (p *Post) Chapters(q querier) []*Chapter {
 
 	defer rows.Close()
 	var chapters []*Chapter
+
+	in := func(id int) bool {
+		for _, chapter := range chapters {
+			if chapter.ID == id {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	for rows.Next() {
 		var c = new(Chapter)
 		if err := rows.Scan(&c.ID); err != nil {
 			log.Println(err)
 			return nil
 		}
-		chapters = append(chapters, c)
+
+		if !in(c.ID) {
+			chapters = append(chapters, c)
+		}
 	}
 
 	if err = rows.Err(); err != nil {
@@ -850,13 +864,6 @@ func (p *Post) Comics(q querier) []*Comic {
 	}
 	return comics
 }
-
-//func (p *Post) Duplicate() *Duplicate {
-//	d := NewDuplicate()
-//	d.Post = p
-//
-//	return d
-//}
 
 func (p *Post) Duplicates(q querier) (Dupe, error) {
 	return getDupeFromPost(q, p)

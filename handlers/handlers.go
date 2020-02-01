@@ -302,7 +302,7 @@ func init() {
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 
-	Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
+	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
 		user, info := getUser(w, r)
 		user.QFlag(DM.DB)
@@ -329,7 +329,7 @@ func init() {
 	Handlers["/api/v1/"] = makeStatHandler(APIv1Handler)
 	Handlers["/api/v1/post"] = makeStatHandler(APIv1PostHandler)
 	Handlers["/api/v1/posts"] = makeStatHandler(APIv1PostsHandler)
-	Handlers["/api/v1/duplicate"] = makeStatHandler(APIv1DuplicateHandler)
+	//Handlers["/api/v1/duplicate"] = makeStatHandler(APIv1DuplicateHandler)
 	Handlers["/api/v1/suggesttags"] = makeStatHandler(APIv1SuggestTagsHandler)
 	Handlers["/api/v1/similar"] = makeStatHandler(APIv1SimilarPostsHandler)
 

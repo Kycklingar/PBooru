@@ -97,6 +97,18 @@ func FetchDupReport(id int, q querier) (*DupReport, error) {
 	return &r, rows.Err()
 }
 
+func ProcessDupReport(reportID int) error {
+	_, err := DB.Exec(`
+		UPDATE duplicate_report
+		SET approved = CURRENT_TIMESTAMP
+		WHERE id = $1
+		`,
+		reportID,
+	)
+
+	return err
+}
+
 func ReportDuplicates(dupe Dupe, reporter *User, note string) error {
 	tx, err := DB.Begin()
 	if err != nil {

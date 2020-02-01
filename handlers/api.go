@@ -110,46 +110,45 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, AP)
 }
 
-func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
-	p := DM.NewPost()
-	if postID := r.FormValue("id"); postID != "" {
-		id, err := strconv.Atoi(postID)
-		if err != nil {
-			APIError(w, "ID is not a number", http.StatusBadRequest)
-			return
-		}
-
-		err = p.SetID(DM.DB, id)
-		if err != nil {
-			log.Print(err)
-			APIError(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-	} else if postHash := r.FormValue("hash"); postHash != "" {
-		p.Hash = postHash
-
-		if p.QID(DM.DB) == 0 {
-			//fmt.Fprint(w, "{}")
-			APIError(w, "Post Not Found", http.StatusNotFound)
-			return
-		}
-	} else {
-		APIError(w, "No Identifier", http.StatusBadRequest)
-		return
-	}
-
-	d := DM.NewDuplicate()
-	d.Post = p
-
-	type APIv1Duplicate struct {
-		ID    int
-		Level int
-	}
-
-	dp := APIv1Duplicate{d.QDupID(DM.DB), d.QLevel(DM.DB)}
-
-	jsonEncode(w, dp)
-}
+//func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
+//	p := DM.NewPost()
+//	if postID := r.FormValue("id"); postID != "" {
+//		id, err := strconv.Atoi(postID)
+//		if err != nil {
+//			APIError(w, "ID is not a number", http.StatusBadRequest)
+//			return
+//		}
+//
+//		err = p.SetID(DM.DB, id)
+//		if err != nil {
+//			log.Print(err)
+//			APIError(w, ErrInternal, http.StatusInternalServerError)
+//			return
+//		}
+//	} else if postHash := r.FormValue("hash"); postHash != "" {
+//		p.Hash = postHash
+//
+//		if p.QID(DM.DB) == 0 {
+//			//fmt.Fprint(w, "{}")
+//			APIError(w, "Post Not Found", http.StatusNotFound)
+//			return
+//		}
+//	} else {
+//		APIError(w, "No Identifier", http.StatusBadRequest)
+//		return
+//	}
+//
+//	d, err := p.Duplicates()
+//
+//	type APIv1Duplicate struct {
+//		ID    int
+//		Level int
+//	}
+//
+//	dp := APIv1Duplicate{d.QDupID(DM.DB), d.QLevel(DM.DB)}
+//
+//	jsonEncode(w, dp)
+//}
 
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post

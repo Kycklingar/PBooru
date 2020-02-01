@@ -47,9 +47,12 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	var note = r.FormValue("note")
 	user, _ := getUser(w, r)
 
-	const bestPostIDKey = "best-id"
+	const (
+		bestPostIDKey = "best-id"
+		reportIDKey = "report-id"
+	)
 
-	m, err := verifyInteger(r, bestPostIDKey)
+	m, err := verifyInteger(r, bestPostIDKey, reportIDKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -81,6 +84,11 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		if m[reportIDKey] != 0 {
+			processReportHandler(w, r)
+			return
+		}
 	} else {
 		if err = DM.ReportDuplicates(d, user, note); err != nil {
 			log.Println(err)
@@ -90,6 +98,29 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func processReportHandler(w http.ResponseWriter, r *http.Request) {
+	reportID, err := strconv.Atoi(r.FormValue("report-id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Delete() {
+		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
+		return
+	}
+
+	err = DM.ProcessDupReport(reportID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func compareReportHandler(w http.ResponseWriter, r *http.Request) {
