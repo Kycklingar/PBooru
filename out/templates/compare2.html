@@ -7,10 +7,21 @@
 		position:fixed;
 		display:flex;
 		background-color:#222B;
-		top:0px;
 		bottom:0px;
 		left:0px;
 		right:0px;
+		top:0px;
+	}
+
+	.x
+	{
+		background-color:#333A;
+		padding:2px;
+		position:absolute;
+		top:0px;
+		right:0px;
+
+		cursor:pointer;
 	}
 
 	#interface-left
@@ -57,6 +68,24 @@
 		cursor:pointer;
 	}
 
+	#interface-float-left
+	{
+		background-color:#333A;
+		position:absolute;
+		bottom:0px;
+		margin:1em;
+	}
+
+	#interface-float-left details
+	{
+		padding-left:1em;
+	}
+
+	#interface-float-left div
+	{
+		padding-left:1em;
+	}
+
 	.highlighted
 	{
 		background-color:#222;
@@ -68,23 +97,41 @@
 	<div id="interface-left"></div>
 	<div id="interface-right">
 		<canvas></canvas>
+		<details id="interface-float-left">
+			<summary>File</summary>
+			<details>
+				<summary>Add post</summary>
+				<div>
+				<input type="number" id="add-post-input">
+				<button onclick="getRemotePost(document.getElementById('add-post-input').value)">Add</button>
+				</div>
+			</details>
+			<details>
+				<summary>Report</summary>
+				<div>
+				<textarea onfocus="disableKeymap()" onfocusout="enableKeymap()" placeholder="Optional note" id="note"></textarea>
+				<br>
+				<button onclick="submitReport()">Submit</button>
+				</div>
+			</details>
+		</details>
 	</div>
 </div>
 
 <div id="interface-float">
-	<span id="button-anchor" onclick="anchor()">Anchor</span>
-	<span id="button-fit" onclick="fit()">Fit</span>
+	<span title="[A]" id="button-anchor" onclick="anchor()">Anchor</span>
+	<span title="[F]" id="button-fit" onclick="fit()">Fit</span>
 	<br>
 	<span id="scale" style="cursor:inherit">Scale:
-		<span id="button-scale1" class="highlighted" onclick="scale(1)">1x</span>
-		<span id="button-scale2" onclick="scale(2)">2x</span>
-		<span id="button-scale5" onclick="scale(5)">5x</span>
+		<span title="[S,1]" id="button-scale1" class="highlighted" onclick="scale(1)">1x</span>
+		<span title="[S,2]" id="button-scale2" onclick="scale(2)">2x</span>
+		<span title="[S,3]" id="button-scale5" onclick="scale(5)">5x</span>
 	</span>
 	<br>
 	<span id="contrast" style="cursor:inherit">Contrast:
-		<span id="button-cont1" class="highlighted" onclick="cont(1)">1x</span>
-		<span id="button-cont2" onclick="cont(2)">2x</span>
-		<span id="button-cont3" onclick="cont(3)">3x</span>
+		<span title="[C,1]" id="button-cont1" class="highlighted" onclick="cont(1)">1x</span>
+		<span title="[C,2]"id="button-cont2" onclick="cont(2)">2x</span>
+		<span title="[C,3]"id="button-cont3" onclick="cont(3)">3x</span>
 	</span>
 </div>
 

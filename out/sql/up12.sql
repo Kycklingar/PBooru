@@ -17,3 +17,17 @@ CREATE TABLE IF NOT EXISTS duplicates (
 	dup_id INTEGER PRIMARY KEY REFERENCES posts(id),
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO duplicates (post_id, dup_id)
+	SELECT d1.post_id, d2.post_id
+	FROM duplicate_posts d1
+	LEFT JOIN duplicate_posts d2
+	ON d1.dup_id = d2.dup_id
+	WHERE d1.level = (
+		SELECT MIN(level)
+		FROM duplicate_posts
+		WHERE dup_id = d1.dup_id
+	)
+	AND d1.post_id != d2.post_id;
+
+DROP TABLE duplicate_posts;

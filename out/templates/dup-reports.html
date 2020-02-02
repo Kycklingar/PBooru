@@ -3,17 +3,27 @@
 {{range .Reports}}
 <div class="panel dupe-reports">
 	<span>{{.ID}}</span>
+	<br>
 	<span><a href="/user/{{.Reporter.ID}}/">{{.Reporter.Name}}</a></span>
 	<br>
 	{{with .Approved.String}}
-	<span>Processed on {{.}}<span>
+	<span>Processed on {{.}}</span>
 	{{else}}
 	<span>Unprocessed</span>
+	{{if $.User.Flag.Delete }}
+	<form style="display:inline;" method="POST" action="/duplicate/process/">
+		<input type="hidden" name="report-id" value="{{.ID}}">
+		<input type="submit" value="Process">
+	</form>
+	{{end}}
 	{{end}}
 	<br>
 	<span>{{.Timestamp}}</span>
+	<br>
 	{{with .Note}}
-		<span>{{.}}</span>
+		<div>Note:
+			<div style="padding-left:1em">{{.}}</div>
+		</div>
 	{{end}}
 	<span>
 	{{template "thumbnail" wrap2 "Post" "UserInfo" .Dupe.Post $.UserInfo}}

@@ -3,6 +3,7 @@ package DataManager
 import (
 	"fmt"
 	"log"
+	"errors"
 )
 
 type Dupe struct {
@@ -351,6 +352,14 @@ func conflicts(tx querier, dupe Dupe) error {
 
 		return derr
 	}
+
+	// Don't want to assign a post to itself
+	for _, set := range newSets {
+		if set.Post.ID == bdupe.Post.ID {
+			return errors.New("Conflicting dupe assignment. Trying to assign post as a dupe of itself")
+		}
+	}
+
 
 	return nil
 }

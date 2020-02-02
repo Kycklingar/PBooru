@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,10 +12,12 @@ import (
 func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	var page = struct {
 		UserInfo UserInfo
-		Reports []*DM.DupReport
+		User     *DM.User
+		Reports  []*DM.DupReport
 	}{}
 
-	page.UserInfo = userCookies(w, r)
+	page.User, page.UserInfo = getUser(w, r)
+	page.User.QFlag(DM.DB)
 
 	var err error
 	page.Reports, err = DM.FetchDupReports(10, 0)
@@ -49,10 +52,9 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	const (
 		bestPostIDKey = "best-id"
-		reportIDKey = "report-id"
 	)
 
-	m, err := verifyInteger(r, bestPostIDKey, reportIDKey)
+	m, err := verifyInteger(r, bestPostIDKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -85,7 +87,8 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if m[reportIDKey] != 0 {
+		if report := r.FormValue("report-id"); report != "" {
+			fmt.Println("Processing")
 			processReportHandler(w, r)
 			return
 		}
@@ -101,6 +104,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func processReportHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.FormValue("report-id"))
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

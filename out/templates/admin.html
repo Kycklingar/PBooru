@@ -55,10 +55,6 @@
 </div>
 <div class="separator controlls">
 	<div>
-	    <h4>Dups</h4>
-	    <button onclick="postDupChanges()">Submit Duplicates</button>
-	</div>
-	<div>
 		<h4>Delete</h4>
 		<button onClick="deletePosts()">Delete</button>
 	</div>
@@ -139,7 +135,7 @@
 	let params = new URLSearchParams(f)
 	console.log(params.toString())
 
-	window.open("/compare/?" + params.toString())
+	window.open("/compare2/?" + params.toString())
     	
     }
 
@@ -546,101 +542,6 @@
         }
 
         t(tagInput, selectedPosts, 0)
-    }
-
-    function postDupChanges() {
-        function getInput(e) {
-            //console.log("getInput->", e)
-            for (let i = 0; i < e.children.length; i++) {
-                if (e.children[i].tagName == "INPUT") {
-                    return e.children[i]
-                }
-            }
-            return null
-        }
-
-        // Find if there already are some some posts with dupid's
-        let kingPosts = []
-        for (let i = 0; i < selectedPosts.length; i++) {
-            let inp = getInput(selectedPosts[i])
-
-            if (inp.getAttribute("dupid") != "0") {
-                kingPosts.push(selectedPosts[i])
-            }
-        }
-
-        //console.log("kingposts:", kingPosts)
-
-        if (kingPosts.length >= 2) {
-            let dupID = getInput(kingPosts[0]).getAttribute("dupid")
-            //console.log(dupID)
-            for (let i = 1; i < kingPosts.length; i++) {
-                //console.log(getInput(kingPosts[i]).getAttribute("dupid"))
-                if (getInput(kingPosts[i]).getAttribute("dupid") != dupID) {
-                    //console.log("More than 2 posts with different dupid's", "Aborting")
-                    return
-                }
-            }
-        }
-
-        let firstAppend = "0"
-
-        if (kingPosts.length == 1) {
-            firstAppend = kingPosts[0].getAttribute("postid")
-        }
-
-        function t(duppostID, arr, index, callback) {
-            //console.log(duppostID, arr[index])
-
-            if (callback == null) {
-                return
-            }
-
-            if (index >= arr.length) {
-                alert("Finished")
-                return
-            }
-
-            let postID = arr[index].getAttribute("postid")
-            if (postID == null || postID == 0) {
-                console.log("bad postID ", postID)
-                return
-            }
-
-            if (duppostID == postID) {
-                duppostID = 0
-                //return callback(postID, arr, index + 1, callback)
-            }
-
-            let inp = getInput(arr[index])
-            if (inp == null) {
-                console.log("inp is null", getInput)
-                return
-            }
-            if (inp.getAttribute("dupid") != 0) {
-                console.log("this is already a dup, skip")
-                duppostID = 0
-                //return callback(postID, arr, index + 1, t)
-            }
-            let level = inp.value
-
-            if (level == null) {
-                console.log("level is null: ", arr[index])
-                return
-            }
-
-            let req = new XMLHttpRequest()
-            req.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    console.log(this.status)
-                    t(postID, arr, index + 1, t)
-                }
-            }
-            req.open("POST", "/dups/add/?postid=" + postID + "&duppostid=" + duppostID + "&level=" + level, true)
-            req.send()
-        }
-
-        t(firstAppend, selectedPosts, 0, t)
     }
 
     document.getElementById("posts").onmousedown = function (caller) {

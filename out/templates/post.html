@@ -55,6 +55,14 @@
 		</script>
 		<details>
 		<summary>Report post</summary>
+			<form action="/compare2/">
+				<h4>Compare post with</h4>
+				<input type="hidden" name="post-id" value="{{.Post.ID}}">
+				<input type="number" name="post-id">
+				<br>
+				<br>
+				<input type="submit">
+			</form>
 			{{template "reportForm" .Post.ID}}
 		</details>
 		<details id="quickadd" style="display:none">

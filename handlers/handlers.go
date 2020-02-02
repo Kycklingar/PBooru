@@ -257,6 +257,7 @@ func init() {
 
 	Handlers["/reports/duplicates/"] = dupReportsHandler
 	Handlers["/duplicate/report/"] = dupReportHandler
+	Handlers["/duplicate/process/"] = processReportHandler
 	Handlers["/duplicate/compare/"] = compareReportHandler
 
 	Handlers["/upload"] = makeStatHandler(UploadHandler)

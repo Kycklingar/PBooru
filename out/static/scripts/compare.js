@@ -9,6 +9,8 @@ var rightInterface = document.getElementById("interface-right")
 var canvas = rightInterface.children[0]
 var ctx = canvas.getContext("2d")
 
+var note = document.getElementById("note")
+
 canvas.onclick = function(){rightInterface.focus()}
 
 function postStruct(id, hash, thumb, dimensions, filesize, mime)
@@ -31,6 +33,12 @@ function submitReport()
 		return
 	}
 
+	if (posts.length <= 1)
+	{
+		alert("Need more than 1 post")
+		return
+	}
+
 	let fd = new FormData()
 	for (let i = 0; i < posts.length; i++)
 	{
@@ -38,6 +46,8 @@ function submitReport()
 	}
 
 	fd.append("best-id", currentPost.id)
+
+	fd.append("note", note.value)
 
 	if (reportID != null)
 		fd.append("report-id", reportID)
@@ -116,8 +126,8 @@ function getRemotePost(id)
 						j.ID,
 						j.Hash,
 						closestThumb(100, j.ThumbHashes),
-						{"Width":100,"Height":100},
-						100,
+						j.Dimension,
+						j.Filesize,
 						mimeObj(j.Mime)
 					)
 				)
@@ -132,7 +142,6 @@ function getRemotePost(id)
 
 	let fd = new FormData()
 	fd.append("id", id)
-	console.log(fd)
 
 	xhr.open("POST", "/api/v1/post", true)
 	xhr.send(fd)
@@ -157,12 +166,18 @@ function removePost(id)
 			break
 		}
 	}
+
+	if (currentPost.id == id)
+	{
+		renderNextPost(1)
+	}
 }
 
 function leftPostElement(post)
 {
 	let e = document.createElement("div")
 	e.postid = post.id
+	e.style.position = "relative"
 	e.draggable = true
 	e.ondragstart = drag
 	//e.ondrop = drop
@@ -185,9 +200,19 @@ function leftPostElement(post)
 	}
 
 	pEl("ID: " + post.id, e)
-	pEl(post.dimensions.Width + "x" + post.dimensions.Height, e)
+	if (post.dimensions != null)
+		pEl(post.dimensions.Width + "x" + post.dimensions.Height, e)
+	else
+		pEl("Dimensions unknown", e)
 	pEl(humanFileSize(post.filesize), e)
 	pEl(post.mime.Type + "/" + post.mime.Name , e)
+
+	let x = document.createElement("span")
+	x.innerText = "x"
+	x.className = "x"
+	x.onclick = function(){removePost(e.postid)}
+
+	e.appendChild(x)
 
 	return e
 }
@@ -258,6 +283,12 @@ function ipfsLink(hash)
 
 function renderPost(post)
 {
+	if (post == null)
+	{
+		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		return
+	}
+
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
 	img.onload = function(){renderImage(img)}
@@ -309,7 +340,14 @@ function renderImage(image)
 	scaledHeight = image.height * optScale
 	ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-	if(!optAnchor || (canvas.width < scaledWidth || canvas.height < scaledHeight))
+	if (optAnchor)
+	{
+		if(canvas.width < scaledWidth)
+			canvas.width = scaledWidth
+		if(canvas.height < scaledHeight)
+			canvas.height = scaledHeight
+	}
+	else
 	{
 		canvas.width = scaledWidth
 		canvas.height = scaledHeight
@@ -374,6 +412,32 @@ document.onkeydown = processKey
 
 var keymap = [
 ]
+
+var tmpKeymap = []
+
+function enableKeymap()
+{
+	keymap = tmpKeymap
+}
+
+function disableKeymap()
+{
+	tmpKeymap = keymap
+	keymap = []
+}
+
+function toggleKeymap()
+{
+	if (keymap.length > 0 )
+	{
+		tmpKeymap = keymap
+		keymap = []
+	}
+	else
+	{
+		keymap = tmpKeymap
+	}
+}
 
 function registerKeyMapping(keycode, callback)
 {

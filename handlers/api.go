@@ -26,6 +26,8 @@ type APIv1Post struct {
 	Mime        string
 	Deleted     bool
 	Tags        []APIv1TagI
+	Dimension   *DM.Dimension
+	Filesize int64
 }
 
 type APIv1TagI interface {
@@ -163,7 +165,16 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 	}
 
 	p.QThumbnails(DM.DB)
-	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB), ThumbHashes: p.Thumbnails(), Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
+	p.QDimensions(DM.DB)
+	AP = APIv1Post{
+		ID: p.QID(DM.DB),
+		Hash: p.QHash(DM.DB),
+		ThumbHashes: p.Thumbnails(),
+		Mime: p.QMime(DM.DB).Str(),
+		Deleted: p.QDeleted(DM.DB) == 1,
+		Filesize: p.QSize(DM.DB),
+		Dimension: p.Dimension,
+	}
 
 	for _, tag := range tc.Tags {
 		tag = DM.CachedTag(tag)
