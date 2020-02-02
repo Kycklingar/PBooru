@@ -140,7 +140,6 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
 	if err := r.ParseForm(); err != nil {
 		log.Println(err)
 	}
@@ -212,6 +211,9 @@ func comicUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 		return
 	}
 
@@ -568,6 +570,5 @@ func comicDeletePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
->>>>>>> master
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }

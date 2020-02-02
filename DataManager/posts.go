@@ -812,7 +812,6 @@ func (p *Post) Chapters(q querier) []*Chapter {
 
 	defer rows.Close()
 	var chapters []*Chapter
-<<<<<<< HEAD
 
 	in := func(id int) bool {
 		for _, chapter := range chapters {
@@ -824,22 +823,16 @@ func (p *Post) Chapters(q querier) []*Chapter {
 		return false
 	}
 
-=======
->>>>>>> master
 	for rows.Next() {
 		var c = new(Chapter)
 		if err := rows.Scan(&c.ID); err != nil {
 			log.Println(err)
 			return nil
 		}
-<<<<<<< HEAD
 
 		if !in(c.ID) {
 			chapters = append(chapters, c)
 		}
-=======
-		chapters = append(chapters, c)
->>>>>>> master
 	}
 
 	if err = rows.Err(); err != nil {
