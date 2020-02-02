@@ -1,133 +1,76 @@
 {{template "base" .Base}}
 
-<div>
-        {{if .User.Flag.Comics}}
-        <div class="text-panel">
-        <form method="post" action="/comic/add">
-            <input type="hidden" name="comicid" value="{{.Comic.ID}}">
-            <label>Add Post ID</label>
-            <input type="text" name="postid">
-            <br>
-            <label>Page</label>
-            <input type="text" name="postorder">
-            <br>
-            {{range .Comic.Chapters}}
-            <input type="radio" name="chapterid" value="{{.Order}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{if .Title}} -- {{.Title}}{{end}}</br>
-            {{end}}
-            <input type="submit">
-        </form>
+{{if .User.Flag.Comics}}
+<details>
+<summary>Create a new chapter</summary>
+	<form method="POST" action="/comic/chapter/add/">
+	    <input type="hidden" name="comic-id" value="{{.Comic.ID}}">
+	    <input placeholder="Title" type="text" name="title">
+	    <br>
+	    <input placeholder="Order" type="text" name="order">
+	    <br>
+	    <input type="submit">
+	</form>
+</details>
+{{end}}
 
-        <form method="POST" action="/comic/edit">
-            <label>Add new chapter</label>
-            <input type="hidden" name="newchapter" value="true">
-            <input type="hidden" name="comicid" value="{{.Comic.ID}}">
-            <label>Title</label>
-            <input type="text" name="title">
-            <br>
-            <label>Order</label>
-            <input type="text" name="order">
-            <input type="submit">
-        </form>
-
-        <script>
-            function checked(element, order){
-                if(element.getAttribute("chapter") == order)
-                {
-                    return "checked";
-                }
-                return "";
-            }
-
-            function enableEdit()
-            {
-                var el = document.getElementsByClassName("comic-page");
-
-                for (var i = 0; i < el.length; i++)
-                {
-                    console.log(el[i]);
-                    el[i].innerHTML += `
-                        <form method="post" action="/comic/edit">
-                            <input type="hidden" name="editpost" value="true">
-                            <input type="hidden" name="comicid" value="`+ {{.Comic.ID}} +`">
-                            <input type="hidden" name="postid" value="`+ el[i].getAttribute("postid") +`">
-                            <label>Page</label>
-                            <input type="text" name="order" value="`+ el[i].getAttribute("page") +`">
-                            <br>
-                                {{range .Comic.Chapters}}
-                                <input type="radio" name="chapterid" value="{{.Order}}" ` + checked(el[i], {{.Order}}) + `>{{.Order}}{{if .Title}} -- {{.Title}}{{end}}<br>
-                                {{end}}
-                            <input type="submit">
-                        </form>
-                    `
-                }
-            }
-        </script>
-        <button onclick="enableEdit()">Edit</button>
-        </div>
-        {{end}}
-        
-        <div id="comic-container">
-        <h1>{{.Comic.Title}}</h1>
-        {{if .Chapter}}
-        <div>
-            <h3>Chapter {{.Chapter.Order}}{{if .Chapter.Title}} - {{.Chapter.Title}}{{end}}</h3>
-            <h4>Pages: {{.Chapter.PageCount}}</h4>
-            {{range .Chapter.Posts}}
-                <div class="comic-page" page="{{.Order}}" postid="{{.Post.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
-                    <!-- <div class="centHorizont"> -->
-                    <div>
-                        <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
-                        </a>
-                        <br>
-                        <p>Page:{{.Order}}</p>
-                    </div>
-                </div>
-            {{end}}
-            {{if .Comic.Chapters}}
-            <div class="text-panel">
-                <ul>
-                    {{range .Comic.Chapters}}
-                    <li>
-                        <a href="{{.Order}}">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
-                    </li>
-                    {{end}}
-                </ul>
-            </div>
-            {{end}}
-        </div>
-        {{else}}
-            {{range .Comic.Chapters}}
-            <div class="comics-container">
-                <h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
-                <h4>Pages: {{.PageCount}}</h4>
-                <div class="cpage-container">
-                    {{if ge $.Comic.ChapterCount 10}}
-                        {{range .PostsLimit 2}}
-                        <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                            <div class="comic-thumb">
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
-                            </div>
-                        </a>
-                        {{end}}
-                    {{else}}
-                        {{range .PostsLimit 5}}
-                        <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                            <div class="comic-thumb">
-                                <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
-                            </div>
-                        </a>
-                        {{end}}
-                    {{end}}
-                </div>
-            </div>
-            {{end}}
-        {{end}}
-    </div>    
+<div id="comic-container">
+	<h1>{{.Comic.Title}}</h1>
+	<form>
+		{{if .User.Flag.Comics}}<button type="submit" name="edit-mode">Edit chapters</button>{{end}}
+	</form>
+	{{$PostLimit := 5}}
+	{{if ge (len .Comic.Chapters) 10}}
+	{{$PostLimit = 2}}
+	{{end}}
+	{{range .Comic.Chapters}}
+	<div class="comics-container">
+		<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
+	    	<h4>Pages: {{.PageCount}}</h4>
+	    	<div class="cpage-container">
+		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit $PostLimit)}}
+		</div>
+		{{if and $.EditMode $.User.Flag.Comics}}
+			<details>
+			<summary>Edit</summary>
+				<form method="post" action="/comic/chapter/edit/">
+					<label>Chapter ID: <b>{{.ID}}</b></label>
+					<br>
+					<input type="hidden" name="chapter-id" value="{{.ID}}">
+					<label>Title</label>
+					<br>
+					<input type="text" name="title" value="{{.Title}}">
+					<br>
+					<br>
+					<label>Order</label>
+					<br>
+					<input type="number" name="order" value="{{.Order}}">
+					<br>
+					<br>
+					<input type="submit">
+				</form>
+				<form action="/comic/chapter/delete/" method="POST">
+					<input type="hidden" name="chapter-id" value="{{.ID}}">
+					<input type="submit" value="Delete">
+				</form>
+			</details>
+		{{end}}
+	</div>
+	{{end}}
 </div>
 
-{{template "userSettings" .UserInfo}}
-
-{{template "benchmark" .Time}}
+{{define "chapterPosts"}}
+	{{$offset := 0}}
+	{{$zindex := 10}}
+	{{range .Posts}}
+		<div style="position:absolute; left:{{$offset}}em; z-index:{{$zindex}};" class="comic-thumb" >
+			{{$offset = add $offset 4}}
+			{{$zindex = add $zindex -1}}
+        	    	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+        	            	<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
+        	    	</a>
+        	</div>
+	{{end}}
+{{end}}
 
 {{template "baseEnd"}}

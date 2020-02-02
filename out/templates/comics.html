@@ -1,47 +1,50 @@
 {{template "base"}}
-<div >
+
 {{if .User.Flag.Comics}}
-    <form method="post">
-        <p>Create a new comic</p>
-        <label>Title</label>
-        <input type="text" name="title">
-        <input type="submit">
-    </form>
+<details>
+<summary>Create a new comic</summary>
+	<form method="post">
+		<input placeholder="Title" type="text" name="title">
+		<br>
+		<input type="submit">
+	</form>
+</details>
+<form>
+	<input type="hidden" name="edit">
+	<input type="submit" value="Edit">
+</form>
 {{end}}
+
 {{range .Comics}}
 <div class="comics-container">
         <a href="/comic/{{.ID}}">
             <h2>{{.Title}}</h2>
         </a>
         <p>Pages:{{.PageCount}}<br>Chapters:{{.ChapterCount}}</p>
-        {{if .Chapters}}
-            {{range .ChaptersLimit 1}}
-            <h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
-            <div class="cpage-container">
-                {{range .PostsLimit 5}}
-			<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-			    <div class="comic-thumb">
-			        <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
-			    </div>
-			</a>
-                {{end}}
-            </div>
-            {{end}}
-        {{end}}
-        <!-- {{/*else}}
-            <div class="cpage-container">
-                {{range .Posts}}
-                    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                        <div class="thumbnail">
-                            <img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Thumb}}" alt="{{.Post.Hash}}">
-                        </div>
-                    </a>
-                {{end}}
-            </div>
-        {{end*/}} -->
+	{{range .ChaptersLimit 1}}
+        	<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
+        	<div class="cpage-container">
+        		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+		</div>
+	{{end}}
+
+	{{if $.Edit}}
+	<details>
+	<summary>Edit</summary>
+	<form action="/comic/edit/" method="POST">
+		<input type="hidden" name="comic-id" value="{{.ID}}">
+		<label>Title</label><br>
+		<input type="text" name="title" value="{{.Title}}"><br>
+		<input type="submit">
+	</form>
+	<form action="/comic/delete/" method="POST">
+		<input type="hidden" value="{{.ID}}" name="comic-id">
+		<input type="submit" value="Delete">
+	</form>
+	</details>
+	{{end}}
 </div>
 {{end}}
-</div>
 
 <div class="nolink" id="pageinator">
     {{ if ne 0 $.Pageinator.Prev}}
