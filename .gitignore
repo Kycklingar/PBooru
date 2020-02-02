@@ -4,5 +4,5 @@ debug
 PBDB.db*
 *.test
 *.db
-config.cfg
+out/*.cfg
 

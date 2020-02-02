@@ -73,10 +73,8 @@
 	<div>
 	    <h4>Comic</h4>
 	    <form id="comicpageform" onsubmit="postComicPages(); return false">
-	        <label>ComicID</label>
-	        <input type="number" id="comicidinput" name="comicid">
 	        <label>ChapterID</label>
-	        <input type="number" id="chapteridinput" name="chapterid">
+	        <input type="number" id="chapteridinput" name="chapter-id">
 	        <input type="submit">
 	    </form>
 	</div>
@@ -700,12 +698,11 @@
     }
 
     function postComicPages(){
-        let comicID = document.getElementById("comicidinput").value
         let chapterID = document.getElementById("chapteridinput").value
         
-        if(Number(chapterID) == 0 || Number(comicID) == 0)
+        if(Number(chapterID) == 0)
         {
-            console.log("Want: comicID, chapterID. Got:", comicID, ", ", chapterID)
+            console.log("Want: chapterID. Got:", chapterID)
             return
         }
 
@@ -727,7 +724,7 @@
             }
         }
 
-        function t(arr, index, comicID, chapterID) {
+        function t(arr, index, chapterID) {
             if (index >= arr.length) {
                 alert("Finished")
                 return
@@ -757,7 +754,7 @@
                 if (this.readyState == 4) {
                     console.log(this.status)
                     if(this.status == 200){
-                        t(arr, index + 1, comicID, chapterID)
+                        t(arr, index + 1, chapterID)
                     }
                     else{
                         console.log(arr[index])
@@ -765,11 +762,11 @@
                     }
                 }
             }
-            req.open("POST", "/comic/add?comicid=" + comicID + "&chapterid=" + chapterID + "&postid=" + postID + "&postorder=" + page, true)
+            req.open("POST", "/comic/page/add/?chapter-id=" + chapterID + "&post-id=" + postID + "&order=" + page, true)
             req.send()
         }
 
-        t(selectedPosts, 0, comicID, chapterID)
+        t(selectedPosts, 0, chapterID)
     }
 </script>
 {{else}}
