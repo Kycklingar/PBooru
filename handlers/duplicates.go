@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -88,7 +87,6 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if report := r.FormValue("report-id"); report != "" {
-			fmt.Println("Processing")
 			processReportHandler(w, r)
 			return
 		}
@@ -104,7 +102,6 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func processReportHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.FormValue("report-id"))
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

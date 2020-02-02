@@ -358,6 +358,17 @@ function renderImage(image)
 	ctx.drawImage(image, 0, 0, scaledWidth, scaledHeight)
 }
 
+function toggleReport()
+{
+	let rt = document.getElementById("report-tab")
+	rt.open = !rt.open
+
+	rt.parentElement.open = rt.open
+
+	if (rt.open)
+		setTimeout(function(){note.focus()}, 100)
+}
+
 function fit()
 {
 	if(optFit = !optFit)
@@ -467,6 +478,9 @@ function processKey(e)
 		}
 	}
 }
+
+// Open report tab
+registerKeyMapping(82, function(){toggleReport()})
 
 // Next, previous post
 registerKeyMapping(78, function(){renderNextPost(1)})

@@ -98,6 +98,17 @@
 	<div id="interface-right">
 		<canvas></canvas>
 		<details id="interface-float-left">
+			<details>
+				<summary>Help</summary>
+				<h4>Keyboard shortcuts</h4>
+				<p>[N] Next</p>
+				<p>[P] Previous</p>
+				<p>[R] Report tab</p>
+				<p>[F] Fit to screen</p>
+				<p>[A] Anchor</p>
+				<p>[S][1-3] Zoom</p>
+				<p>[C][1-3] Contrast</p>
+			</details>
 			<summary>File</summary>
 			<details>
 				<summary>Add post</summary>
@@ -106,7 +117,7 @@
 				<button onclick="getRemotePost(document.getElementById('add-post-input').value)">Add</button>
 				</div>
 			</details>
-			<details>
+			<details id="report-tab">
 				<summary>Report</summary>
 				<div>
 				<textarea onfocus="disableKeymap()" onfocusout="enableKeymap()" placeholder="Optional note" id="note"></textarea>
