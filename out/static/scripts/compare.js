@@ -6,8 +6,7 @@ var reportID = null
 
 var leftInterface = document.getElementById("interface-left")
 var rightInterface = document.getElementById("interface-right")
-var canvas = rightInterface.children[0]
-var ctx = canvas.getContext("2d")
+var canvas = document.getElementById("canvas")
 
 var note = document.getElementById("note")
 
@@ -23,6 +22,11 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime)
 		"filesize":filesize,
 		"mime":mime,
 	}
+}
+
+function preloadImage(post)
+{
+	new Image().src = gateway + "/ipfs/" + post.hash
 }
 
 function submitReport()
@@ -87,6 +91,7 @@ function addPost(post)
 
 	posts.push(post)
 	leftInterface.appendChild(leftPostElement(post))
+	preloadImage(post)
 }
 
 function closestThumb(minsize, thumbs)
@@ -285,7 +290,7 @@ function renderPost(post)
 {
 	if (post == null)
 	{
-		ctx.clearRect(0, 0, canvas.width, canvas.height)
+		//ctx.clearRect(0, 0, canvas.width, canvas.height)
 		return
 	}
 
@@ -336,26 +341,46 @@ var optFit = false
 
 function renderImage(image)
 {
-	scaledWidth = image.width * optScale
-	scaledHeight = image.height * optScale
-	ctx.clearRect(0, 0, canvas.width, canvas.height)
+	var scaledWidth = image.width * optScale
+	var scaledHeight = image.height * optScale
+
+	image.style.width = scaledWidth
+	image.style.height = scaledHeight
 
 	if (optAnchor)
 	{
-		if(canvas.width < scaledWidth)
-			canvas.width = scaledWidth
-		if(canvas.height < scaledHeight)
-			canvas.height = scaledHeight
+		let rect = canvas.getBoundingClientRect()
+		if(rect.width < scaledWidth)
+		{
+			console.log("Setting width")
+			canvas.style.width = scaledWidth
+		}
+		if(rect.height < scaledHeight)
+		{
+			console.log("Setting height")
+			canvas.style.height = scaledHeight
+		}
 	}
 	else
 	{
-		canvas.width = scaledWidth
-		canvas.height = scaledHeight
+		canvas.style.width = scaledWidth
+		canvas.style.height = scaledHeight
+	}
+
+	if (optFit)
+	{
+		image.style.width = null
+		image.style.height = null
+		canvas.style.height = null
+		canvas.style.width = null
 	}
 
 	canvas.style.filter = `contrast(${optContrast})`
-	ctx.imageSmoothingEnabled = false
-	ctx.drawImage(image, 0, 0, scaledWidth, scaledHeight)
+	
+	for (let c = canvas.firstChild; c != null; c = canvas.firstChild)
+		canvas.removeChild(c)
+
+	canvas.appendChild(image)
 }
 
 function toggleReport()
@@ -367,19 +392,16 @@ function toggleReport()
 
 	if (rt.open)
 		setTimeout(function(){note.focus()}, 100)
+	else
+		rightInterface.focus()
 }
 
 function fit()
 {
-	if(optFit = !optFit)
-	{
-		canvas.style.maxWidth = "100%"
-		canvas.style.maxHeight = "100%"
-	} else {
-		canvas.style.maxWidth = ""
-		canvas.style.maxHeight = ""
-	}
+	optFit = !optFit
+	canvas.classList.toggle("fit-image")
 	document.getElementById("button-fit").classList.toggle("highlighted")
+	renderPost(currentPost)
 }
 
 function cb(p)

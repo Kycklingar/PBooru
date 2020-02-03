@@ -49,10 +49,6 @@
 		overflow: auto;
 		width:100%;
 	}
-	#interface-right canvas
-	{
-		position:relative;
-	}
 
 	#interface-float
 	{
@@ -91,12 +87,30 @@
 		background-color:#222;
 		box-shadow:0px 0px 2px #AAA;
 	}
+
+	#canvas
+	{
+		position:relative;
+		image-rendering: crisp-edges;
+	}
+
+	.fit-image
+	{
+		width: 100%;
+		height: 100%;
+	}
+
+	.fit-image img
+	{
+		max-width: 100%;
+		max-height: 100%;
+	}
 </style>
 
 <div id="interface-window">
 	<div id="interface-left"></div>
 	<div id="interface-right">
-		<canvas></canvas>
+		<div id="canvas"></div>
 		<details id="interface-float-left">
 			<details>
 				<summary>Help</summary>
@@ -113,7 +127,7 @@
 			<details>
 				<summary>Add post</summary>
 				<div>
-				<input type="number" id="add-post-input">
+				<input onfocus="disableKeymap()" onfocusout="enableKeymap()" type="number" id="add-post-input">
 				<button onclick="getRemotePost(document.getElementById('add-post-input').value)">Add</button>
 				</div>
 			</details>
