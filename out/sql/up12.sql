@@ -31,3 +31,7 @@ INSERT INTO duplicates (post_id, dup_id)
 	AND d1.post_id != d2.post_id;
 
 DROP TABLE duplicate_posts;
+
+CREATE TRIGGER post_score_update_trigger
+AFTER UPDATE ON post_score_mapping
+FOR EACH ROW EXECUTE PROCEDURE score_update();
