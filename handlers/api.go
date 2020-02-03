@@ -70,28 +70,43 @@ func jsonEncode(w http.ResponseWriter, v interface{}) error {
 func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	p := DM.NewPost()
 
-	if postID := r.FormValue("id"); postID != "" {
-		id, err := strconv.Atoi(postID)
-		if err != nil {
-			APIError(w, "ID is not a number", http.StatusBadRequest)
-			return
+	firstNonEmpty := func(keys ...string) (string, string) {
+		for _, key := range keys {
+			if value := r.FormValue(key); value != "" {
+				return key, value
+			}
 		}
+		return "", ""
+	}
 
-		err = p.SetID(DM.DB, id)
-		if err != nil {
-			log.Print(err)
-			APIError(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-	} else if postHash := r.FormValue("hash"); postHash != "" {
-		p.Hash = postHash
+	key, val := firstNonEmpty("id", "ipfs", "sha256", "md5")
 
-		if p.QID(DM.DB) == 0 {
-			APIError(w, "Post Not Found", http.StatusNotFound)
+	var err error
+
+	switch key{
+		case "id":
+			var id int
+			id, err = strconv.Atoi(val)
+			if err != nil {
+				break
+			}
+			err = p.SetID(DM.DB, id)
+		case "ipfs":
+			p.Hash = val
+		case "sha256", "md5":
+			p, err = DM.GetPostFromHash(key, val)
+		default:
+			APIError(w, "No Identifier", http.StatusBadRequest)
 			return
-		}
-	} else {
-		APIError(w, "No Identifier", http.StatusBadRequest)
+	}
+
+	if err != nil {
+		APIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if p.QID(DM.DB) == 0 {
+		APIError(w, "Post Not Found", http.StatusNotFound)
 		return
 	}
 

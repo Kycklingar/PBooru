@@ -28,6 +28,21 @@ func NewPost() *Post {
 	return &p
 }
 
+func GetPostFromHash(fnc, hash string) (*Post, error) {
+	var p = NewPost()
+	err := DB.QueryRow(fmt.Sprintf(`
+			SELECT post_id
+			FROM hashes
+			WHERE %s = $1
+			`,
+			fnc,
+		),
+		hash,
+	).Scan(&p.ID)
+
+	return p, err
+}
+
 func CachedPost(p *Post) *Post {
 	if n := C.Cache.Get("PST", strconv.Itoa(p.ID)); n != nil {
 		tp, ok := n.(*Post)

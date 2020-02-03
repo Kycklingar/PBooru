@@ -108,7 +108,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	for _, mime := range DM.Mimes {
 		pp.Sidebar.Mimes[mime.Type] = append(pp.Sidebar.Mimes[mime.Type], mime)
 	}
-	p := DM.NewPost()
 
 	pp.User, pp.UserInfo = getUser(w, r)
 
@@ -116,45 +115,51 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	pp.User.QFlag(DM.DB)
 	pp.User.QPools(DM.DB)
 
-	uri := splitURI(r.URL.Path)
+
 
 	// Valid Uris: 	post/1
 	//		post/hash/Qm...
-	if len(uri) <= 1 {
+	//		post/md5/HASH...
+	//		post/sha256/HASH...
+	var p = DM.NewPost()
+
+	uri := uriSplitter(r)
+
+	method, err := uri.getAtIndex(1)
+	if err != nil {
+		log.Println(err)
+	}
+
+	switch method {
+		case "ipfs":
+			p.Hash, err = uri.getAtIndex(2)
+		case "sha256", "md5":
+			var hash string
+			hash, err = uri.getAtIndex(2)
+			p, err = DM.GetPostFromHash(method, hash)
+		default:
+			var id int
+			id, err = uri.getIntAtIndex(1)
+			if err != nil {
+				break
+			}
+
+			err = p.SetID(DM.DB, id)
+	}
+
+	if err != nil {
+		notFoundHandler(w, r)
+		//http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if p.QID(DM.DB) == 0 {
 		notFoundHandler(w, r)
 		return
-	} else if len(uri) >= 2 && uri[1] != "hash" {
-		id, err := strconv.Atoi(uri[1])
-		if err != nil {
-			notFoundHandler(w, r)
-			//fmt.Println("Failed converting string to int")
-			return
-		}
-
-		err = p.SetID(DM.DB, id)
-		if err != nil {
-			notFoundHandler(w, r)
-			return
-		}
-		//dPost = DM.NewPost(id)
-		if p.QID(DM.DB) == 0 {
-			notFoundHandler(w, r)
-			return
-		}
-
-		bm.Split("Posts added")
-
-	} else if len(uri) > 2 && uri[1] == "hash" {
-		p.Hash = uri[2]
-		if p.QID(DM.DB) == 0 {
-			notFoundHandler(w, r)
-			return
-		}
 	}
-	var err error
 
-	p.QID(DM.DB)
 	p = DM.CachedPost(p)
+
 	p.QHash(DM.DB)
 	p.QDeleted(DM.DB)
 	p.QSize(DM.DB)
@@ -163,6 +168,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p.QThumbnails(DM.DB)
 	p.QDescription(DM.DB)
 	p.QScore(DM.DB)
+	p.QSize(DM.DB)
+	p.QDimensions(DM.DB)
 
 	pp.Post = p
 
