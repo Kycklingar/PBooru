@@ -35,3 +35,12 @@ DROP TABLE duplicate_posts;
 CREATE TRIGGER post_score_update_trigger
 AFTER UPDATE ON post_score_mapping
 FOR EACH ROW EXECUTE PROCEDURE score_update();
+
+CREATE TABLE apple_tree (
+	post_id INTEGER PRIMARY KEY REFERENCES posts(id),
+);
+
+CREATE TABLE pears (
+	apple_tree INTEGER NOT NULL REFERENCES posts(id),
+	pear INTEGER NOT NULL REFERENCES posts(id),
+);

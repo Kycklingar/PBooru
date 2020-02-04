@@ -252,6 +252,8 @@ func init() {
 	Handlers["/compare/"] = comparisonHandler
 	Handlers["/compare2/"] = compare2Handler
 
+	Handlers["/appletree/"] = appleTreeHandler
+
 	Handlers["/reports/"] = makeStatHandler(reportsHandler)
 	Handlers["/reports/delete/"] = reportDeleteHandler
 

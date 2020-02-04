@@ -1,9 +1,9 @@
 package DataManager
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"errors"
 )
 
 type Dupe struct {
@@ -366,7 +366,6 @@ func conflicts(tx querier, dupe Dupe) error {
 			return errors.New("Conflicting dupe assignment. Trying to assign post as a dupe of itself")
 		}
 	}
-
 
 	return nil
 }

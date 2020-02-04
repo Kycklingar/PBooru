@@ -58,6 +58,7 @@ func main() {
 	generateFileSize := flag.Bool("gen-filesize", false, "Generate file sizes on posts with 0 filesize")
 	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
 	upgradePostCids := flag.Bool("upgrade-post-cids", false, "Upgrade post cids to base32")
+	genPears := flag.Bool("gen-pears", false, "Harvest apple tree")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -81,6 +82,14 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *genPears {
+		if err := DM.GeneratePears(); err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
 
 	if *upgradePostCids {
 		DM.UpgradePostCids()
