@@ -347,17 +347,22 @@ function renderImage(image)
 	image.style.width = scaledWidth
 	image.style.height = scaledHeight
 
-	if (optAnchor)
+	if (optFit)
+	{
+		canvas.style.width = null
+		canvas.style.height = null
+		image.style.width = null
+		image.style.height = null
+	}
+	else if (optAnchor)
 	{
 		let rect = canvas.getBoundingClientRect()
 		if(rect.width < scaledWidth)
 		{
-			console.log("Setting width")
 			canvas.style.width = scaledWidth
 		}
 		if(rect.height < scaledHeight)
 		{
-			console.log("Setting height")
 			canvas.style.height = scaledHeight
 		}
 	}
@@ -367,13 +372,6 @@ function renderImage(image)
 		canvas.style.height = scaledHeight
 	}
 
-	if (optFit)
-	{
-		image.style.width = null
-		image.style.height = null
-		canvas.style.height = null
-		canvas.style.width = null
-	}
 
 	canvas.style.filter = `contrast(${optContrast})`
 	
