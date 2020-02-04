@@ -1,0 +1,10 @@
+{{template "base"}}
+
+{{range .Fruits}}
+<div>
+	{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
+	{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Pear}}
+</div>
+{{end}}
+
+{{template "baseEnd"}}
