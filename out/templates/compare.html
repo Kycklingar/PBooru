@@ -123,10 +123,10 @@
 		{{end}}
 		<input type="submit" value="Add post to compare">
 	</form>
-	<form>
+	<form action="/duplicate/report/" method="POST">
 		{{range .Posts}}
 		<span postid="{{.ID}}" class="interface-post">
-			<input type="hidden" name="post-id" value="{{.ID}}">
+			<input type="hidden" name="post-ids" value="{{.ID}}">
 			<div style="position:relative;">
 				<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 100}}">
 				<a onclick="fit({{.ID}})" class="thumb-button" href="#img-{{.ID}}" style="top:0px; left:0px; right:0px; bottom:50%;">Fit</a>
@@ -142,136 +142,11 @@
 				<p>No dimensional data</p>
 				{{end}}
 			</div>
-			<button type="submit" name="superior-id" value="{{.ID}}">Report as superior</button>
+			<button type="submit" name="best-id" value="{{.ID}}">Report as superior</button>
 		</span>
 		{{end}}
+		<textarea rows="1" name="note" placeholder="Opptional note"></textarea>
 	</form>
 </details>
-
-<script>
-
-	let posts = [
-		{{range .Posts}}
-		{
-			"id":{{.ID}},
-			"hash":{{.Hash}},
-			"width":{{.Dimension.Width}},
-			"height":{{.Dimension.Height}},
-		},
-		{{end}}
-	]
-
-
-	function fit(id)
-	{
-		let fi = fullInterface()
-
-		let r = fi.children[1]
-		let img = document.createElement("img")
-
-		let hash = ""
-		for (let i = 0; i < posts.length; i++)
-		{
-			if (posts[i].id == id)
-			{
-				hash = posts[i].hash
-				break
-			}
-		}
-		img.src = "http://localhost:8080/ipfs/" + hash
-
-		r.appendChild(img)
-		document.body.appendChild(fi)
-	}
-
-	function zoom(id)
-	{
-		
-	}
-
-	function fullInterface()
-	{
-		let fi = document.createElement("div")
-		fi.id = "full-interface"
-
-		fi.appendChild(leftInterface(posts))
-		fi.appendChild(rightInterface(posts[0]))
-
-		return fi
-	}
-
-	function leftInterface()
-	{
-		let li = document.createElement("div")
-		li.id = "left-interface"
-
-		for(let i = 0; i < posts.length; i++)
-		{
-			let d = document.createElement("div")
-			let p = document.createElement("p")
-			p.innerText = posts[i].id
-
-			let pwidth = document.createElement("p")
-			let pheight = document.createElement("p")
-
-			pwidth.innerText = posts[i].width
-			pheight.innerText = posts[i].height
-
-			d.appendChild(p)
-			d.appendChild(pwidth)
-			d.appendChild(pheight)
-			li.appendChild(d)
-		}
-		
-		return li
-	}
-
-	function rightInterface(post)
-	{
-		let ri = document.createElement("div")
-		ri.id = "right-interface"
-
-		let img = document.createElement("img")
-		img.src = "http://localhost:8080/ipfs/" + post.hash
-
-		ri.appendChild(img)
-
-		return ri
-	}
-
-	function addRemoveButton()
-	{
-		let ifp = document.getElementsByClassName("interface-post")
-		console.log(ifp)
-		for(let i = 0; i < ifp.length; i++)
-		{
-			let b = document.createElement("p")
-			let p = ifp[i]
-			b.onclick = function() {
-				console.log(p)
-				removePost(p)
-			}
-			b.innerText = "X"
-			ifp[i].insertBefore(b, ifp[i].firstChild)
-		}
-	}
-
-	function removePost(p)
-	{
-		let ps = document.getElementById("image-wraper")
-		for(let i = 0; i < ps.children.length; i++)
-		{
-			if(ps.children[i].postid == p.postid)
-			{
-				ps.removeChild(ps.children[i])
-				break
-			}
-		}
-
-		p.parentElement.removeChild(p)
-	}
-
-	addRemoveButton()
-</script>
 
 {{template "baseEnd"}}

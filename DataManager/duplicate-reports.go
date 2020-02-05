@@ -19,7 +19,8 @@ func FetchDupReports(limit, offset int) ([]*DupReport, error) {
 		rows, err := DB.Query(`
 			SELECT id, post_id, reporter, note, approved, timestamp
 			FROM duplicate_report
-			ORDER BY approved DESC NULLS FIRST
+			WHERE approved IS NULL
+			ORDER BY timestamp DESC
 			LIMIT $1
 			OFFSET $2
 			`,

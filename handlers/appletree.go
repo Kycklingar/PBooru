@@ -15,7 +15,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var page struct {
 		UserInfo UserInfo
-		Fruits []DM.Fruit
+		Fruits   []DM.Fruit
 	}
 
 	page.UserInfo = userCookies(w, r)
@@ -29,7 +29,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, fruit := range page.Fruits{
+	for _, fruit := range page.Fruits {
 		fruit.Apple.QThumbnails(DM.DB)
 		fruit.Apple.QHash(DM.DB)
 		fruit.Apple.QMime(DM.DB)
@@ -58,7 +58,7 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 
 	const (
 		appleKey = "apple"
-		pearKey = "pear"
+		pearKey  = "pear"
 	)
 
 	m, err := verifyInteger(r, appleKey, pearKey)

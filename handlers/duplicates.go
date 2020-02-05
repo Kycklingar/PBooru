@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -77,6 +78,10 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if d.Post == nil {
+		http.Error(w, "No superior post has been choosen", http.StatusBadRequest)
+	}
+
 	// Assign duplicates if having sufficient privileges
 	// otherwise submit a report
 	if user.QFlag(DM.DB).Delete() {
@@ -98,7 +103,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	fmt.Fprint(w, "Thank you for your report")
 }
 
 func processReportHandler(w http.ResponseWriter, r *http.Request) {
