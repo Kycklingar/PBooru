@@ -55,13 +55,14 @@
 		</script>
 		<details>
 		<summary>Report post</summary>
-			<form action="/compare2/">
+			<form>
 				<h4>Compare post with</h4>
 				<input type="hidden" name="post-id" value="{{.Post.ID}}">
 				<input style="padding:0.5em;" type="number" name="post-id">
 				<br>
 				<br>
-				<input type="submit">
+				<input formaction="/compare2/" type="submit" value="compare2.js"> 
+				<input formaction="/compare/" type="submit" value="compare"> 
 			</form>
 			{{template "reportForm" .Post.ID}}
 		</details>
