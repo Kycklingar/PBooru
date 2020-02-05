@@ -4,6 +4,16 @@
 <div>
 	{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
 	{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Pear}}
+	<form action="/compare2/">
+		<input type="hidden" name="post-id" value="{{.Apple.ID}}">
+		<input type="hidden" name="post-id" value="{{.Pear.ID}}">
+		<input type="submit" value="compare">
+	</form>
+	<form method="POST">
+		<input type="hidden" name="apple" value="{{.Apple.ID}}">
+		<input type="hidden" name="pear" value="{{.Pear.ID}}">
+		<input type="submit" value="Pluck">
+	</form>
 </div>
 {{end}}
 

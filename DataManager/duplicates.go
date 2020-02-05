@@ -130,6 +130,13 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	// TODO
 	// Move post descriptions and comments
 
+
+	// Update apple trees
+	if err = updateAppleTrees(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Reset tag cache
 	tc := new(TagCollector)
 	tc.GetFromPost(tx, dupe.Post)
@@ -138,6 +145,64 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	a = tx.Commit
+
+	return nil
+}
+
+func updateAppleTrees(tx querier, dupe Dupe) error {
+	var err error
+	for _, p := range dupe.Inferior {
+
+		_, err = tx.Exec(`
+			UPDATE apple_tree
+			SET apple = $1
+			WHERE apple = $2
+			AND pear NOT IN(
+				SELECT pear
+				FROM apple_tree
+				WHERE apple = $2
+			)
+			`,
+			dupe.Post.ID,
+			p.ID,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(`
+			UPDATE apple_tree
+			SET pear = $1
+			WHERE pear = $2
+			AND apple NOT IN(
+				SELECT apple
+				FROM apple_tree
+				WHERE pear = $2
+			)
+			`,
+			dupe.Post.ID,
+			p.ID,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(`
+			UPDATE apple_tree
+			SET processed = CURRENT_TIMESTAMP
+			WHERE processed IS NULL
+			AND (
+				apple = $1
+				OR pear = $1
+			)
+			`,
+			p.ID,
+		)
+		if err != nil {
+			return err
+		}
+
+	}
 
 	return nil
 }

@@ -1,18 +1,23 @@
 package DataManager
 
 import (
+	"fmt"
+
 	"github.com/Nr90/imgsim"
 )
 
 type Fruit struct {
 	Apple *Post
-	Pear *Post
+	Pear  *Post
 }
 
-func GetFruits() ([]Fruit, error){
+func GetFruits() ([]Fruit, error) {
 	rows, err := DB.Query(`
 		SELECT apple, pear
 		FROM apple_tree
+		WHERE processed IS NULL
+		ORDER BY apple
+		LIMIT 25
 		`,
 	)
 	if err != nil {
@@ -41,6 +46,20 @@ func GetFruits() ([]Fruit, error){
 	}
 
 	return fruits, nil
+}
+
+func PluckApple(apple, pear int) error {
+	_, err := DB.Exec(`
+		UPDATE apple_tree
+		SET processed = CURRENT_TIMESTAMP
+		WHERE apple = $1
+		AND pear = $2
+		`,
+		apple,
+		pear,
+	)
+
+	return err
 }
 
 func GeneratePears() error {
@@ -78,7 +97,7 @@ func GeneratePears() error {
 					FROM apple_tree
 				)
 				ORDER BY post_id
-				LIMIT 100
+				LIMIT 10000
 			)
 			ORDER BY p1.post_id
 			`,
@@ -130,11 +149,14 @@ func GeneratePears() error {
 
 	defer commitOrDie(tx, &err)
 
+	var count int
 	for _, tree := range forest.trees {
+		count++
 		var pears []phs
 
 		// Weed out oranges, we only want to compare apples with pears
 		for _, pear := range tree.pears {
+			fmt.Printf("[%d/%d] comparing %d %d\n", count, len(forest.trees), tree.apple.postid, pear.postid)
 			if tree.apple.distance(pear) < 4 {
 				pears = append(pears, pear)
 			}

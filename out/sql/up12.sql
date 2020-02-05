@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS duplicates (
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS apple_tree (
+	apple INTEGER NOT NULL REFERENCES posts(id),
+	pear INTEGER NOT NULL REFERENCES posts(id),
+	processed TIMESTAMP DEFAULT NULL,
+
+	CONSTRAINT apple_pear UNIQUE (apple, pear),
+	CHECK (apple < pear)
+);
+
 INSERT INTO duplicates (post_id, dup_id)
 	SELECT d1.post_id, d2.post_id
 	FROM duplicate_posts d1
@@ -36,11 +45,7 @@ CREATE TRIGGER post_score_update_trigger
 AFTER UPDATE ON post_score_mapping
 FOR EACH ROW EXECUTE PROCEDURE score_update();
 
-CREATE TABLE apple_tree (
-	post_id INTEGER PRIMARY KEY REFERENCES posts(id),
-);
-
-CREATE TABLE pears (
-	apple_tree INTEGER NOT NULL REFERENCES posts(id),
-	pear INTEGER NOT NULL REFERENCES posts(id),
-);
+CREATE INDEX phash_h1_index ON phash (h1);
+CREATE INDEX phash_h2_index ON phash (h2);
+CREATE INDEX phash_h3_index ON phash (h3);
+CREATE INDEX phash_h4_index ON phash (h4);
