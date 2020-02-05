@@ -138,50 +138,62 @@ func GeneratePears() error {
 		return forest, nil
 	}
 
-	forest, err := getForest()
-	if err != nil {
-		return err
-	}
+	var err error
+	var forest Forest
 
-	tx, err := DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer commitOrDie(tx, &err)
-
-	var count int
-	for _, tree := range forest.trees {
-		count++
-		var pears []phs
-
-		// Weed out oranges, we only want to compare apples with pears
-		for _, pear := range tree.pears {
-			fmt.Printf("[%d/%d] comparing %d %d\n", count, len(forest.trees), tree.apple.postid, pear.postid)
-			if tree.apple.distance(pear) < 4 {
-				pears = append(pears, pear)
-			}
+	for {
+		forest, err = getForest()
+		if err != nil || len(forest.trees) <= 0 {
+			break
 		}
+
+		err = func() error {
+			tx, err := DB.Begin()
+			if err != nil {
+				return err
+			}
+
+			defer commitOrDie(tx, &err)
+
+			var count int
+			for _, tree := range forest.trees {
+				count++
+				var pears []phs
+
+				// Weed out oranges, we only want to compare apples with pears
+				for _, pear := range tree.pears {
+					fmt.Printf("[%d/%d] comparing %d %d\n", count, len(forest.trees), tree.apple.postid, pear.postid)
+					if tree.apple.distance(pear) < 4 {
+						pears = append(pears, pear)
+					}
+				}
+
+				if err != nil {
+					return err
+				}
+
+				for _, apple := range pears {
+					_, err = tx.Exec(`
+						INSERT INTO apple_tree (apple, pear)
+						VALUES($1, $2)
+						`,
+						tree.apple.postid,
+						apple.postid,
+					)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}()
 
 		if err != nil {
 			return err
 		}
-
-		for _, apple := range pears {
-			_, err = tx.Exec(`
-				INSERT INTO apple_tree (apple, pear)
-				VALUES($1, $2)
-				`,
-				tree.apple.postid,
-				apple.postid,
-			)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
-	return nil
+	return err
 }
 
 func generateAppleTree(tx querier, ph phs) error {
