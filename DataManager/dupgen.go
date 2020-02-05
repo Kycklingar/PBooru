@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/Nr90/imgsim"
@@ -183,6 +184,94 @@ func GeneratePears() error {
 	return nil
 }
 
+func generateAppleTree(tx querier, ph phs) error {
+	query := func() ([]phs, error) {
+		rows, err := tx.Query(`
+				SELECT
+					p.post_id, p.h1, p.h2, p.h3, p.h4
+				FROM phash p
+				LEFT JOIN duplicates d
+				ON p.post_id = d.dup_id
+				WHERE d.post_id IS NULL
+				AND p.post_id != $1
+				AND (
+					p.h1 = $2
+					OR p.h2 = $3
+					OR p.h3 = $4
+					OR p.h4 = $5
+				)
+			`,
+			ph.postid,
+			ph.h1,
+			ph.h2,
+			ph.h3,
+			ph.h4,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var hashes []phs
+
+		for rows.Next() {
+			var p phs
+			err = rows.Scan(
+				&p.postid,
+				&p.h1,
+				&p.h2,
+				&p.h3,
+				&p.h4,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			hashes = append(hashes, p)
+		}
+
+		return hashes, rows.Err()
+	}
+
+	hashes, err := query()
+	if err != nil {
+		return err
+	}
+
+	for _, h := range hashes {
+		if ph.distance(h) < 4 {
+			_, err = tx.Exec(`
+				INSERT INTO apple_tree
+					(apple, pear)
+				VALUES ($1, $2)
+				`,
+				h.postid,
+				ph.postid,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func phsFromHash(postid int, hash imgsim.Hash) phs {
+	var ph phs
+	ph.postid = postid
+
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(hash))
+
+	ph.h1 = uint16(b[1]) | uint16(b[0])<<8
+	ph.h2 = uint16(b[3]) | uint16(b[2])<<8
+	ph.h3 = uint16(b[5]) | uint16(b[4])<<8
+	ph.h4 = uint16(b[7]) | uint16(b[6])<<8
+
+	return ph
+}
+
 type phs struct {
 	postid int
 	h1     uint16
@@ -202,4 +291,22 @@ func (p phs) hash() imgsim.Hash {
 
 func (a phs) distance(b phs) int {
 	return imgsim.Distance(a.hash(), b.hash())
+}
+
+func (a phs) insert(tx querier) error {
+	_, err := tx.Exec(`
+		INSERT INTO phash (
+			post_id, h1, h2, h3, h4
+		)
+		VALUES (
+			$1, $2, $3, $4, $5
+		)`,
+		a.postid,
+		a.h1,
+		a.h2,
+		a.h3,
+		a.h4,
+	)
+
+	return err
 }

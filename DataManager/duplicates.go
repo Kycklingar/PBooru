@@ -130,7 +130,6 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	// TODO
 	// Move post descriptions and comments
 
-
 	// Update apple trees
 	if err = updateAppleTrees(tx, dupe); err != nil {
 		log.Println(err)

@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -454,30 +453,27 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 		if p.Mime.Type == "image" {
 			file.Seek(0, 0)
-			u := dHash(file)
-
-			type PHS struct {
-				id int
-				h1 uint16
-				h2 uint16
-				h3 uint16
-				h4 uint16
-			}
-			var ph PHS
-
-			ph.id = p.QID(tx)
-
-			b := make([]byte, 8)
-			binary.BigEndian.PutUint64(b, u)
-			ph.h1 = uint16(b[1]) | uint16(b[0])<<8
-			ph.h2 = uint16(b[3]) | uint16(b[2])<<8
-			ph.h3 = uint16(b[5]) | uint16(b[4])<<8
-			ph.h4 = uint16(b[7]) | uint16(b[6])<<8
-
-			_, err = tx.Exec("INSERT INTO phash(post_id, h1, h2, h3, h4) VALUES($1, $2, $3, $4, $5)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
+			u, err := dHash(file)
 			if err != nil {
 				return txError(tx, err)
 			}
+
+			var ph phs
+			ph = phsFromHash(p.ID, u)
+			if err != nil {
+				return txError(tx, err)
+			}
+
+			err = ph.insert(tx)
+			if err != nil {
+				return txError(tx, err)
+			}
+
+			err = generateAppleTree(tx, ph)
+			if err != nil {
+				return txError(tx, err)
+			}
+
 		}
 	} else {
 		tx, err = DB.Begin()
