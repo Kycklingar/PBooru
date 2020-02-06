@@ -7,18 +7,25 @@ import (
 	"github.com/Nr90/imgsim"
 )
 
-type Fruit struct {
+type AppleTree struct {
 	Apple *Post
-	Pear  *Post
+	Pears []*Post
 }
 
-func GetFruits() ([]Fruit, error) {
+func GetAppleTrees() ([]AppleTree, error) {
 	rows, err := DB.Query(`
 		SELECT apple, pear
 		FROM apple_tree
-		WHERE processed IS NULL
+		WHERE apple IN(
+			SELECT apple
+			FROM apple_tree
+			WHERE processed IS NULL
+			GROUP BY apple
+			ORDER BY apple
+			LIMIT 25
+		)
+		AND processed IS NULL
 		ORDER BY apple
-		LIMIT 25
 		`,
 	)
 	if err != nil {
@@ -27,40 +34,63 @@ func GetFruits() ([]Fruit, error) {
 
 	defer rows.Close()
 
-	var fruits []Fruit
+	var trees []AppleTree
 
-	for rows.Next() {
-		var fruit = Fruit{
-			NewPost(),
-			NewPost(),
+	putOnTree := func(apple, pear *Post) {
+		for i, _ := range trees {
+			if trees[i].Apple.ID == apple.ID {
+				trees[i].Pears = append(trees[i].Pears, pear)
+				return
+			}
 		}
 
+		trees = append(trees, AppleTree{
+			apple,
+			[]*Post{pear},
+		})
+	}
+
+	for rows.Next() {
+		var apple, pear = NewPost(), NewPost()
+
 		err = rows.Scan(
-			&fruit.Apple.ID,
-			&fruit.Pear.ID,
+			&apple.ID,
+			&pear.ID,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		fruits = append(fruits, fruit)
+		putOnTree(apple, pear)
 	}
 
-	return fruits, nil
+	return trees, nil
 }
 
-func PluckApple(apple, pear int) error {
-	_, err := DB.Exec(`
-		UPDATE apple_tree
-		SET processed = CURRENT_TIMESTAMP
-		WHERE apple = $1
-		AND pear = $2
-		`,
-		apple,
-		pear,
-	)
+func PluckApple(apple int, pears []int) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
 
-	return err
+	defer commitOrDie(tx, &err)
+
+	for _, pear := range pears {
+		_, err := tx.Exec(`
+			UPDATE apple_tree
+			SET processed = CURRENT_TIMESTAMP
+			WHERE apple = $1
+			AND pear = $2
+			`,
+			apple,
+			pear,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func GeneratePears() error {

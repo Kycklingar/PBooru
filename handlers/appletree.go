@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
@@ -15,30 +16,31 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var page struct {
 		UserInfo UserInfo
-		Fruits   []DM.Fruit
+		Trees    []DM.AppleTree
 	}
 
 	page.UserInfo = userCookies(w, r)
 
 	var err error
 
-	page.Fruits, err = DM.GetFruits()
+	page.Trees, err = DM.GetAppleTrees()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	for _, fruit := range page.Fruits {
-		fruit.Apple.QThumbnails(DM.DB)
-		fruit.Apple.QHash(DM.DB)
-		fruit.Apple.QMime(DM.DB)
-		fruit.Apple.QDeleted(DM.DB)
-		fruit.Pear.QThumbnails(DM.DB)
-		fruit.Pear.QHash(DM.DB)
-		fruit.Pear.QMime(DM.DB)
-		fruit.Pear.QDeleted(DM.DB)
-
+	for _, tree := range page.Trees {
+		tree.Apple.QThumbnails(DM.DB)
+		tree.Apple.QHash(DM.DB)
+		tree.Apple.QMime(DM.DB)
+		tree.Apple.QDeleted(DM.DB)
+		for _, pear := range tree.Pears {
+			pear.QThumbnails(DM.DB)
+			pear.QHash(DM.DB)
+			pear.QMime(DM.DB)
+			pear.QDeleted(DM.DB)
+		}
 	}
 
 	renderTemplate(w, "appletree", page)
@@ -56,18 +58,26 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const (
-		appleKey = "apple"
-		pearKey  = "pear"
-	)
-
-	m, err := verifyInteger(r, appleKey, pearKey)
+	apple, err := strconv.Atoi(r.FormValue("apple"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = DM.PluckApple(m[appleKey], m[pearKey])
+	var pears []int
+
+	pearsStr := r.Form["pears"]
+	for _, pearStr := range pearsStr {
+		pear, err := strconv.Atoi(pearStr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		pears = append(pears, pear)
+	}
+
+	err = DM.PluckApple(apple, pears)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
