@@ -90,10 +90,12 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		tagStrAdd := r.FormValue("addtags")
-		tagStrRem := r.FormValue("remtags")
+		//tagStrAdd := r.FormValue("addtags")
+		//tagStrRem := r.FormValue("remtags")
 
-		err := post.EditTags(user, tagStrAdd, tagStrRem)
+		tags := r.FormValue("tags")
+
+		err := post.EditTags(user, tags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Something went wrong", http.StatusInternalServerError)

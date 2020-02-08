@@ -1,5 +1,11 @@
 {{ template "base" .Base}}
 
+{{define "printTags" -}}
+{{range . -}}
+{{if ne .Namespace.Namespace "none"}}{{.Namespace.Namespace}}:{{.Tag}}{{else}}{{.Tag}}{{end}}
+{{end -}}
+{{end}}
+
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
@@ -16,10 +22,10 @@
         		<div id="editPostForm">
         			{{if .User.Flag.Tagging}}
         		    		<form method="POST">
-        		    		    <p>Add tags</p>
-        		    		    <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
-        		    		    <p>Remove tags</p>
-        		    		    <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
+        		    		    <p>Edit tags</p>
+        		    		    <textarea class="stinput" id="addtagsinput" name="tags">
+					    {{- template "printTags" .Sidebar.Tags -}}
+					    </textarea>
         		    		    <input type="submit" value="Submit edit">
         		    		</form>
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
