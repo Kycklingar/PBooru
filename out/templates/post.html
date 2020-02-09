@@ -17,7 +17,7 @@
 			<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
 		</form>
 		<details>
-		<summary onclick="swapInput()">Edit Post</summary>
+		<summary>Edit Post</summary>
 			<br><a style="color:#AAA" href="/post/taghistory/{{.Post.ID}}/">Tag History</a>
         		<div id="editPostForm">
         			{{if .User.Flag.Tagging}}
@@ -48,17 +48,6 @@
         		    	{{end}}
         		</div>
 		</details>
-		<script>
-		var lastInput = document.getElementById("remtagsinput")
-
-		function swapInput()
-		{
-			console.log(input, lastInput)
-			let tmp = lastInput
-			lastInput = input
-			input = tmp
-		}
-		</script>
 		<details>
 		<summary>Report post</summary>
 			<form>
