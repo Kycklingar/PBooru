@@ -182,15 +182,25 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 
 	var parentID, childID int
 
+
 	at := NewAlias()
 	at.Tag = t
-	if childID = at.QTo(q).QID(q); childID == 0 {
+	to, err := at.QTo(q)
+	if err != nil {
+		return err
+	}
+	if childID = to.QID(q); childID != 0 {
 		childID = t.QID(q)
 	}
 
 	ap := NewAlias()
 	ap.Tag = parent
-	if parentID = ap.QTo(q).QID(q); parentID == 0 {
+	to, err = ap.QTo(q)
+	if err != nil {
+		return err
+	}
+
+	if parentID = to.QID(q); parentID == 0 {
 		parentID = parent.QID(q)
 	}
 
@@ -317,8 +327,13 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 		} else {
 			a := NewAlias()
 			a.Tag = tag
-			if a.QTo(q).QID(q) != 0 {
-				tag = a.QTo(q)
+			to, err := a.QTo(q)
+			if err != nil {
+				return err
+			}
+
+			if to.QID(q) != 0 {
+				tag = to
 			}
 		}
 
@@ -377,13 +392,18 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 		a := NewAlias()
 		// a.setQ(q)
 		a.Tag = t
-		if a.QTo(q).QID(q) != 0 {
-			t = a.QTo(q)
+		to, err := a.QTo(q)
+		if err != nil {
+			return err
+		}
+
+		if to.QID(q) != 0 {
+			t = to
 		}
 
 		resetCacheTag(t.QID(q))
 
-		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
+		_, err = q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
 		if err != nil {
 			log.Print(err)
 			continue
@@ -513,6 +533,48 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 	C.Cache.Set("TC", strconv.Itoa(dupe.Post.ID), tc)
 
 	return rows.Err()
+}
+
+func (tc *TagCollector) upgrade(q querier) error {
+	in := func(t *Tag, tags []*Tag) bool {
+		for _, tag := range tags {
+			if tag.ID == t.ID {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	var newTags []*Tag
+
+	for _, tag := range tc.Tags {
+		a := NewAlias()
+		a.Tag = tag
+		b, err := a.QTo(q)
+		if err != nil {
+			return err
+		}
+		if b.ID != 0 {
+			if !in(b, newTags) {
+				newTags = append(newTags, b)
+			}
+		} else if !in(tag, newTags) {
+			newTags = append(newTags, tag)
+		}
+	}
+
+	for _, tag := range newTags {
+		for _, parent := range tag.Parents(q) {
+			if !in(parent, newTags) {
+				newTags = append(newTags, parent)
+			}
+		}
+	}
+
+	tc.Tags = newTags
+
+	return nil
 }
 
 func (tc *TagCollector) SuggestedTags(q querier) TagCollector {

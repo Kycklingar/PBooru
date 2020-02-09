@@ -45,20 +45,21 @@ func (a *Alias) QFrom(q querier) []*Tag {
 	return a.From
 }
 
-func (a *Alias) QTo(q querier) *Tag {
+func (a *Alias) QTo(q querier) (*Tag, error) {
 	if a.Tag.QID(q) == 0 {
-		return a.To
+		return a.To, nil
 	}
 	if a.To.QID(q) != 0 {
-		return a.To
+		return a.To, nil
 	}
 
 	err := q.QueryRow("SELECT alias_to FROM alias WHERE alias_from=$1", a.Tag.QID(q)).Scan(&a.To.ID)
 	if err != nil && err != sql.ErrNoRows {
 		log.Print(err)
+		return nil, err
 	}
 
-	return a.To
+	return a.To, nil
 }
 
 func (a *Alias) Save(q querier) error {
