@@ -26,6 +26,8 @@ type APIv1Post struct {
 	Mime        string
 	Deleted     bool
 	Tags        []APIv1TagI
+	Dimension   *DM.Dimension
+	Filesize    int64
 }
 
 type APIv1TagI interface {
@@ -125,46 +127,45 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, AP)
 }
 
-func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
-	p := DM.NewPost()
-	if postID := r.FormValue("id"); postID != "" {
-		id, err := strconv.Atoi(postID)
-		if err != nil {
-			APIError(w, "ID is not a number", http.StatusBadRequest)
-			return
-		}
-
-		err = p.SetID(DM.DB, id)
-		if err != nil {
-			log.Print(err)
-			APIError(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-	} else if postHash := r.FormValue("hash"); postHash != "" {
-		p.Hash = postHash
-
-		if p.QID(DM.DB) == 0 {
-			//fmt.Fprint(w, "{}")
-			APIError(w, "Post Not Found", http.StatusNotFound)
-			return
-		}
-	} else {
-		APIError(w, "No Identifier", http.StatusBadRequest)
-		return
-	}
-
-	d := DM.NewDuplicate()
-	d.Post = p
-
-	type APIv1Duplicate struct {
-		ID    int
-		Level int
-	}
-
-	dp := APIv1Duplicate{d.QDupID(DM.DB), d.QLevel(DM.DB)}
-
-	jsonEncode(w, dp)
-}
+//func APIv1DuplicateHandler(w http.ResponseWriter, r *http.Request) {
+//	p := DM.NewPost()
+//	if postID := r.FormValue("id"); postID != "" {
+//		id, err := strconv.Atoi(postID)
+//		if err != nil {
+//			APIError(w, "ID is not a number", http.StatusBadRequest)
+//			return
+//		}
+//
+//		err = p.SetID(DM.DB, id)
+//		if err != nil {
+//			log.Print(err)
+//			APIError(w, ErrInternal, http.StatusInternalServerError)
+//			return
+//		}
+//	} else if postHash := r.FormValue("hash"); postHash != "" {
+//		p.Hash = postHash
+//
+//		if p.QID(DM.DB) == 0 {
+//			//fmt.Fprint(w, "{}")
+//			APIError(w, "Post Not Found", http.StatusNotFound)
+//			return
+//		}
+//	} else {
+//		APIError(w, "No Identifier", http.StatusBadRequest)
+//		return
+//	}
+//
+//	d, err := p.Duplicates()
+//
+//	type APIv1Duplicate struct {
+//		ID    int
+//		Level int
+//	}
+//
+//	dp := APIv1Duplicate{d.QDupID(DM.DB), d.QLevel(DM.DB)}
+//
+//	jsonEncode(w, dp)
+//}
 
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
@@ -179,7 +180,16 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 	}
 
 	p.QThumbnails(DM.DB)
-	AP = APIv1Post{ID: p.QID(DM.DB), Hash: p.QHash(DM.DB), ThumbHashes: p.Thumbnails(), Mime: p.QMime(DM.DB).Str(), Deleted: p.QDeleted(DM.DB) == 1}
+	p.QDimensions(DM.DB)
+	AP = APIv1Post{
+		ID:          p.QID(DM.DB),
+		Hash:        p.QHash(DM.DB),
+		ThumbHashes: p.Thumbnails(),
+		Mime:        p.QMime(DM.DB).Str(),
+		Deleted:     p.QDeleted(DM.DB) == 1,
+		Filesize:    p.QSize(DM.DB),
+		Dimension:   p.Dimension,
+	}
 
 	for _, tag := range tc.Tags {
 		tag = DM.CachedTag(tag)

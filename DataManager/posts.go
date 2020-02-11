@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -69,7 +68,7 @@ type Post struct {
 	Mime       *Mime
 	Deleted    int
 	Size       int64
-	Dimension  *dimension
+	Dimension  *Dimension
 	Score      int
 
 	description *string
@@ -77,7 +76,7 @@ type Post struct {
 	editCount int
 }
 
-type dimension struct {
+type Dimension struct {
 	Width  int
 	Height int
 }
@@ -260,7 +259,7 @@ func (p *Post) QDimensions(q querier) error {
 		return nil
 	}
 
-	var dim dimension
+	var dim Dimension
 
 	err := q.QueryRow("SELECT width, height FROM post_info WHERE post_id = $1", p.ID).Scan(&dim.Width, &dim.Height)
 	if err != nil {
@@ -469,30 +468,27 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 		if p.Mime.Type == "image" {
 			file.Seek(0, 0)
-			u := dHash(file)
-
-			type PHS struct {
-				id int
-				h1 uint16
-				h2 uint16
-				h3 uint16
-				h4 uint16
-			}
-			var ph PHS
-
-			ph.id = p.QID(tx)
-
-			b := make([]byte, 8)
-			binary.BigEndian.PutUint64(b, u)
-			ph.h1 = uint16(b[1]) | uint16(b[0])<<8
-			ph.h2 = uint16(b[3]) | uint16(b[2])<<8
-			ph.h3 = uint16(b[5]) | uint16(b[4])<<8
-			ph.h4 = uint16(b[7]) | uint16(b[6])<<8
-
-			_, err = tx.Exec("INSERT INTO phash(post_id, h1, h2, h3, h4) VALUES($1, $2, $3, $4, $5)", ph.id, ph.h1, ph.h2, ph.h3, ph.h4)
+			u, err := dHash(file)
 			if err != nil {
 				return txError(tx, err)
 			}
+
+			var ph phs
+			ph = phsFromHash(p.ID, u)
+			if err != nil {
+				return txError(tx, err)
+			}
+
+			err = ph.insert(tx)
+			if err != nil {
+				return txError(tx, err)
+			}
+
+			err = generateAppleTree(tx, ph)
+			if err != nil {
+				return txError(tx, err)
+			}
+
 		}
 	} else {
 		tx, err = DB.Begin()
@@ -827,13 +823,27 @@ func (p *Post) Chapters(q querier) []*Chapter {
 
 	defer rows.Close()
 	var chapters []*Chapter
+
+	in := func(id int) bool {
+		for _, chapter := range chapters {
+			if chapter.ID == id {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	for rows.Next() {
 		var c = new(Chapter)
 		if err := rows.Scan(&c.ID); err != nil {
 			log.Println(err)
 			return nil
 		}
-		chapters = append(chapters, c)
+
+		if !in(c.ID) {
+			chapters = append(chapters, c)
+		}
 	}
 
 	if err = rows.Err(); err != nil {
@@ -866,11 +876,8 @@ func (p *Post) Comics(q querier) []*Comic {
 	return comics
 }
 
-func (p *Post) Duplicate() *Duplicate {
-	d := NewDuplicate()
-	d.Post = p
-
-	return d
+func (p *Post) Duplicates(q querier) (Dupe, error) {
+	return getDupeFromPost(q, p)
 }
 
 func (p *Post) NewComment() *PostComment {

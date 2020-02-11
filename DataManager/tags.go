@@ -303,12 +303,9 @@ func (tc *TagCollector) Parse(tagStr string) error {
 }
 
 func (tc *TagCollector) AddToPost(q querier, p *Post) error {
-	var post = p
-
-	d := NewDuplicate()
-	d.Post = p
-	if d.BestPost(q).QID(q) != 0 {
-		post = d.BestPost(q)
+	dupe, err := getDupeFromPost(q, p)
+	if err != nil {
+		return err
 	}
 
 	for _, tag := range tc.Tags {
@@ -345,13 +342,13 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
 
 		for _, i := range parentIDs {
-			if _, err = q.Exec(execStr, i, post.QID(q)); err != nil {
+			if _, err = q.Exec(execStr, i, dupe.Post.QID(q)); err != nil {
 				log.Print(err)
 			}
 			resetCacheTag(i)
 		}
 
-		_, err = q.Exec(execStr, tag.QID(q), post.QID(q))
+		_, err = q.Exec(execStr, tag.QID(q), dupe.Post.QID(q))
 		if err != nil {
 			log.Print(err)
 			//return err
@@ -364,13 +361,10 @@ func (tc *TagCollector) AddToPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
-	post := p
 
-	d := NewDuplicate()
-	//d.setQ(q)
-	d.Post = p
-	if d.BestPost(q).QID(q) != 0 {
-		post = p
+	dupe, err := getDupeFromPost(q, p)
+	if err != nil {
+		return err
 	}
 
 	for _, t := range tc.Tags {
@@ -389,7 +383,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 
 		resetCacheTag(t.QID(q))
 
-		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), post.QID(q))
+		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
 		if err != nil {
 			log.Print(err)
 			continue
@@ -464,14 +458,10 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		}
 	}
 
-	dup := NewDuplicate()
-	dup.Post = p
-	//dup.setQ(q)
-	p = dup.BestPost(q)
-	// b := dup.BestPost()
-	// if b.QID() != p.QID() {
-	// 	p = *b
-	// }
+	dupe, err := getDupeFromPost(q, p)
+	if err != nil {
+		return err
+	}
 
 	rows, err := q.Query(
 		`SELECT tags.id, tag, count, namespaces.id, nspace 
@@ -485,7 +475,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
-		p.QID(q))
+		dupe.Post.QID(q))
 	if err != nil {
 		return err
 	}
@@ -520,7 +510,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		}
 	}
 
-	C.Cache.Set("TC", strconv.Itoa(p.QID(q)), tc)
+	C.Cache.Set("TC", strconv.Itoa(dupe.Post.ID), tc)
 
 	return rows.Err()
 }

@@ -197,7 +197,7 @@ func (c *Chapter) Delete(user *User) error {
 
 	var a func() error
 	a = tx.Rollback
-	defer func(){a()}()
+	defer func() { a() }()
 
 	if err = c.log(tx, lRemove, user); err != nil {
 		log.Println(err)

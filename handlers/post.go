@@ -17,7 +17,7 @@ type Postpage struct {
 	Post     *DM.Post
 	Voted    bool
 	Comments []*DM.PostComment
-	Dups     *DM.Duplicate
+	Dupe     DM.Dupe
 	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
@@ -69,6 +69,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			notFoundHandler(w, r)
 			return
 		}
+
+		post.QID(DM.DB)
+		post = DM.CachedPost(post)
 
 		if r.FormValue("comment") == "true" {
 			pc := post.NewComment()
@@ -173,15 +176,32 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Post = p
 
-	pp.Voted = pp.User.Voted(DM.DB, p)
+	pp.Dupe, err = p.Duplicates(DM.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	dup := DM.NewDuplicate()
-	dup.Post = p
-	dp := dup.BestPost(DM.DB)
+	pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
+
+	pp.Dupe.Post.QHash(DM.DB)
+	pp.Dupe.Post.QDeleted(DM.DB)
+	pp.Dupe.Post.QThumbnails(DM.DB)
+
+	for _, p := range pp.Dupe.Inferior {
+		p.QID(DM.DB)
+		p = DM.CachedPost(p)
+		p.QHash(DM.DB)
+		p.QThumbnails(DM.DB)
+		p.QDeleted(DM.DB)
+	}
+
+	pp.Voted = pp.User.Voted(DM.DB, p)
 
 	var tc DM.TagCollector
 
-	err = tc.GetFromPost(DM.DB, dp)
+	err = tc.GetFromPost(DM.DB, pp.Dupe.Post)
 	if err != nil {
 		log.Print(err)
 	}
@@ -201,7 +221,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Chapters = dp.Chapters(DM.DB)
+	pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
 	for _, c := range pp.Chapters {
 		c.QComic(DM.DB)
 		c.Comic.QTitle(DM.DB)
@@ -228,15 +248,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sortTags(pp.Sidebar.Tags)
-
-	pp.Dups = p.Duplicate()
-	pp.Dups.QID(DM.DB)
-	for _, p := range pp.Dups.QPosts(DM.DB) {
-		p.QID(DM.DB)
-		p.QHash(DM.DB)
-		p.QThumbnails(DM.DB)
-		p.QDeleted(DM.DB)
-	}
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
@@ -598,76 +609,76 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "taghistory", thp)
 }
 
-func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
-		return
-	}
-
-	u, _ := getUser(w, r)
-	if !u.QFlag(DM.DB).Delete() {
-		http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusBadRequest)
-		return
-	}
-
-	dupIDStr := r.FormValue("duppostid")
-	pIDStr := r.FormValue("postid")
-	levelStr := r.FormValue("level")
-
-	level, err := strconv.Atoi(levelStr)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "level not integer", http.StatusBadRequest)
-		return
-	}
-	pID, err := strconv.Atoi(pIDStr)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "postid not integer", http.StatusBadRequest)
-		return
-	}
-	dPostID, _ := strconv.Atoi(dupIDStr)
-	var dupID int
-	if dPostID != 0 {
-		p := DM.NewPost()
-		p.SetID(DM.DB, dPostID)
-
-		di := DM.NewDuplicate()
-		di.Post = p
-
-		dupID = di.QDupID(DM.DB)
-
-		if dupID == 0 {
-			http.Error(w, "That post have no dupes", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	d := DM.NewDuplicate()
-	err = d.Post.SetID(DM.DB, pID)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Oops", http.StatusInternalServerError)
-		return
-	}
-
-	err = d.SetDupID(DM.DB, dupID)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Oops", http.StatusInternalServerError)
-		return
-	}
-	d.Level = level
-
-	err = d.Save()
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Oops", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", pID, d.Post.QHash(DM.DB)), http.StatusSeeOther)
-}
+//func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
+//	if r.Method != http.MethodPost {
+//		notFoundHandler(w, r)
+//		return
+//	}
+//
+//	u, _ := getUser(w, r)
+//	if !u.QFlag(DM.DB).Delete() {
+//		http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusBadRequest)
+//		return
+//	}
+//
+//	dupIDStr := r.FormValue("duppostid")
+//	pIDStr := r.FormValue("postid")
+//	levelStr := r.FormValue("level")
+//
+//	level, err := strconv.Atoi(levelStr)
+//	if err != nil {
+//		log.Print(err)
+//		http.Error(w, "level not integer", http.StatusBadRequest)
+//		return
+//	}
+//	pID, err := strconv.Atoi(pIDStr)
+//	if err != nil {
+//		log.Print(err)
+//		http.Error(w, "postid not integer", http.StatusBadRequest)
+//		return
+//	}
+//	dPostID, _ := strconv.Atoi(dupIDStr)
+//	var dupID int
+//	if dPostID != 0 {
+//		p := DM.NewPost()
+//		p.SetID(DM.DB, dPostID)
+//
+//		di := DM.NewDuplicate()
+//		di.Post = p
+//
+//		dupID = di.QDupID(DM.DB)
+//
+//		if dupID == 0 {
+//			http.Error(w, "That post have no dupes", http.StatusInternalServerError)
+//			return
+//		}
+//	}
+//
+//	d := DM.NewDuplicate()
+//	err = d.Post.SetID(DM.DB, pID)
+//	if err != nil {
+//		log.Print(err)
+//		http.Error(w, "Oops", http.StatusInternalServerError)
+//		return
+//	}
+//
+//	err = d.SetDupID(DM.DB, dupID)
+//	if err != nil {
+//		log.Print(err)
+//		http.Error(w, "Oops", http.StatusInternalServerError)
+//		return
+//	}
+//	d.Level = level
+//
+//	err = d.Save()
+//	if err != nil {
+//		log.Print(err)
+//		http.Error(w, "Oops", http.StatusInternalServerError)
+//		return
+//	}
+//
+//	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", pID, d.Post.QHash(DM.DB)), http.StatusSeeOther)
+//}
 
 func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")

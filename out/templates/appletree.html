@@ -1,0 +1,29 @@
+{{template "base"}}
+
+{{range .Trees}}
+<div>
+	<form method="POST">
+		{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
+		<input type="hidden" name="apple" name="post-id" value="{{.Apple.ID}}">
+		<div class="comic-strip">
+		{{range .Pears}}
+			<span>
+				{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .}}
+				<input type="checkbox" checked name="pears" value="{{.ID}}">
+			</span>
+		{{end}}
+		</div>
+		<input type="submit" value="Pluck">
+	</form>
+
+	<form target="_blank" action="/compare2/">
+		<input type="hidden" name="post-id" value="{{.Apple.ID}}">
+		{{range .Pears}}
+			<input type="hidden" name="post-id" value="{{.ID}}">
+		{{end}}
+		<input type="submit" value="Compare">
+	</form>
+</div>
+{{end}}
+
+{{template "baseEnd"}}
