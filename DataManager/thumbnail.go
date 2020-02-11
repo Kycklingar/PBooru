@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"image/png"
@@ -92,26 +91,15 @@ func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 }
 
 func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {
-	hash := dHash(file)
+	hash, err := dHash(file)
+	if err != nil {
+		return nil, err
+	}
 	if hash == 0 {
 		return nil, nil
 	}
 
-	type phash struct {
-		post_id int
-		h1      uint16
-		h2      uint16
-		h3      uint16
-		h4      uint16
-	}
-
-	var ph phash
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, hash)
-	ph.h1 = uint16(b[1]) | uint16(b[0])<<8
-	ph.h2 = uint16(b[3]) | uint16(b[2])<<8
-	ph.h3 = uint16(b[5]) | uint16(b[4])<<8
-	ph.h4 = uint16(b[7]) | uint16(b[6])<<8
+	var ph = phsFromHash(0, hash)
 
 	rows, err := DB.Query("SELECT * FROM phash WHERE h1=$1 OR h2=$2 OR h3=$3 OR h4=$4 ORDER BY post_id DESC", ph.h1, ph.h2, ph.h3, ph.h4)
 	if err != nil {
@@ -119,27 +107,22 @@ func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {
 	}
 	defer rows.Close()
 
-	var phs []phash
+	var phas []phs
 
 	for rows.Next() {
-		var phn phash
-		if err = rows.Scan(&phn.post_id, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
+		var phn phs
+		if err = rows.Scan(&phn.postid, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
 			return nil, err
 		}
-		phs = append(phs, phn)
-	}
-	f := func(a phash) imgsim.Hash {
-		return imgsim.Hash(uint64(a.h1)<<16 | uint64(a.h2)<<32 | uint64(a.h3)<<48 | uint64(a.h4)<<64)
+		phas = append(phas, phn)
 	}
 
 	var posts []*Post
-	hasha := f(ph)
 
-	for _, h := range phs {
-		hashb := f(h)
-		if imgsim.Distance(hasha, hashb) < distance {
+	for _, h := range phas {
+		if ph.distance(h) < distance {
 			pst := NewPost()
-			pst.ID = h.post_id
+			pst.ID = h.postid
 			posts = append(posts, pst)
 		}
 	}
@@ -147,18 +130,18 @@ func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {
 	return posts, nil
 }
 
-func dHash(file io.ReadSeeker) uint64 {
+func dHash(file io.ReadSeeker) (imgsim.Hash, error) {
 	b, err := image.MakeThumbnail(file, "png", 1024)
 	if err != nil {
 		log.Println(err)
-		return 0
+		return 0, err
 	}
 
 	img, err := png.Decode(b)
 	if err != nil {
 		log.Println(err)
-		return 0
+		return 0, err
 	}
 	hash := imgsim.DifferenceHash(img)
-	return uint64(hash)
+	return hash, nil
 }

@@ -16,7 +16,7 @@ type comicsPage struct {
 	UserInfo   UserInfo
 	Pageinator Pageination
 	Time       string
-	Edit bool
+	Edit       bool
 }
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +140,6 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	if err := r.ParseForm(); err != nil {
 		log.Println(err)
 	}
@@ -220,7 +219,7 @@ func comicUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	const (
 		comicIDKey = "comic-id"
-		titleKey = "title"
+		titleKey   = "title"
 	)
 
 	m, err := verifyInteger(r, comicIDKey)

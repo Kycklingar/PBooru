@@ -8,7 +8,7 @@
 </style>
 
 <div id="content">
-	<form action="/compare/">
+	<form>
 	{{range .Posts}}
 		<span>
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
@@ -17,7 +17,8 @@
 	{{end}}
 
 	<br>
-	<input type="submit" value="Compare">
+	<input type="submit" formaction="/compare/" value="Compare">
+	<input type="submit" formaction="/compare2/" value="Compare2.js">
 	</form>
 
 </div>

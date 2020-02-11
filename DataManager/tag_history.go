@@ -10,7 +10,7 @@ import (
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
-	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM tag_history ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset))
+	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, timestamp FROM tag_history ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset))
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -38,7 +38,7 @@ func GetUserTagHistory(limit, offset, userID int) ([]*TagHistory, int) {
 	if err != nil {
 		return nil, 0
 	}
-	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, to_char(timestamp, 'YYYY-MM-DD HH24:MI:SS') FROM tag_history WHERE user_id = $1 ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset), userID)
+	rows, err := DB.Query(fmt.Sprintf("SELECT id, user_id, post_id, timestamp FROM tag_history WHERE user_id = $1 ORDER BY timestamp DESC LIMIT %d OFFSET %d", limit, offset), userID)
 	if err != nil {
 		log.Print(err)
 		return nil, 0
@@ -69,7 +69,7 @@ type TagHistory struct {
 
 	User      *User
 	Post      *Post
-	Timestamp string
+	Timestamp timestamp
 
 	ETags []*EditedTag
 }

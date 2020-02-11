@@ -70,6 +70,31 @@
 	{
 		color:inherit;
 	}
+
+	#full-interface
+	{
+		position:fixed;
+		left:0px;
+		right:0px;
+		top:0px;
+		bottom:0px;
+		display:flex;
+
+		background-color:#222B;
+	}
+
+	#left-interface
+	{
+		background-color:green;
+		margin:1em;
+	}
+
+	#right-interface
+	{
+		width:100%;
+		margin:1em;
+		background-color:blue;
+	}
 </style>
 
 <div>
@@ -77,11 +102,13 @@
 
 	<div id="image-wraper">
 		{{range .Posts}}
+		<span postid="{{.ID}}">
 		<span class="default">
 			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
 		</span>
 		<span class="zoom5x">
 			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
+		</span>
 		</span>
 		{{end}}
 	</div>
@@ -96,25 +123,30 @@
 		{{end}}
 		<input type="submit" value="Add post to compare">
 	</form>
-	{{range .Posts}}
-	<span>
-		<div style="position:relative;">
-			<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 100}}">
-			<a class="thumb-button" href="#img-{{.ID}}" style="top:0px; left:0px; right:0px; bottom:50%;">Fit</a>
-			<a class="thumb-button" href="#zoom-{{.ID}}" style="top:50%; left:0px; right:0px; bottom:0px">Zoom</a>
-		</div>
-		<div>
-			<p>ID: <a href="/post/{{.ID}}/{{.Hash}}/">{{.ID}}</a></p>
-			<p>Mime: {{.Mime.Type}} / {{.Mime.Name}}
-			<p>Size: {{.SizePretty}}</p>
-			{{with .Dimension}}
-			<p>Dimensions: {{.Width}}x{{.Height}}</p>
-			{{else}}
-			<p>No dimensional data</p>
-			{{end}}
-		</div>
-	</span>
-	{{end}}
+	<form action="/duplicate/report/" method="POST">
+		{{range .Posts}}
+		<span postid="{{.ID}}" class="interface-post">
+			<input type="hidden" name="post-ids" value="{{.ID}}">
+			<div style="position:relative;">
+				<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 100}}">
+				<a onclick="fit({{.ID}})" class="thumb-button" href="#img-{{.ID}}" style="top:0px; left:0px; right:0px; bottom:50%;">Fit</a>
+				<a onclick="zoom({{.ID}})" class="thumb-button" href="#zoom-{{.ID}}" style="top:50%; left:0px; right:0px; bottom:0px">Zoom</a>
+			</div>
+			<div>
+				<p>ID: <a href="/post/{{.ID}}/{{.Hash}}/">{{.ID}}</a></p>
+				<p>Mime: {{.Mime.Type}} / {{.Mime.Name}}
+				<p>Size: {{.SizePretty}}</p>
+				{{with .Dimension}}
+				<p>Dimensions: {{.Width}}x{{.Height}}</p>
+				{{else}}
+				<p>No dimensional data</p>
+				{{end}}
+			</div>
+			<button type="submit" name="best-id" value="{{.ID}}">Report as superior</button>
+		</span>
+		{{end}}
+		<textarea rows="1" name="note" placeholder="Opptional note"></textarea>
+	</form>
 </details>
 
 {{template "baseEnd"}}
