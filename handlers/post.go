@@ -164,6 +164,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	p = DM.CachedPost(p)
 
 	p.QHash(DM.DB)
+	p.QChecksums(DM.DB)
 	p.QDeleted(DM.DB)
 	p.QSize(DM.DB)
 	p.QMime(DM.DB).QType(DM.DB)

@@ -110,7 +110,16 @@
 	{{else}}
 		<div>Score: {{.Post.Score}}</div>
 	{{end}}
-	
+		
+		<details>
+		<summary>Find on</summary>
+			<div class="links">
+				<a href="https://e621.net/post/show/?md5={{.Post.Checksums.Md5}}">e621.net</a>
+				<a href="https://furry.booru.org/index.php?page=post&s=list&md5={{.Post.Checksums.Md5}}">furry.booru.org</a>
+				<a href="https://rule34.xxx/index.php?page=post&s=list&md5={{.Post.Checksums.Md5}}">rule34.xxx</a>
+				<a href="https://gelbooru.com/index.php?page=post&s=list&md5={{.Post.Checksums.Md5}}">gelbooru.org</a>
+			</div>
+		</details>
     </div>
     <div id="post">
 	{{if eq .Post.Mime.Type "image"}}

@@ -71,9 +71,16 @@ type Post struct {
 	Dimension  *Dimension
 	Score      int
 
+	Checksums *checksums
+
 	description *string
 
 	editCount int
+}
+
+type checksums struct {
+	Sha256 string
+	Md5 string
 }
 
 type Dimension struct {
@@ -132,6 +139,29 @@ func (p *Post) QHash(q querier) string {
 	}
 
 	return p.Hash
+}
+
+func (p *Post) QChecksums(q querier) error {
+	if p.Checksums != nil {
+		return nil
+	}
+
+	var c checksums
+
+	err := q.QueryRow(`
+		SELECT sha256, md5
+		FROM hashes
+		WHERE post_id = $1
+		`,
+		p.ID,
+	).Scan(&c.Sha256, &c.Md5)
+	if err != nil {
+		return err
+	}
+
+	p.Checksums = &c
+
+	return nil
 }
 
 func (p *Post) QThumbnails(q querier) error {

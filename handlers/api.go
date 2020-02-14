@@ -22,6 +22,8 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 type APIv1Post struct {
 	ID          int
 	Hash        string
+	Sha256 string
+	Md5 string
 	ThumbHashes []DM.Thumb
 	Mime        string
 	Deleted     bool
@@ -179,11 +181,14 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		}
 	}
 
+	p.QChecksums(DM.DB)
 	p.QThumbnails(DM.DB)
 	p.QDimensions(DM.DB)
 	AP = APIv1Post{
 		ID:          p.QID(DM.DB),
 		Hash:        p.QHash(DM.DB),
+		Sha256:      p.Checksums.Sha256,
+		Md5:	     p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.QMime(DM.DB).Str(),
 		Deleted:     p.QDeleted(DM.DB) == 1,
