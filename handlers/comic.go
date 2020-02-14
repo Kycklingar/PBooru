@@ -122,10 +122,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	}{}
 
 	page.User, page.UserInfo = getUser(w, r)
-	if !page.User.QFlag(DM.DB).Comics() {
-		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
-		return
-	}
+	page.User.QFlag(DM.DB)
 
 	uri := uriSplitter(r)
 
