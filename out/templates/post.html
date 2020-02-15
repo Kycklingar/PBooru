@@ -164,6 +164,8 @@
 	    {{end}}
             <h4>ID:{{ .Post.ID }}</h4>
             <h4>{{ .Post.Hash }}</h4>
+	    <h5>Sha256: {{ .Post.Checksums.Sha256 }}</h5>
+	    <h5>MD5: {{ .Post.Checksums.Md5}}</h5>
 		{{with .Post.Thumbnails}}
 			<span>Thumbnails:</span>
 			<ul>
