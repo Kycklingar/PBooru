@@ -64,6 +64,14 @@ li
     border-bottom:solid grey;
 }
 
+.links a:link
+{
+	color: #AAA;
+	text-shadow: 1px 1px black;
+	display:block;
+	font-size:14px;
+}
+
 .nolink a:visited, .nolink a:link
 {
     text-decoration: none;
