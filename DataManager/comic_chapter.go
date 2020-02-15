@@ -3,6 +3,7 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -24,6 +25,68 @@ type Chapter struct {
 	PageCount int
 
 	Posts []*ComicPost
+}
+
+func (c *Chapter) ShiftPosts(user *User, symbol, page, by int) error {
+	symb := func() string {
+		if symbol > 0 {
+			return ">"
+		}
+		return "<"
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	query := fmt.Sprintf(`
+		UPDATE comic_mappings
+		SET post_order = post_order + $1
+		WHERE chapter_id = $2
+		AND post_order %s $3
+		RETURNING id, post_id, post_order
+		`,
+		symb(),
+	)
+
+	comicPosts, err := func() ([]*ComicPost, error) {
+		rows, err := tx.Query(query, by, c.ID, page)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var comicPosts []*ComicPost
+
+		for rows.Next() {
+			var cp = newComicPost()
+			err = rows.Scan(&cp.ID, &cp.Post.ID, &cp.Order)
+			if err != nil {
+				return nil, err
+			}
+
+			cp.Chapter = c
+
+			comicPosts = append(comicPosts, cp)
+		}
+
+		return comicPosts, nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	for _, cp := range comicPosts {
+		err = cp.log(tx, lUpdate, user)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *Chapter) QID(q querier) int {
