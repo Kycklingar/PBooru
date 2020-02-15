@@ -22,6 +22,8 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 type APIv1Post struct {
 	ID          int
 	Hash        string
+	Sha256 string
+	Md5 string
 	ThumbHashes []DM.Thumb
 	Mime        string
 	Deleted     bool
@@ -72,28 +74,43 @@ func jsonEncode(w http.ResponseWriter, v interface{}) error {
 func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	p := DM.NewPost()
 
-	if postID := r.FormValue("id"); postID != "" {
-		id, err := strconv.Atoi(postID)
-		if err != nil {
-			APIError(w, "ID is not a number", http.StatusBadRequest)
-			return
+	firstNonEmpty := func(keys ...string) (string, string) {
+		for _, key := range keys {
+			if value := r.FormValue(key); value != "" {
+				return key, value
+			}
 		}
+		return "", ""
+	}
 
-		err = p.SetID(DM.DB, id)
-		if err != nil {
-			log.Print(err)
-			APIError(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-	} else if postHash := r.FormValue("hash"); postHash != "" {
-		p.Hash = postHash
+	key, val := firstNonEmpty("id", "ipfs", "sha256", "md5")
 
-		if p.QID(DM.DB) == 0 {
-			APIError(w, "Post Not Found", http.StatusNotFound)
+	var err error
+
+	switch key{
+		case "id":
+			var id int
+			id, err = strconv.Atoi(val)
+			if err != nil {
+				break
+			}
+			err = p.SetID(DM.DB, id)
+		case "ipfs":
+			p.Hash = val
+		case "sha256", "md5":
+			p, err = DM.GetPostFromHash(key, val)
+		default:
+			APIError(w, "No Identifier", http.StatusBadRequest)
 			return
-		}
-	} else {
-		APIError(w, "No Identifier", http.StatusBadRequest)
+	}
+
+	if err != nil {
+		APIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if p.QID(DM.DB) == 0 {
+		APIError(w, "Post Not Found", http.StatusNotFound)
 		return
 	}
 
@@ -164,11 +181,16 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		}
 	}
 
+	p.QChecksums(DM.DB)
 	p.QThumbnails(DM.DB)
 	p.QDimensions(DM.DB)
 	AP = APIv1Post{
 		ID:          p.QID(DM.DB),
 		Hash:        p.QHash(DM.DB),
+
+		Sha256:      p.Checksums.Sha256,
+		Md5:	     p.Checksums.Md5,
+
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.QMime(DM.DB).Str(),
 		Deleted:     p.QDeleted(DM.DB) == 1,
