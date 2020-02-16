@@ -122,10 +122,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	}{}
 
 	page.User, page.UserInfo = getUser(w, r)
-	if !page.User.QFlag(DM.DB).Comics() {
-		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
-		return
-	}
+	page.User.QFlag(DM.DB)
 
 	uri := uriSplitter(r)
 
@@ -408,6 +405,49 @@ func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
 	chapter.Title = r.FormValue(titleKey)
 	if err = chapter.SaveEdit(DM.DB, user); err != nil {
 		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	const (
+		chapterIDKey = "chapter-id"
+		byKey        = "by"
+		symbolKey    = "symbol"
+		pageKey      = "page"
+	)
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	m, err := verifyInteger(r, chapterIDKey, byKey, symbolKey, pageKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	chapter := DM.NewChapter()
+	chapter.ID = m[chapterIDKey]
+
+	err = chapter.ShiftPosts(user, m[symbolKey], m[pageKey], m[byKey])
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

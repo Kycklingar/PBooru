@@ -27,6 +27,21 @@ func NewPost() *Post {
 	return &p
 }
 
+func GetPostFromHash(fnc, hash string) (*Post, error) {
+	var p = NewPost()
+	err := DB.QueryRow(fmt.Sprintf(`
+			SELECT post_id
+			FROM hashes
+			WHERE %s = $1
+			`,
+			fnc,
+		),
+		hash,
+	).Scan(&p.ID)
+
+	return p, err
+}
+
 func CachedPost(p *Post) *Post {
 	if n := C.Cache.Get("PST", strconv.Itoa(p.ID)); n != nil {
 		tp, ok := n.(*Post)
@@ -56,9 +71,17 @@ type Post struct {
 	Dimension  *Dimension
 	Score      int
 
+	Checksums *checksums
+
 	description *string
 
 	editCount int
+}
+
+
+type checksums struct {
+	Sha256 string
+	Md5 string
 }
 
 type Dimension struct {
@@ -117,6 +140,29 @@ func (p *Post) QHash(q querier) string {
 	}
 
 	return p.Hash
+}
+
+func (p *Post) QChecksums(q querier) error {
+	if p.Checksums != nil {
+		return nil
+	}
+
+	var c checksums
+
+	err := q.QueryRow(`
+		SELECT sha256, md5
+		FROM hashes
+		WHERE post_id = $1
+		`,
+		p.ID,
+	).Scan(&c.Sha256, &c.Md5)
+	if err != nil {
+		return err
+	}
+
+	p.Checksums = &c
+
+	return nil
 }
 
 func (p *Post) QThumbnails(q querier) error {

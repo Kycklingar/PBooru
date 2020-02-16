@@ -300,6 +300,7 @@ func init() {
 	Handlers["/comic/edit/"] = makeStatHandler(comicUpdateHandler)
 	Handlers["/comic/chapter/add/"] = makeStatHandler(comicAddChapterHandler)
 	Handlers["/comic/chapter/edit/"] = makeStatHandler(comicEditChapterHandler)
+	Handlers["/comic/chapter/edit/shift/"] = makeStatHandler(chapterShiftHandler)
 	Handlers["/comic/chapter/delete/"] = makeStatHandler(comicRemoveChapterHandler)
 	Handlers["/comic/page/add/"] = makeStatHandler(comicAddPageHandler)
 	Handlers["/comic/page/edit/"] = makeStatHandler(comicEditPageHandler)

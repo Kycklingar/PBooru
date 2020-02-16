@@ -404,6 +404,7 @@ func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
 		resetCacheTag(t.QID(q))
 
 		_, err = q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
+
 		if err != nil {
 			log.Print(err)
 			continue

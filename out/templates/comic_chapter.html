@@ -82,6 +82,28 @@
 	    	<button type="sumbit" name="full">View full images</button>
 		{{if .User.Flag.Comics}}<button type="submit" name="edit-mode">Edit pages</button>{{end}}
 	    </form>
+	    {{if .EditMode}}
+	    	<form action="/comic/chapter/edit/shift/" method="POST" style="display:flex;">
+			<span>
+				<input type="hidden" name="chapter-id" value="{{.Chapter.ID}}">
+				<label>Shift pages by</label>
+				<input type="number" name="by" value="1" style="width:6em">
+				<label>where page is</label>
+			</span>
+			<span style="margin:1em; margin-top:-1em;">
+				<input type="radio" name="symbol" value="0">
+				<label><</label>
+				<br>
+				<input type="radio" name="symbol" value="1">
+				<label>></label>
+			</span>
+			<span>
+			<label>than</label>
+			<input type="number" name="page" style="width:6em">
+			<input type="submit" value="shift">
+			</span>
+		</form>
+	    {{end}}
 	    {{range .Chapter.Posts}}
 	        <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
 	            <div>
