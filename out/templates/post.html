@@ -26,8 +26,13 @@
         		    		    <textarea class="stinput" id="addtagsinput" name="tags">
 					    {{- template "printTags" .Sidebar.Tags -}}
 					    </textarea>
-        		    		    <input type="submit" value="Submit edit">
+        		    		    <input type="submit" value="Edit">
         		    		</form>
+					<form method="POST" action="/post/edit/tags/add/">
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
+						<textarea name="tags"></textarea>
+						<input type="submit" value="Add">
+					</form>
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
         			{{if .User.Flag.Delete}}

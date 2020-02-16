@@ -655,7 +655,7 @@ func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) 
 	var removedTags []*Tag
 
 	for _, tag := range currentTags{
-		if !in(tag, tags) {
+		if in(tag, tags) {
 			removedTags = append(removedTags, tag)
 		}
 	}
@@ -677,6 +677,74 @@ func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) 
 	return removedTags, nil
 }
 
+func (p *Post) AddTags(user *User, tagStr string) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	err = p.editTagsAdd(tx, user, tagStr)
+
+	return err
+}
+
+func (p *Post) RemoveTags(user *User, tagStr string) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	err = p.editTagsRemove(tx, user, tagStr)
+
+	return err
+}
+
+func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
+	var tags TagCollector
+	err := tags.Parse(tagStr)
+	if err != nil {
+		return err
+	}
+
+	err = tags.upgrade(tx, false)
+	if err != nil {
+		return err
+	}
+
+	dupe, err := getDupeFromPost(tx, p)
+	if err != nil {
+		return err
+	}
+
+	var currentTags TagCollector
+	if err = currentTags.GetFromPost(tx, dupe.Post); err != nil {
+		return err
+	}
+
+	removedTags, err := dupe.Post.removeTags(tx, currentTags.Tags, tags.Tags)
+	if err != nil {
+		return err
+	}
+
+	if len(removedTags) <= 0 {
+		return nil
+	}
+
+	if err = dupe.Post.logTagEdit(tx, user, nil, removedTags); err != nil {
+		return err
+	}
+
+	for _, tag := range removedTags {
+		resetCacheTag(tag.ID)
+	}
+
+	return nil
+}
+
 func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 	var tags TagCollector
 	err := tags.Parse(tagStr)
@@ -691,7 +759,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 	}
 
 	// Upgrade tags to aliases and add parents
-	err = tags.upgrade(tx)
+	err = tags.upgrade(tx, true)
 	if err != nil {
 		return err
 	}
@@ -736,7 +804,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 
 	// Upgrade to aliases
 
-	err = tags.upgrade(q)
+	err = tags.upgrade(q, true)
 	if err != nil {
 		return err
 	}
@@ -756,8 +824,25 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 	}
 
 	// Remove tags not in tagStr
+	in := func(t *Tag, tags []*Tag) bool {
+		for _, tag := range tags {
+			if tag.ID == t.ID {
+				return true
+			}
+		}
 
-	removedTags, err := dupe.Post.removeTags(q, currentTags.Tags, tags.Tags)
+		return false
+	}
+
+	var removedTags []*Tag
+
+	for _, tag := range currentTags.Tags {
+		if !in(tag, tags.Tags) {
+			removedTags = append(removedTags, tag)
+		}
+	}
+
+	removedTags, err = dupe.Post.removeTags(q, currentTags.Tags, removedTags)
 	if err != nil {
 		return err
 	}

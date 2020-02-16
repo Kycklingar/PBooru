@@ -18,6 +18,10 @@ const (
 	errMustBeAdmin = "Must be logged in as an admin"
 )
 
+func permErr(w http.ResponseWriter, perm string) {
+	http.Error(w, lackingPermissions(perm), http.StatusBadRequest)
+}
+
 func lackingPermissions(priv string) string {
 	return fmt.Sprintf("Insufficient privileges. Want %s", priv)
 }

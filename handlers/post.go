@@ -249,6 +249,66 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "post", pp)
 }
 
+func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Tagging() {
+		permErr(w, "Tagging")
+		return
+	}
+
+	var post = DM.NewPost()
+	var err error
+
+	post.ID, err = strconv.Atoi(r.FormValue("post-id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = post.AddTags(user, r.FormValue("tags")); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Tagging() {
+		permErr(w, "Tagging")
+		return
+	}
+
+	var post = DM.NewPost()
+	var err error
+
+	post.ID, err = strconv.Atoi(r.FormValue("post-id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = post.RemoveTags(user, r.FormValue("tags")); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
 func sortTags(tags []*DM.Tag) {
 	for i := 0; i < len(tags); i++ {
 		for j := len(tags) - 1; j > i; j-- {

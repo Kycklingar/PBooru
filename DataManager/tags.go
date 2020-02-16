@@ -535,7 +535,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 	return rows.Err()
 }
 
-func (tc *TagCollector) upgrade(q querier) error {
+func (tc *TagCollector) upgrade(q querier, parents bool) error {
 	in := func(t *Tag, tags []*Tag) bool {
 		for _, tag := range tags {
 			if tag.ID == t.ID {
@@ -564,10 +564,12 @@ func (tc *TagCollector) upgrade(q querier) error {
 		}
 	}
 
-	for _, tag := range newTags {
-		for _, parent := range tag.Parents(q) {
-			if !in(parent, newTags) {
-				newTags = append(newTags, parent)
+	if parents {
+		for _, tag := range newTags {
+			for _, parent := range tag.Parents(q) {
+				if !in(parent, newTags) {
+					newTags = append(newTags, parent)
+				}
 			}
 		}
 	}
