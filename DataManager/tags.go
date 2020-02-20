@@ -536,17 +536,17 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 	return rows.Err()
 }
 
-func (tc *TagCollector) upgrade(q querier, parents bool) error {
-	in := func(t *Tag, tags []*Tag) bool {
-		for _, tag := range tags {
-			if tag.ID == t.ID {
-				return true
-			}
+func (tc *TagCollector) save(tx querier) error {
+	for _, tag := range tc.Tags {
+		if err :=tag.Save(tx); err != nil {
+			return err
 		}
-
-		return false
 	}
 
+	return nil
+}
+
+func (tc *TagCollector) upgrade(q querier, parents bool) error {
 	var newTags []*Tag
 
 	for _, tag := range tc.Tags {
@@ -557,10 +557,10 @@ func (tc *TagCollector) upgrade(q querier, parents bool) error {
 			return err
 		}
 		if b.ID != 0 {
-			if !in(b, newTags) {
+			if !isTagIn(b, newTags) {
 				newTags = append(newTags, b)
 			}
-		} else if !in(tag, newTags) {
+		} else if !isTagIn(tag, newTags) {
 			newTags = append(newTags, tag)
 		}
 	}
@@ -568,7 +568,7 @@ func (tc *TagCollector) upgrade(q querier, parents bool) error {
 	if parents {
 		for _, tag := range newTags {
 			for _, parent := range tag.Parents(q) {
-				if !in(parent, newTags) {
+				if !isTagIn(parent, newTags) {
 					newTags = append(newTags, parent)
 				}
 			}
@@ -624,4 +624,14 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		ntc.Tags = append(ntc.Tags, newTags...)
 	}
 	return ntc
+}
+
+func isTagIn(a *Tag, tags []*Tag) bool {
+	for _, b := range tags {
+		if a.ID == b.ID {
+			return true
+		}
+	}
+
+	return false
 }

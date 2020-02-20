@@ -436,6 +436,14 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 	var tx *sql.Tx
 
+	tx, err = DB.Begin()
+	if err != nil {
+		log.Println("Error creating transaction: ", err)
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
 	if p.QID(DB) == 0 {
 		if CFG.UseMFS {
 			file.Seek(0, 0)
@@ -454,31 +462,24 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		file.Seek(0, 0)
 		width, height, _ := image.GetDimensions(file)
 
-		tx, err = DB.Begin()
-		if err != nil {
-			log.Println("Error creating transaction: ", err)
-			return err
-		}
-		//p.setQ(tx)
-
 		err = p.Mime.Parse(mime)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		if p.Mime.QID(tx) == 0 {
-			err := p.Mime.Save(tx)
+			err = p.Mime.Save(tx)
 			if err != nil {
 				log.Println(err)
-				return txError(tx, err)
+				return err
 			}
 		}
 
 		err = p.Save(tx, user)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		file.Seek(0, 0)
@@ -486,73 +487,50 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.QID(tx), sha, md)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		if width > 0 && height > 0 {
 			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.QID(tx), width, height)
 			if err != nil {
 				log.Println(err)
-				return txError(tx, err)
+				return err
 			}
 		}
 
 		if p.Mime.Type == "image" {
 			file.Seek(0, 0)
-			u, err := dHash(file)
+			var u imgsim.Hash
+			u, err = dHash(file)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			var ph phs
 			ph = phsFromHash(p.ID, u)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			err = ph.insert(tx)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			err = generateAppleTree(tx, ph)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
-
 		}
-	} else {
-		tx, err = DB.Begin()
-		if err != nil {
-			log.Println("Error creating transaction: ", err)
-			return err
-		}
+	}
 
-		err = p.editTagsAdd(tx, user, tagString)
-		if err != nil {
-			//log.Println(err)
-			return txError(tx, err)
-		}
-
-		err = tx.Commit()
+	err = p.editTagsAdd(tx, user, tagString)
+	if err != nil && err.Error() != "error decoding any tags" {
+		//log.Println(err)
 		return err
 	}
 
-	var tc TagCollector
-
-	err = tc.Parse(tagString)
-	if err != nil && err.Error() != "error decoding any tags" {
-		return txError(tx, err)
-	}
-
-	err = tc.AddToPost(tx, p)
-	if err != nil {
-		return txError(tx, err)
-	}
-
-	err = tx.Commit()
-
-	//p.setQ(nil)
+	err = nil
 
 	return err
 }
@@ -643,29 +621,11 @@ func (p *Post) UnDelete(q querier) error {
 }
 
 func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
-	in := func(t *Tag, tags []*Tag) bool {
-		for _, tag := range tags {
-			if tag.ID == t.ID {
-				return true
-			}
-		}
-
-		return false
-	}
-
 	// Collect only new tags
 	var newTags []*Tag
-
 	for _, tag := range tags {
-		if !in(tag, currentTags) {
+		if !isTagIn(tag, currentTags) {
 			newTags = append(newTags, tag)
-		}
-	}
-
-	// Save tags
-	for _, tag := range newTags {
-		if err := tag.Save(tx); err != nil {
-			return nil, err
 		}
 	}
 
@@ -798,6 +758,10 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 		return err
 	}
 
+	if err = tags.save(tx); err != nil {
+		return err
+	}
+
 	// Get post dupe
 	dupe, err := getDupeFromPost(tx, p)
 	if err != nil {
@@ -843,6 +807,10 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 		//log.Print(err)
 	}
 
+	if err = tags.save(q); err != nil {
+		return err
+	}
+
 	dupe, err := getDupeFromPost(q, p)
 	if err != nil {
 		return err
@@ -870,20 +838,10 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 	}
 
 	// Remove tags not in tagStr
-	in := func(t *Tag, tags []*Tag) bool {
-		for _, tag := range tags {
-			if tag.ID == t.ID {
-				return true
-			}
-		}
-
-		return false
-	}
-
 	var removedTags []*Tag
 
 	for _, tag := range currentTags.Tags {
-		if !in(tag, tags.Tags) {
+		if !isTagIn(tag, tags.Tags) {
 			removedTags = append(removedTags, tag)
 		}
 	}
