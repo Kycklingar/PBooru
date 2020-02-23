@@ -169,6 +169,23 @@ func (t *Tag) Parse(tagStr string) error {
 	return nil
 }
 
+// Returns the tag it has been aliased to or itself if none
+func (t *Tag) aliasedTo(q querier) (*Tag, error) {
+	var alias = NewAlias()
+	alias.Tag = t
+
+	to, err := alias.QTo(q)
+	if err != nil {
+		return nil, err
+	}
+
+	if to.ID == 0 {
+		return t, nil
+	}
+
+	return to, nil
+}
+
 func (t *Tag) AddParent(q querier, parent *Tag) error {
 	var err error
 	if err = parent.Save(q); err != nil {
@@ -180,43 +197,67 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		return err
 	}
 
-	var parentID, childID int
-
-
-	at := NewAlias()
-	at.Tag = t
-	to, err := at.QTo(q)
+	child, err := t.aliasedTo(q)
 	if err != nil {
 		return err
 	}
-	if childID = to.QID(q); childID != 0 {
-		childID = t.QID(q)
-	}
-
-	ap := NewAlias()
-	ap.Tag = parent
-	to, err = ap.QTo(q)
+	aParent, err := parent.aliasedTo(q)
 	if err != nil {
 		return err
 	}
 
-	if parentID = to.QID(q); parentID == 0 {
-		parentID = parent.QID(q)
-	}
-
-	if _, err = q.Exec("INSERT INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2 ON CONFLICT DO NOTHING", parentID, childID); err != nil {
+	if _, err = q.Exec(`
+			INSERT INTO post_tag_mappings(
+				post_id, tag_id
+			)
+			SELECT post_id, $1
+			FROM post_tag_mappings
+			WHERE tag_id = $2
+			ON CONFLICT DO NOTHING
+		`,
+		aParent.ID,
+		child.ID,
+	); err != nil {
 		log.Println(err)
 		return err
 	}
-	//fmt.Println(res.RowsAffected())
 
-	if _, err := q.Exec("INSERT INTO parent_tags(parent_id, child_id) VALUES($1, $2)", parentID, childID); err != nil {
+	if _, err := q.Exec(`
+			INSERT INTO parent_tags(
+				parent_id, child_id
+			)
+			VALUES ($1, $2)
+		`,
+		aParent.ID,
+		child.ID,
+	); err != nil {
 		log.Println(err)
 		return err
 	}
-	resetCacheTag(parentID)
-	resetCacheTag(childID)
+
+	resetCacheTag(aParent.ID)
+	resetCacheTag(child.ID)
 	return nil
+}
+
+func (t *Tag) allParents(q querier) []*Tag {
+	var parents []*Tag
+
+	// Recursivly resolve parents
+	var process func(tags []*Tag)
+
+	process = func(tags []*Tag) {
+		for _, tag := range tags {
+			if !isTagIn(tag, parents) {
+				parents = append(parents, tag)
+				process(tag.Parents(q))
+			}
+		}
+	}
+
+	process(t.Parents(q))
+
+	return parents
 }
 
 func (t *Tag) Parents(q querier) []*Tag {
@@ -546,7 +587,7 @@ func (tc *TagCollector) save(tx querier) error {
 	return nil
 }
 
-func (tc *TagCollector) upgrade(q querier, parents bool) error {
+func (tc *TagCollector) upgrade(q querier, upgradeParents bool) error {
 	var newTags []*Tag
 
 	for _, tag := range tc.Tags {
@@ -565,9 +606,10 @@ func (tc *TagCollector) upgrade(q querier, parents bool) error {
 		}
 	}
 
-	if parents {
+	if upgradeParents {
 		for _, tag := range newTags {
-			for _, parent := range tag.Parents(q) {
+			for _, parent := range tag.allParents(q) {
+				fmt.Println(parent.ID)
 				if !isTagIn(parent, newTags) {
 					newTags = append(newTags, parent)
 				}
