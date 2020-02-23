@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/frustra/bbcode"
 )
 
 // CommentModel is used to retriev and save comments
@@ -54,67 +52,6 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 	}
 
 	return rows.Err()
-}
-
-func compileBBCode(q querier, text, daemon string) string {
-	// This is ugly as shit and probably ripe for abuse :)
-	reg, err := regexp.Compile("#([0-9]+)\\b(\\s|$)")
-	if err != nil {
-		log.Println(err)
-		return text
-	}
-
-	gt, err := regexp.Compile("(?m)^>.*")
-	if err != nil {
-		log.Println(err)
-		return text
-	}
-
-	cmp := bbcode.NewCompiler(true, true)
-	cmp.SetTag("img", nil)
-	cmp.SetTag("post", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
-		id, err := strconv.Atoi(node.GetOpeningTag().Value)
-		if err != nil {
-			return nil, false
-		}
-
-		post := NewPost()
-		if err = post.SetID(q, id); err != nil {
-			return nil, false
-		}
-		a := bbcode.NewHTMLTag("")
-		a.Name = "a"
-		a.Attrs["href"] = fmt.Sprintf("/post/%d/%s", post.QID(q), post.QHash(q))
-		post.QThumbnails(q)
-		img := bbcode.NewHTMLTag("")
-		img.Name = "img"
-		img.Attrs["src"] = daemon + "/ipfs/" + post.ClosestThumbnail(250)
-		img.Attrs["style"] = "max-width:250px; max-height:250px;"
-
-		a.AppendChild(img)
-
-		return a, true
-	})
-	cmp.SetTag("ref", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
-		ref := node.GetOpeningTag().Value
-
-		a := bbcode.NewHTMLTag("")
-		a.Name = "a"
-		a.Attrs["href"] = ref
-		return a, true
-	})
-	cmp.SetTag("greentext", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
-		val := node.GetOpeningTag().Value
-		a := bbcode.NewHTMLTag("")
-		a.Name = "span"
-		a.Attrs["class"] = "greentext"
-		a.Attrs["sl"] = val
-		return a, true
-	})
-
-	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref] ")
-	out = gt.ReplaceAllString(out, "[greentext]$0[/greentext]")
-	return cmp.Compile(out)
 }
 
 //Save a new comment to the wall
