@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 )
 
@@ -62,27 +63,187 @@ func (a *Alias) QTo(q querier) (*Tag, error) {
 	return a.To, nil
 }
 
-func (a *Alias) Save(q querier) error {
-	if a.Tag.QID(q) == 0 {
-		err := a.Tag.Save(q)
+func (a *Alias) Save() error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	if a.Tag.QID(tx) == 0 {
+		err = a.Tag.Save(tx)
 		if err != nil {
 			return err
 		}
 	}
-	if a.To.QID(q) == 0 {
-		err := a.To.Save(q)
+	if a.To.QID(tx) == 0 {
+		err = a.To.Save(tx)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err := q.Exec("INSERT INTO alias (alias_from, alias_to) VALUES($1, COALESCE((SELECT alias_to FROM alias WHERE alias_from = $2), $2)) ON CONFLICT (alias_from) DO UPDATE SET alias_to = EXCLUDED.alias_to", a.Tag.QID(q), a.To.QID(q))
+	if a.Tag.ID == a.To.ID {
+		return errors.New("can't assign alias onto itself")
+	}
+
+	if err = updatePtm(tx, a.To, a.Tag); err != nil {
+		return err
+	}
+
 	if err != nil {
 		log.Println(err)
 		log.Println(a.To, a.Tag)
+		return err
 	}
-	resetCacheTag(a.To.QID(q))
-	resetCacheTag(a.Tag.QID(q))
+
+	if err = updateAliases(tx, a.To, a.Tag); err != nil {
+		return err
+	}
+
+	if err = updateParents(tx, a.To, a.Tag); err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+			INSERT INTO alias(
+				alias_from,
+				alias_to
+			)
+			VALUES ($1, $2)
+		`,
+		a.Tag.ID,
+		a.To.ID,
+	)
+
+	resetCacheTag(a.To.QID(tx))
+	resetCacheTag(a.Tag.QID(tx))
+
+	return err
+}
+
+func updatePtm(q querier, to, from *Tag) error {
+	// Is to, from aliased to something else
+	// If so return error
+	ato, err := to.aliasedTo(q)
+	if err != nil {
+		return err
+	}
+
+	afr, err := from.aliasedTo(q)
+	if err != nil {
+		return err
+	}
+
+	if ato.ID != to.QID(q) || from.QID(q) != afr.ID {
+		return errors.New("assign on the aliased tag")
+	}
+
+	// Gather all parents of to
+	var tags = []*Tag{to}
+	tags = append(tags, to.allParents(q)...)
+
+	// Assign all above tags to from
+	for _, tag := range tags {
+		_, err := q.Exec(`
+			INSERT INTO post_tag_mappings(
+				post_id, tag_id
+			)
+			SELECT post_id, $1
+			FROM post_tag_mappings
+			WHERE tag_id = $2
+			ON CONFLICT DO NOTHING
+			`,
+			tag.ID,
+			from.ID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove all from mappings
+	_, err = q.Exec(`
+		DELETE FROM post_tag_mappings
+		WHERE tag_id = $1
+		`,
+		from.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateAliases(q querier, to, from *Tag) error {
+	// Update aliases
+	_, err := q.Exec(`
+			UPDATE alias
+			SET alias_to = $1
+			WHERE alias_to = $2
+		`,
+		to.ID,
+		from.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func updateParents(q querier, to, from *Tag) error {
+	_, err := q.Exec(`
+		INSERT INTO parent_tags(
+			parent_id,
+			child_id
+		)
+		SELECT parent_id, $1
+		FROM parent_tags
+		WHERE child_id = $2
+		ON CONFLICT DO NOTHING
+		`,
+		to.ID,
+		from.ID,
+	)
+	if err != nil {
+		return err
+	}
+	_, err = q.Exec(`
+		DELETE FROM parent_tags
+		WHERE child_id = $1
+		`,
+		from.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.Exec(`
+		INSERT INTO parent_tags(
+			parent_id,
+			child_id
+		)
+		SELECT $1, child_id
+		FROM parent_tags
+		WHERE parent_id = $2
+		ON CONFLICT DO NOTHING
+		`,
+		to.ID,
+		from.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.Exec(`
+		DELETE FROM parent_tags
+		WHERE parent_id = $1
+		`,
+		from.ID,
+	)
 
 	return err
 }

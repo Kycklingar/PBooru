@@ -142,7 +142,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		alias.To = tc.Tags[0]
 
-		err := alias.Save(DM.DB)
+		err := alias.Save()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

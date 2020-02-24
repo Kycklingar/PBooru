@@ -579,7 +579,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 
 func (tc *TagCollector) save(tx querier) error {
 	for _, tag := range tc.Tags {
-		if err :=tag.Save(tx); err != nil {
+		if err := tag.Save(tx); err != nil {
 			return err
 		}
 	}
@@ -609,7 +609,6 @@ func (tc *TagCollector) upgrade(q querier, upgradeParents bool) error {
 	if upgradeParents {
 		for _, tag := range newTags {
 			for _, parent := range tag.allParents(q) {
-				fmt.Println(parent.ID)
 				if !isTagIn(parent, newTags) {
 					newTags = append(newTags, parent)
 				}

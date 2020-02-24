@@ -34,8 +34,8 @@ func GetPostFromHash(fnc, hash string) (*Post, error) {
 			FROM hashes
 			WHERE %s = $1
 			`,
-			fnc,
-		),
+		fnc,
+	),
 		hash,
 	).Scan(&p.ID)
 
@@ -78,10 +78,9 @@ type Post struct {
 	editCount int
 }
 
-
 type checksums struct {
 	Sha256 string
-	Md5 string
+	Md5    string
 }
 
 type Dimension struct {
@@ -629,7 +628,7 @@ func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
 		}
 	}
 
-	for _, tag := range newTags{
+	for _, tag := range newTags {
 		_, err := tx.Exec(`
 			INSERT INTO post_tag_mappings(
 				post_id, tag_id
@@ -660,7 +659,7 @@ func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) 
 
 	var removedTags []*Tag
 
-	for _, tag := range currentTags{
+	for _, tag := range currentTags {
 		if in(tag, tags) {
 			removedTags = append(removedTags, tag)
 		}
@@ -793,7 +792,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 		return err
 	}
 
-	for _, tag := range newTags{
+	for _, tag := range newTags {
 		resetCacheTag(tag.ID)
 	}
 
@@ -860,7 +859,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 		return err
 	}
 
-	for _, tag := range newTags{
+	for _, tag := range newTags {
 		resetCacheTag(tag.ID)
 	}
 
@@ -891,7 +890,7 @@ func (p *Post) logTagEdit(tx querier, user *User, newTags, removedTags []*Tag) e
 		return err
 	}
 
-	for _, tag := range newTags{
+	for _, tag := range newTags {
 		_, err = tx.Exec(`
 			INSERT INTO edited_tags(
 				history_id, tag_id, direction
