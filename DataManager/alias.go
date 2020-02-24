@@ -174,6 +174,13 @@ func updatePtm(q querier, to, from *Tag) error {
 		return err
 	}
 
+	for _, tag := range tags {
+		err = tag.recount(q)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

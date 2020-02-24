@@ -298,6 +298,22 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 		}
 	}
 
+	// Update tag counts
+	var tc = new(TagCollector)
+
+	err = tc.GetFromPost(tx, dupe.Post)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tc.Tags {
+		err = tag.recount(tx)
+		if err != nil {
+			return err
+		}
+	}
+
+
 	return
 }
 

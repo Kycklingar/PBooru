@@ -169,6 +169,33 @@ func (t *Tag) Parse(tagStr string) error {
 	return nil
 }
 
+func (t *Tag) recount(q querier) error {
+	_, err := q.Exec(`
+		UPDATE tags
+		SET count = (
+			SELECT count(1)
+			FROM post_tag_mappings
+			WHERE tag_id = $1
+		)
+		WHERE id = $1
+		`,
+		t.ID,
+	)
+	return err
+}
+
+func (t *Tag) updateCount(q querier, count int) error {
+	_, err := q.Exec(`
+		UPDATE tags
+		SET count = count + $1
+		WHERE id = $2
+		`,
+		count,
+		t.ID,
+	)
+	return err
+}
+
 // Returns the tag it has been aliased to or itself if none
 func (t *Tag) aliasedTo(q querier) (*Tag, error) {
 	var alias = NewAlias()
@@ -232,6 +259,16 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		child.ID,
 	); err != nil {
 		log.Println(err)
+		return err
+	}
+
+	err = aParent.recount(q)
+	if err != nil {
+		return err
+	}
+
+	err = child.recount(q)
+	if err != nil {
 		return err
 	}
 
@@ -353,106 +390,106 @@ func (tc *TagCollector) Parse(tagStr string) error {
 	return err
 }
 
-func (tc *TagCollector) AddToPost(q querier, p *Post) error {
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
+//func (tc *TagCollector) AddToPost(q querier, p *Post) error {
+//	dupe, err := getDupeFromPost(q, p)
+//	if err != nil {
+//		return err
+//	}
+//
+//	for _, tag := range tc.Tags {
+//		if tag.QID(q) == 0 {
+//			err := tag.Save(q)
+//			if err != nil {
+//				return err
+//			}
+//		} else {
+//			a := NewAlias()
+//			a.Tag = tag
+//			to, err := a.QTo(q)
+//			if err != nil {
+//				return err
+//			}
+//
+//			if to.QID(q) != 0 {
+//				tag = to
+//			}
+//		}
+//
+//		var parentIDs []int
+//		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", tag.QID(q))
+//		if err != nil {
+//			log.Print(err)
+//		}
+//		for rows.Next() {
+//			pid := 0
+//			if err = rows.Scan(&pid); err != nil {
+//				log.Println(err)
+//			}
+//			if pid == 0 {
+//				continue
+//			}
+//			parentIDs = append(parentIDs, pid)
+//		}
+//		rows.Close()
+//
+//		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
+//
+//		for _, i := range parentIDs {
+//			if _, err = q.Exec(execStr, i, dupe.Post.QID(q)); err != nil {
+//				log.Print(err)
+//			}
+//			resetCacheTag(i)
+//		}
+//
+//		_, err = q.Exec(execStr, tag.QID(q), dupe.Post.QID(q))
+//		if err != nil {
+//			log.Print(err)
+//			//return err
+//			//continue
+//		}
+//		resetCacheTag(tag.QID(q))
+//	}
+//
+//	return nil
+//}
 
-	for _, tag := range tc.Tags {
-		if tag.QID(q) == 0 {
-			err := tag.Save(q)
-			if err != nil {
-				return err
-			}
-		} else {
-			a := NewAlias()
-			a.Tag = tag
-			to, err := a.QTo(q)
-			if err != nil {
-				return err
-			}
-
-			if to.QID(q) != 0 {
-				tag = to
-			}
-		}
-
-		var parentIDs []int
-		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", tag.QID(q))
-		if err != nil {
-			log.Print(err)
-		}
-		for rows.Next() {
-			pid := 0
-			if err = rows.Scan(&pid); err != nil {
-				log.Println(err)
-			}
-			if pid == 0 {
-				continue
-			}
-			parentIDs = append(parentIDs, pid)
-		}
-		rows.Close()
-
-		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
-
-		for _, i := range parentIDs {
-			if _, err = q.Exec(execStr, i, dupe.Post.QID(q)); err != nil {
-				log.Print(err)
-			}
-			resetCacheTag(i)
-		}
-
-		_, err = q.Exec(execStr, tag.QID(q), dupe.Post.QID(q))
-		if err != nil {
-			log.Print(err)
-			//return err
-			//continue
-		}
-		resetCacheTag(tag.QID(q))
-	}
-
-	return nil
-}
-
-func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
-
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
-
-	for _, t := range tc.Tags {
-
-		if t.QID(q) == 0 {
-			log.Print("TagCollector: RemoveFromPost: tag invalid", t)
-			continue
-		}
-
-		a := NewAlias()
-		// a.setQ(q)
-		a.Tag = t
-		to, err := a.QTo(q)
-		if err != nil {
-			return err
-		}
-
-		if to.QID(q) != 0 {
-			t = to
-		}
-
-		resetCacheTag(t.QID(q))
-
-		_, err = q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
-
-		if err != nil {
-			log.Print(err)
-			continue
-		}
-	}
-	return nil
-}
+//func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
+//
+//	dupe, err := getDupeFromPost(q, p)
+//	if err != nil {
+//		return err
+//	}
+//
+//	for _, t := range tc.Tags {
+//
+//		if t.QID(q) == 0 {
+//			log.Print("TagCollector: RemoveFromPost: tag invalid", t)
+//			continue
+//		}
+//
+//		a := NewAlias()
+//		// a.setQ(q)
+//		a.Tag = t
+//		to, err := a.QTo(q)
+//		if err != nil {
+//			return err
+//		}
+//
+//		if to.QID(q) != 0 {
+//			t = to
+//		}
+//
+//		resetCacheTag(t.QID(q))
+//
+//		_, err = q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
+//
+//		if err != nil {
+//			log.Print(err)
+//			continue
+//		}
+//	}
+//	return nil
+//}
 
 func (tc *TagCollector) Get(limit, offset int) error {
 	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags ORDER BY id LIMIT $1 OFFSET $2", limit, offset)

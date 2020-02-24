@@ -641,6 +641,11 @@ func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		err = tag.updateCount(tx, 1)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return newTags, nil
@@ -674,6 +679,11 @@ func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) 
 			p.ID,
 			tag.ID,
 		)
+		if err != nil {
+			return nil, err
+		}
+
+		err = tag.updateCount(tx, -1)
 		if err != nil {
 			return nil, err
 		}
