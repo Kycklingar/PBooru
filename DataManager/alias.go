@@ -251,6 +251,15 @@ func updateParents(q querier, to, from *Tag) error {
 		`,
 		from.ID,
 	)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.Exec(`
+		DELETE FROM parent_tags
+		WHERE parent_id = child_id
+		`,
+	)
 
 	return err
 }
