@@ -445,7 +445,7 @@ li
     display: flex;
     margin:1em;
     position:relative;
-    height:300px;
+    padding;1em;
 }
 
 .cpage-container img
@@ -464,8 +464,17 @@ li
 
 .comic-thumb
 {
-    margin:3px;
-    word-break: break-all;
+	padding:3px;
+	word-break: break-all;
+	position:relative;
+	left:128px;
+	margin-left: -128px;
+	transition:margin-left 0.07s;
+}
+
+.comic-thumb:hover:not(:first-child)
+{
+	margin-left:-1px;
 }
 
 .deleted
