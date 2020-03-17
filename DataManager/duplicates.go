@@ -313,7 +313,6 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 		}
 	}
 
-
 	return
 }
 

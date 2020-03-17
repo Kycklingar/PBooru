@@ -757,6 +757,8 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 		resetCacheTag(tag.ID)
 	}
 
+	C.Cache.Purge("TC", strconv.Itoa(p.ID))
+
 	return nil
 }
 
@@ -805,6 +807,8 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 	for _, tag := range newTags {
 		resetCacheTag(tag.ID)
 	}
+
+	C.Cache.Purge("TC", strconv.Itoa(p.ID))
 
 	return nil
 }
@@ -1558,7 +1562,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	if len(pc.tags) > 0 {
 		return pc.tags
 	}
-	//fmt.Println(pc.id)
+
 	var allTags []*Tag
 
 	if pc.idStr() == "-1" {
@@ -1567,7 +1571,6 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 
 	// Get the first batch
 	pc.search(10, 0)
-	//pc.GetW(10, 0)
 
 	// Get tags from all posts
 	pc.pl.RLock()
@@ -1582,51 +1585,41 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.pl.RUnlock()
 
 	type tagMap struct {
-		//id    int
 		tag   *Tag
 		count int
 	}
 
-	// Count all tags
-	var countMap []tagMap
+	tm := make(map[int]*tagMap)
+
 	for _, tag := range allTags {
-		newTag := true
-		for i, counted := range countMap {
-			if counted.tag == tag {
-				countMap[i].count++
-				newTag = false
-				break
-			}
-		}
-		if newTag {
-			countMap = append(countMap, tagMap{tag, 1})
+		if t, ok := tm[tag.ID]; ok {
+			t.count++
+		} else {
+			tm[tag.ID] = &tagMap{tag, 1}
 		}
 	}
 
-	// Sort all tags
-	swapped := true
-	for swapped {
-		swapped = false
-		for i := 1; i < len(countMap); i++ {
-			if countMap[i-1].count < countMap[i].count {
-				tmp := countMap[i]
-				countMap[i] = countMap[i-1]
-				countMap[i-1] = tmp
-				swapped = true
-			}
-		}
+	var countMap = make([]tagMap, len(tm))
+	var i int
+	for _, v := range tm {
+		countMap[i] = *v
+		i++
 	}
+
+	sort.Slice(countMap, func(i, j int) bool {
+		return countMap[i].count > countMap[j].count
+	})
 
 	// Hotfix for when cache is gc'd and there are multiple calls for this search
 	pc.tags = nil
 	// Retrive and append the tags
-	arrLimit := maxTags
-	if len(countMap) < arrLimit {
-		arrLimit = len(countMap)
-	}
+	//arrLimit := maxTags
+	//if len(countMap) < arrLimit {
+	//	arrLimit = len(countMap)
+	//}
+	arrLimit := max(maxTags, len(countMap))
 	for i := 0; i < arrLimit; i++ {
-		tag := countMap[i].tag
-		//tag.QNamespace(DB).QNamespace(DB)
+		tag := CachedTag(countMap[i].tag)
 		pc.tags = append(pc.tags, tag)
 	}
 

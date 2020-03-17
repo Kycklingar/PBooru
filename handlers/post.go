@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -120,8 +121,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	pp.User.QFlag(DM.DB)
 	pp.User.QPools(DM.DB)
 
-
-
 	// Valid Uris: 	post/1
 	//		post/hash/Qm...
 	//		post/md5/HASH...
@@ -136,20 +135,20 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch method {
-		case "ipfs":
-			p.Hash, err = uri.getAtIndex(2)
-		case "sha256", "md5":
-			var hash string
-			hash, err = uri.getAtIndex(2)
-			p, err = DM.GetPostFromHash(method, hash)
-		default:
-			var id int
-			id, err = uri.getIntAtIndex(1)
-			if err != nil {
-				break
-			}
+	case "ipfs":
+		p.Hash, err = uri.getAtIndex(2)
+	case "sha256", "md5":
+		var hash string
+		hash, err = uri.getAtIndex(2)
+		p, err = DM.GetPostFromHash(method, hash)
+	default:
+		var id int
+		id, err = uri.getIntAtIndex(1)
+		if err != nil {
+			break
+		}
 
-			err = p.SetID(DM.DB, id)
+		err = p.SetID(DM.DB, id)
 	}
 
 	if err != nil {
@@ -204,16 +203,21 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var tc DM.TagCollector
 
-	err = tc.GetFromPost(DM.DB, pp.Dupe.Post)
+	bm.Split("Queriying tags")
+	err = tc.GetPostTags(DM.DB, pp.Dupe.Post)
 	if err != nil {
 		log.Print(err)
 	}
 
-	for _, tag := range tc.Tags {
-		tag.QTag(DM.DB)
-		tag.QCount(DM.DB)
-		tag.QNamespace(DM.DB).QNamespace(DM.DB)
-	}
+	//for _, tag := range tc.Tags {
+	//	if err := tag.QueryAll(DM.DB); err != nil {
+	//		log.Println(err)
+	//	}
+	//	//tag.QTag(DM.DB)
+	//	//tag.QCount(DM.DB)
+	//	//tag.QNamespace(DM.DB).QNamespace(DM.DB)
+	//	fmt.Println(tag.Namespace, tag.Tag)
+	//}
 
 	pp.Sidebar.Tags = tc.Tags
 
@@ -244,13 +248,15 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Base.Title = strconv.Itoa(pp.Post.ID)
 
+	bm.Split("Gathering creator tags")
 	for _, tag := range pp.Sidebar.Tags {
 		if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "creator" {
 			pp.Base.Title += " - " + tag.QTag(DM.DB)
 		}
 	}
 
-	sortTags(pp.Sidebar.Tags)
+	bm.Split("Sorting tags")
+	sort.Sort(tagSort(pp.Sidebar.Tags))
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
@@ -316,25 +322,28 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
-func sortTags(tags []*DM.Tag) {
-	for i := 0; i < len(tags); i++ {
-		for j := len(tags) - 1; j > i; j-- {
-			tag1 := tags[i].Namespace.Namespace + ":" + tags[i].Tag
-			tag2 := tags[j].Namespace.Namespace + ":" + tags[j].Tag
-			if tags[i].Namespace.Namespace == "none" {
-				tag1 = tags[i].Tag
-			}
-			if tags[j].Namespace.Namespace == "none" {
-				tag2 = tags[j].Tag
-			}
+type tagSort []*DM.Tag
 
-			if strings.Compare(tag1, tag2) == 1 {
-				tmp := tags[i]
-				tags[i] = tags[j]
-				tags[j] = tmp
-			}
-		}
+func (t tagSort) Len() int {
+	return len(t)
+}
+
+func (t tagSort) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
+}
+
+func (t tagSort) Less(i, j int) bool {
+	tag1 := t[i].Namespace.Namespace + ":" + t[i].Tag
+	tag2 := t[j].Namespace.Namespace + ":" + t[j].Tag
+
+	if t[i].Namespace.Namespace == "none" {
+		tag1 = t[i].Tag
 	}
+	if t[j].Namespace.Namespace == "none" {
+		tag2 = t[j].Tag
+	}
+
+	return strings.Compare(tag1, tag2) != 1
 }
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {

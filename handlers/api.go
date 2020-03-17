@@ -22,8 +22,8 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 type APIv1Post struct {
 	ID          int
 	Hash        string
-	Sha256 string
-	Md5 string
+	Sha256      string
+	Md5         string
 	ThumbHashes []DM.Thumb
 	Mime        string
 	Deleted     bool
@@ -36,16 +36,17 @@ type APIv1TagI interface {
 	Parse(*DM.Tag)
 }
 
-type APIv1TagHydrus struct {
-	Tag string
-}
+type APIv1TagString string
 
-func (t *APIv1TagHydrus) Parse(tag *DM.Tag) {
+func (t *APIv1TagString) Parse(tag *DM.Tag) {
+	var str string
 	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none" {
-		t.Tag = tag.QTag(DM.DB)
+		str = tag.QTag(DM.DB)
 	} else {
-		t.Tag = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
+		str = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
 	}
+
+	*t = APIv1TagString(str)
 }
 
 type APIv1Tag struct {
@@ -87,21 +88,21 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
-	switch key{
-		case "id":
-			var id int
-			id, err = strconv.Atoi(val)
-			if err != nil {
-				break
-			}
-			err = p.SetID(DM.DB, id)
-		case "ipfs":
-			p.Hash = val
-		case "sha256", "md5":
-			p, err = DM.GetPostFromHash(key, val)
-		default:
-			APIError(w, "No Identifier", http.StatusBadRequest)
-			return
+	switch key {
+	case "id":
+		var id int
+		id, err = strconv.Atoi(val)
+		if err != nil {
+			break
+		}
+		err = p.SetID(DM.DB, id)
+	case "ipfs":
+		p.Hash = val
+	case "sha256", "md5":
+		p, err = DM.GetPostFromHash(key, val)
+	default:
+		APIError(w, "No Identifier", http.StatusBadRequest)
+		return
 	}
 
 	if err != nil {
@@ -172,15 +173,6 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
-	tc := DM.TagCollector{}
-
-	if includeTags {
-		err := tc.GetPostTags(DM.DB, p)
-		if err != nil {
-			return AP, err
-		}
-	}
-
 	p.QChecksums(DM.DB)
 	p.QThumbnails(DM.DB)
 	p.QDimensions(DM.DB)
@@ -188,7 +180,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		ID:          p.QID(DM.DB),
 		Hash:        p.QHash(DM.DB),
 		Sha256:      p.Checksums.Sha256,
-		Md5:	     p.Checksums.Md5,
+		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.QMime(DM.DB).Str(),
 		Deleted:     p.QDeleted(DM.DB) == 1,
@@ -196,11 +188,18 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Dimension:   p.Dimension,
 	}
 
+	tc := DM.TagCollector{}
+	if includeTags {
+		err := tc.GetPostTags(DM.DB, p)
+		if err != nil {
+			return AP, err
+		}
+	}
+
 	for _, tag := range tc.Tags {
-		tag = DM.CachedTag(tag)
 		var t APIv1TagI
 		if combineTagNamespace {
-			t = &APIv1TagHydrus{}
+			t = new(APIv1TagString)
 		} else {
 			t = &APIv1Tag{}
 		}

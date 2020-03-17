@@ -28,15 +28,10 @@ type Tag struct {
 //var tagCacheLock sync.RWMutex
 
 func CachedTag(t *Tag) *Tag {
-	//tagCacheLock.RLock()
 	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
-		//tagCacheLock.RUnlock()
 		return ct.(*Tag)
 	}
-	//tagCacheLock.RUnlock()
-	//tagCacheLock.Lock()
 	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
-	//tagCacheLock.Unlock()
 	return t
 }
 
@@ -58,6 +53,28 @@ func (t *Tag) QID(q querier) int {
 		return 0
 	}
 	return t.ID
+}
+
+func (t *Tag) QueryAll(q querier) error {
+	if t.ID <= 0 {
+		return errors.New("No identifier")
+	}
+
+	if t.Tag != ""  && t.Namespace.ID > 0 && t.Namespace.Namespace != "" {
+		return nil
+	}
+
+	err := q.QueryRow(`
+		SELECT tag, count, namespaces.id, nspace 
+		FROM tags 
+		JOIN namespaces 
+		ON tags.namespace_id = namespaces.id 
+		WHERE tags.id = $1
+		`,
+		t.ID,
+	).Scan(&t.Tag, &t.Count, &t.Namespace.ID, &t.Namespace.Namespace)
+
+	return err
 }
 
 func (t *Tag) SetID(id int) {
@@ -390,107 +407,6 @@ func (tc *TagCollector) Parse(tagStr string) error {
 	return err
 }
 
-//func (tc *TagCollector) AddToPost(q querier, p *Post) error {
-//	dupe, err := getDupeFromPost(q, p)
-//	if err != nil {
-//		return err
-//	}
-//
-//	for _, tag := range tc.Tags {
-//		if tag.QID(q) == 0 {
-//			err := tag.Save(q)
-//			if err != nil {
-//				return err
-//			}
-//		} else {
-//			a := NewAlias()
-//			a.Tag = tag
-//			to, err := a.QTo(q)
-//			if err != nil {
-//				return err
-//			}
-//
-//			if to.QID(q) != 0 {
-//				tag = to
-//			}
-//		}
-//
-//		var parentIDs []int
-//		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", tag.QID(q))
-//		if err != nil {
-//			log.Print(err)
-//		}
-//		for rows.Next() {
-//			pid := 0
-//			if err = rows.Scan(&pid); err != nil {
-//				log.Println(err)
-//			}
-//			if pid == 0 {
-//				continue
-//			}
-//			parentIDs = append(parentIDs, pid)
-//		}
-//		rows.Close()
-//
-//		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
-//
-//		for _, i := range parentIDs {
-//			if _, err = q.Exec(execStr, i, dupe.Post.QID(q)); err != nil {
-//				log.Print(err)
-//			}
-//			resetCacheTag(i)
-//		}
-//
-//		_, err = q.Exec(execStr, tag.QID(q), dupe.Post.QID(q))
-//		if err != nil {
-//			log.Print(err)
-//			//return err
-//			//continue
-//		}
-//		resetCacheTag(tag.QID(q))
-//	}
-//
-//	return nil
-//}
-
-//func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
-//
-//	dupe, err := getDupeFromPost(q, p)
-//	if err != nil {
-//		return err
-//	}
-//
-//	for _, t := range tc.Tags {
-//
-//		if t.QID(q) == 0 {
-//			log.Print("TagCollector: RemoveFromPost: tag invalid", t)
-//			continue
-//		}
-//
-//		a := NewAlias()
-//		// a.setQ(q)
-//		a.Tag = t
-//		to, err := a.QTo(q)
-//		if err != nil {
-//			return err
-//		}
-//
-//		if to.QID(q) != 0 {
-//			t = to
-//		}
-//
-//		resetCacheTag(t.QID(q))
-//
-//		_, err = q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
-//
-//		if err != nil {
-//			log.Print(err)
-//			continue
-//		}
-//	}
-//	return nil
-//}
-
 func (tc *TagCollector) Get(limit, offset int) error {
 	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags ORDER BY id LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
@@ -541,6 +457,7 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 		tag = CachedTag(tag)
 		tc.Tags = append(tc.Tags, tag)
 	}
+
 	return rows.Err()
 }
 
@@ -557,11 +474,6 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		}
 	}
 
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
-
 	rows, err := q.Query(
 		`SELECT tags.id, tag, count, namespaces.id, nspace 
 		FROM tags 
@@ -574,7 +486,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
-		dupe.Post.QID(q))
+		p.QID(q))
 	if err != nil {
 		return err
 	}
@@ -582,34 +494,21 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 
 	for rows.Next() {
 		tag := NewTag()
-		err = rows.Scan(&tag.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
+		c := NewTag()
+		err = rows.Scan(&c.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
 		if err != nil {
 			return err
 		}
-		tc.Tags = append(tc.Tags, tag)
+
+		tag.ID = c.ID
+
+		c = CachedTag(c)
+		c = tag
+
+		tc.Tags = append(tc.Tags, c)
 	}
 
-	// Sort in a pleasing way
-	for i := 0; i < len(tc.Tags); i++ {
-		for j := len(tc.Tags) - 1; j > i; j-- {
-			tag1 := tc.Tags[i].QNamespace(q).QNamespace(q) + ":" + tc.Tags[i].QTag(q)
-			tag2 := tc.Tags[j].QNamespace(q).QNamespace(q) + ":" + tc.Tags[j].QTag(q)
-			if tc.Tags[i].QNamespace(q).QNamespace(q) == "none" {
-				tag1 = tc.Tags[i].QTag(q)
-			}
-			if tc.Tags[j].QNamespace(q).QNamespace(q) == "none" {
-				tag2 = tc.Tags[j].QTag(q)
-			}
-
-			if strings.Compare(tag1, tag2) == 1 {
-				tmp := tc.Tags[i]
-				tc.Tags[i] = tc.Tags[j]
-				tc.Tags[j] = tmp
-			}
-		}
-	}
-
-	C.Cache.Set("TC", strconv.Itoa(dupe.Post.ID), tc)
+	C.Cache.Set("TC", strconv.Itoa(p.ID), tc)
 
 	return rows.Err()
 }
