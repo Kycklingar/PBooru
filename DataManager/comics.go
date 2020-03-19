@@ -41,6 +41,150 @@ func (cc *ComicCollector) Get(limit, offset int) error {
 	return nil
 }
 
+
+
+func (cc *ComicCollector) Search(tagQuery string, limit, offset int) error {
+	tags, err := parseTags(tagQuery)
+	if err != nil || tags == nil {
+		return err
+	}
+
+	ptmJoin := fmt.Sprintf(`
+		JOIN post_tag_mappings ptm0
+		ON cm.post_id = ptm0.post_id
+		%s`,
+		ptmJoinQuery(tags),
+	)
+
+	ptmWhere := ptmWhereQuery(tags)
+
+	meat := fmt.Sprintf(`
+		FROM comics c
+		JOIN comic_chapter cc
+		ON c.id = cc.comic_id
+		JOIN comic_mappings cm
+		ON cc.id = cm.chapter_id
+		%s
+		WHERE %s
+		`,
+		ptmJoin,
+		ptmWhere,
+	)
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT c.id, c.title, c.modified
+		%s
+		ORDER BY c.modified DESC
+		LIMIT $1
+		OFFSET $2
+		`,
+		meat,
+	)
+
+	queryFn := func() error {
+		rows, err := DB.Query(query, limit, offset)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var comic = NewComic()
+			var garbage string
+			err = rows.Scan(&comic.ID, &comic.Title, &garbage)
+			if err != nil {
+				return err
+			}
+
+			cc.Comics = append(cc.Comics, comic)
+		}
+
+		return rows.Err()
+	}
+
+	if err = queryFn(); err != nil {
+		return err
+	}
+
+	query = fmt.Sprintf(`
+		SELECT count(DISTINCT c.id)
+		%s
+		`,
+		meat,
+	)
+
+	err = DB.QueryRow(query).Scan(&cc.TotalComics)
+
+	return err
+}
+
+func parseTags(tagQuery string) ([]*Tag, error) {
+	var tc TagCollector
+
+	err := tc.Parse(tagQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []*Tag
+	for _, tag := range tc.Tags {
+		if tag.QID(DB) == 0 {
+			// No posts will be available, return
+			return nil, nil
+		}
+
+		alias := NewAlias()
+		alias.Tag = tag
+		if alias.QTo(DB).QID(DB) != 0 {
+			tag = alias.QTo(DB)
+		}
+
+		tags = append(tags, tag)
+	}
+
+	return tags, nil
+}
+
+func ptmWhereQuery(tags []*Tag) string {
+	var ptmWhere string
+
+	for i := 0; i < len(tags) - 1; i++ {
+		ptmWhere += fmt.Sprintf(
+			"ptm%d.tag_id = %d AND ",
+			i,
+			tags[i].ID,
+		)
+	}
+
+	ptmWhere += fmt.Sprintf(
+		"ptm%d.tag_id = %d",
+		len(tags)-1,
+		tags[len(tags)-1].ID,
+	)
+
+	return ptmWhere
+}
+
+func ptmJoinQuery(tags []*Tag) string {
+	if len(tags) < 2 {
+		return ""
+	}
+
+	var ptmJoin string
+	for i := 0; i < len(tags) - 1; i++{
+		ptmJoin += fmt.Sprintf(`
+			JOIN post_tag_mappings ptm%d
+			ON ptm%d.post_id = ptm%d.post_id
+			`,
+			i+1,
+			i,
+			i+1,
+		)
+	}
+
+	return ptmJoin
+}
+
 func NewComic() *Comic {
 	return &Comic{}
 }

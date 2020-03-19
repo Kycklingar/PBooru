@@ -15,6 +15,16 @@
 </form>
 {{end}}
 
+<div>
+	<form class="center" action="/comics/">
+		<input class="stinput" type="text" name="tags" placeholder="Search" value="{{.LastQuery}}">
+		<br>
+		<input type="submit" value="Search">
+	</form>
+</div>
+
+<script type="text/javascript" src="/static/suggestions.js"></script>
+
 {{range .Comics}}
 <div class="comics-container">
         <a href="/comic/{{.ID}}">
@@ -48,11 +58,11 @@
 
 <div class="nolink" id="pageinator">
     {{ if ne 0 $.Pageinator.Prev}}
-        <a href="/comics/{{.Pageinator.First}}/">
+        <a href="/comics/{{.Pageinator.First}}/{{with .LastQuery}}?tags={{.}}{{end}}">
             First
         </a>
     
-        <a href="/comics/{{$.Pageinator.Prev}}/" id="prev">
+        <a href="/comics/{{$.Pageinator.Prev}}/{{with .LastQuery}}?tags={{.}}{{end}}" id="prev">
             Previous
         </a>
     {{ end }}
@@ -63,17 +73,17 @@
                 {{.}}
             </span>
             {{ else }}
-            <a href="/comics/{{.}}/">
+            <a href="/comics/{{.}}/{{with $.LastQuery}}?tags={{.}}{{end}}">
                 {{.}}
             </a>
             {{ end }}
         </span>
     {{ end }}
     {{ if ne 0 $.Pageinator.Next}}
-        <a href="/comics/{{.Pageinator.Next}}/">
+        <a href="/comics/{{.Pageinator.Next}}/{{with .LastQuery}}?tags={{.}}{{end}}">
             Next
         </a>
-        <a href="/comics/{{.Pageinator.Last}}/">
+        <a href="/comics/{{.Pageinator.Last}}/{{with .LastQuery}}?tags={{.}}{{end}}">
             Last
         </a>
     {{ end }}

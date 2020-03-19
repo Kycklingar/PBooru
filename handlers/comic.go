@@ -17,7 +17,11 @@ type comicsPage struct {
 	Pageinator Pageination
 	Time       string
 	Edit       bool
+
+	LastQuery string
 }
+
+const comicsPerPage = 5
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -69,8 +73,15 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Edit = len(r.Form["edit"]) >= 1
 
 	var cc DM.ComicCollector
-	err = cc.Get(5, (offset-1)*5)
+
+	if tagQuery := r.FormValue("tags");  len(tagQuery) > 0 {
+		err = cc.Search(tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
+		p.LastQuery = tagQuery
+	} else {
+		err = cc.Get(comicsPerPage, (offset-1)*comicsPerPage)
+	}
 	if err != nil {
+		log.Println(err)
 		http.Error(w, "Oops.", http.StatusInternalServerError)
 		return
 	}
@@ -101,7 +112,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p.Pageinator = pageinate(cc.TotalComics, 5, offset, 10)
+	p.Pageinator = pageinate(cc.TotalComics, comicsPerPage, offset, 10)
 
 	var u *DM.User
 	u, p.UserInfo = getUser(w, r)
