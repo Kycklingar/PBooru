@@ -11,41 +11,9 @@ type ComicCollector struct {
 	TotalComics int
 }
 
-func (cc *ComicCollector) Get(limit, offset int) error {
-	str := fmt.Sprintf("SELECT id, title FROM comics ORDER BY modified DESC LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(str)
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		c := NewComic()
-		err = rows.Scan(&c.ID, &c.Title)
-		if err != nil {
-			log.Print(err)
-			return err
-		}
-		cc.Comics = append(cc.Comics, c)
-	}
-	if rows.Err() != nil {
-		log.Print(rows.Err())
-		return err
-	}
-	err = DB.QueryRow("SELECT count(*) FROM comics").Scan(&cc.TotalComics)
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-	return nil
-}
-
-
-
-func (cc *ComicCollector) Search(tagQuery string, limit, offset int) error {
+func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) error {
 	tags, err := parseTags(tagQuery)
-	if err != nil || tags == nil {
+	if err != nil {
 		return err
 	}
 
@@ -56,33 +24,65 @@ func (cc *ComicCollector) Search(tagQuery string, limit, offset int) error {
 		ptmJoinQuery(tags),
 	)
 
-	ptmWhere := ptmWhereQuery(tags)
+	where := ptmWhereQuery(tags)
 
-	meat := fmt.Sprintf(`
-		FROM comics c
-		JOIN comic_chapter cc
-		ON c.id = cc.comic_id
-		JOIN comic_mappings cm
-		ON cc.id = cm.chapter_id
-		%s
-		WHERE %s
-		`,
-		ptmJoin,
-		ptmWhere,
-	)
+	var parN = 1
+	if len(title) > 0 {
+		if where != "" {
+			where += `
+				AND `
+		}
+		where += `
+			(lower(c.title) like '%' || $1 || '%'
+			OR lower(cc.title) like '%' || $1 || '%')
+		`
+
+		parN++
+	}
+
+	var meat string
+
+	if where != "" {
+		where = "WHERE " + where
+		meat = fmt.Sprintf(`
+			FROM comics c
+			JOIN comic_chapter cc
+			ON c.id = cc.comic_id
+			JOIN comic_mappings cm
+			ON cc.id = cm.chapter_id
+			%s
+			%s
+			`,
+			ptmJoin,
+			where,
+		)
+	} else {
+		meat = `
+			FROM comics c
+		`
+	}
 
 	query := fmt.Sprintf(`
 		SELECT DISTINCT c.id, c.title, c.modified
 		%s
 		ORDER BY c.modified DESC
-		LIMIT $1
-		OFFSET $2
+		LIMIT $%d
+		OFFSET $%d
 		`,
 		meat,
+		parN,
+		parN + 1,
 	)
 
+	params := func(additional ...interface{}) []interface{} {
+		if title != "" {
+			return append([]interface{}{title}, additional...)
+		}
+		return additional
+	}
+
 	queryFn := func() error {
-		rows, err := DB.Query(query, limit, offset)
+		rows, err := DB.Query(query, params(limit, offset)...)
 		if err != nil {
 			return err
 		}
@@ -113,12 +113,15 @@ func (cc *ComicCollector) Search(tagQuery string, limit, offset int) error {
 		meat,
 	)
 
-	err = DB.QueryRow(query).Scan(&cc.TotalComics)
+	err = DB.QueryRow(query, params()...).Scan(&cc.TotalComics)
 
 	return err
 }
 
 func parseTags(tagQuery string) ([]*Tag, error) {
+	if len(tagQuery) <= 0 {
+		return nil, nil
+	}
 	var tc TagCollector
 
 	err := tc.Parse(tagQuery)
@@ -130,7 +133,7 @@ func parseTags(tagQuery string) ([]*Tag, error) {
 	for _, tag := range tc.Tags {
 		if tag.QID(DB) == 0 {
 			// No posts will be available, return
-			return nil, nil
+			return nil, errors.New("tags doesn't exists")
 		}
 
 		alias := NewAlias()
@@ -146,6 +149,10 @@ func parseTags(tagQuery string) ([]*Tag, error) {
 }
 
 func ptmWhereQuery(tags []*Tag) string {
+	if len(tags) <= 0 {
+		return ""
+	}
+
 	var ptmWhere string
 
 	for i := 0; i < len(tags) - 1; i++ {

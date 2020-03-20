@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -18,7 +19,37 @@ type comicsPage struct {
 	Time       string
 	Edit       bool
 
-	LastQuery string
+	Query values
+}
+
+type values map[string]string
+
+func(v values) Encode()string {
+	if v == nil || len(v) <= 0 {
+		return ""
+	}
+
+	var out string
+	for k, v := range v {
+		if len(out) > 0 {
+			out += "&"
+		}
+		out += url.QueryEscape(k)+"="+url.QueryEscape(v)
+	}
+
+	return "?" + out
+}
+
+func vals(val url.Values) values {
+	var va = make(values)
+
+	for k, v := range val {
+		if len(v) > 0 && len(v[0]) > 0 {
+			va[k] = v[0]
+		}
+	}
+
+	return va
 }
 
 const comicsPerPage = 5
@@ -74,18 +105,15 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var cc DM.ComicCollector
 
-	if tagQuery := r.FormValue("tags");  len(tagQuery) > 0 {
-		err = cc.Search(tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
-		p.LastQuery = tagQuery
-	} else {
-		err = cc.Get(comicsPerPage, (offset-1)*comicsPerPage)
-	}
+	tagQuery := r.FormValue("tags")
+	err = cc.Search(r.FormValue("title"), tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Oops.", http.StatusInternalServerError)
 		return
 	}
 
+	p.Query = vals(r.Form)
 	p.Comics = cc.Comics
 
 	for _, c := range cc.Comics {
