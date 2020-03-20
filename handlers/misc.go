@@ -122,9 +122,8 @@ func pageinate(total, limit, currPage, numOfPages int) Pageination {
 			p.Pages = append(p.Pages, i)
 		}
 	} else if totalPages-currPage < halfPages { // Close to the end
-
 		set := totalPages - numOfPages + 1
-		if set < 0 {
+		if set <= 0 {
 			set = 1
 		}
 		for i := set; i <= totalPages; i++ {

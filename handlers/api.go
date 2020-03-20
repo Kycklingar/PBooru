@@ -309,7 +309,7 @@ func APIError(w http.ResponseWriter, err string, code int) {
 
 func APIv1ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	cc := DM.ComicCollector{}
-	if err := cc.Get(10, 0); err != nil {
+	if err := cc.Search(r.FormValue("title"), r.FormValue("tags"), 10, 0); err != nil {
 		log.Println(err)
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 	}
