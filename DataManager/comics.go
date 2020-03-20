@@ -129,23 +129,9 @@ func parseTags(tagQuery string) ([]*Tag, error) {
 		return nil, err
 	}
 
-	var tags []*Tag
-	for _, tag := range tc.Tags {
-		if tag.QID(DB) == 0 {
-			// No posts will be available, return
-			return nil, errors.New("tags doesn't exists")
-		}
+	tc.upgrade(DB, false)
 
-		alias := NewAlias()
-		alias.Tag = tag
-		if alias.QTo(DB).QID(DB) != 0 {
-			tag = alias.QTo(DB)
-		}
-
-		tags = append(tags, tag)
-	}
-
-	return tags, nil
+	return tc.Tags, nil
 }
 
 func ptmWhereQuery(tags []*Tag) string {
