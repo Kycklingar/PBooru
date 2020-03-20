@@ -22,8 +22,8 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 type APIv1Post struct {
 	ID          int
 	Hash        string
-	Sha256 string
-	Md5 string
+	Sha256      string
+	Md5         string
 	ThumbHashes []DM.Thumb
 	Mime        string
 	Deleted     bool
@@ -87,21 +87,21 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
-	switch key{
-		case "id":
-			var id int
-			id, err = strconv.Atoi(val)
-			if err != nil {
-				break
-			}
-			err = p.SetID(DM.DB, id)
-		case "ipfs":
-			p.Hash = val
-		case "sha256", "md5":
-			p, err = DM.GetPostFromHash(key, val)
-		default:
-			APIError(w, "No Identifier", http.StatusBadRequest)
-			return
+	switch key {
+	case "id":
+		var id int
+		id, err = strconv.Atoi(val)
+		if err != nil {
+			break
+		}
+		err = p.SetID(DM.DB, id)
+	case "ipfs":
+		p.Hash = val
+	case "sha256", "md5":
+		p, err = DM.GetPostFromHash(key, val)
+	default:
+		APIError(w, "No Identifier", http.StatusBadRequest)
+		return
 	}
 
 	if err != nil {
@@ -188,7 +188,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		ID:          p.QID(DM.DB),
 		Hash:        p.QHash(DM.DB),
 		Sha256:      p.Checksums.Sha256,
-		Md5:	     p.Checksums.Md5,
+		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.QMime(DM.DB).Str(),
 		Deleted:     p.QDeleted(DM.DB) == 1,
@@ -310,7 +310,7 @@ func APIError(w http.ResponseWriter, err string, code int) {
 
 func APIv1ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	cc := DM.ComicCollector{}
-	if err := cc.Get(10, 0); err != nil {
+	if err := cc.Search(r.FormValue("title"), r.FormValue("tags"), 10, 0); err != nil {
 		log.Println(err)
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 	}

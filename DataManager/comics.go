@@ -11,34 +11,185 @@ type ComicCollector struct {
 	TotalComics int
 }
 
-func (cc *ComicCollector) Get(limit, offset int) error {
-	str := fmt.Sprintf("SELECT id, title FROM comics ORDER BY modified DESC LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(str)
+func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) error {
+	tags, err := parseTags(tagQuery)
 	if err != nil {
-		log.Print(err)
 		return err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		c := NewComic()
-		err = rows.Scan(&c.ID, &c.Title)
+	ptmJoin := fmt.Sprintf(`
+		JOIN post_tag_mappings ptm0
+		ON cm.post_id = ptm0.post_id
+		%s`,
+		ptmJoinQuery(tags),
+	)
+
+	where := ptmWhereQuery(tags)
+
+	var parN = 1
+	if len(title) > 0 {
+		if where != "" {
+			where += `
+				AND `
+		}
+		where += `
+			(lower(c.title) like '%' || $1 || '%'
+			OR lower(cc.title) like '%' || $1 || '%')
+		`
+
+		parN++
+	}
+
+	var meat string
+
+	if where != "" {
+		where = "WHERE " + where
+		meat = fmt.Sprintf(`
+			FROM comics c
+			JOIN comic_chapter cc
+			ON c.id = cc.comic_id
+			JOIN comic_mappings cm
+			ON cc.id = cm.chapter_id
+			%s
+			%s
+			`,
+			ptmJoin,
+			where,
+		)
+	} else {
+		meat = `
+			FROM comics c
+		`
+	}
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT c.id, c.title, c.modified
+		%s
+		ORDER BY c.modified DESC
+		LIMIT $%d
+		OFFSET $%d
+		`,
+		meat,
+		parN,
+		parN + 1,
+	)
+
+	params := func(additional ...interface{}) []interface{} {
+		if title != "" {
+			return append([]interface{}{title}, additional...)
+		}
+		return additional
+	}
+
+	queryFn := func() error {
+		rows, err := DB.Query(query, params(limit, offset)...)
 		if err != nil {
-			log.Print(err)
 			return err
 		}
-		cc.Comics = append(cc.Comics, c)
+		defer rows.Close()
+
+		for rows.Next() {
+			var comic = NewComic()
+			var garbage string
+			err = rows.Scan(&comic.ID, &comic.Title, &garbage)
+			if err != nil {
+				return err
+			}
+
+			cc.Comics = append(cc.Comics, comic)
+		}
+
+		return rows.Err()
 	}
-	if rows.Err() != nil {
-		log.Print(rows.Err())
+
+	if err = queryFn(); err != nil {
 		return err
 	}
-	err = DB.QueryRow("SELECT count(*) FROM comics").Scan(&cc.TotalComics)
+
+	query = fmt.Sprintf(`
+		SELECT count(DISTINCT c.id)
+		%s
+		`,
+		meat,
+	)
+
+	err = DB.QueryRow(query, params()...).Scan(&cc.TotalComics)
+
+	return err
+}
+
+func parseTags(tagQuery string) ([]*Tag, error) {
+	if len(tagQuery) <= 0 {
+		return nil, nil
+	}
+	var tc TagCollector
+
+	err := tc.Parse(tagQuery)
 	if err != nil {
-		log.Print(err)
-		return err
+		return nil, err
 	}
-	return nil
+
+	var tags []*Tag
+	for _, tag := range tc.Tags {
+		if tag.QID(DB) == 0 {
+			// No posts will be available, return
+			return nil, errors.New("tags doesn't exists")
+		}
+
+		alias := NewAlias()
+		alias.Tag = tag
+		if alias.QTo(DB).QID(DB) != 0 {
+			tag = alias.QTo(DB)
+		}
+
+		tags = append(tags, tag)
+	}
+
+	return tags, nil
+}
+
+func ptmWhereQuery(tags []*Tag) string {
+	if len(tags) <= 0 {
+		return ""
+	}
+
+	var ptmWhere string
+
+	for i := 0; i < len(tags) - 1; i++ {
+		ptmWhere += fmt.Sprintf(
+			"ptm%d.tag_id = %d AND ",
+			i,
+			tags[i].ID,
+		)
+	}
+
+	ptmWhere += fmt.Sprintf(
+		"ptm%d.tag_id = %d",
+		len(tags)-1,
+		tags[len(tags)-1].ID,
+	)
+
+	return ptmWhere
+}
+
+func ptmJoinQuery(tags []*Tag) string {
+	if len(tags) < 2 {
+		return ""
+	}
+
+	var ptmJoin string
+	for i := 0; i < len(tags) - 1; i++{
+		ptmJoin += fmt.Sprintf(`
+			JOIN post_tag_mappings ptm%d
+			ON ptm%d.post_id = ptm%d.post_id
+			`,
+			i+1,
+			i,
+			i+1,
+		)
+	}
+
+	return ptmJoin
 }
 
 func NewComic() *Comic {

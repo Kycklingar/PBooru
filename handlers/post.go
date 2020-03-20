@@ -118,8 +118,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	pp.User.QFlag(DM.DB)
 	pp.User.QPools(DM.DB)
 
-
-
 	// Valid Uris: 	post/1
 	//		post/hash/Qm...
 	//		post/md5/HASH...
@@ -134,20 +132,20 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch method {
-		case "ipfs":
-			p.Hash, err = uri.getAtIndex(2)
-		case "sha256", "md5":
-			var hash string
-			hash, err = uri.getAtIndex(2)
-			p, err = DM.GetPostFromHash(method, hash)
-		default:
-			var id int
-			id, err = uri.getIntAtIndex(1)
-			if err != nil {
-				break
-			}
+	case "ipfs":
+		p.Hash, err = uri.getAtIndex(2)
+	case "sha256", "md5":
+		var hash string
+		hash, err = uri.getAtIndex(2)
+		p, err = DM.GetPostFromHash(method, hash)
+	default:
+		var id int
+		id, err = uri.getIntAtIndex(1)
+		if err != nil {
+			break
+		}
 
-			err = p.SetID(DM.DB, id)
+		err = p.SetID(DM.DB, id)
 	}
 
 	if err != nil {

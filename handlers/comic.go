@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -17,7 +18,41 @@ type comicsPage struct {
 	Pageinator Pageination
 	Time       string
 	Edit       bool
+
+	Query values
 }
+
+type values map[string]string
+
+func(v values) Encode()string {
+	if v == nil || len(v) <= 0 {
+		return ""
+	}
+
+	var out string
+	for k, v := range v {
+		if len(out) > 0 {
+			out += "&"
+		}
+		out += url.QueryEscape(k)+"="+url.QueryEscape(v)
+	}
+
+	return "?" + out
+}
+
+func vals(val url.Values) values {
+	var va = make(values)
+
+	for k, v := range val {
+		if len(v) > 0 && len(v[0]) > 0 {
+			va[k] = v[0]
+		}
+	}
+
+	return va
+}
+
+const comicsPerPage = 5
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -69,12 +104,16 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Edit = len(r.Form["edit"]) >= 1
 
 	var cc DM.ComicCollector
-	err = cc.Get(5, (offset-1)*5)
+
+	tagQuery := r.FormValue("tags")
+	err = cc.Search(r.FormValue("title"), tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
 	if err != nil {
+		log.Println(err)
 		http.Error(w, "Oops.", http.StatusInternalServerError)
 		return
 	}
 
+	p.Query = vals(r.Form)
 	p.Comics = cc.Comics
 
 	for _, c := range cc.Comics {
@@ -101,7 +140,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p.Pageinator = pageinate(cc.TotalComics, 5, offset, 10)
+	p.Pageinator = pageinate(cc.TotalComics, comicsPerPage, offset, 10)
 
 	var u *DM.User
 	u, p.UserInfo = getUser(w, r)

@@ -1,5 +1,5 @@
 
-document.onclick = removeSTBox
+//document.onclick = removeSTBox
 
 function removeSTBox() {
     clearTimeout(timeout)
@@ -92,6 +92,7 @@ var timeout
     for(let i = 0; i < sti.length; i++){
         sti[i].oninput = function () { setSTBoxTimeout(this) }
         sti[i].autocomplete = "off"
+	sti[i].addEventListener("focusout", removeSTBox)
     }
 }
 
