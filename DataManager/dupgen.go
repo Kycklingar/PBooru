@@ -12,7 +12,7 @@ type AppleTree struct {
 	Pears []*Post
 }
 
-func GetAppleTrees(tagStr string) ([]AppleTree, error) {
+func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	tags, err := parseTags(tagStr)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,8 @@ func GetAppleTrees(tagStr string) ([]AppleTree, error) {
 				%s
 				GROUP BY apple
 				ORDER BY apple
-				LIMIT 25
+				LIMIT $1
+				OFFSET $2
 			)
 			AND processed IS NULL
 			ORDER BY apple
@@ -50,7 +51,7 @@ func GetAppleTrees(tagStr string) ([]AppleTree, error) {
 			where,
 	)
 
-	rows, err := DB.Query(query)
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}

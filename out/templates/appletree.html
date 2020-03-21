@@ -1,5 +1,4 @@
 {{template "base"}}
-
 <form>
 	<input class="stinput" type="text" name="tags" value="{{.Query}}" placeholder="Tags">
 	<br>
@@ -7,30 +6,59 @@
 </form>
 <script type="text/javascript" src="/static/suggestions.js"></script>
 
-{{range .Trees}}
-<div>
-	<form method="POST">
-		{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
-		<input type="hidden" name="apple" name="post-id" value="{{.Apple.ID}}">
-		<div class="comic-strip">
-		{{range .Pears}}
-			<span>
-				{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .}}
-				<input type="checkbox" checked name="pears" value="{{.ID}}">
-			</span>
-		{{end}}
-		</div>
-		<input type="submit" value="Pluck">
-	</form>
+<h3>Ignore false positives</h3>
+{{if .User.Flag.Delete}}
+	{{range .Trees}}
+	<div class="panel">
+		<form method="POST">
+			{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
+			<input type="hidden" name="apple" name="post-id" value="{{.Apple.ID}}">
+			<div class="comic-strip">
+			{{range .Pears}}
+				<span>
+					{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .}}
+					<input type="checkbox" checked name="pears" value="{{.ID}}">
+				</span>
+			{{end}}
+			</div>
+			<input type="submit" value="Pluck">
+		</form>
 
-	<form target="_blank" action="/compare2/">
-		<input type="hidden" name="post-id" value="{{.Apple.ID}}">
-		{{range .Pears}}
-			<input type="hidden" name="post-id" value="{{.ID}}">
-		{{end}}
-		<input type="submit" value="Compare">
-	</form>
-</div>
+		<form target="_blank" action="/compare2/">
+			<input type="hidden" name="post-id" value="{{.Apple.ID}}">
+			{{range .Pears}}
+				<input type="hidden" name="post-id" value="{{.ID}}">
+			{{end}}
+			<input type="submit" value="Compare2.js">
+			<input type="submit" formaction="/compare/" value="Compare">
+		</form>
+	</div>
+	{{end}}
+{{else}}
+	{{range .Trees}}
+	<div class="panel">
+		<form target="_blank">
+			{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
+			<input type="hidden" name="post-id" value="{{.Apple.ID}}">
+			<div class="comic-strip">
+			{{range .Pears}}
+				<span>
+					{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .}}
+					<input type="checkbox" checked name="post-id" value="{{.ID}}">
+				</span>
+			{{end}}
+			</div>
+			<input type="submit" formaction="/compare2/" value="Compare2.js">
+			<input type="submit" formaction="/compare/" value="Compare">
+		</form>
+	</div>
+	{{end}}
 {{end}}
+
+<form>
+	<input type="hidden" name="tags" value="{{.Query}}">
+	<input type="hidden" name="offset" value="{{.Offset}}">
+	<input type="submit" value="Next page">
+</form>
 
 {{template "baseEnd"}}
