@@ -16,19 +16,30 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var page struct {
 		UserInfo UserInfo
+		User *DM.User
 		Trees    []DM.AppleTree
+		Query string
+		Offset int
 	}
 
-	page.UserInfo = userCookies(w, r)
+	page.User, page.UserInfo = getUser(w, r)
+	page.User.QFlag(DM.DB)
 
 	var err error
 
-	page.Trees, err = DM.GetAppleTrees()
+	var limit = 25
+	page.Offset, _ = strconv.Atoi(r.FormValue("offset"))
+
+
+	page.Query = r.FormValue("tags")
+	page.Trees, err = DM.GetAppleTrees(page.Query, limit, page.Offset)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	page.Offset += limit
 
 	for _, tree := range page.Trees {
 		tree.Apple.QThumbnails(DM.DB)
