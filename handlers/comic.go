@@ -24,7 +24,7 @@ type comicsPage struct {
 
 type values map[string]string
 
-func(v values) Encode()string {
+func (v values) Encode() string {
 	if v == nil || len(v) <= 0 {
 		return ""
 	}
@@ -34,7 +34,7 @@ func(v values) Encode()string {
 		if len(out) > 0 {
 			out += "&"
 		}
-		out += url.QueryEscape(k)+"="+url.QueryEscape(v)
+		out += url.QueryEscape(k) + "=" + url.QueryEscape(v)
 	}
 
 	return "?" + out

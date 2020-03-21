@@ -574,9 +574,40 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		var rows *sql.Rows
 		var err error
 		if tag.Namespace.Namespace == "none" {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
+			rows, err = q.Query(`
+				SELECT id, tag, namespace_id
+				FROM tags
+				WHERE id IN(
+					SELECT coalesce(alias_to, id)
+					FROM tags
+					LEFT JOIN alias
+					ON id = alias_from
+					WHERE tag LIKE('%'||$1||'%')
+				)
+				ORDER BY count DESC
+				LIMIT 10`,
+				//strings.Replace(tag.Tag, "%", "\\%", -1),
+				tag.Tag,
+			)
 		} else {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.Namespace.QID(q), "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
+			rows, err = q.Query(`
+				SELECT id, tag, namespace_id
+				FROM tags
+				WHERE id IN(
+					SELECT coalesce(alias_to, id)
+					FROM tags
+					LEFT JOIN alias
+					ON id = alias_from
+					WHERE namespace_id=$1
+					AND tag LIKE('%'||$2||'%')
+				)
+				ORDER BY count DESC
+				LIMIT 10
+				`,
+				tag.Namespace.QID(q),
+				//strings.Replace(tag.Tag, "%", "\\%", -1),
+				tag.Tag,
+			)
 		}
 		if err != nil {
 			log.Print(err)

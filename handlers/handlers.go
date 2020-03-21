@@ -17,6 +17,7 @@ import (
 type Config struct {
 	AllowedMimes  []string
 	IPFSDaemonMap map[string]string
+	EnableCommentCaptcha int
 }
 
 func (c *Config) Default() {
@@ -33,6 +34,7 @@ func (c *Config) Default() {
 	}
 
 	c.IPFSDaemonMap["default"] = "http://localhost:8080"
+	c.EnableCommentCaptcha = captchaEveryone
 }
 
 var CFG *Config
