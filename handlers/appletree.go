@@ -23,7 +23,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
-	page.Trees, err = DM.GetAppleTrees()
+	page.Trees, err = DM.GetAppleTrees(r.FormValue("tags"))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
