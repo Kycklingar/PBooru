@@ -12,22 +12,46 @@ type AppleTree struct {
 	Pears []*Post
 }
 
-func GetAppleTrees() ([]AppleTree, error) {
-	rows, err := DB.Query(`
-		SELECT apple, pear
-		FROM apple_tree
-		WHERE apple IN(
-			SELECT apple
+func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
+	tags, err := parseTags(tagStr)
+	if err != nil {
+		return nil, err
+	}
+
+
+	var join string
+	var where string
+	if len(tags) > 0 {
+		join = `
+			JOIN post_tag_mappings ptm0
+			ON apple = ptm0.post_id
+			` + ptmJoinQuery(tags)
+
+		where = " AND " + ptmWhereQuery(tags)
+	}
+
+	query := fmt.Sprintf(`
+			SELECT apple, pear
 			FROM apple_tree
-			WHERE processed IS NULL
-			GROUP BY apple
+			WHERE apple IN(
+				SELECT apple
+				FROM apple_tree
+				%s
+				WHERE processed IS NULL
+				%s
+				GROUP BY apple
+				ORDER BY apple
+				LIMIT $1
+				OFFSET $2
+			)
+			AND processed IS NULL
 			ORDER BY apple
-			LIMIT 25
-		)
-		AND processed IS NULL
-		ORDER BY apple
-		`,
+			`,
+			join,
+			where,
 	)
+
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
