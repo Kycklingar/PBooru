@@ -17,13 +17,15 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 	var page struct {
 		UserInfo UserInfo
 		Trees    []DM.AppleTree
+		Query string
 	}
 
 	page.UserInfo = userCookies(w, r)
 
 	var err error
 
-	page.Trees, err = DM.GetAppleTrees(r.FormValue("tags"))
+	page.Query = r.FormValue("tags")
+	page.Trees, err = DM.GetAppleTrees(page.Query)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
