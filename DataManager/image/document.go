@@ -12,7 +12,7 @@ import (
 	"strconv"
 )
 
-func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error) {
+func mupdf(file io.Reader, mime, format string, size, quality int) (*bytes.Buffer, error) {
 	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
 	if err != nil {
 		log.Println(err)
@@ -54,10 +54,10 @@ func mupdf(file io.Reader, mime, format string, size int) (*bytes.Buffer, error)
 	}
 
 	f := bytes.NewReader(b.Bytes())
-	return magickResize(f, format, size)
+	return magickResize(f, format, size, quality)
 }
 
-func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
+func gnomeMobi(file io.Reader, format string, size, quality int) (*bytes.Buffer, error) {
 	tmpdir, err := ioutil.TempDir("", "pbooru-tmp")
 	if err != nil {
 		log.Println(err)
@@ -102,5 +102,5 @@ func gnomeMobi(file io.Reader, format string, size int) (*bytes.Buffer, error) {
 
 	defer f.Close()
 
-	return magickResize(f, format, size)
+	return magickResize(f, format, size, quality)
 }

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) {
+func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer, error) {
 	tmpFile, err := ioutil.TempFile("", "pbooru-temp")
 	if err != nil {
 		log.Println(err)
@@ -95,7 +95,7 @@ func ffmpeg(file io.ReadSeeker, format string, size int) (*bytes.Buffer, error) 
 		return nil, err
 	}
 
-	out, err := magickResize(stdout, format, size)
+	out, err := magickResize(stdout, format, size, quality)
 	if err != nil {
 		log.Println(err)
 		return nil, err

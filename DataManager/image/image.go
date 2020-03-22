@@ -58,7 +58,7 @@ func ThumbnailerInstalled() {
 	}
 }
 
-func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize int) (*bytes.Buffer, error) {
+func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize, quality int) (*bytes.Buffer, error) {
 	var err error
 
 	buffer := make([]byte, 512)
@@ -83,14 +83,14 @@ func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize int
 		} else if strings.Contains(mime.MediaType(), "epub") {
 			m = "epub"
 		}
-		b, err = mupdf(file, m, thumbnailFormat, thumbnailSize)
+		b, err = mupdf(file, m, thumbnailFormat, thumbnailSize, quality)
 	case "application/x-mobipocket-ebook":
-		b, err = gnomeMobi(file, thumbnailFormat, thumbnailSize)
+		b, err = gnomeMobi(file, thumbnailFormat, thumbnailSize, quality)
 	default:
 		if strings.Contains(mime.MediaType(), "image") {
-			b, err = magickResize(file, thumbnailFormat, thumbnailSize)
+			b, err = magickResize(file, thumbnailFormat, thumbnailSize, quality)
 		} else if strings.Contains(mime.MediaType(), "video") {
-			b, err = ffmpeg(file, thumbnailFormat, thumbnailSize)
+			b, err = ffmpeg(file, thumbnailFormat, thumbnailSize, quality)
 		} else {
 			return nil, errors.New("unsupported mime")
 		}
@@ -104,7 +104,7 @@ func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize int
 	return b, nil
 }
 
-func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error) {
+func magickResize(file io.Reader, format string, size, quality int) (*bytes.Buffer, error) {
 	tmpdir, err := ioutil.TempDir("", "pbooru-temp")
 	if err != nil {
 		log.Println(err)
@@ -115,7 +115,7 @@ func magickResize(file io.Reader, format string, size int) (*bytes.Buffer, error
 	args := []string{
 		"-[0]",
 		"-quality",
-		"75",
+		fmt.Sprintf("%d", quality),
 		"-strip",
 		"-resize",
 		fmt.Sprintf("%dx%d>", size, size),

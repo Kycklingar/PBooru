@@ -12,8 +12,8 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
-func makeThumbnail(file io.ReadSeeker, size int) (string, error) {
-	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size)
+func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
+	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size, quality)
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -48,7 +48,7 @@ func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 		}
 	}
 
-	b, err := image.MakeThumbnail(file, "PNG", largestThumbnailSize)
+	b, err := image.MakeThumbnail(file, "PNG", largestThumbnailSize, CFG.ThumbnailQuality)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -60,7 +60,7 @@ func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 
 	for _, size := range CFG.ThumbnailSizes {
 		f.Seek(0, 0)
-		buf, err := image.MakeThumbnail(f, CFG.ThumbnailFormat, size)
+		buf, err := image.MakeThumbnail(f, CFG.ThumbnailFormat, size, CFG.ThumbnailQuality)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -131,7 +131,7 @@ func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {
 }
 
 func dHash(file io.ReadSeeker) (imgsim.Hash, error) {
-	b, err := image.MakeThumbnail(file, "png", 1024)
+	b, err := image.MakeThumbnail(file, "png", 1024, 75)
 	if err != nil {
 		log.Println(err)
 		return 0, err
