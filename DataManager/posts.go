@@ -757,7 +757,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 		resetCacheTag(tag.ID)
 	}
 
-	C.Cache.Purge("TC", strconv.Itoa(p.ID))
+	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return nil
 }
@@ -808,7 +808,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 		resetCacheTag(tag.ID)
 	}
 
-	C.Cache.Purge("TC", strconv.Itoa(p.ID))
+	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return nil
 }
@@ -881,7 +881,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 		resetCacheTag(tag.ID)
 	}
 
-	C.Cache.Purge("TC", strconv.Itoa(p.QID(DB)))
+	C.Cache.Purge("TPC", strconv.Itoa(p.QID(DB)))
 
 	return err
 }

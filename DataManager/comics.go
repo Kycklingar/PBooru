@@ -71,7 +71,7 @@ func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) erro
 		`,
 		meat,
 		parN,
-		parN + 1,
+		parN+1,
 	)
 
 	params := func(additional ...interface{}) []interface{} {
@@ -141,7 +141,7 @@ func ptmWhereQuery(tags []*Tag) string {
 
 	var ptmWhere string
 
-	for i := 0; i < len(tags) - 1; i++ {
+	for i := 0; i < len(tags)-1; i++ {
 		ptmWhere += fmt.Sprintf(
 			"ptm%d.tag_id = %d AND ",
 			i,
@@ -164,7 +164,7 @@ func ptmJoinQuery(tags []*Tag) string {
 	}
 
 	var ptmJoin string
-	for i := 0; i < len(tags) - 1; i++{
+	for i := 0; i < len(tags)-1; i++ {
 		ptmJoin += fmt.Sprintf(`
 			JOIN post_tag_mappings ptm%d
 			ON ptm%d.post_id = ptm%d.post_id

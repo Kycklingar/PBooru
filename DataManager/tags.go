@@ -60,7 +60,7 @@ func (t *Tag) QueryAll(q querier) error {
 		return errors.New("No identifier")
 	}
 
-	if t.Tag != ""  && t.Namespace.ID > 0 && t.Namespace.Namespace != "" {
+	if t.Tag != "" && t.Namespace.ID > 0 && t.Namespace.Namespace != "" {
 		return nil
 	}
 
@@ -466,7 +466,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		return errors.New("post invalid")
 	}
 
-	if m := C.Cache.Get("TC", strconv.Itoa(p.QID(q))); m != nil {
+	if m := C.Cache.Get("TPC", strconv.Itoa(p.QID(q))); m != nil {
 		switch mm := m.(type) {
 		case *TagCollector:
 			*tc = *mm
@@ -508,7 +508,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		tc.Tags = append(tc.Tags, c)
 	}
 
-	C.Cache.Set("TC", strconv.Itoa(p.ID), tc)
+	C.Cache.Set("TPC", strconv.Itoa(p.ID), tc)
 
 	return rows.Err()
 }

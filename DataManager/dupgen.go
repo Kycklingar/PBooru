@@ -18,7 +18,6 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 		return nil, err
 	}
 
-
 	var join string
 	var where string
 	if len(tags) > 0 {
@@ -47,8 +46,8 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 			AND processed IS NULL
 			ORDER BY apple
 			`,
-			join,
-			where,
+		join,
+		where,
 	)
 
 	rows, err := DB.Query(query, limit, offset)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type Dupe struct {
@@ -145,6 +147,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 
 	a = tx.Commit
 
+	c.Cache.Purge("TPC", strconv.Itoa(dupe.Post.ID))
 	return nil
 }
 
