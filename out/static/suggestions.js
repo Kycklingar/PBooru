@@ -71,6 +71,7 @@ function suggestionBox(caller) {
                         stb.removeChild(stb.children[0])
                     }
                     caller.focus()
+		    removeSTBox()
                 }
                 stb.appendChild(sp)
             }
@@ -92,7 +93,7 @@ var timeout
     for(let i = 0; i < sti.length; i++){
         sti[i].oninput = function () { setSTBoxTimeout(this) }
         sti[i].autocomplete = "off"
-	sti[i].addEventListener("focusout", removeSTBox)
+	//sti[i].addEventListener("focusout", removeSTBox)
     }
 }
 
@@ -128,6 +129,13 @@ function keyDown(e){
     if(box.selection == null)
     {
         box.selection = -1
+    }
+
+    // Esc, tab
+    if(e.keyCode == 27 || e.keyCode == 9)
+    {
+    	removeSTBox()
+	return
     }
     
     // Right
