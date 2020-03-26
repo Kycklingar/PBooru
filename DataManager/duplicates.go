@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type Dupe struct {
@@ -145,6 +147,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 
 	a = tx.Commit
 
+	c.Cache.Purge("TPC", strconv.Itoa(dupe.Post.ID))
 	return nil
 }
 
@@ -295,6 +298,21 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 		)
 		if err != nil {
 			return
+		}
+	}
+
+	// Update tag counts
+	var tc = new(TagCollector)
+
+	err = tc.GetFromPost(tx, dupe.Post)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tc.Tags {
+		err = tag.recount(tx)
+		if err != nil {
+			return err
 		}
 	}
 

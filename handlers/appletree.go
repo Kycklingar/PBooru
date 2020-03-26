@@ -23,6 +23,12 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page.User, page.UserInfo = getUser(w, r)
+
+	if page.User.QID(DM.DB) <= 0 {
+		http.Error(w, "Registered users only", http.StatusForbidden)
+		return
+	}
+
 	page.User.QFlag(DM.DB)
 
 	var err error

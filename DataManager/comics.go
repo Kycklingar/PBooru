@@ -71,7 +71,7 @@ func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) erro
 		`,
 		meat,
 		parN,
-		parN + 1,
+		parN+1,
 	)
 
 	params := func(additional ...interface{}) []interface{} {
@@ -129,23 +129,9 @@ func parseTags(tagQuery string) ([]*Tag, error) {
 		return nil, err
 	}
 
-	var tags []*Tag
-	for _, tag := range tc.Tags {
-		if tag.QID(DB) == 0 {
-			// No posts will be available, return
-			return nil, errors.New("tags doesn't exists")
-		}
+	tc.upgrade(DB, false)
 
-		alias := NewAlias()
-		alias.Tag = tag
-		if alias.QTo(DB).QID(DB) != 0 {
-			tag = alias.QTo(DB)
-		}
-
-		tags = append(tags, tag)
-	}
-
-	return tags, nil
+	return tc.Tags, nil
 }
 
 func ptmWhereQuery(tags []*Tag) string {
@@ -155,7 +141,7 @@ func ptmWhereQuery(tags []*Tag) string {
 
 	var ptmWhere string
 
-	for i := 0; i < len(tags) - 1; i++ {
+	for i := 0; i < len(tags)-1; i++ {
 		ptmWhere += fmt.Sprintf(
 			"ptm%d.tag_id = %d AND ",
 			i,
@@ -178,7 +164,7 @@ func ptmJoinQuery(tags []*Tag) string {
 	}
 
 	var ptmJoin string
-	for i := 0; i < len(tags) - 1; i++{
+	for i := 0; i < len(tags)-1; i++ {
 		ptmJoin += fmt.Sprintf(`
 			JOIN post_tag_mappings ptm%d
 			ON ptm%d.post_id = ptm%d.post_id

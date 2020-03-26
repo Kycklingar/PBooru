@@ -36,16 +36,17 @@ type APIv1TagI interface {
 	Parse(*DM.Tag)
 }
 
-type APIv1TagHydrus struct {
-	Tag string
-}
+type APIv1TagString string
 
-func (t *APIv1TagHydrus) Parse(tag *DM.Tag) {
+func (t *APIv1TagString) Parse(tag *DM.Tag) {
+	var str string
 	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none" {
-		t.Tag = tag.QTag(DM.DB)
+		str = tag.QTag(DM.DB)
 	} else {
-		t.Tag = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
+		str = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
 	}
+
+	*t = APIv1TagString(str)
 }
 
 type APIv1Tag struct {
@@ -172,15 +173,6 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
-	tc := DM.TagCollector{}
-
-	if includeTags {
-		err := tc.GetPostTags(DM.DB, p)
-		if err != nil {
-			return AP, err
-		}
-	}
-
 	p.QChecksums(DM.DB)
 	p.QThumbnails(DM.DB)
 	p.QDimensions(DM.DB)
@@ -196,11 +188,18 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Dimension:   p.Dimension,
 	}
 
+	tc := DM.TagCollector{}
+	if includeTags {
+		err := tc.GetPostTags(DM.DB, p)
+		if err != nil {
+			return AP, err
+		}
+	}
+
 	for _, tag := range tc.Tags {
-		tag = DM.CachedTag(tag)
 		var t APIv1TagI
 		if combineTagNamespace {
-			t = &APIv1TagHydrus{}
+			t = new(APIv1TagString)
 		} else {
 			t = &APIv1Tag{}
 		}

@@ -60,10 +60,13 @@
 	</div>
 	<div>
 	    <h4>Tags</h4>
-	    <form id="newtagsform" onsubmit="postTags(); return false">
-	        <textarea class="stinput" name="addtags"></textarea>
-	        <textarea class="stinput" name="remtags"></textarea>
-	        <input type="submit" value="Submit Tags">
+	    <form id="newtagsform" action="/post/edit/tags/add/" onsubmit="editTags(this); return false">
+	    	<textarea class="stinput" name="tags"></textarea>
+	        <input type="submit" value="Add Tags">
+	    </form>
+	    <form id="removetagsform" action="/post/edit/tags/remove/" onsubmit="editTags(this); return false">
+	    	<textarea class="stinput" name="tags"></textarea>
+		<input type="submit" value="Remove Tags">
 	    </form>
 	</div>
 	<div>
@@ -514,9 +517,7 @@
 	d(selectedPosts, 0)
     }
 
-    function postTags(){
-        let tagInput = document.getElementById("newtagsform")
-
+    function editTags(caller){
         function t(form, arr, index){
             if(index >= arr.length)
             {
@@ -537,11 +538,13 @@
             }
             console.log(arr[index].getAttribute("postid"))
             let fd = new FormData(form)
-            req.open("POST", "/post/" + arr[index].getAttribute("postid"), true)
+	    fd.set("post-id", arr[index].getAttribute("postid"))
+            req.open("POST", form.action, true)
             req.send(fd)
         }
 
-        t(tagInput, selectedPosts, 0)
+        t(caller, selectedPosts, 0)
+
     }
 
     document.getElementById("posts").onmousedown = function (caller) {

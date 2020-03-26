@@ -28,15 +28,10 @@ type Tag struct {
 //var tagCacheLock sync.RWMutex
 
 func CachedTag(t *Tag) *Tag {
-	//tagCacheLock.RLock()
 	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
-		//tagCacheLock.RUnlock()
 		return ct.(*Tag)
 	}
-	//tagCacheLock.RUnlock()
-	//tagCacheLock.Lock()
 	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
-	//tagCacheLock.Unlock()
 	return t
 }
 
@@ -58,6 +53,28 @@ func (t *Tag) QID(q querier) int {
 		return 0
 	}
 	return t.ID
+}
+
+func (t *Tag) QueryAll(q querier) error {
+	if t.ID <= 0 {
+		return errors.New("No identifier")
+	}
+
+	if t.Tag != "" && t.Namespace.ID > 0 && t.Namespace.Namespace != "" {
+		return nil
+	}
+
+	err := q.QueryRow(`
+		SELECT tag, count, namespaces.id, nspace 
+		FROM tags 
+		JOIN namespaces 
+		ON tags.namespace_id = namespaces.id 
+		WHERE tags.id = $1
+		`,
+		t.ID,
+	).Scan(&t.Tag, &t.Count, &t.Namespace.ID, &t.Namespace.Namespace)
+
+	return err
 }
 
 func (t *Tag) SetID(id int) {
@@ -169,6 +186,50 @@ func (t *Tag) Parse(tagStr string) error {
 	return nil
 }
 
+func (t *Tag) recount(q querier) error {
+	_, err := q.Exec(`
+		UPDATE tags
+		SET count = (
+			SELECT count(1)
+			FROM post_tag_mappings
+			WHERE tag_id = $1
+		)
+		WHERE id = $1
+		`,
+		t.ID,
+	)
+	return err
+}
+
+func (t *Tag) updateCount(q querier, count int) error {
+	_, err := q.Exec(`
+		UPDATE tags
+		SET count = count + $1
+		WHERE id = $2
+		`,
+		count,
+		t.ID,
+	)
+	return err
+}
+
+// Returns the tag it has been aliased to or itself if none
+func (t *Tag) aliasedTo(q querier) (*Tag, error) {
+	var alias = NewAlias()
+	alias.Tag = t
+
+	to, err := alias.QTo(q)
+	if err != nil {
+		return nil, err
+	}
+
+	if to.ID == 0 {
+		return t, nil
+	}
+
+	return to, nil
+}
+
 func (t *Tag) AddParent(q querier, parent *Tag) error {
 	var err error
 	if err = parent.Save(q); err != nil {
@@ -180,33 +241,77 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		return err
 	}
 
-	var parentID, childID int
-
-	at := NewAlias()
-	at.Tag = t
-	if childID = at.QTo(q).QID(q); childID == 0 {
-		childID = t.QID(q)
+	child, err := t.aliasedTo(q)
+	if err != nil {
+		return err
+	}
+	aParent, err := parent.aliasedTo(q)
+	if err != nil {
+		return err
 	}
 
-	ap := NewAlias()
-	ap.Tag = parent
-	if parentID = ap.QTo(q).QID(q); parentID == 0 {
-		parentID = parent.QID(q)
-	}
-
-	if _, err = q.Exec("INSERT INTO post_tag_mappings(post_id, tag_id) SELECT post_id, $1 FROM post_tag_mappings WHERE tag_id=$2 ON CONFLICT DO NOTHING", parentID, childID); err != nil {
+	if _, err = q.Exec(`
+			INSERT INTO post_tag_mappings(
+				post_id, tag_id
+			)
+			SELECT post_id, $1
+			FROM post_tag_mappings
+			WHERE tag_id = $2
+			ON CONFLICT DO NOTHING
+		`,
+		aParent.ID,
+		child.ID,
+	); err != nil {
 		log.Println(err)
 		return err
 	}
-	//fmt.Println(res.RowsAffected())
 
-	if _, err := q.Exec("INSERT INTO parent_tags(parent_id, child_id) VALUES($1, $2)", parentID, childID); err != nil {
+	if _, err := q.Exec(`
+			INSERT INTO parent_tags(
+				parent_id, child_id
+			)
+			VALUES ($1, $2)
+		`,
+		aParent.ID,
+		child.ID,
+	); err != nil {
 		log.Println(err)
 		return err
 	}
-	resetCacheTag(parentID)
-	resetCacheTag(childID)
+
+	err = aParent.recount(q)
+	if err != nil {
+		return err
+	}
+
+	err = child.recount(q)
+	if err != nil {
+		return err
+	}
+
+	resetCacheTag(aParent.ID)
+	resetCacheTag(child.ID)
 	return nil
+}
+
+func (t *Tag) allParents(q querier) []*Tag {
+	var parents []*Tag
+
+	// Recursivly resolve parents
+	var process func(tags []*Tag)
+
+	process = func(tags []*Tag) {
+		for _, tag := range tags {
+			if !isTagIn(tag, parents) {
+				parents = append(parents, tag)
+				process(tag.Parents(q))
+			}
+		}
+	}
+
+	process(t.Parents(q))
+
+	return parents
 }
 
 func (t *Tag) Parents(q querier) []*Tag {
@@ -302,96 +407,6 @@ func (tc *TagCollector) Parse(tagStr string) error {
 	return err
 }
 
-func (tc *TagCollector) AddToPost(q querier, p *Post) error {
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
-
-	for _, tag := range tc.Tags {
-		if tag.QID(q) == 0 {
-			err := tag.Save(q)
-			if err != nil {
-				return err
-			}
-		} else {
-			a := NewAlias()
-			a.Tag = tag
-			if a.QTo(q).QID(q) != 0 {
-				tag = a.QTo(q)
-			}
-		}
-
-		var parentIDs []int
-		rows, err := q.Query("SELECT parent_id FROM parent_tags WHERE child_id = $1", tag.QID(q))
-		if err != nil {
-			log.Print(err)
-		}
-		for rows.Next() {
-			pid := 0
-			if err = rows.Scan(&pid); err != nil {
-				log.Println(err)
-			}
-			if pid == 0 {
-				continue
-			}
-			parentIDs = append(parentIDs, pid)
-		}
-		rows.Close()
-
-		execStr := "INSERT INTO post_tag_mappings VALUES($1, $2) ON CONFLICT DO NOTHING"
-
-		for _, i := range parentIDs {
-			if _, err = q.Exec(execStr, i, dupe.Post.QID(q)); err != nil {
-				log.Print(err)
-			}
-			resetCacheTag(i)
-		}
-
-		_, err = q.Exec(execStr, tag.QID(q), dupe.Post.QID(q))
-		if err != nil {
-			log.Print(err)
-			//return err
-			//continue
-		}
-		resetCacheTag(tag.QID(q))
-	}
-
-	return nil
-}
-
-func (tc *TagCollector) RemoveFromPost(q querier, p *Post) error {
-
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
-
-	for _, t := range tc.Tags {
-
-		if t.QID(q) == 0 {
-			log.Print("TagCollector: RemoveFromPost: tag invalid", t)
-			continue
-		}
-
-		a := NewAlias()
-		// a.setQ(q)
-		a.Tag = t
-		if a.QTo(q).QID(q) != 0 {
-			t = a.QTo(q)
-		}
-
-		resetCacheTag(t.QID(q))
-
-		_, err := q.Exec("DELETE FROM post_tag_mappings WHERE tag_id=$1 AND post_id=$2", t.QID(q), dupe.Post.QID(q))
-		if err != nil {
-			log.Print(err)
-			continue
-		}
-	}
-	return nil
-}
-
 func (tc *TagCollector) Get(limit, offset int) error {
 	rows, err := DB.Query("SELECT id, tag, namespace_id FROM tags ORDER BY id LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
@@ -442,6 +457,7 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 		tag = CachedTag(tag)
 		tc.Tags = append(tc.Tags, tag)
 	}
+
 	return rows.Err()
 }
 
@@ -450,17 +466,12 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 		return errors.New("post invalid")
 	}
 
-	if m := C.Cache.Get("TC", strconv.Itoa(p.QID(q))); m != nil {
+	if m := C.Cache.Get("TPC", strconv.Itoa(p.QID(q))); m != nil {
 		switch mm := m.(type) {
 		case *TagCollector:
 			*tc = *mm
 			return nil
 		}
-	}
-
-	dupe, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
 	}
 
 	rows, err := q.Query(
@@ -475,7 +486,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
-		dupe.Post.QID(q))
+		p.QID(q))
 	if err != nil {
 		return err
 	}
@@ -483,36 +494,67 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 
 	for rows.Next() {
 		tag := NewTag()
-		err = rows.Scan(&tag.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
+		c := NewTag()
+		err = rows.Scan(&c.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
 		if err != nil {
 			return err
 		}
-		tc.Tags = append(tc.Tags, tag)
+
+		tag.ID = c.ID
+
+		c = CachedTag(c)
+		c = tag
+
+		tc.Tags = append(tc.Tags, c)
 	}
 
-	// Sort in a pleasing way
-	for i := 0; i < len(tc.Tags); i++ {
-		for j := len(tc.Tags) - 1; j > i; j-- {
-			tag1 := tc.Tags[i].QNamespace(q).QNamespace(q) + ":" + tc.Tags[i].QTag(q)
-			tag2 := tc.Tags[j].QNamespace(q).QNamespace(q) + ":" + tc.Tags[j].QTag(q)
-			if tc.Tags[i].QNamespace(q).QNamespace(q) == "none" {
-				tag1 = tc.Tags[i].QTag(q)
-			}
-			if tc.Tags[j].QNamespace(q).QNamespace(q) == "none" {
-				tag2 = tc.Tags[j].QTag(q)
-			}
+	C.Cache.Set("TPC", strconv.Itoa(p.ID), tc)
 
-			if strings.Compare(tag1, tag2) == 1 {
-				tmp := tc.Tags[i]
-				tc.Tags[i] = tc.Tags[j]
-				tc.Tags[j] = tmp
+	return rows.Err()
+}
+
+func (tc *TagCollector) save(tx querier) error {
+	for _, tag := range tc.Tags {
+		if err := tag.Save(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (tc *TagCollector) upgrade(q querier, upgradeParents bool) error {
+	var newTags []*Tag
+
+	for _, tag := range tc.Tags {
+		a := NewAlias()
+		a.Tag = tag
+		b, err := a.QTo(q)
+		if err != nil {
+			return err
+		}
+		if b.ID != 0 {
+			if !isTagIn(b, newTags) {
+				newTags = append(newTags, b)
+			}
+		} else if !isTagIn(tag, newTags) {
+			newTags = append(newTags, tag)
+		}
+	}
+
+	if upgradeParents {
+		for _, tag := range newTags {
+			for _, parent := range tag.allParents(q) {
+				if !isTagIn(parent, newTags) {
+					newTags = append(newTags, parent)
+				}
 			}
 		}
 	}
 
-	C.Cache.Set("TC", strconv.Itoa(dupe.Post.ID), tc)
+	tc.Tags = newTags
 
-	return rows.Err()
+	return nil
 }
 
 func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
@@ -532,9 +574,40 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		var rows *sql.Rows
 		var err error
 		if tag.Namespace.Namespace == "none" {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE tag LIKE($1)) ORDER BY count DESC LIMIT 10", "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
+			rows, err = q.Query(`
+				SELECT id, tag, namespace_id
+				FROM tags
+				WHERE id IN(
+					SELECT coalesce(alias_to, id)
+					FROM tags
+					LEFT JOIN alias
+					ON id = alias_from
+					WHERE tag LIKE('%'||$1||'%')
+				)
+				ORDER BY count DESC
+				LIMIT 10`,
+				//strings.Replace(tag.Tag, "%", "\\%", -1),
+				tag.Tag,
+			)
 		} else {
-			rows, err = q.Query("SELECT id, tag, namespace_id FROM tags WHERE id IN(SELECT coalesce(alias_to, id) FROM tags LEFT JOIN alias ON id = alias_from WHERE namespace_id=$1 AND tag LIKE($2)) ORDER BY count DESC LIMIT 10", tag.Namespace.QID(q), "%"+strings.Replace(tag.Tag, "%", "\\%", -1)+"%")
+			rows, err = q.Query(`
+				SELECT id, tag, namespace_id
+				FROM tags
+				WHERE id IN(
+					SELECT coalesce(alias_to, id)
+					FROM tags
+					LEFT JOIN alias
+					ON id = alias_from
+					WHERE namespace_id=$1
+					AND tag LIKE('%'||$2||'%')
+				)
+				ORDER BY count DESC
+				LIMIT 10
+				`,
+				tag.Namespace.QID(q),
+				//strings.Replace(tag.Tag, "%", "\\%", -1),
+				tag.Tag,
+			)
 		}
 		if err != nil {
 			log.Print(err)
@@ -559,4 +632,14 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 		ntc.Tags = append(ntc.Tags, newTags...)
 	}
 	return ntc
+}
+
+func isTagIn(a *Tag, tags []*Tag) bool {
+	for _, b := range tags {
+		if a.ID == b.ID {
+			return true
+		}
+	}
+
+	return false
 }

@@ -93,7 +93,12 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			p.From = a.QFrom(DM.DB)
 			preload(p.From...)
 
-			p.To = a.QTo(DM.DB)
+			p.To, err = a.QTo(DM.DB)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			preload(p.To)
 
 			p.Parents = p.Tag.Parents(DM.DB)
@@ -137,7 +142,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		alias.To = tc.Tags[0]
 
-		err := alias.Save(DM.DB)
+		err := alias.Save()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -170,7 +175,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.Redirect(w, r, "/tags/", http.StatusSeeOther)
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 type TagHistoryPage struct {

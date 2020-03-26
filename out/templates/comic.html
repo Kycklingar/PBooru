@@ -60,11 +60,9 @@
 </div>
 
 {{define "chapterPosts"}}
-	{{$offset := 0}}
 	{{$zindex := 10}}
 	{{range .Posts}}
-		<div style="position:absolute; left:{{$offset}}em; z-index:{{$zindex}};" class="comic-thumb" >
-			{{$offset = add $offset 4}}
+		<div style="z-index:{{$zindex}};" class="comic-thumb" >
 			{{$zindex = add $zindex -1}}
         	    	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
         	            	<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">

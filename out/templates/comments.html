@@ -6,6 +6,13 @@
         <form method="POST">
             <textarea maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
             <br>
+	    {{with .Captcha}}
+	    <img style="background-color:white;" src="/captcha/{{.}}.png">
+	    <br>
+	    <input type="hidden" name="key" value="{{.}}">
+	    <input type="text" name="code">
+	    {{end}}
+	    <br>
             <input type="submit" value="Post Comment">    
         </form>
     </div>

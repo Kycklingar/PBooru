@@ -1,5 +1,11 @@
 {{ template "base" .Base}}
 
+{{define "printTags" -}}
+{{range . -}}
+{{if ne .Namespace.Namespace "none"}}{{.Namespace.Namespace}}:{{.Tag}}{{else}}{{.Tag}}{{end}}
+{{end -}}
+{{end}}
+
 <div id="content">
     <div id="sidebar">
         {{ template "inner sidebar" .Sidebar}}
@@ -11,17 +17,22 @@
 			<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
 		</form>
 		<details>
-		<summary onclick="swapInput()">Edit Post</summary>
+		<summary>Edit Post</summary>
 			<br><a style="color:#AAA" href="/post/taghistory/{{.Post.ID}}/">Tag History</a>
         		<div id="editPostForm">
         			{{if .User.Flag.Tagging}}
         		    		<form method="POST">
-        		    		    <p>Add tags</p>
-        		    		    <textarea class="stinput" id="addtagsinput" name="addtags"></textarea>
-        		    		    <p>Remove tags</p>
-        		    		    <textarea class="stinput" id="remtagsinput" name="remtags"></textarea>
-        		    		    <input type="submit" value="Submit edit">
+        		    		    <p>Edit tags</p>
+        		    		    <textarea class="stinput" id="addtagsinput" name="tags">
+					    {{- template "printTags" .Sidebar.Tags -}}
+					    </textarea>
+        		    		    <input type="submit" value="Edit">
         		    		</form>
+					<form method="POST" action="/post/edit/tags/add/">
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
+						<textarea class="stinput" name="tags"></textarea>
+						<input type="submit" value="Add">
+					</form>
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
         			{{if .User.Flag.Delete}}
@@ -42,17 +53,6 @@
         		    	{{end}}
         		</div>
 		</details>
-		<script>
-		var lastInput = document.getElementById("remtagsinput")
-
-		function swapInput()
-		{
-			console.log(input, lastInput)
-			let tmp = lastInput
-			lastInput = input
-			input = tmp
-		}
-		</script>
 		<details>
 		<summary>Report post</summary>
 			<form>

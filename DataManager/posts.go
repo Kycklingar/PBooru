@@ -34,8 +34,8 @@ func GetPostFromHash(fnc, hash string) (*Post, error) {
 			FROM hashes
 			WHERE %s = $1
 			`,
-			fnc,
-		),
+		fnc,
+	),
 		hash,
 	).Scan(&p.ID)
 
@@ -80,7 +80,7 @@ type Post struct {
 
 type checksums struct {
 	Sha256 string
-	Md5 string
+	Md5    string
 }
 
 type Dimension struct {
@@ -435,6 +435,14 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 	var tx *sql.Tx
 
+	tx, err = DB.Begin()
+	if err != nil {
+		log.Println("Error creating transaction: ", err)
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
 	if p.QID(DB) == 0 {
 		if CFG.UseMFS {
 			file.Seek(0, 0)
@@ -453,31 +461,24 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		file.Seek(0, 0)
 		width, height, _ := image.GetDimensions(file)
 
-		tx, err = DB.Begin()
-		if err != nil {
-			log.Println("Error creating transaction: ", err)
-			return err
-		}
-		//p.setQ(tx)
-
 		err = p.Mime.Parse(mime)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		if p.Mime.QID(tx) == 0 {
-			err := p.Mime.Save(tx)
+			err = p.Mime.Save(tx)
 			if err != nil {
 				log.Println(err)
-				return txError(tx, err)
+				return err
 			}
 		}
 
 		err = p.Save(tx, user)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		file.Seek(0, 0)
@@ -485,81 +486,50 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.QID(tx), sha, md)
 		if err != nil {
 			log.Println(err)
-			return txError(tx, err)
+			return err
 		}
 
 		if width > 0 && height > 0 {
 			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.QID(tx), width, height)
 			if err != nil {
 				log.Println(err)
-				return txError(tx, err)
+				return err
 			}
 		}
 
 		if p.Mime.Type == "image" {
 			file.Seek(0, 0)
-			u, err := dHash(file)
+			var u imgsim.Hash
+			u, err = dHash(file)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			var ph phs
 			ph = phsFromHash(p.ID, u)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			err = ph.insert(tx)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
 
 			err = generateAppleTree(tx, ph)
 			if err != nil {
-				return txError(tx, err)
+				return err
 			}
-
 		}
-	} else {
-		tx, err = DB.Begin()
-		if err != nil {
-			log.Println("Error creating transaction: ", err)
-			return err
-		}
-
-		err = p.EditTagsQ(tx, user, tagString, "")
-		if err != nil && err.Error() != "no tags in edit" {
-			//log.Println(err)
-			return txError(tx, err)
-		}
-
-		err = tx.Commit()
-		return err
-
-		//p.setQ(tx)
-
-		// Get the best post and add the tags to it
-		// d := NewDuplicate()
-		// d.setQ(tx)
-		// d.Post = p
-		// post = d.BestPost()
 	}
 
-	var tc TagCollector
-
-	err = tc.Parse(tagString)
+	err = p.editTagsAdd(tx, user, tagString)
 	if err != nil && err.Error() != "error decoding any tags" {
-		return txError(tx, err)
+		//log.Println(err)
+		return err
 	}
 
-	err = tc.AddToPost(tx, p)
-	if err != nil {
-		return txError(tx, err)
-	}
-
-	err = tx.Commit()
-
-	//p.setQ(nil)
+	err = nil
 
 	return err
 }
@@ -649,134 +619,334 @@ func (p *Post) UnDelete(q querier) error {
 	return nil
 }
 
-func (p *Post) EditTagsQ(q querier, user *User, tagStrAdd, tagStrRem string) error {
-	var addTags TagCollector
-	err := addTags.Parse(tagStrAdd)
-	if err != nil {
-		//log.Print(err)
-	}
-	var remTags TagCollector
-	err = remTags.Parse(tagStrRem)
-	if err != nil {
-		//log.Print(err)
+func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
+	// Collect only new tags
+	var newTags []*Tag
+	for _, tag := range tags {
+		if !isTagIn(tag, currentTags) {
+			newTags = append(newTags, tag)
+		}
 	}
 
-	if len(addTags.Tags) < 1 && len(remTags.Tags) < 1 {
-		return errors.New("no tags in edit")
-	}
-
-	var at []*Tag
-	for _, t := range addTags.Tags {
-		a := NewAlias()
-		a.Tag = t
-		//a.setQ(tx)
-		b := a.QTo(q)
-		if b.QID(q) == 0 {
-			b = t
+	for _, tag := range newTags {
+		_, err := tx.Exec(`
+			INSERT INTO post_tag_mappings(
+				post_id, tag_id
+			)
+			VALUES ($1, $2)
+			`,
+			p.ID,
+			tag.ID,
+		)
+		if err != nil {
+			return nil, err
 		}
 
-		if b.QID(q) == 0 {
-			err = b.Save(q)
-			if err != nil {
-				log.Print(err)
-				return err
+		err = tag.updateCount(tx, 1)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newTags, nil
+}
+
+func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
+	in := func(t *Tag, tags []*Tag) bool {
+		for _, tag := range tags {
+			if tag.ID == t.ID {
+				return true
 			}
 		}
 
-		for _, pa := range b.Parents(q) {
-			var tmp int
-			err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), pa.QID(q)).Scan(&tmp)
-			if err == nil && tmp > 0 {
-				continue // Tag is already on this post
-			} else if err != nil && err != sql.ErrNoRows {
-				log.Println(err)
-				return err
-			}
-
-			at = append(at, pa)
-		}
-
-		var tmp int
-		err = q.QueryRow("SELECT count(*) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&tmp)
-		if err == nil && tmp > 0 {
-			continue // Tag is already on this post
-		}
-
-		at = append(at, b)
+		return false
 	}
 
-	var rt []*Tag
-	for _, t := range remTags.Tags {
-		a := NewAlias()
-		a.Tag = t
-		b := a.QTo(q)
-		if b.QID(q) == 0 {
-			b = t
-		}
+	var removedTags []*Tag
 
-		if b.QID(q) == 0 {
-			continue
+	for _, tag := range currentTags {
+		if in(tag, tags) {
+			removedTags = append(removedTags, tag)
 		}
-
-		var exist int
-		err := q.QueryRow("SELECT count(1) FROM post_tag_mappings WHERE post_id=$1 AND tag_id=$2", p.QID(q), b.QID(q)).Scan(&exist)
-		if err != nil || exist == 0 {
-			// Tag does not exist on this post
-			continue
-		}
-
-		rt = append(rt, b)
 	}
 
-	if len(at) < 1 && len(rt) < 1 {
-		return errors.New("no tags in edit")
+	for _, tag := range removedTags {
+		_, err := tx.Exec(`
+			DELETE FROM post_tag_mappings
+			WHERE post_id = $1
+			AND tag_id = $2
+			`,
+			p.ID,
+			tag.ID,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		err = tag.updateCount(tx, -1)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	addTags.Tags = at
-	remTags.Tags = rt
+	return removedTags, nil
+}
 
-	var historyID int
-
-	err = q.QueryRow("INSERT INTO tag_history(user_id, post_id, timestamp) VALUES($1, $2, CURRENT_TIMESTAMP) RETURNING id", user.QID(q), p.QID(q)).Scan(&historyID)
+func (p *Post) AddTags(user *User, tagStr string) error {
+	tx, err := DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	for _, tag := range at {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), 1)
-		if err != nil {
-			return err
-		}
-	}
-	addTags.AddToPost(q, p)
+	defer commitOrDie(tx, &err)
 
-	for _, tag := range rt {
-		_, err = q.Exec("INSERT INTO edited_tags(history_id, tag_id, direction) VALUES($1, $2, $3)", historyID, tag.QID(q), -1)
-		if err != nil {
-			return err
-		}
-	}
-	err = remTags.RemoveFromPost(q, p)
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-
-	// p.setQ(nil)
-
-	C.Cache.Purge("TC", strconv.Itoa(p.QID(DB)))
+	err = p.editTagsAdd(tx, user, tagStr)
 
 	return err
 }
 
-func (p *Post) EditTags(user *User, tagStrAdd, tagStrRem string) error {
+func (p *Post) RemoveTags(user *User, tagStr string) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	err = p.editTagsRemove(tx, user, tagStr)
+
+	return err
+}
+
+func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
+	var tags TagCollector
+	err := tags.Parse(tagStr)
+	if err != nil {
+		return err
+	}
+
+	err = tags.upgrade(tx, false)
+	if err != nil {
+		return err
+	}
+
+	dupe, err := getDupeFromPost(tx, p)
+	if err != nil {
+		return err
+	}
+
+	var currentTags TagCollector
+	if err = currentTags.GetFromPost(tx, dupe.Post); err != nil {
+		return err
+	}
+
+	removedTags, err := dupe.Post.removeTags(tx, currentTags.Tags, tags.Tags)
+	if err != nil {
+		return err
+	}
+
+	if len(removedTags) <= 0 {
+		return nil
+	}
+
+	if err = dupe.Post.logTagEdit(tx, user, nil, removedTags); err != nil {
+		return err
+	}
+
+	for _, tag := range removedTags {
+		resetCacheTag(tag.ID)
+	}
+
+	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
+
+	return nil
+}
+
+func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
+	var tags TagCollector
+	err := tags.Parse(tagStr)
+	if err != nil {
+		return err
+	}
+
+	if err = tags.save(tx); err != nil {
+		return err
+	}
+
+	// Get post dupe
+	dupe, err := getDupeFromPost(tx, p)
+	if err != nil {
+		return err
+	}
+
+	// Upgrade tags to aliases and add parents
+	err = tags.upgrade(tx, true)
+	if err != nil {
+		return err
+	}
+
+	// Get current tags on the post
+	var currentTags TagCollector
+	if err = currentTags.GetFromPost(tx, dupe.Post); err != nil {
+		return err
+	}
+
+	newTags, err := dupe.Post.addTags(tx, currentTags.Tags, tags.Tags)
+	if err != nil {
+		return err
+	}
+
+	if len(newTags) <= 0 {
+		return nil
+	}
+
+	if err = dupe.Post.logTagEdit(tx, user, newTags, nil); err != nil {
+		return err
+	}
+
+	for _, tag := range newTags {
+		resetCacheTag(tag.ID)
+	}
+
+	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
+
+	return nil
+}
+
+func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
+	var tags TagCollector
+	err := tags.Parse(tagStr)
+	if err != nil {
+		//log.Print(err)
+	}
+
+	if err = tags.save(q); err != nil {
+		return err
+	}
+
+	dupe, err := getDupeFromPost(q, p)
+	if err != nil {
+		return err
+	}
+
+	// Upgrade to aliases
+
+	err = tags.upgrade(q, true)
+	if err != nil {
+		return err
+	}
+
+	// Get current tags
+
+	var currentTags TagCollector
+	if err = currentTags.GetFromPost(q, dupe.Post); err != nil {
+		return err
+	}
+
+	// Add tags to post
+
+	newTags, err := dupe.Post.addTags(q, currentTags.Tags, tags.Tags)
+	if err != nil {
+		return err
+	}
+
+	// Remove tags not in tagStr
+	var removedTags []*Tag
+
+	for _, tag := range currentTags.Tags {
+		if !isTagIn(tag, tags.Tags) {
+			removedTags = append(removedTags, tag)
+		}
+	}
+
+	removedTags, err = dupe.Post.removeTags(q, currentTags.Tags, removedTags)
+	if err != nil {
+		return err
+	}
+
+	if len(newTags) < 1 && len(removedTags) < 1 {
+		return nil
+		//return errors.New("no tags in edit")
+	}
+
+	if err = dupe.Post.logTagEdit(q, user, newTags, removedTags); err != nil {
+		return err
+	}
+
+	for _, tag := range newTags {
+		resetCacheTag(tag.ID)
+	}
+
+	for _, tag := range removedTags {
+		resetCacheTag(tag.ID)
+	}
+
+	C.Cache.Purge("TPC", strconv.Itoa(p.QID(DB)))
+
+	return err
+}
+
+func (p *Post) logTagEdit(tx querier, user *User, newTags, removedTags []*Tag) error {
+	var historyID int
+
+	err := tx.QueryRow(`
+		INSERT INTO tag_history(
+			user_id, post_id, timestamp
+		)
+		VALUES(
+			$1, $2, CURRENT_TIMESTAMP
+		)
+		RETURNING id`,
+		user.QID(tx),
+		p.ID,
+	).Scan(&historyID)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range newTags {
+		_, err = tx.Exec(`
+			INSERT INTO edited_tags(
+				history_id, tag_id, direction
+			)
+			VALUES($1, $2, $3)
+			`,
+			historyID,
+			tag.QID(tx),
+			1,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, tag := range removedTags {
+		_, err = tx.Exec(`
+			INSERT INTO edited_tags(
+				history_id, tag_id, direction
+			)
+			VALUES($1, $2, $3)
+			`,
+			historyID,
+			tag.QID(tx),
+			-1,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Post) EditTags(user *User, tagStr string) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	if err = p.EditTagsQ(tx, user, tagStrAdd, tagStrRem); err != nil {
+	if err = p.EditTagsQ(tx, user, tagStr); err != nil {
 		log.Println(err)
 		return txError(tx, err)
 	}
@@ -1001,8 +1171,13 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 			}
 			alias := NewAlias()
 			alias.Tag = tag
-			if alias.QTo(DB).QID(DB) != 0 {
-				tag = alias.QTo(DB)
+			to, err := alias.QTo(DB)
+			if err != nil {
+				return err
+			}
+
+			if to.QID(DB) != 0 {
+				tag = to
 			}
 			pc.id = append(pc.id, tag.QID(DB))
 		}
@@ -1028,8 +1203,14 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 
 			alias := NewAlias()
 			alias.Tag = tag
-			if alias.QTo(DB).QID(DB) != 0 {
-				tag = alias.QTo(DB)
+
+			to, err := alias.QTo(DB)
+			if err != nil {
+				return err
+			}
+
+			if to.QID(DB) != 0 {
+				tag = to
 			}
 
 			// Cant have your tag and filter it too
@@ -1059,8 +1240,12 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 
 			alias := NewAlias()
 			alias.Tag = tag
-			if alias.QTo(DB).QID(DB) != 0 {
-				tag = alias.QTo(DB)
+			to, err := alias.QTo(DB)
+			if err != nil {
+				return err
+			}
+			if to.QID(DB) != 0 {
+				tag = to
 			}
 
 			// Cant filter your tag and include it too
@@ -1377,7 +1562,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	if len(pc.tags) > 0 {
 		return pc.tags
 	}
-	//fmt.Println(pc.id)
+
 	var allTags []*Tag
 
 	if pc.idStr() == "-1" {
@@ -1386,7 +1571,6 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 
 	// Get the first batch
 	pc.search(10, 0)
-	//pc.GetW(10, 0)
 
 	// Get tags from all posts
 	pc.pl.RLock()
@@ -1401,51 +1585,41 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	pc.pl.RUnlock()
 
 	type tagMap struct {
-		//id    int
 		tag   *Tag
 		count int
 	}
 
-	// Count all tags
-	var countMap []tagMap
+	tm := make(map[int]*tagMap)
+
 	for _, tag := range allTags {
-		newTag := true
-		for i, counted := range countMap {
-			if counted.tag == tag {
-				countMap[i].count++
-				newTag = false
-				break
-			}
-		}
-		if newTag {
-			countMap = append(countMap, tagMap{tag, 1})
+		if t, ok := tm[tag.ID]; ok {
+			t.count++
+		} else {
+			tm[tag.ID] = &tagMap{tag, 1}
 		}
 	}
 
-	// Sort all tags
-	swapped := true
-	for swapped {
-		swapped = false
-		for i := 1; i < len(countMap); i++ {
-			if countMap[i-1].count < countMap[i].count {
-				tmp := countMap[i]
-				countMap[i] = countMap[i-1]
-				countMap[i-1] = tmp
-				swapped = true
-			}
-		}
+	var countMap = make([]tagMap, len(tm))
+	var i int
+	for _, v := range tm {
+		countMap[i] = *v
+		i++
 	}
+
+	sort.Slice(countMap, func(i, j int) bool {
+		return countMap[i].count > countMap[j].count
+	})
 
 	// Hotfix for when cache is gc'd and there are multiple calls for this search
 	pc.tags = nil
 	// Retrive and append the tags
-	arrLimit := maxTags
-	if len(countMap) < arrLimit {
-		arrLimit = len(countMap)
-	}
+	//arrLimit := maxTags
+	//if len(countMap) < arrLimit {
+	//	arrLimit = len(countMap)
+	//}
+	arrLimit := max(maxTags, len(countMap))
 	for i := 0; i < arrLimit; i++ {
-		tag := countMap[i].tag
-		//tag.QNamespace(DB).QNamespace(DB)
+		tag := CachedTag(countMap[i].tag)
 		pc.tags = append(pc.tags, tag)
 	}
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dchest/captcha"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
 )
@@ -17,6 +18,10 @@ import (
 const (
 	errMustBeAdmin = "Must be logged in as an admin"
 )
+
+func permErr(w http.ResponseWriter, perm string) {
+	http.Error(w, lackingPermissions(perm), http.StatusBadRequest)
+}
 
 func lackingPermissions(priv string) string {
 	return fmt.Sprintf("Insufficient privileges. Want %s", priv)
@@ -65,6 +70,12 @@ const (
 	pageCount               = 30
 	maxTagsPerPage          = 50
 	performBenchmarks       = false
+)
+
+const (
+	captchaNone = iota
+	captchaAnon
+	captchaEveryone
 )
 
 var (
@@ -255,6 +266,13 @@ func tPostComments(cm []*DM.PostComment) (r []Comment) {
 func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 	user, uinfo := getUser(w, r)
 	if r.Method == http.MethodPost {
+		if CFG.EnableCommentCaptcha == captchaEveryone || (CFG.EnableCommentCaptcha == captchaAnon && user.QID(DM.DB) <= 0) {
+			if !verifyCaptcha(w, r) {
+				http.Error(w, "Captcha failed", http.StatusBadRequest)
+				return
+			}
+		}
+
 		text := r.FormValue("text")
 		if len(text) < 3 || len(text) > 7500 {
 			http.Error(w, "Minimum 3 characters. Maximum 7500 characters.", http.StatusBadRequest)
@@ -287,6 +305,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 		Comments   []Comment
 		ServerTime string
 		Time       string
+		Captcha    string
 	}
 	var p P
 	p.Comments = tComments(commMod.Comments)
@@ -297,6 +316,11 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.ServerTime = time.Now().Format(DM.Sqlite3Timestamp)
 	p.Time = bm.EndStr(performBenchmarks)
+
+	if CFG.EnableCommentCaptcha == captchaEveryone || (CFG.EnableCommentCaptcha == captchaAnon && user.QID(DM.DB) <= 0) {
+		p.Captcha = captcha.New()
+	}
+
 	renderTemplate(w, "comments", p)
 }
 

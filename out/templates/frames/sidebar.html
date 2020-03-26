@@ -122,13 +122,13 @@
 {{ define "sidebartag" }}
     {{ if eq .Namespace.Namespace "none" }}
     <li class="tag namespace-{{ .Namespace.Namespace }}">
-        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
+        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+</span>
         <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
         <!--<span class="counter">{{/*.Count*/}}</span>-->
     </li>
     {{ else }}
     <li class="tag namespace-{{ .Namespace.Namespace }}">
-        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
+        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+</span>
         <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
         <!--<span class="counter">{{/*.Count*/}}</span>-->
     </li>
