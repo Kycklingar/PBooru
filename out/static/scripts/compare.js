@@ -372,8 +372,6 @@ function renderImage(image)
 
 	if (optFit)
 	{
-		canvas.style.width = null
-		canvas.style.height = null
 		image.style.width = null
 		image.style.height = null
 	}
@@ -392,8 +390,6 @@ function renderImage(image)
 	}
 	else
 	{
-		canvas.style.width = scaledWidth
-		canvas.style.height = scaledHeight
 		gluedW = 0
 		gluedH = 0
 	}
