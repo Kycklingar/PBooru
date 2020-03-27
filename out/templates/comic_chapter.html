@@ -19,54 +19,30 @@
 		</form>
 	</div>
 </details>
+<script src="/static/scripts/quickadd.js"></script>
 <script>
 	let button = document.createElement("button")
-	let store = window.localStorage
+	
+	const QAADD = "Add to quickadd"
+	const QAREM = "Remove from quickadd"
 
-	button.innerText = "Add to quickadd"
-
-	let chapters = JSON.parse(store.getItem("chapters"))
-	if (chapters != null)
-	{
-		for (let i = 0; i < chapters.length; i++)
-		{
-			if (chapters[i].ID == {{.Chapter.ID}})
-			{
-				button.innerText = "Remove from quickadd"
-				break
-			}
-		}
-	}
+	if (qaQuery({{.Chapter.ID}}) == null)
+		button.innerText = QAADD
+	else
+		button.innerText = QAREM
 
 	button.onclick = function() {
-		let chapters = JSON.parse(store.getItem("chapters"))
-
-		if (chapters != null)
+		if (qaQuery({{.Chapter.ID}}) == null)
 		{
-			for (let i = 0; i < chapters.length; i++)
-			{
-				if (chapters[i].ID == {{.Chapter.ID}})
-				{
-					chapters.splice(i, 1)
-					store.setItem("chapters", JSON.stringify(chapters))
-					button.innerText = "Add to quickadd"
-					return
-				}
-			}
+			let title = {{with .Chapter.Title}}{{.}}{{else}}{{.Chapter.Order}}{{end}}
+			qaRegister({{.Chapter.Comic.Title}}, title, {{.Chapter.ID}})
+			button.innerText = QAREM
 		}
-
-		chapter = {
-			"comicTitle":{{.Chapter.Comic.Title}},
-			"title":{{with .Chapter.Title}}{{.}}{{else}}{{.Chapter.Order}}{{end}},
-			"ID":{{.Chapter.ID}},
+		else
+		{
+			qaRemove({{.Chapter.ID}})
+			button.innerText = QAADD
 		}
-		if (chapters == null) {
-			chapters = [chapter]
-		}else {
-			chapters.push(chapter)
-		}
-		button.innerText = "Remove from quickadd"
-		store.setItem("chapters", JSON.stringify(chapters))
 	}
 
 	document.body.appendChild(button)

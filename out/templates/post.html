@@ -68,19 +68,19 @@
 		</details>
 		<details id="quickadd" style="display:none">
 		<summary>Add to chapter</summary>
-			<form style="width:min-content" method="post" action="/comic/page/add/">
+			<form style="width:min-content" onsubmit="return incr(this)" method="post" action="/comic/page/add/">
 				<br>
 				<input type="hidden" name="post-id" value="{{.Post.ID}}">
 				<select id="quickadd-chapter" name="chapter-id"></select>
-				<input style="margin:2px; padding:3px 0px;" placeholder="Page" type="number" name="order">
+				<input id="quickadd-page" style="margin:2px; padding:3px 0px;" placeholder="Page" type="number" name="order">
 				<input type="submit" value="Add to chapter">
 			</form>
+			<script src="/static/scripts/quickadd.js"></script>
 			<script>
-				let store = window.localStorage
-				let chapters = JSON.parse(store.getItem("chapters"))
-				
-				let sel = document.getElementById("quickadd-chapter")
+				let qac = document.getElementById("quickadd-chapter")
 				let det = document.getElementById("quickadd")
+
+				let chapters = qaChapters()
 
 				for(let i = 0; i < chapters.length; i++)
 				{
@@ -88,8 +88,19 @@
 					let op = document.createElement("option")
 					op.value = chapters[i].ID
 					op.innerText = chapters[i].comicTitle + " / " + chapters[i].title
-					sel.appendChild(op)
+					qac.appendChild(op)
 					console.log(op)
+				}
+
+				if (chapters != null)
+				{
+					document.getElementById("quickadd-page").value = chapters[0].lastPage
+				}
+
+
+				function incr(form)
+				{
+					qaIncrement(form["chapter-id"].value, form["order"].value)
 				}
 			</script>
 		</details>
