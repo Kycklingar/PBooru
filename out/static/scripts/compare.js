@@ -294,10 +294,17 @@ function renderPost(post)
 		return
 	}
 
+	let lt = setTimeout(function(){loader.classList.remove("hidden")}, 1000)
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
-	img.onload = function(){renderImage(img)}
+	img.onload = function(){
+		clearTimeout(lt)
+		loader.classList.add("hidden")
+		renderImage(img)
+	}
+
 	currentPost = post
+
 
 	for (c = leftInterface.firstChild; c != null; c = c.nextSibling)
 	{

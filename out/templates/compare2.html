@@ -111,12 +111,38 @@
 		max-width: 100%;
 		max-height: 100%;
 	}
+
+	.hidden
+	{
+		display:none;
+	}
+
+	#loader
+	{
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		border: 16px solid grey;
+		border-top: 16px solid blue;
+		border-radius: 50%;
+		width: 120px;
+		height: 120px;
+		opacity: 0.75;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin
+	{
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
 </style>
 
 <div id="interface-window">
 	<div id="interface-left"></div>
 	<div id="interface-right">
 		<div id="canvas"></div>
+		<div class="hidden" id="loader"></div>
 		<details id="interface-float-left">
 			<details>
 				<summary>Help</summary>
