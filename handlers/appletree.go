@@ -16,10 +16,10 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var page struct {
 		UserInfo UserInfo
-		User *DM.User
+		User     *DM.User
 		Trees    []DM.AppleTree
-		Query string
-		Offset int
+		Query    string
+		Offset   int
 	}
 
 	page.User, page.UserInfo = getUser(w, r)
@@ -35,7 +35,6 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var limit = 25
 	page.Offset, _ = strconv.Atoi(r.FormValue("offset"))
-
 
 	page.Query = r.FormValue("tags")
 	page.Trees, err = DM.GetAppleTrees(page.Query, limit, page.Offset)

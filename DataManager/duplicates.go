@@ -3,9 +3,9 @@ package DataManager
 import (
 	"errors"
 	"fmt"
+	c "github.com/kycklingar/PBooru/DataManager/cache"
 	"log"
 	"strconv"
-	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type Dupe struct {

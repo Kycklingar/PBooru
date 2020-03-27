@@ -3,22 +3,40 @@
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
     {{else if .Flag.Upload}}
-    <form enctype="multipart/form-data" method="POST">
-        <label for="file">File</label>
-        <br>
-        <input id="file" type="file" name="file">
-        <br>
-        <br>
-        <label for="tagsform">Tags</label>
-        <br>
-        <textarea class="stinput" id="tagsform" name="tags"></textarea>
-        <br>
-        <br>
-        <input type="submit" value="Submit">
+    <form style="display:flex" enctype="multipart/form-data" method="POST">
+	<div>
+		<label for="file">File</label>
+		<br>
+		<input id="file" type="file" name="file">
+		<br>
+		<br>
+		<label for="tagsform">Tags</label>
+		<br>
+		<textarea class="stinput" id="tagsform" name="tags"></textarea>
+		<br>
+		<br>
+		<input type="submit" value="Submit">
+	</div>
+	{{if .Flag.Comics}}
+	<details>
+	<summary>Add to comic</summary>
+	<div style="border-left: 1px solid grey;padding-left:1em;">
+		<label>Chapter ID</label>
+		<br>
+		<input type="number" name="chapter-id">
+		<br>
+		<br>
+		<label>Page</label>
+		<br>
+		<input type="number" name="order">
+	</div>
+	</details>
+	{{end}}
     </form>
     <script type="text/javascript" src="/static/suggestions.js"></script>
         <h3>Tagging Guide</h3>
-        <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>yawg"</span>.</p>
+	<p>Tag what you know.</p>
+        <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>furball"</span>.</p>
         <p>The default supported namespaces are:
             <ul style="width:100px;">
                 <li class="namespace-creator">creator</li>

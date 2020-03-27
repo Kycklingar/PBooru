@@ -15,8 +15,8 @@ import (
 )
 
 type Config struct {
-	AllowedMimes  []string
-	IPFSDaemonMap map[string]string
+	AllowedMimes         []string
+	IPFSDaemonMap        map[string]string
 	EnableCommentCaptcha int
 }
 
