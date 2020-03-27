@@ -403,6 +403,7 @@ li
 {
     border: solid 1px;
     background-color:#888;
+    overflow: auto;
 }
 
 .comment
