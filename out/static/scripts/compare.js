@@ -286,18 +286,37 @@ function ipfsLink(hash)
 	return gateway + "/ipfs/" + hash
 }
 
+let lt = null
+
 function renderPost(post)
 {
+	var a = rightInterface.scrollTop
+	var b = rightInterface.scrollHeight - rightInterface.clientHeight
+	scrollY = a / b
+	a = rightInterface.scrollLeft
+	b = rightInterface.scrollWidth - rightInterface.clientWidth
+	scrollX = a / b
+
 	if (post == null)
 	{
 		//ctx.clearRect(0, 0, canvas.width, canvas.height)
 		return
 	}
 
+	if (lt)
+		clearTimeout(lt)
+	lt = setTimeout(function(){loader.classList.remove("hidden")}, 1000)
+
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
-	img.onload = function(){renderImage(img)}
+	img.onload = function(){
+		clearTimeout(lt)
+		loader.classList.add("hidden")
+		renderImage(img)
+	}
+
 	currentPost = post
+
 
 	for (c = leftInterface.firstChild; c != null; c = c.nextSibling)
 	{
@@ -334,10 +353,14 @@ function renderNextPost(dir)
 	renderPost(posts[ind % posts.length])
 }
 
-var optAnchor = false
 var optScale = 1
 var optContrast = 1
 var optFit = false
+var optGlue = false
+
+var gluedW, gluedH
+
+var scrollX, scrollY
 
 function renderImage(image)
 {
@@ -354,22 +377,25 @@ function renderImage(image)
 		image.style.width = null
 		image.style.height = null
 	}
-	else if (optAnchor)
+	else if (optGlue)
 	{
-		let rect = canvas.getBoundingClientRect()
-		if(rect.width < scaledWidth)
+		if (gluedW > 0 && gluedH > 0)
 		{
-			canvas.style.width = scaledWidth
+			image.style.width = gluedW
+			image.style.height = gluedH
 		}
-		if(rect.height < scaledHeight)
+		else
 		{
-			canvas.style.height = scaledHeight
+			gluedW = scaledWidth
+			gluedH = scaledHeight
 		}
 	}
 	else
 	{
 		canvas.style.width = scaledWidth
 		canvas.style.height = scaledHeight
+		gluedW = 0
+		gluedH = 0
 	}
 
 
@@ -379,6 +405,13 @@ function renderImage(image)
 		canvas.removeChild(c)
 
 	canvas.appendChild(image)
+
+
+	var b = rightInterface.scrollHeight - rightInterface.clientHeight
+	rightInterface.scrollTop = b * scrollY
+
+	b = rightInterface.scrollWidth - rightInterface.clientWidth
+	rightInterface.scrollLeft = b * scrollX
 }
 
 function toggleReport()
@@ -415,15 +448,24 @@ function tb(caller)
 	caller.classList.toggle("highlighted")
 }
 
-function anchor()
+//function anchor()
+//{
+//	document.getElementById("button-anchor").classList.toggle("highlighted")
+//	optAnchor = !optAnchor
+//	renderPost(currentPost)
+//}
+
+function glue()
 {
-	document.getElementById("button-anchor").classList.toggle("highlighted")
-	optAnchor = !optAnchor
+	document.getElementById("button-glue").classList.toggle("highlighted")
+	optGlue= !optGlue
 	renderPost(currentPost)
 }
 
 function scale(val)
 {
+	gluedW = 0
+	gluedH = 0
 	optScale = val
 	renderPost(currentPost)
 
@@ -507,7 +549,11 @@ registerKeyMapping(78, function(){renderNextPost(1)})
 registerKeyMapping(80, function(){renderNextPost(-1)})
 
 // Anchor
-registerKeyMapping(65, function(){anchor()})
+// Not needed anymore
+//registerKeyMapping(65, function(){anchor()})
+
+// Glue
+registerKeyMapping(81, function(){glue()})
 
 // Fit
 registerKeyMapping(70, function(){fit()})
