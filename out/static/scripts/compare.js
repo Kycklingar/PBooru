@@ -362,7 +362,8 @@ var optGlue = false
 
 var gluedW, gluedH
 
-var scrollX, scrollY
+var scrollX = 0.5
+var scrollY = 0.5
 
 function renderImage(image)
 {
