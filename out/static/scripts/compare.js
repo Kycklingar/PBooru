@@ -292,10 +292,12 @@ function renderPost(post)
 {
 	var a = rightInterface.scrollTop
 	var b = rightInterface.scrollHeight - rightInterface.clientHeight
-	scrollY = a / b
+	if (b)
+		scrollY = a / b
 	a = rightInterface.scrollLeft
 	b = rightInterface.scrollWidth - rightInterface.clientWidth
-	scrollX = a / b
+	if (b)
+		scrollX = a / b
 
 	if (post == null)
 	{
