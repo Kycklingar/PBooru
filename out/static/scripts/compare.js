@@ -286,6 +286,8 @@ function ipfsLink(hash)
 	return gateway + "/ipfs/" + hash
 }
 
+let lt = null
+
 function renderPost(post)
 {
 	if (post == null)
@@ -294,7 +296,10 @@ function renderPost(post)
 		return
 	}
 
-	let lt = setTimeout(function(){loader.classList.remove("hidden")}, 1000)
+	if (lt)
+		clearTimeout(lt)
+	lt = setTimeout(function(){loader.classList.remove("hidden")}, 1000)
+
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
 	img.onload = function(){
