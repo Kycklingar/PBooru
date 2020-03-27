@@ -589,6 +589,14 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
+
+		if len(r.FormValue("chapter-id")) > 0 {
+			r.Form.Add("post-id", strconv.Itoa(post.QID(DM.DB)))
+			r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
+			comicAddPageHandler(w, r)
+			return
+		}
+
 		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.QID(DM.DB)), http.StatusSeeOther)
 
 	} else {
