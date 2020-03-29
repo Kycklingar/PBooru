@@ -105,7 +105,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	// Replace comics with new post
-	if err = replaceComicPages(tx, dupe); err != nil {
+	if err = replaceComicPages(tx, user, dupe); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -319,20 +319,55 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func replaceComicPages(tx querier, dupe Dupe) (err error) {
-	for _, p := range dupe.Inferior {
-		_, err = tx.Exec(`
+func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
+	exec := func(inferior *Post) ([]*ComicPost, error) {
+		rows, err := tx.Query(`
 			UPDATE comic_mappings
 			SET post_id = $1
 			WHERE post_id = $2
+			RETURNING id, chapter_id, post_order
 			`,
 			dupe.Post.ID,
-			p.ID,
+			inferior.ID,
 		)
 		if err != nil {
-			return
+			return nil, err
+		}
+		defer rows.Close()
+
+		var cps []*ComicPost
+
+		for rows.Next() {
+			var cp = newComicPost()
+			cp.Post = dupe.Post
+
+			err = rows.Scan(&cp.ID, &cp.Chapter.ID, &cp.Order)
+			if err != nil {
+				return nil, err
+			}
+
+			cps = append(cps, cp)
+		}
+
+		return cps, nil
+	}
+
+	for _, p := range dupe.Inferior {
+		var cps []*ComicPost
+		cps, err = exec(p)
+		if err != nil {
+			return err
+		}
+
+		// Log changes
+		for _, cp := range cps {
+			err = cp.log( tx, lUpdate, user)
+			if err != nil {
+				return
+			}
 		}
 	}
+
 
 	return
 }
