@@ -41,15 +41,6 @@
         		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
         		    		    <input type="submit" value="Delete/Undelete">
         		    		</form>
-        		    		<form method="POST" action="/dups/add/">
-        		    		    <p>New Duplicate</p>
-        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
-        		    		    <p>Dup post id</p>
-        		    		    <input type="text" name="duppostid">
-        		    		    <p>Level</p>
-        		    		    <input type="text" name="level">
-        		    		    <input type="submit">
-        		    		</form>
         		    	{{end}}
         		</div>
 		</details>
@@ -218,6 +209,18 @@
     </div>
 </div>
 
+{{range .Chapters}}
+	<div class="comics-container">
+		<div>
+			<p><a href="/comic/{{.Comic.ID}}/">{{.Comic.Title}}</a></p>
+			<p><a href="/comic/{{.Comic.ID}}/{{.Order}}/">C{{.Order}}{{with .Title}} - {{.}}{{end}}</a></p>
+			<p>{{.Comic.PageCount}} pages</p>
+		</div>
+		<div class="cpage-container">
+			{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+		</div>
+	</div>
+{{end}}
 
 {{with .Dupe}}
 	{{if .Inferior}}
@@ -233,18 +236,6 @@
 	{{end}}
 {{end}}
 
-{{range .Chapters}}
-	<div class="comics-container">
-		<div>
-			<p><a href="/comic/{{.Comic.ID}}/">{{.Comic.Title}}</a></p>
-			<p><a href="/comic/{{.Comic.ID}}/{{.Order}}/">C{{.Order}}{{with .Title}} - {{.}}{{end}}</a></p>
-			<p>{{.Comic.PageCount}} pages</p>
-		</div>
-		<div class="cpage-container">
-			{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
-		</div>
-	</div>
-{{end}}
 
 {{ template "userSettings" .UserInfo}}
 

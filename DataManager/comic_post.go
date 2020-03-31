@@ -119,6 +119,12 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 		return fmt.Errorf("Invalid Chapter")
 	}
 
+	dupe, err := getDupeFromPost(tx, p.Post)
+	if err != nil {
+		return err
+	}
+	p.Post = dupe.Post
+
 	if p.Post.QID(tx) == 0 {
 		return fmt.Errorf("Invalid post")
 	}
