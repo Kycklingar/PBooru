@@ -1,123 +1,75 @@
 {{ define "sidebar"}}
-<div id="sidebar">
-    {{template "inner sidebar" .}}
-</div>
+	<div id="sidebar">
+		{{if ne .TotalPosts 0}}
+			<div>{{.TotalPosts}}</div>
+		{{end}}
+		{{template "search field" .}}
+		{{template "sidebar tags" .}}
+	</div>
 {{ end }}
 
-{{ define "inner sidebar"}}
-<script>
-        var input = null
-        function appendQuery(caller, tag)
-        {
-            if(input == null)
-            {
-                input = document.getElementById("searchinput")
-            }
-            if(input == null)
-            {
-                return
-            }
-            let inp = input.value.split(",")
-            let ret = []
-            let n = true
-            for(let i = 0; i < inp.length; i++)
-            {
-                if(inp[i].trim() != tag)
-                {
-                    if(inp[i].trim().length >= 1)
-                    {
-                        ret.push(inp[i].trim())
-                    }
-                }
-                else
-                {
-                    n = false
-                }
-            }
-            if(n)
-            {
-                ret.push(tag)
-                caller.innerHTML = "-"
-            }
-            else
-            {
-                caller.innerHTML = "+"
-            }
-            input.value = ""
-            for(let i = 0; i < ret.length; i++)
-            {
-                if(i == ret.length - 1)
-                {
-                    input.value += ret[i]
-                }
-                else
-                {
-                    input.value += ret[i] + ", "
-                }
-            }
-        }
-    </script>
-    {{if ne .TotalPosts 0}}
-    <div>
-        {{.TotalPosts}}
-    </div>
-    {{end}}    
-    <div id="searchbar">
-        <form action="/posts/">
-            <input title="Search for posts with these tags" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
-            <br>
-            <input title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
-            <br>
-            <input title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
-            <input type="submit" value="Search">
-            <details>
-	    	<summary style="font-size:14px;">Advanced</summary>
-            	<div id="advanced-search">
-            	    <span>Order:</span>
-            	    <br>
-            	    <input id="order-desc" type="radio" name="order" value="" checked> <label for="order-desc">Descending</label><br>
-            	    <input id="order-asc" type="radio" name="order" value="asc"> <label for="order-asc">Ascending</label><br>
-            	    <input id="order-rand" type="radio" name="order" value="random"> <label for="order-rand">Random</label><br>
+{{ define "search field" }}
+	<div id="searchbar">
+	<script src="/static/scripts/taginput.js"></script>
+	<form action="/posts/">
+	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
+	    <script>
+	    	setInput(document.getElementById("searchinput"))
+	    </script>
+	    <br>
+	    <input onfocus="setInput(this)" title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
+	    <br>
+	    <input onfocus="setInput(this)" title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
+	    <input type="submit" value="Search">
+	    <details>
+		<summary style="font-size:14px;">Advanced</summary>
+		<div id="advanced-search">
+		    <span>Order:</span>
+		    <br>
+		    <input id="order-desc" type="radio" name="order" value="" checked> <label for="order-desc">Descending</label><br>
+		    <input id="order-asc" type="radio" name="order" value="asc"> <label for="order-asc">Ascending</label><br>
+		    <input id="order-rand" type="radio" name="order" value="random"> <label for="order-rand">Random</label><br>
 		    <input id="order-score" type="radio" name="order" value="score"> <label for="order-score">Score</label><br>
 		    <details>
-		    	<summary>Mimes:</summary>
-		    	<br>
-		    	{{range $k, $v := .Mimes}}
-		    		<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
-		    	    <ul>
-		    		{{range $v}}
-		    			<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
-		    	    {{end}}
-		    	    </ul>
-		    	{{end}}
+			<summary>Mimes:</summary>
+			<br>
+			{{range $k, $v := .Mimes}}
+				<input id="adv-group-{{$k}}" type="checkbox" name="mime-type" value="{{$k}}"><label for="adv-group-{{$k}}"> {{$k}}</label><br>
+			    <ul>
+				{{range $v}}
+					<li><input id="adv-mime-{{.ID}}" type="checkbox" name="mime" value="{{.ID}}"><label for="adv-mime-{{.ID}}"> {{.Name}}</label></li>
+			    {{end}}
+			    </ul>
+			{{end}}
 		    </details>
-            	</div>
+		</div>
 	    </details>
-        </form>
-    </div>
-    <script type="text/javascript" src="/static/suggestions.js"></script>
+	</form>
+	</div>
+	<script type="text/javascript" src="/static/suggestions.js"></script>
+{{end}}
 
-    <table class="nolink" id="tags">
-        {{ range .Tags }}
-        <tr>
-            {{ if eq .Namespace.Namespace "none" }}
-                <td class="tag namespace-{{ .Namespace.Namespace }}">
-                    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
-                    <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
-                </td>
-                <td class="counter">{{.Count}}</td>
-            {{ else }}
-                <td class="tag namespace-{{ .Namespace.Namespace }}">
-                    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
-                    <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
-                </td>
-                <td class="counter">{{.Count}}</td>
-            {{ end }}
-        </tr>
-        {{ end }}
-    </table>
-{{ end }}
-
+{{ define "sidebar tags"}}
+	<table class="nolink" id="tags">
+	{{ range .Tags }}
+		<tr>
+		    {{ if eq .Namespace.Namespace "none" }}
+			<td class="tag namespace-{{ .Namespace.Namespace }}">
+			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
+			    <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
+			</td>
+			<td class="counter">{{.Count}}</td>
+		    {{ else }}
+			<td class="tag namespace-{{ .Namespace.Namespace }}">
+			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
+			    <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
+			</td>
+			<td class="counter">{{.Count}}</td>
+		    {{ end }}
+		</tr>
+	{{ end }}
+	</table>
+{{end}}
 
 {{ define "sidebartag" }}
     {{ if eq .Namespace.Namespace "none" }}
