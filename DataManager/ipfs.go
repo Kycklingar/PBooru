@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -121,7 +122,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 
 	uri := fmt.Sprintf("%s/files/cp?%sarg=%s&arg=%s", ipfsAPI, fl, "/ipfs/"+mhash, directory+mhash)
 	//fmt.Println(uri)
-	res, err := http.Get(uri)
+	res, err := http.PostForm(uri, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -138,7 +139,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 }
 
 func mfsMkdir(dir string) error {
-	res, err := http.Get(ipfsAPI + "files/mkdir?parents=true&arg=" + dir)
+	res, err := http.PostForm(ipfsAPI + "files/mkdir?parents=true&arg=" + dir, nil)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func mfsMkdir(dir string) error {
 }
 
 func mfsExists(dir string) error {
-	res, err := http.Get(ipfsAPI + "files/ls?arg=" + dir)
+	res, err := http.PostForm(ipfsAPI + "files/ls?arg=" + dir, nil)
 	if err != nil {
 		return err
 	}
@@ -179,7 +180,7 @@ func mfsExists(dir string) error {
 }
 
 func mfsFlush(dir string) error {
-	res, err := http.Get(ipfsAPI + "/files/flush?arg=" + dir)
+	res, err := http.PostForm(ipfsAPI + "/files/flush?arg=" + dir, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -190,10 +191,11 @@ func mfsFlush(dir string) error {
 }
 
 func ipfsPatchLink(rootHash, name, linkHash string) (string, error) {
-	hc := http.Client{}
-
 	if rootHash == "" {
-		resp, err := hc.Get(ipfsAPI + "object/new?arg=unixfs-dir")
+		resp, err := http.PostForm(
+			ipfsAPI+"object/new?arg=unixfs-dir",
+			nil,
+		)
 		if err != nil {
 			return "", err
 		}
@@ -216,7 +218,7 @@ func ipfsPatchLink(rootHash, name, linkHash string) (string, error) {
 		rootHash = m
 	}
 
-	resp, err := hc.Get(ipfsAPI + fmt.Sprintf("object/patch/add-link?arg=%s&arg=%s&arg=%s", rootHash, name, linkHash))
+	resp, err := http.PostForm(ipfsAPI + fmt.Sprintf("object/patch/add-link?arg=%s&arg=%s&arg=%s", rootHash, name, linkHash), nil)
 	if err != nil {
 		return "", err
 	}
@@ -244,22 +246,29 @@ func ipfsCat(hash string) io.ReadCloser {
 	if len(hash) < 46 {
 		return nil
 	}
-	cl := http.Client{}
-	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
+
+	res, err := http.PostForm(
+		fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash),
+		nil,
+	)
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
 	if res.StatusCode != 200 {
-		b := make([]byte, 10)
-		res.Body.Read(b)
-		fmt.Println(string(b))
-		res.Body.Close()
+		readError(res)
 		return nil
 	}
 
 	return res.Body
+}
+
+func readError(res *http.Response) {
+	var b = make([]byte, res.ContentLength)
+	res.Body.Read(b)
+	fmt.Println(string(b))
+	res.Body.Close()
 }
 
 func ipfsSize(hash string) int64 {
@@ -267,10 +276,17 @@ func ipfsSize(hash string) int64 {
 		return 0
 	}
 
-	cl := http.Client{}
-	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash))
+	res, err := http.PostForm(
+		fmt.Sprintf(ipfsAPI+"cat?arg=%s", hash),
+		nil,
+	)
 	if err != nil {
 		log.Println(err)
+		return 0
+	}
+
+	if res.StatusCode != 200 {
+		readError(res)
 		return 0
 	}
 	res.Body.Close()
@@ -288,7 +304,12 @@ func ipfsSize(hash string) int64 {
 
 func ipfsUpgradeCidBase32(hash string) (string, error) {
 	cl := http.Client{}
-	res, err := cl.Get(fmt.Sprintf(ipfsAPI+"cid/base32?arg=%s", hash))
+	res, err := cl.PostForm(
+		ipfsAPI+"cid/base32",
+		url.Values{
+			"arg": {hash},
+		},
+	)
 	if err != nil {
 		log.Println(err)
 		return "", err
