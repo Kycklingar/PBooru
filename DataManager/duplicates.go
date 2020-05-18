@@ -3,9 +3,10 @@ package DataManager
 import (
 	"errors"
 	"fmt"
-	c "github.com/kycklingar/PBooru/DataManager/cache"
 	"log"
 	"strconv"
+
+	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type Dupe struct {
@@ -361,13 +362,12 @@ func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
 
 		// Log changes
 		for _, cp := range cps {
-			err = cp.log( tx, lUpdate, user)
+			err = cp.log(tx, lUpdate, user)
 			if err != nil {
 				return
 			}
 		}
 	}
-
 
 	return
 }
