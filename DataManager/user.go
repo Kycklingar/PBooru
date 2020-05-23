@@ -282,7 +282,7 @@ func (u *User) PassHash(q querier) string {
 		return ""
 	}
 
-	err := q.QueryRow("SELECT passwordhash, salt FROM users WHERE id=$1", u.QID(q)).Scan(&u.passwordHash, &u.salt)
+	err := q.QueryRow("SELECT hash, salt FROM passwords WHERE user_id=$1", u.QID(q)).Scan(&u.passwordHash, &u.salt)
 	if err != nil {
 		log.Print(err)
 	}
@@ -345,10 +345,22 @@ func (u User) Register(name, password string) error {
 		return txError(tx, errors.New("Username already exist"))
 	}
 
-	_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.flag)
-
+	err = tx.QueryRow("INSERT INTO users(username, datejoined, adminflag) VALUES($1, CURRENT_TIMESTAMP, $2) RETURNING id", u.Name, u.flag).Scan(&u.ID)
 	if err != nil {
 		log.Print(err)
+		return txError(tx, err)
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO passwords(user_id, hash, salt)
+		VALUES($1, $2, $3)
+		`,
+		u.ID,
+		u.passwordHash,
+		u.salt,
+	)
+	if err != nil {
+		log.Println(err)
 		return txError(tx, err)
 	}
 
