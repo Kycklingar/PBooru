@@ -120,7 +120,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 		fl = "flush=false&"
 	}
 
-	uri := fmt.Sprintf("%s/files/cp?%sarg=%s&arg=%s", ipfsAPI, fl, "/ipfs/"+mhash, directory+mhash)
+	uri := fmt.Sprintf(ipfsAPI + "files/cp?%sarg=%s&arg=%s", fl, "/ipfs/"+mhash, directory+mhash)
 	//fmt.Println(uri)
 	res, err := http.PostForm(uri, nil)
 	if err != nil {
@@ -132,7 +132,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 	if res.StatusCode != 200 {
 		b := bytes.Buffer{}
 		b.ReadFrom(res.Body)
-		return errors.New(fmt.Sprint(res.Status, string(b.Bytes())))
+		return errors.New(fmt.Sprint(res.Status, b.String()))
 	}
 
 	return nil
