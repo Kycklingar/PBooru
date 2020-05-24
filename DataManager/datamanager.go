@@ -220,6 +220,7 @@ type Config struct {
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
+	ThumbnailQuality int
 }
 
 func (c *Config) Default() {
@@ -228,6 +229,7 @@ func (c *Config) Default() {
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
+	c.ThumbnailQuality = 90
 	c.StdUserFlag = flagTagging | flagUpload
 }
 

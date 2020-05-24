@@ -326,7 +326,7 @@ func GenerateThumbnails(size int) {
 			var b bytes.Buffer
 			b.ReadFrom(file)
 			f := bytes.NewReader(b.Bytes())
-			thash, err := makeThumbnail(f, size)
+			thash, err := makeThumbnail(f, size, CFG.ThumbnailQuality)
 			file.Close()
 			if err != nil {
 				log.Println(err, hash)
