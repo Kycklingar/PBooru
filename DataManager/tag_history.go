@@ -125,7 +125,7 @@ func (th *TagHistory) Reverse() error {
 	}
 
 	for _, et := range etags {
-		resetCacheTag(et.Tag.QID(DB))
+		resetCacheTag(tx, et.Tag.QID(DB))
 	}
 
 	// Reset post cache

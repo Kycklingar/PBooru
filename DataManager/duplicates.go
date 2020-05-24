@@ -143,7 +143,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	tc := new(TagCollector)
 	tc.GetFromPost(tx, dupe.Post)
 	for _, tag := range tc.Tags {
-		resetCacheTag(tag.ID)
+		resetCacheTag(tx, tag.ID)
 	}
 
 	a = tx.Commit

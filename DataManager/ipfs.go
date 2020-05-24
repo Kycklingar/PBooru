@@ -139,7 +139,7 @@ func mfsCP(dir, mhash string, flush bool) error {
 }
 
 func mfsMkdir(dir string) error {
-	res, err := http.PostForm(ipfsAPI + "files/mkdir?parents=true&arg=" + dir, nil)
+	res, err := http.PostForm(ipfsAPI+"files/mkdir?parents=true&arg="+dir, nil)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func mfsMkdir(dir string) error {
 }
 
 func mfsExists(dir string) error {
-	res, err := http.PostForm(ipfsAPI + "files/ls?arg=" + dir, nil)
+	res, err := http.PostForm(ipfsAPI+"files/ls?arg="+dir, nil)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func mfsExists(dir string) error {
 }
 
 func mfsFlush(dir string) error {
-	res, err := http.PostForm(ipfsAPI + "/files/flush?arg=" + dir, nil)
+	res, err := http.PostForm(ipfsAPI+"/files/flush?arg="+dir, nil)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -218,7 +218,7 @@ func ipfsPatchLink(rootHash, name, linkHash string) (string, error) {
 		rootHash = m
 	}
 
-	resp, err := http.PostForm(ipfsAPI + fmt.Sprintf("object/patch/add-link?arg=%s&arg=%s&arg=%s", rootHash, name, linkHash), nil)
+	resp, err := http.PostForm(ipfsAPI+fmt.Sprintf("object/patch/add-link?arg=%s&arg=%s&arg=%s", rootHash, name, linkHash), nil)
 	if err != nil {
 		return "", err
 	}

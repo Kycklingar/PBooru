@@ -117,8 +117,8 @@ func (a *Alias) Save() error {
 		a.To.ID,
 	)
 
-	resetCacheTag(a.To.QID(tx))
-	resetCacheTag(a.Tag.QID(tx))
+	resetCacheTag(tx, a.To.QID(tx))
+	resetCacheTag(tx, a.Tag.QID(tx))
 
 	return err
 }

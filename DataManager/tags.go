@@ -289,8 +289,8 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 		return err
 	}
 
-	resetCacheTag(aParent.ID)
-	resetCacheTag(child.ID)
+	resetCacheTag(q, aParent.ID)
+	resetCacheTag(q, child.ID)
 	return nil
 }
 

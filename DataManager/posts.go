@@ -588,7 +588,7 @@ func (p *Post) Delete(q querier) error {
 		return err
 	}
 	for _, t := range tc.Tags {
-		resetCacheTag(t.QID(q))
+		resetCacheTag(q, t.QID(q))
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
 
@@ -612,7 +612,7 @@ func (p *Post) UnDelete(q querier) error {
 		return err
 	}
 	for _, t := range tc.Tags {
-		resetCacheTag(t.QID(q))
+		resetCacheTag(q, t.QID(q))
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
 
@@ -754,7 +754,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 	}
 
 	for _, tag := range removedTags {
-		resetCacheTag(tag.ID)
+		resetCacheTag(tx, tag.ID)
 	}
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
@@ -805,7 +805,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 	}
 
 	for _, tag := range newTags {
-		resetCacheTag(tag.ID)
+		resetCacheTag(tx, tag.ID)
 	}
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
@@ -874,11 +874,11 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 	}
 
 	for _, tag := range newTags {
-		resetCacheTag(tag.ID)
+		resetCacheTag(q, tag.ID)
 	}
 
 	for _, tag := range removedTags {
-		resetCacheTag(tag.ID)
+		resetCacheTag(q, tag.ID)
 	}
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.QID(DB)))
@@ -1640,15 +1640,15 @@ func GetTotalPosts() int {
 	return totalPosts
 }
 
-func resetCacheTag(tagID int) {
+func resetCacheTag(q querier, tagID int) {
 	C.Cache.Purge("PC", strconv.Itoa(tagID))
 	C.Cache.Purge("TAG", strconv.Itoa(tagID))
 	C.Cache.Purge("PC", "0")
-	ccPurge(tagID)
+	ccPurge(q, tagID)
 }
 
-func ccPurge(tagID int) {
-	_, err := DB.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
+func ccPurge(q querier, tagID int) {
+	_, err := q.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
 	if err != nil {
 		log.Println(err)
 	}
