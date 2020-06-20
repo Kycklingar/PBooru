@@ -1,3 +1,48 @@
+.comics
+{
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.comic
+{
+	margin: 1em;
+}
+
+.comic a:visited, .comic a:link
+{
+	color:inherit;
+}
+
+.comic img
+{
+	position:relative;
+	margin-bottom: 0.6em;
+	left: 50%;
+	transform: translateX(-50%);
+	box-shadow: 3px 3px 6px #213;
+}
+
+.comic .info .tagbox
+{
+	max-width: 200px;
+	color: black;
+	text-shadow: 1px 1px 5px white;
+	font-family: monospace;
+}
+
+.comic .info .tagbox span
+{
+	background-color: grey;
+}
+
+.comic .title .chapters
+{
+	padding-left:2em;
+	max-height: 200px;
+	overflow: auto;
+}
+
 body
 {
     background-color:#35353F;
@@ -349,30 +394,26 @@ li
 
 .namespace-series
 {
-    background-color: #A030A0;
+    background-color: #A030A0 !important;
 }
 
 .namespace-gender
 {
-    background-color: pink;
+    background-color: pink !important;
 }
 
 .namespace-species
 {
-    background-color: green;
+    background-color: green !important;
 }
 
 .namespace-creator
 {
-    background-color: red;
+    background-color: red !important;
 }
 .namespace-character
 {
-    background-color:yellow;
-}
-.namespace-none
-{
-
+    background-color:yellow !important;
 }
 
 #suggestedtags

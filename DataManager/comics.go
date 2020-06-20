@@ -198,6 +198,8 @@ type Comic struct {
 	Chapters     []*Chapter
 	ChapterCount int
 	PageCount    int
+
+	TagSummary []*Tag
 }
 
 func (c *Comic) QID(q querier) int {
@@ -310,6 +312,49 @@ func (c *Comic) QChapterCount(q querier) int {
 		return 0
 	}
 	return c.ChapterCount
+}
+
+func (c *Comic) QTagSummary(q querier) error {
+	if len(c.TagSummary) > 0 {
+		return nil
+	}
+
+	rows, err := q.Query(`
+		SELECT ptm.tag_id
+		FROM post_tag_mappings ptm
+		JOIN comic_mappings cm
+			ON ptm.post_id = cm.post_id
+		JOIN comic_chapter cc
+			ON cm.chapter_id = cc.id
+		JOIN comics c
+			ON cc.comic_id = c.id
+		WHERE c.id = $1
+		GROUP BY ptm.tag_id ORDER BY count(ptm.tag_id) DESC LIMIT 15;
+		`,
+		c.ID,
+	)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t = NewTag()
+		err = rows.Scan(&t.ID)
+		if err != nil {
+			return err
+		}
+
+		t = CachedTag(t)
+		t.QTag(q)
+		t.QNamespace(q)
+		t.Namespace.QNamespace(q)
+
+		c.TagSummary = append(c.TagSummary, t)
+	}
+
+	return rows.Err()
 }
 
 func (c *Comic) Save(user *User) error {
