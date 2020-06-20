@@ -7,6 +7,7 @@
 .comic
 {
 	margin: 1em;
+	max-width: 300px;
 }
 
 .comic a:visited, .comic a:link
@@ -25,7 +26,6 @@
 
 .comic .info .tagbox
 {
-	max-width: 200px;
 	color: black;
 	text-shadow: 1px 1px 5px white;
 	font-family: monospace;
