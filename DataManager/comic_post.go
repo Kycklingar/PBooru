@@ -26,7 +26,7 @@ func NewComicPost() *ComicPost {
 type ComicPost struct {
 	ID      int
 	Post    *Post
-	Order   int
+	Order   int // TODO: Major, Minor pages
 	Chapter *Chapter
 	Comic   *Comic
 }

@@ -52,7 +52,7 @@ func vals(val url.Values) values {
 	return va
 }
 
-const comicsPerPage = 5
+const comicsPerPage = 25
 
 func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -117,6 +117,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Comics = cc.Comics
 
 	for _, c := range cc.Comics {
+		c.QTagSummary(DM.DB)
 		c.QChapters(DM.DB)
 		c.QChapterCount(DM.DB)
 		c.QPageCount(DM.DB)

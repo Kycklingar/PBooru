@@ -27,36 +27,34 @@
 
 <script type="text/javascript" src="/static/suggestions.js"></script>
 
-{{range .Comics}}
-<div class="comics-container">
-        <a href="/comic/{{.ID}}">
-            <h2>{{.Title}}</h2>
-        </a>
-        <p>Pages:{{.PageCount}}<br>Chapters:{{.ChapterCount}}</p>
-	{{range .ChaptersLimit 1}}
-        	<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
-        	<div class="cpage-container">
-        		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+<div class="comics">
+	{{range .Comics}}
+	<div class="comic">
+		{{$cID := .ID}}
+		{{range .ChaptersLimit 1}}
+			{{range .PostsLimit 1}}
+				<a href="/comic/{{$cID}}/"><img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}"></a>
+			{{end}}
+		{{end}}
+		<div class="info">
+			<details class="title">
+			<summary>{{.Title}} </summary>
+				<div class="chapters">
+					{{range .Chapters}}
+					<div class="chapter"><a href="/comic/{{.Comic.ID}}/{{.Order}}">{{with .Title}}{{.}}{{else}}Chapter {{.Order}}{{end}}</a></div>
+					{{end}}
+				</div>
+			</details>
+			<div class="pagecount">{{.PageCount}}</div>
+			<div class="tagbox">
+				{{range .TagSummary}}
+					<span class="namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
+				{{end}}
+			</div>
 		</div>
-	{{end}}
-
-	{{if $.Edit}}
-	<details>
-	<summary>Edit</summary>
-	<form action="/comic/edit/" method="POST">
-		<input type="hidden" name="comic-id" value="{{.ID}}">
-		<label>Title</label><br>
-		<input type="text" name="title" value="{{.Title}}"><br>
-		<input type="submit">
-	</form>
-	<form action="/comic/delete/" method="POST">
-		<input type="hidden" value="{{.ID}}" name="comic-id">
-		<input type="submit" value="Delete">
-	</form>
-	</details>
+	</div>
 	{{end}}
 </div>
-{{end}}
 
 <div class="nolink" id="pageinator">
     {{ if ne 0 $.Pageinator.Prev}}

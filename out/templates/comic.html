@@ -1,5 +1,6 @@
 {{template "base" .Base}}
 
+{{if .EditMode}}
 {{if .User.Flag.Comics}}
 <details>
 <summary>Create a new chapter</summary>
@@ -13,12 +14,32 @@
 	</form>
 </details>
 {{end}}
+{{end}}
 
 <div id="comic-container">
-	<h1>{{.Comic.Title}}</h1>
-	<form>
-		{{if .User.Flag.Comics}}<button type="submit" name="edit-mode">Edit chapters</button>{{end}}
+	{{if .EditMode}}
+	<form action="/comic/edit" method="POST">
+		<input type="hidden" name="comic-id" value="{{.Comic.ID}}">
+		<input type="text" name="title" value="{{.Comic.Title}}">
+		<br>
+		<input type="submit" value="Change Title">
 	</form>
+	<form action="/comic/delete/" method="POST">
+		<input type="hidden" name="comic-id" value="{{.Comic.ID}}">
+		<input type="submit" value="Delete comic">
+	</form>
+	{{else}}
+	<h1>{{.Comic.Title}}</h1>
+	{{end}}
+
+	{{if not .EditMode}}
+	{{if .User.Flag.Comics}}
+		<form>
+			<button type="submit" name="edit-mode">Edit</button>
+		</form>
+	{{end}}
+	{{end}}
+
 	{{$PostLimit := 5}}
 	{{if ge (len .Comic.Chapters) 10}}
 	{{$PostLimit = 2}}
