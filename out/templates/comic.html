@@ -18,7 +18,7 @@
 
 <div id="comic-container">
 	{{if .EditMode}}
-	<form action="/comic/edit" method="POST">
+	<form action="/comic/edit/" method="POST">
 		<input type="hidden" name="comic-id" value="{{.Comic.ID}}">
 		<input type="text" name="title" value="{{.Comic.Title}}">
 		<br>
