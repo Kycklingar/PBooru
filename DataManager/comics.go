@@ -4,6 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+)
+
+const (
+	cacheComic = "CMC"
 )
 
 type ComicCollector struct {
@@ -95,6 +102,8 @@ func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) erro
 			if err != nil {
 				return err
 			}
+
+			comic = CachedComic(comic)
 
 			cc.Comics = append(cc.Comics, comic)
 		}
@@ -189,6 +198,15 @@ func NewComicByID(id int) (*Comic, error) {
 	}
 
 	return comic, nil
+}
+
+func CachedComic(c *Comic) *Comic {
+	if cc := C.Cache.Get(cacheComic, strconv.Itoa(c.ID)); cc != nil {
+		return cc.(*Comic)
+	}
+
+	C.Cache.Set(cacheComic, strconv.Itoa(c.ID), c)
+	return c
 }
 
 type Comic struct {
@@ -425,6 +443,8 @@ func (c *Comic) SaveEdit(user *User) error {
 
 	a = tx.Commit
 
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.ID))
+
 	return nil
 }
 
@@ -457,6 +477,8 @@ func (c *Comic) Delete(user *User) error {
 	}
 
 	a = tx.Commit
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.ID))
 
 	return nil
 }

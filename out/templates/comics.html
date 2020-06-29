@@ -9,14 +9,10 @@
 		<input type="submit">
 	</form>
 </details>
-<form>
-	<input type="hidden" name="edit">
-	<input type="submit" value="Edit">
-</form>
 {{end}}
 
-<div>
-	<form class="center" action="/comics/">
+<div class="comic-search ">
+	<form class="centHorizont" action="/comics/">
 		<input type="text" name="title" placeholder="Title" value="{{.Query.title}}">
 		<br>
 		<input class="stinput" type="text" name="tags" placeholder="Tags" value="{{.Query.tags}}">
@@ -30,12 +26,19 @@
 <div class="comics">
 	{{range .Comics}}
 	<div class="comic">
-		{{$cID := .ID}}
+		{{$post := 0}}
 		{{range .ChaptersLimit 1}}
 			{{range .PostsLimit 1}}
-				<a href="/comic/{{$cID}}/"><img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}"></a>
+				{{$post = .Post}}
 			{{end}}
 		{{end}}
+		<a href="/comic/{{.ID}}/">
+		{{if $post}}
+			<img src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{$post.ClosestThumbnail 256}}" alt="{{.Title}}">
+		{{else}}
+			<h1>{{.Title}}</h1>
+		{{end}}
+		</a>
 		<div class="info">
 			<details class="title">
 			<summary>{{.Title}} </summary>
@@ -48,7 +51,7 @@
 			<div class="pagecount">{{.PageCount}}</div>
 			<div class="tagbox">
 				{{range .TagSummary}}
-					<span class="namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
+					<span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
 				{{end}}
 			</div>
 		</div>
