@@ -40,6 +40,11 @@ func (v values) Encode() string {
 	return "?" + out
 }
 
+func (v values) AddEncode(key, val string) string {
+	v[key] = val
+	return v.Encode()
+}
+
 func vals(val url.Values) values {
 	var va = make(values)
 
@@ -106,6 +111,13 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	var cc DM.ComicCollector
 
 	tagQuery := r.FormValue("tags")
+	appendTag := r.FormValue("append-tag")
+	if(len(tagQuery) > 0) {
+		tagQuery += ", " + appendTag
+	} else {
+		tagQuery += appendTag
+	}
+
 	err = cc.Search(r.FormValue("title"), tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
 	if err != nil {
 		log.Println(err)
@@ -114,6 +126,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Query = vals(r.Form)
+	p.Query["tags"] = tagQuery
 	p.Comics = cc.Comics
 
 	for _, c := range cc.Comics {
