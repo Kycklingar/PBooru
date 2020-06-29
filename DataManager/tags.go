@@ -18,6 +18,14 @@ func NewTag() *Tag {
 	return &t
 }
 
+func CachedTag(t *Tag) *Tag {
+	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
+		return ct.(*Tag)
+	}
+	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
+	return t
+}
+
 type Tag struct {
 	ID        int
 	Tag       string
@@ -25,14 +33,12 @@ type Tag struct {
 	Count     int
 }
 
-//var tagCacheLock sync.RWMutex
-
-func CachedTag(t *Tag) *Tag {
-	if ct := C.Cache.Get("TAG", strconv.Itoa(t.ID)); ct != nil {
-		return ct.(*Tag)
+func (t *Tag) String() string {
+	if t.Namespace.Namespace == "none" {
+		return t.Tag
 	}
-	C.Cache.Set("TAG", strconv.Itoa(t.ID), t)
-	return t
+
+	return fmt.Sprint(t.Namespace.Namespace, ":", t.Tag)
 }
 
 func (t *Tag) QID(q querier) int {
