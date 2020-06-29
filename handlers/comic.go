@@ -41,8 +41,13 @@ func (v values) Encode() string {
 }
 
 func (v values) AddEncode(key, val string) string {
-	v[key] = val
-	return v.Encode()
+	nv := make(values)
+	for k, ov := range v {
+		nv[k] = ov
+	}
+
+	nv[key] = val
+	return nv.Encode()
 }
 
 func vals(val url.Values) values {
@@ -110,23 +115,22 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var cc DM.ComicCollector
 
-	tagQuery := r.FormValue("tags")
-	appendTag := r.FormValue("append-tag")
-	if(len(tagQuery) > 0) {
-		tagQuery += ", " + appendTag
-	} else {
-		tagQuery += appendTag
-	}
+	p.Query = vals(r.Form)
 
-	err = cc.Search(r.FormValue("title"), tagQuery, comicsPerPage, (offset-1)*comicsPerPage)
+	if len(p.Query["tags"]) > 0 {
+		p.Query["tags"] += ", " + p.Query["append-tag"]
+	} else if len(p.Query["append-tag"]) > 0 {
+		p.Query["tags"] += p.Query["append-tag"]
+	}
+	delete(p.Query, "append-tag")
+
+	err = cc.Search(r.FormValue("title"), p.Query["tags"], comicsPerPage, (offset-1)*comicsPerPage)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Oops.", http.StatusInternalServerError)
 		return
 	}
 
-	p.Query = vals(r.Form)
-	p.Query["tags"] = tagQuery
 	p.Comics = cc.Comics
 
 	for _, c := range cc.Comics {
