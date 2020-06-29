@@ -1,99 +1,56 @@
 {{ define "userSettings" }}
 <div class="text-panel">
-    <form action="/options" method="POST">
-        <p>Ipfs Gateway</p>
-        <input type="text" name="daemon" value="{{if .IpfsDaemon}}{{.IpfsDaemon}}{{end}}">
-        <p>Post Limit</p>
-        <input type="text" name="limit" value="{{if .Limit}}{{.Limit}}{{end}}">
-        <p>Thumbnail Size</p>
-        <input type="text" name="ImageSize" value="{{if .ImageSize}}{{.ImageSize}}{{end}}">
-	<p>Minimum Thumbnail Image Size</p>
-	<input type="text" name="MinThumbnailSize" title="0 clamps to thumbnail size" value="{{with .MinThumbnailSize}}{{.}}{{end}}">
-        <br>
-        <br>
-        <label for="thumbhover">Thumbnail Preview Hover</label>
-        <input type="checkbox" id="thumbhover" name="thumbhover" {{if .ThumbHover}}checked{{end}}>
-        <br>
-        <label for="thumbhoverfull">Previews Use Full Image (js)</label>
-        <input type="checkbox" id="thumbhoverfull" name="thumbhoverfull" {{if .ThumbHoverFull}}checked{{end}}>
-        <br>
-        <br>
-        <input type="submit">
-    </form>
+	<form action="/options" method="POST">
+		<p>Ipfs Gateway</p>
+		<input type="text" name="daemon" value="{{if .IpfsDaemon}}{{.IpfsDaemon}}{{end}}">
+		<p>Post Limit</p>
+		<input type="text" name="limit" value="{{if .Limit}}{{.Limit}}{{end}}">
+		<p>Thumbnail Size</p>
+		<input type="text" name="ImageSize" value="{{if .ImageSize}}{{.ImageSize}}{{end}}">
+		<p>Minimum Thumbnail Image Size</p>
+		<input type="text" name="MinThumbnailSize" title="0 clamps to thumbnail size" value="{{with .MinThumbnailSize}}{{.}}{{end}}">
+		<br>
+		<br>
+		<label for="thumbhover">Thumbnail Preview Hover</label>
+		<input type="checkbox" id="thumbhover" name="thumbhover" {{if .ThumbHover}}checked{{end}}>
+		<br>
+		<label for="thumbhoverfull">Previews Use Full Image (js)</label>
+		<input type="checkbox" id="thumbhoverfull" name="thumbhoverfull" {{if .ThumbHoverFull}}checked{{end}}>
+		<br>
+		<br>
+		<input type="submit">
+	</form>
 
-    {{if .ThumbHover}}
-        {{if .ThumbHoverFull}}
-            <style>
-                .thumbnail img
-                {
-                    pointer-events: none;
-                }
-            </style>
-            <script>
-                var el = document.getElementsByClassName("thumbnail")
-                for (var i = 0; i < el.length; i++)
-                {
-                    el[i].setAttribute("onmouseover", "thumbPreview(this)");
-                    el[i].setAttribute("onmouseout", "removeChilderen(this)");
-                }
+	{{if .ThumbHover}}
+		{{if .ThumbHoverFull}}
+		<script>
+		var el = document.getElementsByClassName("thumbnail")
+		for (var i = 0; i < el.length; i++)
+		{
+			let ph = el[i].getElementsByClassName("placeholder")[0]
+			if(ph)
+			{
+				el[i].addEventListener("mouseover", function(e){thumbPreview(ph)}, false)
+				el[i].addEventListener("mouseout", function(e){removeChildren(ph)}, false)
+			}
+		}
 
-                function removeChilderen(sender){
-                    var el = sender.getElementsByClassName("fullview");
-                    for (var i = 0; i < el.length; i++){
-                        sender.removeChild(el[i]);
-                    }
-                }
+		function removeChildren(el){
+			while(el.firstChild)
+				el.removeChild(el.lastChild)
+		}
 
-                function thumbPreview(sender)
-                {
-                    if(sender.className.includes("video"))
-                    {
-                        var video = document.createElement("video")
-                        video.src = "{{.IpfsDaemon}}/ipfs/" + sender.firstElementChild.getAttribute("alt")
-                        video.style.position = "fixed"
-                        video.style.maxHeight = "100%"
-                        video.style.maxWidth = "100%"
-                        //video.style.top = 0
-                        video.style.zIndex = 1
-                        video.style.display = "inherit"
-                        video.style.pointerEvents = "none"
-                        video.className = "fullview centered"
-                        video.autoplay = true
-                        video.loop = true
-                        sender.appendChild(video)
-                    }
-                    else
-                    {
-                    var img = new Image(); 
-                    img.src = "{{.IpfsDaemon}}/ipfs/" + sender.firstElementChild.getAttribute('alt')
-                    img.style.position = "fixed";
-                    img.style.maxHeight = "100%";
-                    img.style.maxWidth = "100%";
-                    img.style.zIndex = 1;
-                    img.style.display = "inherit";
-                    img.style.pointerEvents = "none";
-                    img.className = "fullview";
-                    sender.appendChild(img);
-                    }
-                }
-            </script>
-        {{else}}
-            <style>
-                #posts .thumbnail:hover img
-                {
-                    display: inherit;
-                    position: fixed;
-                    max-width: 100%;
-                    max-height: 100%;
-                    z-index: 1;
-                    pointer-events: none;
-                }
-                #posts .thumbnail:hover
-                {
-                    background-color: white;
-                }
-            </style>
-        {{end}}
-    {{end}}
+		function thumbPreview(el)
+		{
+			var video = document.createElement("video")
+			video.src = "{{.IpfsDaemon}}/ipfs/" + el.getAttribute("hash")
+			video.className = "preview"
+			video.autoplay = true
+			video.loop = true
+			el.appendChild(video)
+		}
+		</script>
+		{{end}}
+	{{end}}
 </div>
 {{end}}

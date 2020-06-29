@@ -64,7 +64,18 @@
                 	        </div>
                 	        {{else}}
                 	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
-                	        {{end}}
+					{{if $.User.ThumbHover}}
+						{{if $.User.ThumbHoverFull}}
+							{{if eq .Mime.Type "video"}}
+							<div hash="{{.Hash}}" class="placeholder"></div>
+							{{else if eq .Mime.Type "image"}}
+							<img loading="lazy" src="{{$.User.IpfsDaemon}}/ipfs/{{.Hash}}" alt="{{.Hash}}" class="preview">
+							{{end}}
+						{{else}}
+							<img loading="lazy" src="{{$.User.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 1024}}" alt="{{.Hash}}" class="preview">
+						{{end}}
+                	        	{{end}}
+				{{end}}
 				<div class="overlay"></div>
                 	    </div>
                 	</a>
