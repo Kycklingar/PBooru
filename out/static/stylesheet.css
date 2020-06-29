@@ -4,6 +4,24 @@
 	flex-wrap: wrap;
 }
 
+.comic-search
+{
+	width:100%;
+}
+
+.comic-search form
+{
+	width: 50%;
+	max-width: 500px;
+	z-index:1;
+}
+
+.comic-search input
+{
+	width: 100%;
+	text-align: center;
+}
+
 .comic
 {
 	margin: 1em;
@@ -27,14 +45,16 @@
 .comic .info .tagbox
 {
 	color: black;
-	text-shadow: 1px 1px 5px white;
+	text-shadow: 1px 1px 3px white;
 	font-family: monospace;
 }
 
-.comic .info .tagbox span
+
+.comic .info .tagbox .namespace-none
 {
 	background-color: grey;
 }
+
 
 .comic .title .chapters
 {
