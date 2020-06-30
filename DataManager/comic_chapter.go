@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 func NewChapter() *Chapter {
@@ -85,6 +88,13 @@ func (c *Chapter) ShiftPosts(user *User, symbol, page, by int) error {
 			return err
 		}
 	}
+
+	err = c.QComic(tx)
+	if err != nil {
+		return err
+	}
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.Comic.ID))
 
 	return nil
 }
@@ -208,6 +218,8 @@ func (c *Chapter) Save(q querier, user *User) error {
 		log.Println(err)
 	}
 
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.Comic.ID))
+
 	return err
 }
 
@@ -249,6 +261,8 @@ func (c *Chapter) SaveEdit(q querier, user *User) error {
 		log.Println(err)
 	}
 
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.Comic.ID))
+
 	return err
 }
 
@@ -274,6 +288,13 @@ func (c *Chapter) Delete(user *User) error {
 	}
 
 	a = tx.Commit
+
+	err = c.QComic(tx)
+	if err != nil {
+		return err
+	}
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.Comic.ID))
 
 	return nil
 }
