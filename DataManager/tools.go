@@ -316,7 +316,7 @@ func GenerateThumbnails(size int) {
 			break
 		}
 
-		for _, post := range posts{
+		for _, post := range posts {
 			fmt.Println("Working on post: ", post.id, post.hash)
 			file, err := ipfsCat(post.hash)
 			if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 
 	shell "github.com/ipfs/go-ipfs-api"
 )
@@ -142,14 +141,6 @@ func ipfsCat(hash string) (io.ReadCloser, error) {
 	return ipfs.Cat(hash)
 }
 
-func readError(res *http.Response) {
-	var b = make([]byte, res.ContentLength)
-	res.Body.Read(b)
-	fmt.Println(string(b))
-	res.Body.Close()
-}
-
-// Stolen from go-ipfs-api *Shell.List
 func ipfsSize(hash string) (int64, error) {
 	links, err := ipfs.List(hash)
 	if err != nil {
