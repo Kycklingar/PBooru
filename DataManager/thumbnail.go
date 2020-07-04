@@ -12,7 +12,7 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
-func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
+func makeThumbnail(parentCid string, file io.ReadSeeker, size, quality int) (string, error) {
 	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size, quality)
 	if err != nil {
 		log.Println(err)
@@ -30,7 +30,7 @@ func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
 	}
 
 	if CFG.UseMFS {
-		if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thumbHash, true); err != nil {
+		if err = mfsCP(parentCid, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), true); err != nil {
 			log.Println(err)
 			return "", err
 		}
@@ -40,7 +40,7 @@ func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
 
 }
 
-func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
+func makeThumbnails(parentCid string, file io.ReadSeeker) ([]Thumb, error) {
 	var largestThumbnailSize int
 	for _, size := range CFG.ThumbnailSizes {
 		if largestThumbnailSize < size {
@@ -60,28 +60,9 @@ func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 
 	for _, size := range CFG.ThumbnailSizes {
 		f.Seek(0, 0)
-		buf, err := image.MakeThumbnail(f, CFG.ThumbnailFormat, size, CFG.ThumbnailQuality)
+		thumbHash, err := makeThumbnail(parentCid, f, size, CFG.ThumbnailQuality)
 		if err != nil {
-			log.Println(err)
 			return nil, err
-		}
-
-		thumbHash, err := ipfsAdd(buf)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-
-		if thumbHash == "" {
-			log.Println("thumbhash is empty")
-			continue
-		}
-
-		if CFG.UseMFS {
-			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thumbHash, true); err != nil {
-				log.Println(err)
-				return nil, err
-			}
 		}
 
 		thumbs = append(thumbs, Thumb{Hash: thumbHash, Size: size})

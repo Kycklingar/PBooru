@@ -44,26 +44,29 @@ func GenerateFileSizes() error {
 	}
 
 	for {
-		ids, err := query(tx)
+		posts, err := query(tx)
 		if err != nil {
 			return txError(tx, err)
 		}
-		if len(ids) <= 0 {
+		if len(posts) <= 0 {
 			break
 		}
 
-		for _, id := range ids {
-			fmt.Printf("Working on id %d hash %s -> ", id.id, id.hash)
-			size := ipfsSize(id.hash)
+		for _, post := range posts {
+			fmt.Printf("Working on id %d hash %s -> ", post.id, post.hash)
+			size, err := ipfsSize(post.hash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			fmt.Println(size)
 			if size <= 0 {
 				log.Println("size returned was <= 0, skipping")
-				time.Sleep(time.Second)
+				//time.Sleep(time.Second)
 				continue
-				//return txError(tx, errors.New("size returned was <= 0"))
 			}
 
-			_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
+			_, err = tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, post.id)
 			if err != nil {
 				log.Println(err)
 				return txError(tx, err)
@@ -124,7 +127,11 @@ func CalculateChecksums() error {
 
 		for _, p := range posts {
 			fmt.Printf("Calculating checksum on post: %d %s\n", p.id, p.hash)
-			file := ipfsCat(p.hash)
+			file, err := ipfsCat(p.hash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			sha, md := checksum(file)
 			file.Close()
 
@@ -176,7 +183,6 @@ func MigrateMfs() {
 	var err error
 
 	offset := 0
-	defer mfsFlush(CFG.MFSRootDir)
 
 	for {
 		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset)
@@ -185,12 +191,11 @@ func MigrateMfs() {
 		}
 		for _, post := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
-			if err = mfsCP(CFG.MFSRootDir+"files/", post.Hash, false); err != nil {
+			if err = mfsCP(post.Hash, CFG.MFSRootDir+"files/", false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
-		mfsFlush(CFG.MFSRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -220,12 +225,11 @@ func MigrateMfs() {
 		}
 		for _, thumb := range thumbs {
 			fmt.Println("Working on thumbnail:", thumb)
-			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), thumb.Hash, false); err != nil {
+			if err = mfsCP(thumb.Hash, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), false); err != nil {
 				log.Fatal(err)
 			}
 		}
 		offset++
-		mfsFlush(CFG.MFSRootDir)
 	}
 
 	if err != nil && err != sql.ErrNoRows {
@@ -241,19 +245,17 @@ func GenerateThumbnail(postID int) error {
 		return err
 	}
 
-	file := ipfsCat(hash)
-	if file == nil {
-		return errors.New("File is nil")
+	file, err := ipfsCat(hash)
+	if err != nil {
+		return err
 	}
 
-	var b bytes.Buffer
+	var b = new(bytes.Buffer)
 	b.ReadFrom(file)
-
-	file.Close()
 
 	f := bytes.NewReader(b.Bytes())
 
-	thumbs, err := makeThumbnails(f)
+	thumbs, err := makeThumbnails(hash, f)
 	if err != nil {
 		return err
 	}
@@ -308,17 +310,17 @@ func GenerateThumbnails(size int) {
 			log.Fatal(err)
 		}
 
-		hashes := query(tx, failed)
+		posts := query(tx, failed)
 
-		if len(hashes) <= 0 {
+		if len(posts) <= 0 {
 			break
 		}
 
-		for _, hash := range hashes {
-			fmt.Println("Working on post: ", hash.id, hash.hash)
-			file := ipfsCat(hash.hash)
-			if file == nil {
-				log.Println("File is nil")
+		for _, post := range posts{
+			fmt.Println("Working on post: ", post.id, post.hash)
+			file, err := ipfsCat(post.hash)
+			if err != nil {
+				log.Println(err)
 				time.Sleep(time.Second)
 				failed++
 				continue
@@ -326,26 +328,26 @@ func GenerateThumbnails(size int) {
 			var b bytes.Buffer
 			b.ReadFrom(file)
 			f := bytes.NewReader(b.Bytes())
-			thash, err := makeThumbnail(f, size, CFG.ThumbnailQuality)
+			thash, err := makeThumbnail(post.hash, f, size, CFG.ThumbnailQuality)
 			file.Close()
 			if err != nil {
-				log.Println(err, hash)
+				log.Println(err, post)
 				failed++
 				continue
 			} else if thash == "" {
-				log.Println("makeThumbnail did not produce a hash", hash)
+				log.Println("makeThumbnail did not produce a hash", post)
 				failed++
 				continue
 			}
 			if CFG.UseMFS {
-				err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
+				err = mfsCP(thash, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), true)
 				if err != nil {
 					log.Println(err, thash)
 					failed++
 					continue
 				}
 			}
-			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", hash.id, size, thash)
+			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", post.id, size, thash)
 			if err != nil {
 				tx.Rollback()
 				log.Fatal(err)
@@ -459,18 +461,18 @@ func GenerateFileDimensions() {
 			log.Fatal(err)
 		}
 
-		hashes := query(tx, failed)
+		posts := query(tx, failed)
 
-		if len(hashes) <= 0 {
+		if len(posts) <= 0 {
 			tx.Commit()
 			break
 		}
 
-		for _, hash := range hashes {
-			fmt.Println("Working on post: ", hash.id, hash.hash)
-			file := ipfsCat(hash.hash)
-			if file == nil {
-				log.Println("File is nil")
+		for _, post := range posts {
+			fmt.Println("Working on post: ", post.id, post.hash)
+			file, err := ipfsCat(post.hash)
+			if err != nil {
+				log.Println(err)
 				time.Sleep(time.Second)
 				failed++
 				continue
@@ -490,7 +492,7 @@ func GenerateFileDimensions() {
 				continue
 			}
 
-			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", hash.id, width, height)
+			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", post.id, width, height)
 			if err != nil {
 				tx.Rollback()
 				log.Fatal(err)

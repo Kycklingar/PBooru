@@ -427,14 +427,14 @@ func CreatePost(file io.ReadSeeker, size int64, tagString, mime string, user *Us
 	if p.ID == 0 {
 		if CFG.UseMFS {
 			file.Seek(0, 0)
-			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
+			if err = mfsCP(p.Hash, CFG.MFSRootDir+"files/", true); err != nil {
 				log.Println("Error copying file to mfs: ", err)
 				return p, err
 			}
 		}
 
 		file.Seek(0, 0)
-		p.thumbnails, err = makeThumbnails(file)
+		p.thumbnails, err = makeThumbnails(p.Hash, file)
 		if err != nil {
 			log.Println(err)
 		}

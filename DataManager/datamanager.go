@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	shell "github.com/ipfs/go-ipfs-api"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -80,7 +81,7 @@ func Setup(iApi string) {
 
 	rand.Seed(time.Now().UnixNano())
 
-	ipfsAPI = iApi
+	ipfs = shell.NewShell(iApi)
 
 	// countCache.cache = make(map[string]int)
 }
