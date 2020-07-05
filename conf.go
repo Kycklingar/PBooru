@@ -24,7 +24,7 @@ type config struct {
 
 func (c *config) Default() {
 	c.HTTPAddress = ":80"
-	c.IPFSAPI = "http://localhost:5001/api/v0/"
+	c.IPFSAPI = "http://localhost:5001"
 	c.HCfg.Default()
 	c.DBCfg.Default()
 }

@@ -82,6 +82,9 @@ func Setup(iApi string) {
 	rand.Seed(time.Now().UnixNano())
 
 	ipfs = shell.NewShell(iApi)
+	if !ipfs.IsUp() {
+		log.Printf("Your IPFS Daemon is not accessible on %s. Did you forget to start it?\n", iApi)
+	}
 
 	// countCache.cache = make(map[string]int)
 }
