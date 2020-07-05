@@ -555,8 +555,14 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Insufficient priviliges, Upload needed", http.StatusForbidden)
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
-		r.ParseMultipartForm(50 << 20)
+
+		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize + 1000000)
+		err := r.ParseMultipartForm(CFG.MaxFileSize)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		file, fh, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
