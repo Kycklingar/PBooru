@@ -234,26 +234,42 @@ func (u uri) getAtIndex(index int) (string, error) {
 }
 
 type Comment struct {
-	ID   int
-	User *DM.User
-	Text string
-	Time string
+	ID           int
+	User         *DM.User
+	Text         string
+	CompiledText string
+	Time         string
+	Editable     bool
 }
 
-func tComment(c *DM.Comment) Comment {
+func canEditComment(min time.Duration, user *DM.User, c *DM.Comment) bool {
+	_, toff := time.Now().Zone()
+	return user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(*c.Time.Time())+time.Second*time.Duration(toff) < time.Minute*min)
+}
+
+const commentEditTimeoutMinutes = 30
+
+func tComment(user *DM.User, c *DM.Comment) Comment {
 	c.User.QName(DM.DB)
-	return Comment{c.ID, c.User, c.Text, c.Time.String()}
+	return Comment{
+		c.ID,
+		c.User,
+		c.Text,
+		c.CompiledText,
+		c.Time.String(),
+		canEditComment(commentEditTimeoutMinutes, user, c),
+	}
 }
 
-func tComments(cm []*DM.Comment) (r []Comment) {
+func tComments(user *DM.User, cm []*DM.Comment) (r []Comment) {
 	for _, c := range cm {
-		r = append(r, tComment(c))
+		r = append(r, tComment(user, c))
 	}
 	return
 }
 
 func tPostComment(c *DM.PostComment) Comment {
-	return Comment{c.ID, c.User, c.Text, c.Time}
+	return Comment{c.ID, c.User, c.Text, c.Text, c.Time, false}
 }
 
 func tPostComments(cm []*DM.PostComment) (r []Comment) {
@@ -308,7 +324,8 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 		Captcha    string
 	}
 	var p P
-	p.Comments = tComments(commMod.Comments)
+	p.Comments = tComments(user, commMod.Comments)
+
 	p.Username = user.QName(DM.DB)
 	if p.Username == "" {
 		p.Username = "Anonymous"
@@ -322,6 +339,42 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "comments", p)
+}
+
+func editCommentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	const (
+		cID = "id"
+	)
+
+	m, err := verifyInteger(r, cID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	comment, err := DM.CommentByID(m[cID])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if canEditComment(commentEditTimeoutMinutes, user, comment) {
+		err = comment.Edit(r.FormValue("text"))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func UrlEncode(uri string) string {

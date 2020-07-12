@@ -298,6 +298,7 @@ func init() {
 
 	Handlers["/deletepost"] = makeStatHandler(RemovePostHandler)
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
+	Handlers["/wall/edit/"] = makeStatHandler(editCommentHandler)
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
 	Handlers["/comic/"] = makeStatHandler(comicHandler)
 	Handlers["/comic/delete/"] = makeStatHandler(comicDeleteHandler)

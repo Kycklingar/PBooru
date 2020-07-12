@@ -14,15 +14,30 @@ type CommentCollector struct {
 }
 
 type Comment struct {
-	ID   int
-	User *User
-	Text string
-	Time timestamp
+	ID           int
+	User         *User
+	Text         string
+	CompiledText string
+	Time         timestamp
 }
 
 // Initialize a new comment
 func NewComment() *Comment {
 	return &Comment{User: NewUser()}
+}
+
+func CommentByID(id int) (*Comment, error) {
+	var c = NewComment()
+	c.ID = id
+
+	err := DB.QueryRow(`
+		SELECT user_id, text, timestamp
+		FROM comment_wall
+		WHERE id = $1`,
+		id,
+	).Scan(&c.User.ID, &c.Text, &c.Time)
+
+	return c, err
 }
 
 // Get the latest comments
@@ -48,15 +63,13 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 	}
 
 	for i := range cm.Comments {
-		cm.Comments[i].Text = compileBBCode(q, cm.Comments[i].Text, daemon)
+		cm.Comments[i].CompiledText = compileBBCode(q, cm.Comments[i].Text, daemon)
 	}
 
 	return rows.Err()
 }
 
-//Save a new comment to the wall
-func (cm *Comment) Save(userID int, text string) error {
-
+func verifyCommentPosts(text string) error {
 	if suc, err := regexp.MatchString("\\[post(?s).*\\]", text); err != nil || suc {
 		if err != nil {
 			log.Println(err)
@@ -89,6 +102,24 @@ func (cm *Comment) Save(userID int, text string) error {
 		}
 	}
 
+	return nil
+}
+
+func (cm Comment) Username() string {
+	if cm.User.ID <= 0 {
+		return "Anonymouse"
+	}
+
+	return cm.User.Name
+}
+
+//Save a new comment to the wall
+func (cm *Comment) Save(userID int, text string) error {
+
+	if err := verifyCommentPosts(text); err != nil {
+		return err
+	}
+
 	isNull := func(id int) *int {
 		if id == 0 {
 			return nil
@@ -96,6 +127,15 @@ func (cm *Comment) Save(userID int, text string) error {
 		return &id
 	}
 	_, err := DB.Exec("INSERT INTO comment_wall(user_id, text) VALUES($1, $2)", isNull(userID), strings.TrimSpace(text))
+	return err
+}
+
+func (cm *Comment) Edit(text string) error {
+	if err := verifyCommentPosts(text); err != nil {
+		return err
+	}
+
+	_, err := DB.Exec("UPDATE comment_wall SET text = $1 WHERE id = $2", text, cm.ID)
 	return err
 }
 
