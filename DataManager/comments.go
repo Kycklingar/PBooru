@@ -107,7 +107,7 @@ func verifyCommentPosts(text string) error {
 
 func (cm Comment) Username() string {
 	if cm.User.ID <= 0 {
-		return "Anonymouse"
+		return "Anonymous"
 	}
 
 	return cm.User.Name
