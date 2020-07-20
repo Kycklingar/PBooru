@@ -244,7 +244,7 @@ type Comment struct {
 
 func canEditComment(min time.Duration, user *DM.User, c *DM.Comment) bool {
 	_, toff := time.Now().Zone()
-	return user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(*c.Time.Time())+time.Second*time.Duration(toff) < time.Minute*min)
+	return user.ID > 0 && (user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(*c.Time.Time())+time.Second*time.Duration(toff) < time.Minute*min))
 }
 
 const commentEditTimeoutMinutes = 30

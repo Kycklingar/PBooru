@@ -30,12 +30,18 @@ func CommentByID(id int) (*Comment, error) {
 	var c = NewComment()
 	c.ID = id
 
+	var uID *int
+
 	err := DB.QueryRow(`
 		SELECT user_id, text, timestamp
 		FROM comment_wall
 		WHERE id = $1`,
 		id,
-	).Scan(&c.User.ID, &c.Text, &c.Time)
+	).Scan(&uID, &c.Text, &c.Time)
+
+	if uID != nil {
+		c.User.ID = *uID
+	}
 
 	return c, err
 }
