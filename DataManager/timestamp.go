@@ -14,6 +14,10 @@ type timestamp struct {
 	time *time.Time
 }
 
+func (t timestamp) Time() *time.Time {
+	return t.time
+}
+
 func (t timestamp) String() string {
 	if t.time != nil {
 		return t.time.Format(displayTimestamp)

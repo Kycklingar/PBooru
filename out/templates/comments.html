@@ -39,8 +39,18 @@
             <span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
             <span class="comment-id">#{{.ID}}</span>
             <span class="comment-time">{{.Time}}</span>
+	    {{if .Editable}}
+	    	<details>
+		<summary>Edit</summary>
+			<form action="/wall/edit/" method="POST">
+				<input type="hidden" name="id" value="{{.ID}}">
+				<textarea name="text">{{.Text}}</textarea>
+				<input type="submit">
+			</form>
+		</details>
+	    {{end}}
             </b>
-            <p>{{noescape .Text}}</p>
+            <p>{{noescape .CompiledText}}</p>
         </div>
     </li>
 {{ end}}
