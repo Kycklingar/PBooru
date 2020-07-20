@@ -4,6 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+)
+
+const (
+	cacheComic = "CMC"
 )
 
 type ComicCollector struct {
@@ -95,6 +102,8 @@ func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) erro
 			if err != nil {
 				return err
 			}
+
+			comic = CachedComic(comic)
 
 			cc.Comics = append(cc.Comics, comic)
 		}
@@ -191,6 +200,15 @@ func NewComicByID(id int) (*Comic, error) {
 	return comic, nil
 }
 
+func CachedComic(c *Comic) *Comic {
+	if cc := C.Cache.Get(cacheComic, strconv.Itoa(c.ID)); cc != nil {
+		return cc.(*Comic)
+	}
+
+	C.Cache.Set(cacheComic, strconv.Itoa(c.ID), c)
+	return c
+}
+
 type Comic struct {
 	ID           int
 	Title        string
@@ -198,6 +216,8 @@ type Comic struct {
 	Chapters     []*Chapter
 	ChapterCount int
 	PageCount    int
+
+	TagSummary []*Tag
 }
 
 func (c *Comic) QID(q querier) int {
@@ -312,6 +332,49 @@ func (c *Comic) QChapterCount(q querier) int {
 	return c.ChapterCount
 }
 
+func (c *Comic) QTagSummary(q querier) error {
+	if len(c.TagSummary) > 0 {
+		return nil
+	}
+
+	rows, err := q.Query(`
+		SELECT ptm.tag_id
+		FROM post_tag_mappings ptm
+		JOIN comic_mappings cm
+			ON ptm.post_id = cm.post_id
+		JOIN comic_chapter cc
+			ON cm.chapter_id = cc.id
+		JOIN comics c
+			ON cc.comic_id = c.id
+		WHERE c.id = $1
+		GROUP BY ptm.tag_id ORDER BY count(ptm.tag_id) DESC LIMIT 15;
+		`,
+		c.ID,
+	)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t = NewTag()
+		err = rows.Scan(&t.ID)
+		if err != nil {
+			return err
+		}
+
+		t = CachedTag(t)
+		t.QTag(q)
+		t.QNamespace(q)
+		t.Namespace.QNamespace(q)
+
+		c.TagSummary = append(c.TagSummary, t)
+	}
+
+	return rows.Err()
+}
+
 func (c *Comic) Save(user *User) error {
 	tx, err := DB.Begin()
 	if err != nil {
@@ -380,6 +443,8 @@ func (c *Comic) SaveEdit(user *User) error {
 
 	a = tx.Commit
 
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.ID))
+
 	return nil
 }
 
@@ -412,6 +477,8 @@ func (c *Comic) Delete(user *User) error {
 	}
 
 	a = tx.Commit
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(c.ID))
 
 	return nil
 }

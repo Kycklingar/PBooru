@@ -26,7 +26,7 @@ func NewComicPost() *ComicPost {
 type ComicPost struct {
 	ID      int
 	Post    *Post
-	Order   int
+	Order   int // TODO: Major, Minor pages
 	Chapter *Chapter
 	Comic   *Comic
 }
@@ -144,6 +144,14 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 
 	C.Cache.Purge("CCH", strconv.Itoa(p.Chapter.QID(tx)))
 
+	err = p.Chapter.QComic(tx)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(p.Chapter.Comic.ID))
+
 	return nil
 }
 
@@ -227,9 +235,16 @@ func (p *ComicPost) Delete(user *User) error {
 
 	if err = p.log(tx, lRemove, user); err != nil {
 		log.Println(err)
-		tx.Rollback()
 		return err
 	}
+
+	err = p.Chapter.QComic(tx)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	C.Cache.Purge(cacheComic, strconv.Itoa(p.Chapter.Comic.ID))
 
 	def = tx.Commit
 
