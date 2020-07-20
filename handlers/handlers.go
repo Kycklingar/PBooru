@@ -16,6 +16,7 @@ import (
 
 type Config struct {
 	AllowedMimes         []string
+	MaxFileSize	     int64
 	IPFSDaemonMap        map[string]string
 	EnableCommentCaptcha int
 }
@@ -35,6 +36,7 @@ func (c *Config) Default() {
 
 	c.IPFSDaemonMap["default"] = "http://localhost:8080"
 	c.EnableCommentCaptcha = captchaEveryone
+	c.MaxFileSize = 50000000 // 50MB
 }
 
 var CFG *Config
