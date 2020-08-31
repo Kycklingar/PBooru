@@ -1182,7 +1182,7 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 			pc.id = append(pc.id, tag.QID(DB))
 		}
 		sort.Ints(pc.id)
-		//fmt.Println(tagIDs)
+		//fmt.Println(pc.id)
 		if len(pc.id) <= 0 {
 			pc.id = []int{-1}
 		}

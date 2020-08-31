@@ -99,10 +99,27 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		return err
 	}
 
+	// Find tags in common to superior
+	var cmnTags []*Tag
+	cmnTags, err = commonTags(tx, dupe)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// For each inferior post, move tags to superior
 	if err = moveTags(tx, dupe); err != nil {
 		log.Println(err)
 		return err
+	}
+
+	// Recount common tags
+	for _, tag := range cmnTags {
+		err = tag.recount(tx)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 
 	// Replace comics with new post
@@ -276,6 +293,45 @@ func moveVotes(tx querier, dupe Dupe) (err error) {
 	return
 }
 
+func commonTags(tx querier, dupe Dupe) ([]*Tag, error) {
+	var tags []*Tag
+	q := func(p *Post) error {
+		rows, err := tx.Query(`
+			SELECT p1.tag_id FROM post_tag_mappings p1
+			JOIN post_tag_mappings p2
+			ON p1.tag_id = p2.tag_id
+			WHERE p1.post_id = $1
+			AND p2.post_id = $2
+			`,
+			dupe.Post.ID,
+			p.ID,
+		)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var t = new(Tag)
+			rows.Scan(&t.ID)
+			if !isTagIn(t, tags) {
+				tags = append(tags, t)
+			}
+		}
+
+		return nil
+	}
+
+	for _, p := range dupe.Inferior {
+		if err := q(p); err != nil {
+			return nil, err
+		}
+	}
+
+	return tags, nil
+}
+
 func moveTags(tx querier, dupe Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
@@ -288,6 +344,7 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 			p.ID,
 		)
 		if err != nil {
+			log.Println(err)
 			return
 		}
 
@@ -298,22 +355,8 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 			p.ID,
 		)
 		if err != nil {
+			log.Println(err)
 			return
-		}
-	}
-
-	// Update tag counts
-	var tc = new(TagCollector)
-
-	err = tc.GetFromPost(tx, dupe.Post)
-	if err != nil {
-		return err
-	}
-
-	for _, tag := range tc.Tags {
-		err = tag.recount(tx)
-		if err != nil {
-			return err
 		}
 	}
 
