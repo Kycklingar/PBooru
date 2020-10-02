@@ -459,7 +459,8 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		}
 
 		file.Seek(0, 0)
-		width, height, _ := image.GetDimensions(file)
+		var width, height int
+		width, height, err = image.GetDimensions(file)
 
 		err = p.Mime.Parse(mime)
 		if err != nil {
