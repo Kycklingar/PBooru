@@ -92,6 +92,8 @@ func compare2Handler(w http.ResponseWriter, r *http.Request) {
 
 		page.Posts[i].QDimensions(DM.DB)
 		page.Posts[i].QSize(DM.DB)
+		page.Posts[i].QDeleted(DM.DB)
+
 	}
 
 	renderTemplate(w, "compare2", page)

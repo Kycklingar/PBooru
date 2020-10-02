@@ -157,6 +157,7 @@ func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 
 		p.QDimensions(DM.DB)
 		p.QSize(DM.DB)
+		p.QDeleted(DM.DB)
 	}
 
 	renderTemplate(w, "compare2", page)

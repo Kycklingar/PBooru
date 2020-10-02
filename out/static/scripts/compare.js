@@ -12,7 +12,7 @@ var note = document.getElementById("note")
 
 canvas.onclick = function(){rightInterface.focus()}
 
-function postStruct(id, hash, thumb, dimensions, filesize, mime)
+function postStruct(id, hash, thumb, dimensions, filesize, mime, deleted)
 {
 	return {
 		"id":id,
@@ -21,6 +21,7 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime)
 		"dimensions":dimensions,
 		"filesize":filesize,
 		"mime":mime,
+		"deleted":deleted,
 	}
 }
 
@@ -133,7 +134,8 @@ function getRemotePost(id)
 						closestThumb(100, j.ThumbHashes),
 						j.Dimension,
 						j.Filesize,
-						mimeObj(j.Mime)
+						mimeObj(j.Mime),
+						j.Deleted
 					)
 				)
 			}
@@ -187,6 +189,9 @@ function leftPostElement(post)
 	e.ondragstart = drag
 	//e.ondrop = drop
 	e.ondragover = dragover
+
+	if(post.deleted)
+		e.classList.add("deleted")
 
 	e.addEventListener("drop", drop, true)
 	
