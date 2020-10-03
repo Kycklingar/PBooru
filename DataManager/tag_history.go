@@ -88,7 +88,7 @@ func (th *TagHistory) Reverse() error {
 	etags := th.QETags(tx)
 	th.QPost(tx)
 
-	if th.Post.QID(tx) <= 0 {
+	if th.Post.ID <= 0 {
 		return txError(tx, errors.New("taghistory post has no id"))
 	}
 
@@ -98,9 +98,9 @@ func (th *TagHistory) Reverse() error {
 		}
 
 		if et.Direction {
-			_, err = tx.Exec("DELETE FROM post_tag_mappings WHERE post_id = $1 AND tag_id = $2", th.Post.QID(tx), et.Tag.QID(tx))
+			_, err = tx.Exec("DELETE FROM post_tag_mappings WHERE post_id = $1 AND tag_id = $2", th.Post.ID, et.Tag.QID(tx))
 		} else {
-			_, err = tx.Exec("INSERT INTO post_tag_mappings (post_id, tag_id) VALUES($1, $2) ON CONFLICT DO NOTHING", th.Post.QID(tx), et.Tag.QID(tx))
+			_, err = tx.Exec("INSERT INTO post_tag_mappings (post_id, tag_id) VALUES($1, $2) ON CONFLICT DO NOTHING", th.Post.ID, et.Tag.QID(tx))
 		}
 
 		if err != nil {
@@ -129,7 +129,7 @@ func (th *TagHistory) Reverse() error {
 	}
 
 	// Reset post cache
-	C.Cache.Purge("TC", strconv.Itoa(th.Post.QID(DB)))
+	C.Cache.Purge("TC", strconv.Itoa(th.Post.ID))
 
 	return nil
 }

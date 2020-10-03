@@ -50,13 +50,14 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])
 
-		page.Posts[i].QHash(DM.DB)
-		page.Posts[i].QThumbnails(DM.DB)
-		page.Posts[i].QMime(DM.DB).QName(DM.DB)
-		page.Posts[i].QMime(DM.DB).QType(DM.DB)
-
-		page.Posts[i].QDimensions(DM.DB)
-		page.Posts[i].QSize(DM.DB)
+		page.Posts[i].QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+			DM.PFDimension,
+			DM.PFSize,
+		)
 	}
 
 	renderTemplate(w, "compare", page)
@@ -85,15 +86,14 @@ func compare2Handler(w http.ResponseWriter, r *http.Request) {
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])
 
-		page.Posts[i].QHash(DM.DB)
-		page.Posts[i].QThumbnails(DM.DB)
-		page.Posts[i].QMime(DM.DB).QName(DM.DB)
-		page.Posts[i].QMime(DM.DB).QType(DM.DB)
-
-		page.Posts[i].QDimensions(DM.DB)
-		page.Posts[i].QSize(DM.DB)
-		page.Posts[i].QDeleted(DM.DB)
-
+		page.Posts[i].QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+			DM.PFDimension,
+			DM.PFSize,
+		)
 	}
 
 	renderTemplate(w, "compare2", page)

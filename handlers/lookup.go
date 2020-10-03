@@ -37,12 +37,13 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 		var p PostsPage
 
 		for _, pst := range posts {
-			pst.QID(DM.DB)
-			pst.QHash(DM.DB)
-			pst.QThumbnails(DM.DB)
-			pst.QDeleted(DM.DB)
-			pst.QMime(DM.DB).QName(DM.DB)
-			pst.QMime(DM.DB).QType(DM.DB)
+			pst.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFThumbnails,
+				DM.PFDeleted,
+				DM.PFMime,
+			)
 
 			p.Posts = append(p.Posts, pst)
 		}

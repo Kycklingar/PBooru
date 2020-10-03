@@ -39,9 +39,12 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, pool := range p.Pools {
 		pool.QPosts(DM.DB)
 		for _, post := range pool.Posts {
-			post.Post.QThumbnails(DM.DB)
-			post.Post.QHash(DM.DB)
-			post.Post.QDeleted(DM.DB)
+			post.Post.QMul(
+				DM.DB,
+				DM.PFThumbnails,
+				DM.PFHash,
+				DM.PFDeleted,
+			)
 		}
 	}
 
@@ -71,9 +74,12 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 	pool.QDescription(DM.DB)
 	pool.QPosts(DM.DB)
 	for _, pm := range pool.Posts {
-		pm.Post.QThumbnails(DM.DB)
-		pm.Post.QHash(DM.DB)
-		pm.Post.QDeleted(DM.DB)
+		pm.Post.QMul(
+			DM.DB,
+			DM.PFThumbnails,
+			DM.PFHash,
+			DM.PFDeleted,
+		)
 	}
 
 	type page struct {

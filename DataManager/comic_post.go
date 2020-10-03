@@ -36,7 +36,7 @@ func (p *ComicPost) QID(q querier) int {
 		return p.ID
 	}
 
-	err := q.QueryRow("SELECT id FROM comic_mappings WHERE chapter_id = $1 AND post_id=$2", p.Chapter.QID(q), p.Post.QID(q)).Scan(&p.ID)
+	err := q.QueryRow("SELECT id FROM comic_mappings WHERE chapter_id = $1 AND post_id=$2", p.Chapter.QID(q), p.Post.ID).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 	}
@@ -125,11 +125,11 @@ func (p *ComicPost) Save(user *User, overwrite bool) error {
 	}
 	p.Post = dupe.Post
 
-	if p.Post.QID(tx) == 0 {
+	if p.Post.ID == 0 {
 		return fmt.Errorf("Invalid post")
 	}
 
-	err = tx.QueryRow("INSERT INTO comic_mappings(post_id, post_order, Chapter_id) Values($1, $2, $3) RETURNING id", p.Post.QID(tx), p.Order, p.Chapter.QID(tx)).Scan(&p.ID)
+	err = tx.QueryRow("INSERT INTO comic_mappings(post_id, post_order, Chapter_id) Values($1, $2, $3) RETURNING id", p.Post.ID, p.Order, p.Chapter.QID(tx)).Scan(&p.ID)
 	if err != nil {
 		log.Print(err)
 		tx.Rollback()
@@ -191,13 +191,13 @@ func (p *ComicPost) SaveEdit(user *User) error {
 }
 
 func (p *ComicPost) replacePost(q querier, new *Post) error {
-	if new.QID(q) == 0 {
+	if new.ID == 0 {
 		return errors.New("new.id is zero")
 	}
-	if p.Post.QID(q) == 0 {
+	if p.Post.ID == 0 {
 		return errors.New("p.ID is zero")
 	}
-	_, err := q.Exec("UPDATE comic_mappings SET post_id=$1 WHERE post_id=$2", new.QID(q), p.Post.QID(q))
+	_, err := q.Exec("UPDATE comic_mappings SET post_id=$1 WHERE post_id=$2", new.ID, p.Post.ID)
 	if err != nil {
 		log.Print(err)
 		return err

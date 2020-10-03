@@ -17,6 +17,7 @@ import (
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
+	BM "github.com/kycklingar/PBooru/benchmark"
 )
 
 func NewPost() *Post {
@@ -128,7 +129,9 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 }
 
 func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
+	bm := BM.Begin()
 	selector := sqlbinder.BindFieldAddresses(p, fields...)
+	bm.Split("Selector Done")
 
 	query := fmt.Sprintf(`
 		SELECT %s
@@ -140,13 +143,18 @@ func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
 		selector.Joins(),
 	)
 
-	fmt.Println(query)
-
 	var c = make(chan error)
 
-	go func(){c <- p.QThumbs(q, fields...)}()
-	go func(){c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)}()
+	go func(){
+		c <- p.QThumbs(q, fields...)
+		bm.Split("Thumbs Done")
+	}()
+	go func(){
+		c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)
+		bm.Split("Query Done")
+	}()
 
+	fmt.Println(query)
 
 	var err error
 	for i := 0; i < 2; i++ {
@@ -156,6 +164,8 @@ func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
 			err = er
 		}
 	}
+
+	bm.End(true)
 
 	return err
 }
@@ -192,8 +202,6 @@ func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
 		selector.Select(),
 	)
 
-	fmt.Println(query)
-
 	rows, err := q.Query(query, p.ID)
 	if err != nil {
 		return err
@@ -216,105 +224,28 @@ func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
 	return nil
 }
 
-func (p *Post) QID(q querier) int {
-	if p.ID != 0 {
-		return p.ID
-	}
-
-	if p.Hash != "" {
-		err := q.QueryRow("SELECT id FROM posts WHERE multihash=$1", p.Hash).Scan(&p.ID)
-		if err != nil && err != sql.ErrNoRows {
-			log.Print(err)
-			return 0
-		}
-	}
-
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
-
-	return p.ID
-}
+//func (p *Post) QID(q querier) int {
+//	if p.ID != 0 {
+//		return p.ID
+//	}
+//
+//	if p.Hash != "" {
+//		err := q.QueryRow("SELECT id FROM posts WHERE multihash=$1", p.Hash).Scan(&p.ID)
+//		if err != nil && err != sql.ErrNoRows {
+//			log.Print(err)
+//			return 0
+//		}
+//	}
+//
+//	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
+//
+//	return p.ID
+//}
 
 func (p *Post) SetID(q querier, id int) error {
 	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
 }
 
-func (p *Post) QHash(q querier) string {
-	if p.Hash != "" {
-		return p.Hash
-	}
-
-	if p.ID != 0 {
-		// if t := C.Cache.Get(p.ID); t != nil {
-		// 	p = t.(*Post)
-		// 	return p.Hash
-		// }
-		//	if c := C.Cache.Get("PST", strconv.Itoa(p.ID)); c != nil {
-		//		switch cp := c.(type) {
-		//		case *Post:
-		//			*p = *cp
-		//			if p.Hash != "" {
-		//				return p.Hash
-		//			}
-		//		}
-		//	}
-
-		err := q.QueryRow("SELECT multihash FROM posts WHERE id=$1", p.ID).Scan(&p.Hash)
-		if err != nil {
-			log.Print(err)
-			return ""
-		}
-		//	C.Cache.Set("PST", strconv.Itoa(p.ID), p)
-	}
-
-	return p.Hash
-}
-
-func (p *Post) QChecksums(q querier) error {
-	var c checksums
-
-	err := q.QueryRow(`
-		SELECT sha256, md5
-		FROM hashes
-		WHERE post_id = $1
-		`,
-		p.ID,
-	).Scan(&c.Sha256, &c.Md5)
-	if err != nil {
-		return err
-	}
-
-	p.Checksums = c
-
-	return nil
-}
-
-func (p *Post) QThumbnails(q querier) error {
-	if len(p.thumbnails) > 0 {
-		return nil
-	}
-	if p.QID(q) == 0 {
-		return errors.New("nil id")
-	}
-
-	rows, err := q.Query("SELECT multihash, dimension FROM thumbnails WHERE post_id=$1", p.ID)
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var t Thumb
-		if err = rows.Scan(&t.Hash, &t.Size); err != nil {
-			log.Println(err)
-			return err
-		}
-		p.thumbnails = append(p.thumbnails, t)
-	}
-
-	p.thumbnails = append(p.thumbnails, Thumb{Hash: "", Size: 0})
-	return rows.Err()
-}
 
 func (p *Post) Thumbnails() []Thumb {
 	var thumbs []Thumb
@@ -327,7 +258,6 @@ func (p *Post) Thumbnails() []Thumb {
 }
 
 func (p *Post) ClosestThumbnail(size int) (ret string) {
-	p.QThumbnails(DB)
 	if len(p.thumbnails) <= 0 {
 		return ""
 	}
@@ -350,88 +280,8 @@ func (p *Post) ClosestThumbnail(size int) (ret string) {
 	return
 }
 
-func (p *Post) QMime(q querier) *Mime {
-	if p.Mime.QID(q) != 0 {
-		if cm := C.Cache.Get("MIME", strconv.Itoa(p.Mime.ID)); cm != nil {
-			p.Mime = cm.(*Mime)
-		} else {
-			C.Cache.Set("MIME", strconv.Itoa(p.Mime.ID), p.Mime)
-		}
-		return p.Mime
-	}
-	err := q.QueryRow("SELECT mime_id FROM posts WHERE id=$1", p.QID(q)).Scan(&p.Mime.ID)
-	if err != nil {
-		log.Print(err)
-	}
-
-	return p.Mime
-}
-
-func (p *Post) QDeleted(q querier) bool {
-	if p.QID(q) == 0 {
-		return false
-	}
-
-	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&p.Deleted)
-	if err != nil {
-		log.Print(err)
-		return false
-	}
-
-	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
-
-	return p.Deleted
-}
-
-func (p *Post) QSize(q querier) int64 {
-	if p.Size > 0 {
-		return p.Size
-	}
-
-	if p.QID(q) == 0 {
-		return 0
-	}
-
-	err := q.QueryRow("SELECT file_size FROM posts WHERE id = $1", p.QID(q)).Scan(&p.Size)
-	if err != nil {
-		log.Println(err)
-	}
-	return p.Size
-}
-
-func (p *Post) QDimensions(q querier) error {
-	var dim Dimension
-
-	err := q.QueryRow("SELECT width, height FROM post_info WHERE post_id = $1", p.ID).Scan(&dim.Width, &dim.Height)
-	if err != nil {
-		//log.Println(err)
-		return err
-	}
-
-	p.Dimension = dim
-
-	return nil
-}
-
-func (p *Post) QScore(q querier) int {
-	if p.Score >= 0 {
-		return p.Score
-	}
-
-	if p.QID(q) <= 0 {
-		return 0
-	}
-
-	err := q.QueryRow("SELECT score FROM posts WHERE id = $1", p.ID).Scan(&p.Score)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return p.Score
-}
-
 func (p *Post) Vote(q querier, u *User) error {
-	if p.QID(q) <= 0 {
+	if p.ID <= 0 {
 		return errors.New("no post-id")
 	}
 
@@ -454,7 +304,7 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 		return p.editCount, nil
 	}
 
-	if p.QID(q) <= 0 {
+	if p.ID <= 0 {
 		return 0, errors.New("no id specified")
 	}
 
@@ -464,7 +314,7 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 }
 
 func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
-	if p.QID(q) <= 0 {
+	if p.ID <= 0 {
 		return nil, errors.New("no post id specified")
 	}
 	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
@@ -554,7 +404,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 	defer commitOrDie(tx, &err)
 
-	if p.QID(DB) == 0 {
+	if p.ID == 0 {
 		if CFG.UseMFS {
 			file.Seek(0, 0)
 			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
@@ -579,7 +429,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 			return err
 		}
 
-		if p.Mime.QID(tx) == 0 {
+		if p.Mime.ID == 0 {
 			err = p.Mime.Save(tx)
 			if err != nil {
 				log.Println(err)
@@ -595,14 +445,14 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 
 		file.Seek(0, 0)
 		sha, md := checksum(file)
-		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.QID(tx), sha, md)
+		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.ID, sha, md)
 		if err != nil {
 			log.Println(err)
 			return err
 		}
 
 		if width > 0 && height > 0 {
-			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.QID(tx), width, height)
+			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.ID, width, height)
 			if err != nil {
 				log.Println(err)
 				return err
@@ -647,7 +497,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 }
 
 func (p *Post) Save(q querier, user *User) error {
-	if p.QID(q) != 0 {
+	if p.ID != 0 {
 		return errors.New("post already exist")
 	}
 
@@ -683,10 +533,10 @@ func (p *Post) Save(q querier, user *User) error {
 }
 
 func (p *Post) Delete(q querier) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post:delete: invalid post")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=true WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=true WHERE id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -702,16 +552,16 @@ func (p *Post) Delete(q querier) error {
 	for _, t := range tc.Tags {
 		resetCacheTag(q, t.QID(q))
 	}
-	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
+	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
 	return nil
 }
 
 func (p *Post) UnDelete(q querier) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post:undelete: invalid post id")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=false WHERE id=$1", p.QID(q))
+	_, err := q.Exec("UPDATE posts SET deleted=false WHERE id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -726,7 +576,7 @@ func (p *Post) UnDelete(q querier) error {
 	for _, t := range tc.Tags {
 		resetCacheTag(q, t.QID(q))
 	}
-	C.Cache.Purge("PST", strconv.Itoa(p.QID(q)))
+	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
 	return nil
 }
@@ -993,7 +843,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 		resetCacheTag(q, tag.ID)
 	}
 
-	C.Cache.Purge("TPC", strconv.Itoa(p.QID(DB)))
+	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return err
 }
@@ -1067,7 +917,7 @@ func (p *Post) EditTags(user *User, tagStr string) error {
 }
 
 func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return nil, errors.New("id = 0")
 	}
 
@@ -1081,7 +931,7 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 
 	var ph phash
 
-	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.QID(q)).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
+	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.ID).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
 	if err != nil {
 		return nil, err
 	}
@@ -1121,7 +971,7 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 }
 
 func (p *Post) Chapters(q querier) []*Chapter {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return nil
 	}
 
@@ -1167,10 +1017,10 @@ func (p *Post) Chapters(q querier) []*Chapter {
 }
 
 func (p *Post) Comics(q querier) []*Comic {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return nil
 	}
-	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.QID(q))
+	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.ID)
 	if err != nil {
 		return nil
 	}
@@ -1199,11 +1049,11 @@ func (p *Post) NewComment() *PostComment {
 }
 
 func (p *Post) Comments(q querier) []*PostComment {
-	if p.QID(q) <= 0 {
+	if p.ID <= 0 {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.QID(q))
+	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.ID)
 	if err != nil {
 		log.Println(err)
 		return nil

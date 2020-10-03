@@ -110,7 +110,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p.QID(DM.DB) == 0 {
+	if p.ID == 0 {
 		APIError(w, "Post Not Found", http.StatusNotFound)
 		return
 	}
@@ -173,18 +173,28 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
-	p.QChecksums(DM.DB)
-	p.QThumbnails(DM.DB)
-	p.QDimensions(DM.DB)
+	if err := p.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFMime,
+		DM.PFDeleted,
+		DM.PFSize,
+		DM.PFChecksums,
+		DM.PFThumbnails,
+		DM.PFDimension,
+	); err != nil {
+		log.Println(err)
+	}
+
 	AP = APIv1Post{
-		ID:          p.QID(DM.DB),
-		Hash:        p.QHash(DM.DB),
+		ID:          p.ID,
+		Hash:        p.Hash,
 		Sha256:      p.Checksums.Sha256,
 		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
-		Mime:        p.QMime(DM.DB).Str(),
-		Deleted:     p.QDeleted(DM.DB),
-		Filesize:    p.QSize(DM.DB),
+		Mime:        p.Mime.Str(),
+		Deleted:     p.Deleted,
+		Filesize:    p.Size,
 		Dimension:   p.Dimension,
 	}
 
@@ -288,7 +298,9 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	var AP APIv1Posts
 
 	bm.Split("B Search")
-	for _, post := range pc.Search(limit, limit*offset) {
+	posts := pc.Search(limit, limit*offset)
+	AP.Posts = make([]APIv1Post, len(posts))
+	for i, post := range posts{
 		bm.Split("A Search")
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
 		bm.Split("DMToAPIPost")
@@ -297,7 +309,9 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}
-		AP.Posts = append(AP.Posts, APp)
+		//AP.Posts = append(AP.Posts, APp)
+		AP.Posts[i] = APp
+
 	}
 
 	AP.TotalPosts = pc.TotalPosts

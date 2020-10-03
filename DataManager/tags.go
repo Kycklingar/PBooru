@@ -444,11 +444,11 @@ func (tc *TagCollector) Total() int {
 }
 
 func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
 
-	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=$1", p.QID(q))
+	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=$1", p.ID)
 	if err != nil {
 		return err
 	}
@@ -468,11 +468,11 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
 
-	if m := C.Cache.Get("TPC", strconv.Itoa(p.QID(q))); m != nil {
+	if m := C.Cache.Get("TPC", strconv.Itoa(p.ID)); m != nil {
 		switch mm := m.(type) {
 		case *TagCollector:
 			*tc = *mm
@@ -492,7 +492,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
-		p.QID(q))
+		p.ID)
 	if err != nil {
 		return err
 	}

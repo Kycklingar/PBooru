@@ -71,7 +71,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		post.QID(DM.DB)
 		post = DM.CachedPost(post)
 
 		if r.FormValue("comment") == "true" {
@@ -157,7 +156,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p.QID(DM.DB) == 0 {
+	if p.ID == 0 {
 		notFoundHandler(w, r)
 		return
 	}
@@ -524,8 +523,11 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Println(pc.TotalPosts)
 	for _, post := range pc.Search(pageLimit, offset) {
-		post.QMime(DM.DB).QName(DM.DB)
-		post.QMime(DM.DB).QType(DM.DB)
+		post.QMul(
+			DM.DB,
+			DM.PFMime,
+			DM.PFThumbnails,
+		)
 		p.Posts = append(p.Posts, post)
 	}
 	p.Sidebar.TotalPosts = pc.TotalPosts
@@ -628,13 +630,13 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(r.FormValue("chapter-id")) > 0 {
-			r.Form.Add("post-id", strconv.Itoa(post.QID(DM.DB)))
+			r.Form.Add("post-id", strconv.Itoa(post.ID))
 			r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
 			comicAddPageHandler(w, r)
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.QID(DM.DB)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusSeeOther)
 
 	} else {
 		notFoundHandler(w, r)
@@ -661,7 +663,8 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 
 		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		if post.QDeleted(DM.DB) {
+		post.QMul(DM.DB, DM.PFDeleted)
+		if post.Deleted {
 			if err = post.UnDelete(DM.DB); err != nil {
 				log.Println(err)
 			}
@@ -837,14 +840,15 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i, _ := range p.Posts {
-		p.Posts[i].QID(DM.DB)
 		p.Posts[i] = DM.CachedPost(p.Posts[i])
 
-		p.Posts[i].QHash(DM.DB)
-		p.Posts[i].QThumbnails(DM.DB)
-		p.Posts[i].QDeleted(DM.DB)
-		p.Posts[i].QMime(DM.DB).QName(DM.DB)
-		p.Posts[i].QMime(DM.DB).QType(DM.DB)
+		p.Posts[i].QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+			DM.PFMime,
+		)
 	}
 
 	p.UserInfo = userCookies(w, r)
