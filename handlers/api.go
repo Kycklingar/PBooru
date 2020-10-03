@@ -28,7 +28,7 @@ type APIv1Post struct {
 	Mime        string
 	Deleted     bool
 	Tags        []APIv1TagI
-	Dimension   *DM.Dimension
+	Dimension   DM.Dimension
 	Filesize    int64
 }
 
@@ -183,7 +183,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.QMime(DM.DB).Str(),
-		Deleted:     p.QDeleted(DM.DB) == 1,
+		Deleted:     p.QDeleted(DM.DB),
 		Filesize:    p.QSize(DM.DB),
 		Dimension:   p.Dimension,
 	}
@@ -274,6 +274,8 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	bm.Split("Get")
+
 	pc = DM.CachedPostCollector(pc)
 
 	limit, err := strconv.Atoi(limitStr)
@@ -285,8 +287,11 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
+	bm.Split("B Search")
 	for _, post := range pc.Search(limit, limit*offset) {
+		bm.Split("A Search")
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
+		bm.Split("DMToAPIPost")
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
@@ -297,7 +302,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	AP.TotalPosts = pc.TotalPosts
 
-	AP.Generated = bm.End(false).Seconds()
+	AP.Generated = bm.End(true).Seconds()
 	jsonEncode(w, AP)
 }
 

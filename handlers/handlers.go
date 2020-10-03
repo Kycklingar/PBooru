@@ -16,7 +16,7 @@ import (
 
 type Config struct {
 	AllowedMimes         []string
-	MaxFileSize	     int64
+	MaxFileSize          int64
 	IPFSDaemonMap        map[string]string
 	EnableCommentCaptcha int
 }
@@ -346,7 +346,7 @@ func init() {
 
 	Handlers["/captcha/"] = makeStatHandler(captcha.Server(150, 64).ServeHTTP)
 	//Handlers["/verify/"] = verifyCaptcha
-	//Handlers["/test/"] = testHandler
+	Handlers["/test/"] = testHandler
 
 	//http.HandleFunc("/ssl"] = RedirectHandler
 	// http.HandleFunc("/upload2/", uploadHandler2

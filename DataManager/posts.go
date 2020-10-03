@@ -16,12 +16,13 @@ import (
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
 func NewPost() *Post {
 	var p Post
 	p.Mime = NewMime()
-	p.Deleted = -1
+	//p.Deleted = -1
 	p.Score = -1
 	p.editCount = -1
 	return &p
@@ -56,27 +57,35 @@ func CachedPost(p *Post) *Post {
 	return p
 }
 
-type Thumb struct {
-	Hash string
-	Size int
-}
-
 type Post struct {
 	ID         int
 	Hash       string
 	thumbnails []Thumb
 	Mime       *Mime
-	Deleted    int
+	Deleted    bool
 	Size       int64
-	Dimension  *Dimension
+	Dimension  Dimension
 	Score      int
 
-	Checksums *checksums
+	Checksums checksums
 
 	description *string
 
 	editCount int
 }
+
+const (
+	PFID sqlbinder.Field= iota
+	PFHash
+	PFThumbnails
+	PFMime
+	PFDeleted
+	PFSize
+	PFDimension
+	PFScore
+	PFChecksums
+	PFDescription
+)
 
 type checksums struct {
 	Sha256 string
@@ -86,6 +95,125 @@ type checksums struct {
 type Dimension struct {
 	Width  int
 	Height int
+}
+
+type Thumb struct {
+	Hash string
+	Size int
+}
+
+func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case PFID:
+			sel.Bind(&p.ID, "p.id", "")
+		case PFHash:
+			sel.Bind(&p.Hash, "p.multihash", "")
+		case PFMime:
+			sel.Bind(&p.Mime.Name, "m.mime", "JOIN mime_type m ON mime_id = m.id")
+			sel.Bind(&p.Mime.Type, "m.type", "")
+		case PFDeleted:
+			sel.Bind(&p.Deleted, "p.deleted", "")
+		case PFSize:
+			sel.Bind(&p.Size, "p.file_size", "")
+		case PFScore:
+			sel.Bind(&p.Score, "p.score", "")
+		case PFDimension:
+			sel.Bind(&p.Dimension.Width, "width", "JOIN post_info ON p.id = post_info.post_id")
+			sel.Bind(&p.Dimension.Height, "height", "")
+		case PFChecksums:
+			sel.Bind(&p.Checksums.Sha256, "sha256", "JOIN hashes ON p.id = hashes.post_id")
+			sel.Bind(&p.Checksums.Md5, "md5", "")
+		//case PFDescription:
+	}
+}
+
+func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
+	selector := sqlbinder.BindFieldAddresses(p, fields...)
+
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM posts p
+		%s
+		WHERE p.id = $1
+		`,
+		selector.Select(),
+		selector.Joins(),
+	)
+
+	fmt.Println(query)
+
+	var c = make(chan error)
+
+	go func(){c <- p.QThumbs(q, fields...)}()
+	go func(){c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)}()
+
+
+	var err error
+	for i := 0; i < 2; i++ {
+		er := <-c
+		if er != nil {
+			log.Println(er)
+			err = er
+		}
+	}
+
+	return err
+}
+
+type thumbnails []Thumb
+
+func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field{
+		case PFThumbnails:
+			sel.Bind(nil, "multihash", "")
+			sel.Bind(nil, "dimension", "")
+	}
+}
+
+func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
+	var ok bool
+	for _, field := range fields {
+		if field == PFThumbnails {
+			ok = true
+		}
+	}
+	if !ok {
+		return nil
+	}
+
+	var t thumbnails
+	selector := sqlbinder.BindFieldAddresses(t, fields...)
+
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM thumbnails
+		WHERE post_id = $1
+		`,
+		selector.Select(),
+	)
+
+	fmt.Println(query)
+
+	rows, err := q.Query(query, p.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var thumb Thumb
+		selector.ReBind(&thumb.Hash, &thumb.Size)
+		err = rows.Scan(selector.Values()...)
+		if err != nil {
+			return err
+		}
+
+		t = append(t, thumb)
+	}
+
+	p.thumbnails = t
+
+	return nil
 }
 
 func (p *Post) QID(q querier) int {
@@ -142,10 +270,6 @@ func (p *Post) QHash(q querier) string {
 }
 
 func (p *Post) QChecksums(q querier) error {
-	if p.Checksums != nil {
-		return nil
-	}
-
 	var c checksums
 
 	err := q.QueryRow(`
@@ -159,7 +283,7 @@ func (p *Post) QChecksums(q querier) error {
 		return err
 	}
 
-	p.Checksums = &c
+	p.Checksums = c
 
 	return nil
 }
@@ -243,24 +367,15 @@ func (p *Post) QMime(q querier) *Mime {
 	return p.Mime
 }
 
-func (p *Post) QDeleted(q querier) int {
-	if p.Deleted != -1 {
-		return p.Deleted
-	}
+func (p *Post) QDeleted(q querier) bool {
 	if p.QID(q) == 0 {
-		return -1
-	}
-	var deleted bool
-	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&deleted)
-	if err != nil {
-		log.Print(err)
-		return -1
+		return false
 	}
 
-	if deleted {
-		p.Deleted = 1
-	} else {
-		p.Deleted = 0
+	err := q.QueryRow("SELECT deleted FROM posts WHERE id=$1", p.ID).Scan(&p.Deleted)
+	if err != nil {
+		log.Print(err)
+		return false
 	}
 
 	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
@@ -285,10 +400,6 @@ func (p *Post) QSize(q querier) int64 {
 }
 
 func (p *Post) QDimensions(q querier) error {
-	if p.Dimension != nil {
-		return nil
-	}
-
 	var dim Dimension
 
 	err := q.QueryRow("SELECT width, height FROM post_info WHERE post_id = $1", p.ID).Scan(&dim.Width, &dim.Height)
@@ -297,7 +408,7 @@ func (p *Post) QDimensions(q querier) error {
 		return err
 	}
 
-	p.Dimension = &dim
+	p.Dimension = dim
 
 	return nil
 }
@@ -1534,13 +1645,9 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 	var tmpPosts []*Post
 	for rows.Next() {
 		post := NewPost()
-		var del bool
-		err := rows.Scan(&post.ID, &post.Hash, &del, &post.Mime.ID)
-		if del {
-			post.Deleted = 1
-		} else {
-			post.Deleted = 0
-		}
+
+		err := rows.Scan(&post.ID, &post.Hash, &post.Deleted, &post.Mime.ID)
+
 		if err != nil {
 			log.Println(err)
 			return err

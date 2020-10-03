@@ -162,19 +162,35 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p = DM.CachedPost(p)
+	//p = DM.CachedPost(p)
 
-	p.QHash(DM.DB)
-	p.QChecksums(DM.DB)
-	p.QDeleted(DM.DB)
-	p.QSize(DM.DB)
-	p.QMime(DM.DB).QType(DM.DB)
-	p.QMime(DM.DB).QName(DM.DB)
-	p.QThumbnails(DM.DB)
-	p.QDescription(DM.DB)
-	p.QScore(DM.DB)
-	p.QSize(DM.DB)
-	p.QDimensions(DM.DB)
+	//p.QHash(DM.DB)
+	//p.QChecksums(DM.DB)
+	//p.QDeleted(DM.DB)
+	//p.QSize(DM.DB)
+	//p.QMime(DM.DB).QType(DM.DB)
+	//p.QMime(DM.DB).QName(DM.DB)
+	//p.QThumbnails(DM.DB)
+	//p.QDescription(DM.DB)
+	//p.QScore(DM.DB)
+	//p.QSize(DM.DB)
+	//p.QDimensions(DM.DB)
+
+	if err = p.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFChecksums,
+		DM.PFDeleted,
+		DM.PFSize,
+		DM.PFMime,
+		DM.PFScore,
+		DM.PFDimension,
+		DM.PFThumbnails,
+	); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	pp.Post = p
 
@@ -185,18 +201,30 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
+	//pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
 
-	pp.Dupe.Post.QHash(DM.DB)
-	pp.Dupe.Post.QDeleted(DM.DB)
-	pp.Dupe.Post.QThumbnails(DM.DB)
+	//pp.Dupe.Post.QHash(DM.DB)
+	//pp.Dupe.Post.QDeleted(DM.DB)
+	//pp.Dupe.Post.QThumbnails(DM.DB)
+
+	if err = pp.Dupe.Post.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFDeleted,
+		DM.PFThumbnails,
+	); err != nil {
+		log.Println(err)
+	}
 
 	for _, p := range pp.Dupe.Inferior {
-		p.QID(DM.DB)
-		p = DM.CachedPost(p)
-		p.QHash(DM.DB)
-		p.QThumbnails(DM.DB)
-		p.QDeleted(DM.DB)
+		if err = p.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+		); err != nil {
+			log.Println(err)
+		}
 	}
 
 	pp.Voted = pp.User.Voted(DM.DB, p)
@@ -241,8 +269,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			p.QOrder(DM.DB)
 			p.QPost(DM.DB)
-			p.Post.QHash(DM.DB)
-			p.Post.QThumbnails(DM.DB)
+			p.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFThumbnails,
+			)
 		}
 	}
 
@@ -556,7 +587,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize + 1000000)
+		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize+1000000)
 		err := r.ParseMultipartForm(CFG.MaxFileSize)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -630,7 +661,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 
 		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		if post.QDeleted(DM.DB) >= 1 {
+		if post.QDeleted(DM.DB) {
 			if err = post.UnDelete(DM.DB); err != nil {
 				log.Println(err)
 			}
