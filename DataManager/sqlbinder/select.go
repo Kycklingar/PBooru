@@ -4,6 +4,10 @@ type Binder interface {
 	BindField(*Selection, Field)
 }
 
+type Rebinder interface {
+	Rebind(*Selection, Field)
+}
+
 type Field int
 
 type fieldAddress struct {
@@ -14,15 +18,22 @@ type fieldAddress struct {
 
 type Selection struct {
 	vals []fieldAddress
+	index int
 }
 
 func (sel *Selection) Bind(addr interface{}, name, join string) {
 	sel.vals = append(sel.vals, fieldAddress{addr, name, join})
 }
 
-func (sel *Selection) ReBind(addr... interface{}) {
-	for i, _ := range addr {
-		sel.vals[i].addr = addr[i]
+func (sel *Selection) Rebind(v interface{}) {
+	sel.vals[sel.index].addr = v
+	sel.index = (sel.index + 1) % len(sel.vals)
+}
+
+func (sel *Selection) ReBind(v Rebinder, fields... Field) {
+	for _, f := range fields{
+		v.Rebind(sel, f)
+		//sel.vals[i].addr = v.Rebind(sel, f)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
 func NewTag() *Tag {
@@ -31,6 +32,19 @@ type Tag struct {
 	Tag       string
 	Namespace *Namespace
 	Count     int
+}
+
+func (t *Tag) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case FID:
+			sel.Rebind(&t.ID)
+		case FTag:
+			sel.Rebind(&t.Tag)
+		case FCount:
+			sel.Rebind(&t.Count)
+		case FNamespace:
+			sel.Rebind(&t.Namespace.Namespace)
+	}
 }
 
 func (t *Tag) String() string {
@@ -441,6 +455,61 @@ func (tc *TagCollector) Total() int {
 		log.Println(err)
 	}
 	return total
+}
+
+func (tc *TagCollector) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case FID:
+			sel.Bind(nil, "t.id", "")
+		case FTag:
+			sel.Bind(nil, "t.tag", "")
+		case FCount:
+			sel.Bind(nil, "t.count", "")
+		case FNamespace:
+			sel.Bind(nil, "n.nspace", "JOIN namespaces n ON t.namespace_id = n.id")
+	}
+}
+
+const (
+	FID sqlbinder.Field = iota
+	FTag
+	FCount
+	FNamespace
+)
+
+func (tc *TagCollector) FromPostMul(q querier, p *Post, fields... sqlbinder.Field) error {
+	selector := sqlbinder.BindFieldAddresses(tc, fields...)
+
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM post_tag_mappings ptm
+		JOIN tags t ON tag_id = t.id
+		%s
+		WHERE post_id = $1
+		`,
+		selector.Select(),
+		selector.Joins(),
+	)
+
+	rows, err := q.Query(query, p.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t = NewTag()
+		selector.ReBind(t, fields...)
+
+		err = rows.Scan(selector.Values()...)
+		if err != nil {
+			return err
+		}
+
+		tc.Tags = append(tc.Tags, t)
+	}
+
+	return nil
 }
 
 func (tc *TagCollector) GetFromPost(q querier, p *Post) error {

@@ -52,11 +52,13 @@ func (t *APIv1TagString) Parse(tag *DM.Tag) {
 type APIv1Tag struct {
 	Tag       string
 	Namespace string
+	Count int
 }
 
 func (t *APIv1Tag) Parse(tag *DM.Tag) {
 	t.Tag = tag.QTag(DM.DB)
 	t.Namespace = tag.QNamespace(DM.DB).QNamespace(DM.DB)
+	t.Count = tag.Count
 }
 
 func jsonEncode(w http.ResponseWriter, v interface{}) error {
@@ -200,7 +202,13 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 
 	tc := DM.TagCollector{}
 	if includeTags {
-		err := tc.GetPostTags(DM.DB, p)
+		err := tc.FromPostMul(
+			DM.DB,
+			p,
+			DM.FTag,
+			DM.FCount,
+			DM.FNamespace,
+		)
 		if err != nil {
 			return AP, err
 		}
@@ -284,8 +292,6 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bm.Split("Get")
-
 	pc = DM.CachedPostCollector(pc)
 
 	limit, err := strconv.Atoi(limitStr)
@@ -297,13 +303,10 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
-	bm.Split("B Search")
 	posts := pc.Search(limit, limit*offset)
 	AP.Posts = make([]APIv1Post, len(posts))
 	for i, post := range posts{
-		bm.Split("A Search")
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
-		bm.Split("DMToAPIPost")
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
@@ -316,7 +319,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	AP.TotalPosts = pc.TotalPosts
 
-	AP.Generated = bm.End(true).Seconds()
+	AP.Generated = bm.End(false).Seconds()
 	jsonEncode(w, AP)
 }
 

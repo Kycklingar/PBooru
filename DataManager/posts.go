@@ -17,7 +17,6 @@ import (
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
-	BM "github.com/kycklingar/PBooru/benchmark"
 )
 
 func NewPost() *Post {
@@ -110,7 +109,7 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		case PFHash:
 			sel.Bind(&p.Hash, "p.multihash", "")
 		case PFMime:
-			sel.Bind(&p.Mime.Name, "m.mime", "JOIN mime_type m ON mime_id = m.id")
+			sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
 			sel.Bind(&p.Mime.Type, "m.type", "")
 		case PFDeleted:
 			sel.Bind(&p.Deleted, "p.deleted", "")
@@ -119,19 +118,17 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		case PFScore:
 			sel.Bind(&p.Score, "p.score", "")
 		case PFDimension:
-			sel.Bind(&p.Dimension.Width, "width", "JOIN post_info ON p.id = post_info.post_id")
+			sel.Bind(&p.Dimension.Width, "width", "LEFT JOIN post_info ON p.id = post_info.post_id")
 			sel.Bind(&p.Dimension.Height, "height", "")
 		case PFChecksums:
-			sel.Bind(&p.Checksums.Sha256, "sha256", "JOIN hashes ON p.id = hashes.post_id")
+			sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
 			sel.Bind(&p.Checksums.Md5, "md5", "")
 		//case PFDescription:
 	}
 }
 
 func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
-	bm := BM.Begin()
 	selector := sqlbinder.BindFieldAddresses(p, fields...)
-	bm.Split("Selector Done")
 
 	query := fmt.Sprintf(`
 		SELECT %s
@@ -147,14 +144,10 @@ func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
 
 	go func(){
 		c <- p.QThumbs(q, fields...)
-		bm.Split("Thumbs Done")
 	}()
 	go func(){
 		c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)
-		bm.Split("Query Done")
 	}()
-
-	fmt.Println(query)
 
 	var err error
 	for i := 0; i < 2; i++ {
@@ -165,12 +158,18 @@ func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
 		}
 	}
 
-	bm.End(true)
-
 	return err
 }
 
 type thumbnails []Thumb
+
+func (t *Thumb) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case PFThumbnails:
+			sel.Rebind(&t.Hash)
+			sel.Rebind(&t.Size)
+	}
+}
 
 func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field{
@@ -210,7 +209,7 @@ func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
 
 	for rows.Next() {
 		var thumb Thumb
-		selector.ReBind(&thumb.Hash, &thumb.Size)
+		selector.ReBind(&thumb, fields...)
 		err = rows.Scan(selector.Values()...)
 		if err != nil {
 			return err
