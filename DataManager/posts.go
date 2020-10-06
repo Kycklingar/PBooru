@@ -1336,7 +1336,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 		case "RANDOM()":
 			order = "RANDOM()"
 		case "SCORE":
-			order = fmt.Sprint("(p.score, p.id) DESC")
+			order = fmt.Sprint("p.score DESC, p.id DESC")
 		default:
 			order = "p.id " + pc.order
 	}
