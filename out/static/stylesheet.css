@@ -457,12 +457,33 @@ li
     
 }
 
+.attention
+{
+	background-color:#222;
+	color: #DDD;
+	padding:0.2em 1em;
+	max-width: 33em;
+}
+
+.attention a:link {
+	color:#67E;
+}
+
+.attention a:visited {
+	color: #A6E;
+}
+
 .text-panel table, .text-panel td, .text-panel th
 {
     border: solid 1px grey;
     padding: 0.5em;
     color: #000;
     border-collapse: collapse;
+}
+
+.text-panel p
+{
+	margin:0.1em;
 }
 
 

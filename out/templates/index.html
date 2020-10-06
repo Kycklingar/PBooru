@@ -10,43 +10,47 @@
                     [b]
                 </a>
             </span>
-         / vsdfdtkr5mh6y33p.onion <a style="font-size:12px; font-weight: normal;" href="http://owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion">[V3]</a></h2>
+	    / owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion <a style="font-size:12px; font-weight: normal;" href="http://vsdfdtkr5mh6y33p.onion">[V2]</a></h2>
     <h3>Here there be furry content</h3>
-    <p>The Permanent Booru uses IPFS for distributing its content.</p>
-    <p>
-        You will need to run an ipfs daemon OR use a public gateway like 
-        <a href="http://ipfs.kycklingar.i2p">
-            http://ipfs.kycklingar.i2p
-        </a>
-        <span style="font-size:12px;font-weight:normal;">
-            <a href="http://ipfs.kycklingar.i2p?i2paddresshelper=9V7dNvkBiolE9VN4lbfI~n86lmrEMPT6ckXpCkN9Oxh9mwHsJ5DwnNDJ9yjAXStbyEEdamdxBuMKvMVrKbxvfEDuCqlbAwbX0NdLxl3mjg9QuEGX17GyEewM-Ez~cRg-nhnGTfem7gF2w1dwQTD7SaRAZ3CWlUyUlaOQCVBFSoO3lqPDT9YhMk3XMHbvVOefqoZLE2g086FRQbEaJTN9piskN1rRSGFJ5lPPGPGHgdQblXLlwFwoqWvExRoWBRvkCQ7tmgk91CGEGvUXUtQxf4kZTId7G1dPHYEiRHQf-drORDwdKnE3-2dg5C0DTIqa9zkbmJtGFNmRKuDpnt7to1gNjjO1og8VP2VIlVOQoO2jP8cEsw9I9jnpZuAs0sIRyjrvesJOZygLbskRK4DBJSk1ukyE9x~1F7Cd5eIl9wk4jnncxg5a8EPdtkb4~HT~GjkyRstcugloJuRJv07-ID6rzcFf3Blhl7Ti3y91pmbLTTAtzX3CsLQ78z36rGpkBQAEAAcAAA==">
-                [a]
-            </a>
-            <a href="http://trlr7pylub7xl7lolfv3adslni5yld5njquni2kk5b3etspirzhq.b32.i2p">
-                [b]
-            </a>
-        </span>
-        or 
-        <a href="http://54sdi3p2kf4intp7.onion">
-            http://54sdi3p2kf4intp7.onion            
-        </a>.
-    </p>
-    <p>Set the gateway to your liking at <a href="/options">/options/</a> or at the bottom of the posts page. For example "http://ipfs.kycklingar.i2p" or "http://127.0.0.1:8080"</p>
-    <p>Ipfs is NOT anonymous if you use your local daemon! Continue with caution.</p>
-    <p>Visit <a href="https://ipfs.io">https://ipfs.io</a> for more info</p>
     <br>
-    <br>
-    <br>
+	<div class="attention">
+		<h2>Update your bookmarks</h2>
+		<p>Tor is facing out v2 onion addresses in favour of the newer safer v3.</p>
+		<p>You should update your bookmarks replacing the <a href="http://vsdfdtkr5mh6y33p.onion">v2</a> address with the <a href="http://owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion">v3</a>!</p>
+		<p><a href="https://blog.torproject.org/v2-deprecation-timeline">https://blog.torproject.org/v2-deprecation-timeline</a></p>
+	</div>
+	<br>
     <h3>Hits: {{.Hits}}</h3>
     <h3>Total Posts: {{.TotalPosts}}</h3>
+</div>
+<div class="text-panel">
+    <h3>FAQ</h3>
+    <!-- Litterally no one has asked about this :D -->
+    <h4>Why 'The Permanent Booru'?</h4>
+    <p>The 'Permanent' part is taken from two factors.</p>
+    <p>One being this site was developed as an alternative to the deterioating booru <a href="https://e621.net">e621.net</a>. With the <a href="https://e621.net">e621.net</a> staff being trigger happy on the nuke button, this site is an actual attempt at archiving everything furry. Permanently.</p>
+    <p>The other factor is with the use of IPFS and it's data location permanency.</p>
     <br>
+    <h4>What is allowed on here?</h4>
+    <p>Art with relations to furry culture.</p>
+    <p>This means <b>all</b> art from artists who has done some furry art.</p>
+    <p>Art from universes where furry characters exists.</p>
     <br>
+    <h4>How do I use IPFS?</h4>
+    <p>Download, install and run an IPFS daemon.</p>
+    <p>Install the IPFS Companion addon on your browser</p>
+    <p>Alternatively set the 'Gateway' on <a href="/options/">/options/</a> to your nodes gateway</p>
+    <p>Note: IPFS does not work with tor browser</p>
     <br>
+    <h4>Why doesn't my IPFS node work?</h4>
+    <p>IPFS is still in heavy development.</p>
+    <p>You can try to couple with the storage node by issuing:<br>
+    <code>
+    	ipfs config Peering.Peers --json '[{"ID": "QmajRPiE14o8nrf4aQyuCDUQEuNjgWA5TkJPCZn25Rxyag","Addrs": []}]'
+    </code>
     <br>
-    <br>
-    <br>
-    <br>
-    <!-- <p>Ignore the horrible design please. I'll work on it soon</p> -->
+    <h4>Where is the source code?</h4>
+    <p>The source code is available at <a href="https://github.com/kycklingar/PBooru">https://github.com/kycklingar/PBooru"</a></p>
 </div>
 {{ template "baseEnd" }}
 
