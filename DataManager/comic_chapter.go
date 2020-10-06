@@ -153,7 +153,7 @@ func (c *Chapter) QTitle(q querier) string {
 }
 
 func (c *Chapter) QOrder(q querier) int {
-	if c.Order != 0 {
+	if c.Order > -999999 {
 		return c.Order
 	}
 	if c.QID(q) == 0 {
