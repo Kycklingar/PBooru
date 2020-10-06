@@ -106,9 +106,6 @@ func (c *Chapter) QID(q querier) int {
 	if c.Comic.QID(q) == 0 {
 		return 0
 	}
-	if c.Order == 0 {
-		return 0
-	}
 
 	err := q.QueryRow("SELECT id FROM comic_Chapter WHERE comic_id=$1 AND c_order=$2", c.Comic.QID(q), c.QOrder(q)).Scan(&c.ID)
 	if err != nil && err != sql.ErrNoRows {
