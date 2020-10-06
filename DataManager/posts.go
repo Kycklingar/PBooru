@@ -118,8 +118,8 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		case PFScore:
 			sel.Bind(&p.Score, "p.score", "")
 		case PFDimension:
-			sel.Bind(&p.Dimension.Width, "width", "LEFT JOIN post_info ON p.id = post_info.post_id")
-			sel.Bind(&p.Dimension.Height, "height", "")
+			sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
+			sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
 		case PFChecksums:
 			sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
 			sel.Bind(&p.Checksums.Md5, "md5", "")
@@ -1082,7 +1082,8 @@ func (p *Post) Comments(q querier) []*PostComment {
 type PostCollector struct {
 	posts    map[int][]*Post
 	id       []int
-	blackTag []int
+	or	 []int
+	filter []int
 	unless   []int
 
 	tags       []*Tag //Sidebar
@@ -1107,7 +1108,7 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order string, mimeIDs []int) error {
+func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -1143,16 +1144,43 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 			pc.id = append(pc.id, tag.QID(DB))
 		}
 		sort.Ints(pc.id)
-		//fmt.Println(pc.id)
-		if len(pc.id) <= 0 {
-			pc.id = []int{-1}
-		}
+		//fmt.Println(tagIDs)
 	}
 
-	if len(blackTagString) >= 1 {
+	if len(orString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(blackTagString)
+		err := tc.Parse(orString)
+		if err != nil {
+			return err
+		}
+
+		for _, tag := range tc.Tags {
+			if tag.QID(DB) == 0 {
+				// No posts will be available, return
+				//pc.id = []int{-1}
+				break
+			}
+			alias := NewAlias()
+			alias.Tag = tag
+			to, err := alias.QTo(DB)
+			if err != nil {
+				return err
+			}
+
+			if to.QID(DB) != 0 {
+				tag = to
+			}
+			pc.or = append(pc.or, tag.QID(DB))
+		}
+		sort.Ints(pc.or)
+		//fmt.Println(tagIDs)
+	}
+
+	if len(filterString) >= 1 {
+		var tc TagCollector
+
+		err := tc.Parse(filterString)
 		if err != nil {
 			return err
 		}
@@ -1175,13 +1203,13 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 			}
 
 			// Cant have your tag and filter it too
-			if in(tag.QID(DB), pc.id) {
-				continue
-			}
+			//if in(tag.QID(DB), pc.id) {
+			//	continue
+			//}
 
-			pc.blackTag = append(pc.blackTag, tag.QID(DB))
+			pc.filter = append(pc.filter, tag.QID(DB))
 		}
-		sort.Ints(pc.blackTag)
+		sort.Ints(pc.filter)
 	}
 	//fmt.Println(tagIDs)
 	//pc.id = tagIDs //idStr
@@ -1209,10 +1237,10 @@ func (pc *PostCollector) Get(tagString, blackTagString, unlessString, order stri
 				tag = to
 			}
 
-			// Cant filter your tag and include it too
-			if in(tag.QID(DB), pc.blackTag) || in(tag.QID(DB), pc.id) {
-				continue
-			}
+			//// Cant filter your tag and include it too
+			//if in(tag.QID(DB), pc.filter) || in(tag.QID(DB), pc.id) {
+			//	continue
+			//}
 
 			pc.unless = append(pc.unless, tag.QID(DB))
 		}
@@ -1252,13 +1280,18 @@ func (pc *PostCollector) idStr() string {
 		str = fmt.Sprint(str, " ", 0)
 	}
 	str += " -"
-	for _, i := range pc.blackTag {
+	for _, i := range pc.filter {
 		str = fmt.Sprint(str+" ", i)
 	}
 	str += " -"
 	for _, i := range pc.unless {
 		str = fmt.Sprint(str+" ", i)
 	}
+	str += " -"
+	for _, i := range pc.or {
+		str = fmt.Sprint(str+" ", i)
+	}
+
 
 	str += " -"
 	for _, mimeID := range pc.mimeIDs {
@@ -1275,6 +1308,96 @@ func (pc *PostCollector) idStr() string {
 func (pc *PostCollector) Search(limit, offset int) []*Post {
 	pc.search(limit, offset)
 	return pc.GetW(limit, offset)
+}
+
+func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
+	sg := searchGroup(
+		pc.id,
+		pc.or,
+		pc.filter,
+		pc.unless,
+	)
+
+	var mimes string
+
+	if len(pc.mimeIDs) > 0 {
+		for i, mi := range pc.mimeIDs {
+			mimes += fmt.Sprint(mi)
+			if i < len(pc.mimeIDs) - 1 {
+				mimes += ","
+			}
+		}
+		mimes = fmt.Sprintf("AND p.mime_id IN(%s) ", mimes)
+	}
+
+	var order string
+
+	switch pc.order {
+		case "RANDOM()":
+			order = "RANDOM()"
+		case "SCORE":
+			order = fmt.Sprint("(p.score, p.id) DESC")
+		default:
+			order = "p.id " + pc.order
+	}
+
+	if pc.TotalPosts <= 0 {
+		c := pc.ccGet()
+		if c < 0 {
+			err := DB.QueryRow(
+				fmt.Sprintf(
+					`SELECT count(DISTINCT p.id)
+					FROM posts p %s `,
+					sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
+				),
+			).Scan(&pc.TotalPosts)
+			if err != nil {
+				log.Println(err)
+				return nil, err
+			}
+			pc.ccSet(pc.TotalPosts)
+		} else {
+			pc.TotalPosts = c
+		}
+	}
+
+	query := fmt.Sprintf(`
+			SELECT p.id FROM posts p
+			%s
+			ORDER BY %s
+			LIMIT $1
+			OFFSET $2
+		`,
+		sg.sel(
+			fmt.Sprintf(
+				"p.deleted = false %s",
+				mimes,
+			),
+		),
+		order,
+	)
+
+	//fmt.Println(query)
+
+	rows, err := DB.Query(query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tmpPosts []*Post
+
+	for rows.Next() {
+		post := NewPost()
+
+		err := rows.Scan(&post.ID)
+		if err != nil {
+			return nil, err
+		}
+		tmpPosts = append(tmpPosts, post)
+	}
+
+	return tmpPosts, nil
 }
 
 func (pc *PostCollector) search(ulimit, uoffset int) error {
@@ -1332,10 +1455,10 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 		var innerStr string
 		var endStr = "WHERE "
 		var blt string
-		if len(pc.blackTag) >= 1 {
+		if len(pc.filter) >= 1 {
 			endStr += "("
 			var or, un string
-			for _, t := range pc.blackTag {
+			for _, t := range pc.filter {
 				or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 			}
 			or = strings.TrimRight(or, " OR")
@@ -1402,13 +1525,13 @@ func (pc *PostCollector) search(ulimit, uoffset int) error {
 			return err
 		}
 
-	} else if len(pc.blackTag) > 0 {
+	} else if len(pc.filter) > 0 {
 		var innerStr, endStr string
 		var blt string
 		var or, un string
 
 		endStr = "WHERE "
-		for _, t := range pc.blackTag {
+		for _, t := range pc.filter {
 			or += fmt.Sprint(" f1.tag_id = ", t, " OR")
 		}
 		or = strings.TrimRight(or, " OR")
@@ -1527,11 +1650,15 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	}
 
 	// Get the first batch
-	pc.search(10, 0)
+	posts, err := pc.Search2(500, 0)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
 
 	// Get tags from all posts
 	pc.pl.RLock()
-	for _, post := range pc.posts[0] {
+	for _, post := range posts {
 		var ptc TagCollector
 		err := ptc.GetFromPost(DB, post)
 		if err != nil {
@@ -1735,7 +1862,12 @@ func (pc *PostCollector) ccSet(c int) {
 			tagids = append(tagids, id)
 		}
 	}
-	for _, id := range pc.blackTag {
+	for _, id := range pc.or {
+		if !in(id, tagids) {
+			tagids = append(tagids, id)
+		}
+	}
+	for _, id := range pc.filter {
 		if !in(id, tagids) {
 			tagids = append(tagids, id)
 		}

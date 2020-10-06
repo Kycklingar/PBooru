@@ -17,7 +17,9 @@
     <span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
     <div id="controller" >
         <form onsubmit="slider.search(this); return false">
-            <input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search">
+            <input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search (AND)">
+            <br>
+            <input class="stinput" type="text" name="or" id="orinput" placeholder="Search (OR)">
             <br>
             <input class="stinput" type="text" name="filter" id="filterinput" placeholder="Filter">
             <br>
@@ -76,6 +78,7 @@
         this.div = document.getElementById("image")
 
         this.tags = ""
+	this.or = ""
         this.filter = ""
         this.unless = ""
 
@@ -84,8 +87,8 @@
         this.loadData = function()
         {
             this.loading = true
-            console.log(this.tags, this.filter, this.unless, this.offset)
-            this.GET("/api/v1/posts?tags=" + this.tags + "&filter=" + this.filter + "&unless=" + this.unless + "&order=" + this.order + "&offset=" + this.offset++, function(res){
+            console.log(this.tags, this.or, this.filter, this.unless, this.offset)
+            this.GET("/api/v1/posts?tags=" + this.tags + "&or=" + this.or + "&filter=" + this.filter + "&unless=" + this.unless + "&order=" + this.order + "&offset=" + this.offset++, function(res){
                 //console.log(this.index)
                 this.data = JSON.parse(res)
                 document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
@@ -198,11 +201,13 @@
         {
             let form = new FormData(caller)
             let tags = form.get("tags")
+	    let or = form.get("or")
             let filter = form.get("filter")
             let unless = form.get("unless")
             let order = form.get("order")
             this.stopSlideshow(function(){
                 this.tags = tags
+		this.or = or
                 this.filter = filter
                 this.unless = unless
                 this.order = order
@@ -324,12 +329,13 @@
         }.bind(this)
     }
 
-    if(getParam("tags") || getParam("filter"))
+    if(getParam("tags") || getParam("or") || getParam("filter"))
     {
         document.getElementById("searchinput").value = getParam("tags")
+        document.getElementById("orinput").value = getParam("or")
         document.getElementById("filterinput").value = getParam("filter")
         document.getElementById("unlessinput").value = getParam("unless")
-        slider.search(getParam("tags"), getParam("filter"), getParam("unless"))
+        slider.search(getParam("tags"), getParam("or"), getParam("filter"), getParam("unless"))
     }
 
     function getParam(parameter)

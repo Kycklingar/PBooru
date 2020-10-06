@@ -12,15 +12,17 @@
 	<div id="searchbar">
 	<script src="/static/scripts/taginput.js"></script>
 	<form action="/posts/">
-	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
-	    <script>
-	    	setInput(document.getElementById("searchinput"))
-	    </script>
+	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search (AND)" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
+	    <br>
+	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search (OR)" class="stinput" id="searchinput" type="text" name="or" value="{{ .Or }}">
 	    <br>
 	    <input onfocus="setInput(this)" title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
 	    <br>
 	    <input onfocus="setInput(this)" title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
 	    <input type="submit" value="Search">
+	    <script>
+	    	setInput(document.getElementById("searchinput"))
+	    </script>
 	    <details>
 		<summary style="font-size:14px;">Advanced</summary>
 		<div id="advanced-search">

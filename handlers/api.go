@@ -236,6 +236,7 @@ type APIv1Posts struct {
 
 func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
+	orStr := r.FormValue("or")
 	filterStr := r.FormValue("filter")
 	unlessStr := r.FormValue("unless")
 	limitStr := r.FormValue("limit")
@@ -285,7 +286,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagStr, filterStr, unlessStr, order, mimeIDs)
+	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -303,7 +304,12 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
-	posts := pc.Search(limit, limit*offset)
+	posts, err := pc.Search2(limit, limit*offset)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
 	AP.Posts = make([]APIv1Post, len(posts))
 	for i, post := range posts{
 		APp, err := DMToAPIPost(post, includeTags, combineTags)

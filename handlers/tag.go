@@ -13,6 +13,7 @@ type Sidebar struct {
 	TotalPosts int
 	Tags       []*DM.Tag
 	Query      string
+	Or	string
 	Filter     string
 	Unless     string
 

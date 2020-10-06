@@ -429,6 +429,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagString := r.FormValue("tags")
+	p.Sidebar.Or = r.FormValue("or")
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
@@ -469,6 +470,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	args := []arg{}
+	args = append(args, arg{"or", p.Sidebar.Or})
 	args = append(args, arg{"filter", p.Sidebar.Filter})
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
@@ -512,7 +514,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
@@ -522,7 +524,13 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	pc = DM.CachedPostCollector(pc)
 
 	//fmt.Println(pc.TotalPosts)
-	for _, post := range pc.Search(pageLimit, offset) {
+	posts, err := pc.Search2(pageLimit, offset)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, post := range posts {
 		post.QMul(
 			DM.DB,
 			DM.PFMime,
@@ -543,7 +551,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		p.SuggestedTags = append(p.SuggestedTags, t)
 	}
 
-	//p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 	sidebarTags := pc.Tags(maxTagsPerPage)
 	p.Sidebar.Tags = make([]*DM.Tag, len(sidebarTags))
 	for i, tag := range sidebarTags {
