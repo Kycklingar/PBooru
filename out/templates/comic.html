@@ -41,7 +41,7 @@
 	{{end}}
 
 	{{$PostLimit := 5}}
-	{{if ge (len .Comic.Chapters) 10}}
+	{{if ge (len .Comic.Chapters) 20}}
 	{{$PostLimit = 2}}
 	{{end}}
 	{{range .Comic.Chapters}}

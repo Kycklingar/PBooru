@@ -222,7 +222,11 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 		chapter.QPageCount(DM.DB)
 		for _, cpost := range chapter.PostsLimit(postsPerChapter) {
 			cpost.QPost(DM.DB)
-			cpost.Post.QMul(DM.DB, DM.PFHash)
+			cpost.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFThumbnails,
+			)
 		}
 	}
 
@@ -368,7 +372,11 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 	for _, cpost := range page.Chapter.Posts {
 		cpost.QOrder(DM.DB)
 		cpost.QPost(DM.DB)
-		cpost.Post.QMul(DM.DB, DM.PFHash)
+		cpost.Post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+		)
 	}
 
 	page.Base.Title += fmt.Sprint(page.Chapter.Comic.Title, " - C", page.Chapter.Order)
