@@ -135,7 +135,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch method {
 	case "ipfs":
-		p.Hash, err = uri.getAtIndex(2)
+		var cid string
+		cid, err = uri.getAtIndex(2)
+		p, err = DM.GetPostFromCID(cid)
 	case "sha256", "md5":
 		var hash string
 		hash, err = uri.getAtIndex(2)

@@ -99,7 +99,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err = p.SetID(DM.DB, id)
 	case "ipfs":
-		p.Hash = val
+		p, err = DM.GetPostFromCID(val)
 	case "sha256", "md5":
 		p, err = DM.GetPostFromHash(key, val)
 	default:

@@ -30,6 +30,7 @@ func NewPost() *Post {
 
 func GetPostFromCID(cid string) (*Post, error) {
 	var p = NewPost()
+	p.Hash = cid
 	err := DB.QueryRow(`
 		SELECT id FROM posts
 		WHERE multihash = $1
@@ -1096,6 +1097,7 @@ func (p *Post) Comments(q querier) []*PostComment {
 
 		pcs = append(pcs, pc)
 	}
+
 	return pcs
 }
 
@@ -1288,16 +1290,12 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 }
 
 func (pc *PostCollector) idStr() string {
-	// if len(pc.id) <= 0 {
-	// 	return "0"
-	// }
+	 if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 {
+		return "0"
+	 }
 	var str string
-	if len(pc.id) >= 1 {
-		for _, i := range pc.id {
-			str = fmt.Sprint(str+" ", i)
-		}
-	} else {
-		str = fmt.Sprint(str, " ", 0)
+	for _, i := range pc.id {
+		str = fmt.Sprint(str+" ", i)
 	}
 	str += " -"
 	for _, i := range pc.filter {
@@ -1361,23 +1359,28 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 			order = "p.id " + pc.order
 	}
 
+	// TODO: refactor
 	if pc.TotalPosts <= 0 {
-		c := pc.ccGet()
-		if c < 0 {
-			err := DB.QueryRow(
-				fmt.Sprintf(
-					`SELECT count(DISTINCT p.id)
-					FROM posts p %s `,
-					sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
-				),
-			).Scan(&pc.TotalPosts)
-			if err != nil {
-				log.Println(err)
-				return nil, err
+		if pc.idStr() != "0" {
+			c := pc.ccGet()
+			if c < 0 {
+				err := DB.QueryRow(
+					fmt.Sprintf(
+						`SELECT count(DISTINCT p.id)
+						FROM posts p %s `,
+						sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
+					),
+				).Scan(&pc.TotalPosts)
+				if err != nil {
+					log.Println(err)
+					return nil, err
+				}
+				pc.ccSet(pc.TotalPosts)
+			} else {
+				pc.TotalPosts = c
 			}
-			pc.ccSet(pc.TotalPosts)
 		} else {
-			pc.TotalPosts = c
+			pc.TotalPosts = GetTotalPosts()
 		}
 	}
 
@@ -1847,6 +1850,7 @@ func (pc *PostCollector) ccSet(c int) {
 	if c <= 0 {
 		return
 	}
+
 	tx, err := DB.Begin()
 	if err != nil {
 		log.Println(err)
