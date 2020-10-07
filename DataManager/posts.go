@@ -1150,7 +1150,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		for _, tag := range tc.Tags {
 			if tag.QID(DB) == 0 {
 				// No posts will be available, return
-				pc.id = []int{-1}
+				//pc.id = []int{-1}
 				return nil
 			}
 			alias := NewAlias()
@@ -1289,38 +1289,42 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	return nil
 }
 
-func (pc *PostCollector) idStr() string {
-	 if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 {
+func strSep(values []int, sep string) string {
+	var ret string
+	for i, v := range values {
+		ret += fmt.Sprint(v)
+		if i < len(values) {
+			ret += sep
+		}
+	}
+
+	return ret
+}
+
+func (pc *PostCollector) countIDStr() string {
+	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 {
 		return "0"
-	 }
-	var str string
-	for _, i := range pc.id {
-		str = fmt.Sprint(str+" ", i)
-	}
-	str += " -"
-	for _, i := range pc.filter {
-		str = fmt.Sprint(str+" ", i)
-	}
-	str += " -"
-	for _, i := range pc.unless {
-		str = fmt.Sprint(str+" ", i)
-	}
-	str += " -"
-	for _, i := range pc.or {
-		str = fmt.Sprint(str+" ", i)
 	}
 
+	return fmt.Sprint(
+		strSep(pc.id, " "),
+		" - ",
+		strSep(pc.or, " "),
+		" - ",
+		strSep(pc.filter, " "),
+		" - ",
+		strSep(pc.unless, " "),
+		" - ",
+		strSep(pc.mimeIDs, " "),
+	)
+}
 
-	str += " -"
-	for _, mimeID := range pc.mimeIDs {
-		str = fmt.Sprint(str+" ", mimeID)
-	}
-
-	str += " - " + pc.order
-
-	str = strings.TrimSpace(str)
-	//fmt.Println("PCSTR", str)
-	return str
+func (pc *PostCollector) idStr() string {
+	return fmt.Sprint(
+		pc.countIDStr(),
+		" - ",
+		pc.order,
+	)
 }
 
 func (pc *PostCollector) Search(limit, offset int) []*Post {
@@ -1361,7 +1365,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 
 	// TODO: refactor
 	if pc.TotalPosts <= 0 {
-		if pc.idStr() != "0" {
+		if pc.countIDStr() != "0" {
 			c := pc.ccGet()
 			if c < 0 {
 				query := fmt.Sprintf(
@@ -1370,7 +1374,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 					sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
 				)
 
-				fmt.Println(query)
+				//fmt.Println(query)
 
 				err := DB.QueryRow(query).Scan(&pc.TotalPosts)
 				if err != nil {
@@ -1670,7 +1674,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 
 	var allTags []*Tag
 
-	if pc.idStr() == "-1" {
+	if pc.countIDStr() == "-1" {
 		return nil
 	}
 
