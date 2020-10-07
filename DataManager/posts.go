@@ -28,6 +28,22 @@ func NewPost() *Post {
 	return &p
 }
 
+func GetPostFromCID(cid string) (*Post, error) {
+	var p = NewPost()
+	err := DB.QueryRow(`
+		SELECT id FROM posts
+		WHERE multihash = $1
+		`,
+		cid,
+	).Scan(&p.ID)
+
+	if err != nil && err == sql.ErrNoRows {
+		return p, nil
+	}
+
+	return p, err
+}
+
 func GetPostFromHash(fnc, hash string) (*Post, error) {
 	var p = NewPost()
 	err := DB.QueryRow(fmt.Sprintf(`
@@ -383,12 +399,16 @@ func (p *Post) QDescription(q querier) string {
 	return tmp
 }
 
-func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user *User) error {
-	var err error
-	p.Hash, err = ipfsAdd(file)
+func CreatePost(file io.ReadSeeker, size int64, tagString, mime string, user *User) (*Post, error) {
+	cid, err := ipfsAdd(file)
 	if err != nil {
 		log.Println("Error pinning file to ipfs: ", err)
-		return err
+		return nil, err
+	}
+
+	p, err := GetPostFromCID(cid)
+	if err != nil {
+		return p, err
 	}
 
 	p.Size = size
@@ -398,7 +418,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 	tx, err = DB.Begin()
 	if err != nil {
 		log.Println("Error creating transaction: ", err)
-		return err
+		return p, err
 	}
 
 	defer commitOrDie(tx, &err)
@@ -408,7 +428,7 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 			file.Seek(0, 0)
 			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
 				log.Println("Error copying file to mfs: ", err)
-				return err
+				return p, err
 			}
 		}
 
@@ -425,21 +445,21 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		err = p.Mime.Parse(mime)
 		if err != nil {
 			log.Println(err)
-			return err
+			return p, err
 		}
 
 		if p.Mime.ID == 0 {
 			err = p.Mime.Save(tx)
 			if err != nil {
 				log.Println(err)
-				return err
+				return p, err
 			}
 		}
 
 		err = p.Save(tx, user)
 		if err != nil {
 			log.Println(err)
-			return err
+			return p, err
 		}
 
 		file.Seek(0, 0)
@@ -447,14 +467,14 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.ID, sha, md)
 		if err != nil {
 			log.Println(err)
-			return err
+			return p, err
 		}
 
 		if width > 0 && height > 0 {
 			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.ID, width, height)
 			if err != nil {
 				log.Println(err)
-				return err
+				return p, err
 			}
 		}
 
@@ -463,23 +483,23 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 			var u imgsim.Hash
 			u, err = dHash(file)
 			if err != nil {
-				return err
+				return p, err
 			}
 
 			var ph phs
 			ph = phsFromHash(p.ID, u)
 			if err != nil {
-				return err
+				return p, err
 			}
 
 			err = ph.insert(tx)
 			if err != nil {
-				return err
+				return p, err
 			}
 
 			err = generateAppleTree(tx, ph)
 			if err != nil {
-				return err
+				return p, err
 			}
 		}
 	}
@@ -487,12 +507,12 @@ func (p *Post) New(file io.ReadSeeker, size int64, tagString, mime string, user 
 	err = p.editTagsAdd(tx, user, tagString)
 	if err != nil && err.Error() != "error decoding any tags" {
 		//log.Println(err)
-		return err
+		return p, err
 	}
 
 	err = nil
 
-	return err
+	return p, err
 }
 
 func (p *Post) Save(q querier, user *User) error {

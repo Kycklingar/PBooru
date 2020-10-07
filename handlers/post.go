@@ -627,9 +627,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		tagString := r.FormValue("tags")
 
-		post := DM.NewPost()
+		//post := DM.NewPost()
 
-		err = post.New(file, fh.Size, tagString, contentType, user)
+		post, err := DM.CreatePost(file, fh.Size, tagString, contentType, user)
 		if err != nil {
 			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
 			log.Println(err)
