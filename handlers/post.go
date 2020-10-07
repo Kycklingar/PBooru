@@ -535,6 +535,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, post := range posts {
 		post.QMul(
 			DM.DB,
+			DM.PFHash,
 			DM.PFMime,
 			DM.PFThumbnails,
 		)

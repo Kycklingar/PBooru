@@ -1364,13 +1364,15 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 		if pc.idStr() != "0" {
 			c := pc.ccGet()
 			if c < 0 {
-				err := DB.QueryRow(
-					fmt.Sprintf(
-						`SELECT count(DISTINCT p.id)
-						FROM posts p %s `,
-						sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
-					),
-				).Scan(&pc.TotalPosts)
+				query := fmt.Sprintf(
+					`SELECT count(p.id)
+					FROM posts p %s `,
+					sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
+				)
+
+				fmt.Println(query)
+
+				err := DB.QueryRow(query).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Println(err)
 					return nil, err

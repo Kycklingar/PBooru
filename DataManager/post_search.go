@@ -99,30 +99,38 @@ func (g group) sel(wh string) string {
 	}
 
 	if len(g.filter) > 0 {
-		q += fmt.Sprintf(`
-			LEFT JOIN post_tag_mappings f
-			ON p.id = f.post_id
-			AND f.tag_id = %s
-			`,
-			sep(g.filter, ","),
-		)
 
-		var u string
+		var unlessJ, unlessW string
 
 		if len(g.unless) > 0{
-			q += fmt.Sprintf(`
+			unlessJ = fmt.Sprintf(`
 				LEFT JOIN post_tag_mappings u
-				ON p.id = u.post_id
+				ON f.post_id = u.post_id
 				AND u.tag_id IN(%s)
 				`,
 				sep(g.unless, ","),
 			)
 
-			u = "OR u.post_id IS NOT NULL"
-
+			unlessW = "AND u.post_id IS NULL"
 		}
 
-		where += fmt.Sprintf("%s (f.post_id IS NULL %s)\n", trail, u)
+		q += fmt.Sprintf(`
+			LEFT JOIN (
+				SELECT f.post_id
+				FROM post_tag_mappings f
+				%s
+				WHERE
+				f.tag_id IN(%s)
+				%s
+			) f
+			ON p.id = f.post_id
+			`,
+			unlessJ,
+			sep(g.filter, ","),
+			unlessW,
+		)
+
+		where += fmt.Sprintf("%s f.post_id IS NULL \n", trail)
 	}
 
 	return q + where
