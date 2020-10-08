@@ -1150,7 +1150,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		for _, tag := range tc.Tags {
 			if tag.QID(DB) == 0 {
 				// No posts will be available, return
-				//pc.id = []int{-1}
+				pc.id = []int{-1}
 				return nil
 			}
 			alias := NewAlias()
