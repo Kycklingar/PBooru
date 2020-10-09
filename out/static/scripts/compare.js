@@ -210,7 +210,7 @@ function leftPostElement(post)
 	}
 
 	pEl("ID: " + post.id, e)
-	if (post.dimensions.Width == 0 || post.dimensions.Height == 0)
+	if (!(post.dimensions.Width == 0 || post.dimensions.Height == 0))
 		pEl(post.dimensions.Width + "x" + post.dimensions.Height, e)
 	else
 		pEl("Dimensions unknown", e)
