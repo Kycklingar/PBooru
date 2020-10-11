@@ -315,6 +315,10 @@ func init() {
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 
+
+	Handlers["/forum/"] = makeStatHandler(boardHandler)
+	Handlers["/forum/new/post/"] = makeStatHandler(newThreadHandler)
+
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
 		user, info := getUser(w, r)
