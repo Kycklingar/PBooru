@@ -16,7 +16,7 @@ import (
 
 type Config struct {
 	AllowedMimes         []string
-	MaxFileSize	     int64
+	MaxFileSize          int64
 	IPFSDaemonMap        map[string]string
 	EnableCommentCaptcha int
 }
@@ -312,6 +312,10 @@ func init() {
 	Handlers["/comic/page/delete/"] = makeStatHandler(comicDeletePageHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
+
+
+	Handlers["/forum/"] = makeStatHandler(boardHandler)
+	Handlers["/forum/new/post/"] = makeStatHandler(newThreadHandler)
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {

@@ -556,7 +556,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize + 1000000)
+		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize+1000000)
 		err := r.ParseMultipartForm(CFG.MaxFileSize)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

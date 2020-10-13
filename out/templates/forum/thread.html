@@ -1,0 +1,19 @@
+{{template "base"}}
+<form action="/forum/new/post/" method="POST">
+	<input name="reply-to" type="hidden" value="{{.Thread}}">
+	<input name="board" type="hidden" value="{{.Board}}">
+	<input name="body" type="text">
+	<input type="submit">
+</form>
+
+<div class="thread">
+	{{range .Replies}}
+		<div class="thread-post">
+			<span class="thread-id">{{.Id}}</span>
+			<span class="thread-timestamp">{{.Created}}</span>
+			<h4>{{.Title}}</h4>
+			<p>{{.Body}}</p>
+		</div>
+	{{end}}
+</div>
+{{template "baseEnd"}}
