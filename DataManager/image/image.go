@@ -113,6 +113,7 @@ func magickResize(file io.Reader, format string, size, quality int) (*bytes.Buff
 	defer os.RemoveAll(tmpdir)
 
 	args := []string{
+		"-quiet",
 		"-[0]",
 		"-quality",
 		fmt.Sprintf("%d", quality),
@@ -151,6 +152,7 @@ func magickResize(file io.Reader, format string, size, quality int) (*bytes.Buff
 func GetDimensions(file io.Reader) (int, int, error) {
 	args := []string{
 		"-ping",
+		"-quiet",
 		"-format",
 		"%wx%h",
 		"-[0]",
