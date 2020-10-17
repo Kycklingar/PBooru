@@ -442,6 +442,9 @@ func CreatePost(file io.ReadSeeker, size int64, tagString, mime string, user *Us
 		file.Seek(0, 0)
 		var width, height int
 		width, height, err = image.GetDimensions(file)
+		if err != nil {
+			log.Println(err)
+		}
 
 		err = p.Mime.Parse(mime)
 		if err != nil {
