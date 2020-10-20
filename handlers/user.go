@@ -54,16 +54,22 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
 	for _, post := range p.RecentPosts {
-		post.QHash(DM.DB)
-		post.QThumbnails(DM.DB)
-		post.QDeleted(DM.DB)
+		post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+		)
 	}
 
 	p.RecentVotes = profile.RecentVotes(DM.DB, 5)
 	for _, post := range p.RecentVotes {
-		post.QHash(DM.DB)
-		post.QThumbnails(DM.DB)
-		post.QDeleted(DM.DB)
+		post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+		)
 	}
 
 	p.User.QUnreadMessages(DM.DB)
@@ -107,13 +113,15 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 			e.Tag.QTag(DM.DB)
 			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
 		}
-		h.Post.QID(DM.DB)
+
 		h.Post = DM.CachedPost(h.Post)
 
-		h.Post.QHash(DM.DB)
-		h.Post.QThumbnails(DM.DB)
-		h.Post.QMime(DM.DB).QName(DM.DB)
-		h.Post.QMime(DM.DB).QType(DM.DB)
+		h.Post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+		)
 
 		h.User.QName(DM.DB)
 		h.User.QID(DM.DB)

@@ -47,15 +47,21 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 	page.Offset += limit
 
 	for _, tree := range page.Trees {
-		tree.Apple.QThumbnails(DM.DB)
-		tree.Apple.QHash(DM.DB)
-		tree.Apple.QMime(DM.DB)
-		tree.Apple.QDeleted(DM.DB)
+		tree.Apple.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+			DM.PFDeleted,
+		)
 		for _, pear := range tree.Pears {
-			pear.QThumbnails(DM.DB)
-			pear.QHash(DM.DB)
-			pear.QMime(DM.DB)
-			pear.QDeleted(DM.DB)
+			pear.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFDeleted,
+				DM.PFThumbnails,
+			)
 		}
 	}
 

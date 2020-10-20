@@ -159,7 +159,7 @@ type PostComment struct {
 
 // Save a new comment on a post
 func (pc *PostComment) Save(q querier) error {
-	if pc.Text == "" || pc.Post.QID(q) == 0 || pc.User.QID(q) == 0 {
+	if pc.Text == "" || pc.Post.ID == 0 || pc.User.QID(q) == 0 {
 		return fmt.Errorf("expected: Text, PostID, UserID. Got: %s, %d, %d", pc.Text, pc.Post.ID, pc.User.ID)
 	}
 

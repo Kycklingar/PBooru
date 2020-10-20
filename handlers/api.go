@@ -28,7 +28,7 @@ type APIv1Post struct {
 	Mime        string
 	Deleted     bool
 	Tags        []APIv1TagI
-	Dimension   *DM.Dimension
+	Dimension   DM.Dimension
 	Filesize    int64
 }
 
@@ -52,11 +52,13 @@ func (t *APIv1TagString) Parse(tag *DM.Tag) {
 type APIv1Tag struct {
 	Tag       string
 	Namespace string
+	Count int
 }
 
 func (t *APIv1Tag) Parse(tag *DM.Tag) {
 	t.Tag = tag.QTag(DM.DB)
 	t.Namespace = tag.QNamespace(DM.DB).QNamespace(DM.DB)
+	t.Count = tag.Count
 }
 
 func jsonEncode(w http.ResponseWriter, v interface{}) error {
@@ -97,7 +99,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err = p.SetID(DM.DB, id)
 	case "ipfs":
-		p.Hash = val
+		p, err = DM.GetPostFromCID(val)
 	case "sha256", "md5":
 		p, err = DM.GetPostFromHash(key, val)
 	default:
@@ -110,7 +112,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p.QID(DM.DB) == 0 {
+	if p.ID == 0 {
 		APIError(w, "Post Not Found", http.StatusNotFound)
 		return
 	}
@@ -173,24 +175,40 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
-	p.QChecksums(DM.DB)
-	p.QThumbnails(DM.DB)
-	p.QDimensions(DM.DB)
+	if err := p.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFMime,
+		DM.PFDeleted,
+		DM.PFSize,
+		DM.PFChecksums,
+		DM.PFThumbnails,
+		DM.PFDimension,
+	); err != nil {
+		log.Println(err)
+	}
+
 	AP = APIv1Post{
-		ID:          p.QID(DM.DB),
-		Hash:        p.QHash(DM.DB),
+		ID:          p.ID,
+		Hash:        p.Hash,
 		Sha256:      p.Checksums.Sha256,
 		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
-		Mime:        p.QMime(DM.DB).Str(),
-		Deleted:     p.QDeleted(DM.DB) == 1,
-		Filesize:    p.QSize(DM.DB),
+		Mime:        p.Mime.Str(),
+		Deleted:     p.Deleted,
+		Filesize:    p.Size,
 		Dimension:   p.Dimension,
 	}
 
 	tc := DM.TagCollector{}
 	if includeTags {
-		err := tc.GetPostTags(DM.DB, p)
+		err := tc.FromPostMul(
+			DM.DB,
+			p,
+			DM.FTag,
+			DM.FCount,
+			DM.FNamespace,
+		)
 		if err != nil {
 			return AP, err
 		}
@@ -218,6 +236,7 @@ type APIv1Posts struct {
 
 func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
+	orStr := r.FormValue("or")
 	filterStr := r.FormValue("filter")
 	unlessStr := r.FormValue("unless")
 	limitStr := r.FormValue("limit")
@@ -267,7 +286,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagStr, filterStr, unlessStr, order, mimeIDs)
+	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -285,14 +304,23 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
-	for _, post := range pc.Search(limit, limit*offset) {
+	posts, err := pc.Search2(limit, limit*offset)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
+		return
+	}
+	AP.Posts = make([]APIv1Post, len(posts))
+	for i, post := range posts{
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}
-		AP.Posts = append(AP.Posts, APp)
+		//AP.Posts = append(AP.Posts, APp)
+		AP.Posts[i] = APp
+
 	}
 
 	AP.TotalPosts = pc.TotalPosts

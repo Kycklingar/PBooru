@@ -71,7 +71,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		post.QID(DM.DB)
 		post = DM.CachedPost(post)
 
 		if r.FormValue("comment") == "true" {
@@ -136,7 +135,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch method {
 	case "ipfs":
-		p.Hash, err = uri.getAtIndex(2)
+		var cid string
+		cid, err = uri.getAtIndex(2)
+		p, err = DM.GetPostFromCID(cid)
 	case "sha256", "md5":
 		var hash string
 		hash, err = uri.getAtIndex(2)
@@ -157,24 +158,40 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p.QID(DM.DB) == 0 {
+	if p.ID == 0 {
 		notFoundHandler(w, r)
 		return
 	}
 
-	p = DM.CachedPost(p)
+	//p = DM.CachedPost(p)
 
-	p.QHash(DM.DB)
-	p.QChecksums(DM.DB)
-	p.QDeleted(DM.DB)
-	p.QSize(DM.DB)
-	p.QMime(DM.DB).QType(DM.DB)
-	p.QMime(DM.DB).QName(DM.DB)
-	p.QThumbnails(DM.DB)
-	p.QDescription(DM.DB)
-	p.QScore(DM.DB)
-	p.QSize(DM.DB)
-	p.QDimensions(DM.DB)
+	//p.QHash(DM.DB)
+	//p.QChecksums(DM.DB)
+	//p.QDeleted(DM.DB)
+	//p.QSize(DM.DB)
+	//p.QMime(DM.DB).QType(DM.DB)
+	//p.QMime(DM.DB).QName(DM.DB)
+	//p.QThumbnails(DM.DB)
+	//p.QDescription(DM.DB)
+	//p.QScore(DM.DB)
+	//p.QSize(DM.DB)
+	//p.QDimensions(DM.DB)
+
+	if err = p.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFChecksums,
+		DM.PFDeleted,
+		DM.PFSize,
+		DM.PFMime,
+		DM.PFScore,
+		DM.PFDimension,
+		DM.PFThumbnails,
+	); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	pp.Post = p
 
@@ -185,18 +202,30 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
+	//pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
 
-	pp.Dupe.Post.QHash(DM.DB)
-	pp.Dupe.Post.QDeleted(DM.DB)
-	pp.Dupe.Post.QThumbnails(DM.DB)
+	//pp.Dupe.Post.QHash(DM.DB)
+	//pp.Dupe.Post.QDeleted(DM.DB)
+	//pp.Dupe.Post.QThumbnails(DM.DB)
+
+	if err = pp.Dupe.Post.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFDeleted,
+		DM.PFThumbnails,
+	); err != nil {
+		log.Println(err)
+	}
 
 	for _, p := range pp.Dupe.Inferior {
-		p.QID(DM.DB)
-		p = DM.CachedPost(p)
-		p.QHash(DM.DB)
-		p.QThumbnails(DM.DB)
-		p.QDeleted(DM.DB)
+		if err = p.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+		); err != nil {
+			log.Println(err)
+		}
 	}
 
 	pp.Voted = pp.User.Voted(DM.DB, p)
@@ -241,8 +270,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			p.QOrder(DM.DB)
 			p.QPost(DM.DB)
-			p.Post.QHash(DM.DB)
-			p.Post.QThumbnails(DM.DB)
+			p.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFThumbnails,
+			)
 		}
 	}
 
@@ -399,6 +431,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagString := r.FormValue("tags")
+	p.Sidebar.Or = r.FormValue("or")
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
@@ -439,6 +472,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	args := []arg{}
+	args = append(args, arg{"or", p.Sidebar.Or})
 	args = append(args, arg{"filter", p.Sidebar.Filter})
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
@@ -482,7 +516,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := &DM.PostCollector{}
-	err = pc.Get(tagString, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
@@ -492,9 +526,19 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	pc = DM.CachedPostCollector(pc)
 
 	//fmt.Println(pc.TotalPosts)
-	for _, post := range pc.Search(pageLimit, offset) {
-		post.QMime(DM.DB).QName(DM.DB)
-		post.QMime(DM.DB).QType(DM.DB)
+	posts, err := pc.Search2(pageLimit, offset)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, post := range posts {
+		post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFMime,
+			DM.PFThumbnails,
+		)
 		p.Posts = append(p.Posts, post)
 	}
 	p.Sidebar.TotalPosts = pc.TotalPosts
@@ -510,7 +554,6 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		p.SuggestedTags = append(p.SuggestedTags, t)
 	}
 
-	//p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 	sidebarTags := pc.Tags(maxTagsPerPage)
 	p.Sidebar.Tags = make([]*DM.Tag, len(sidebarTags))
 	for i, tag := range sidebarTags {
@@ -556,7 +599,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize + 1000000)
+		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize+1000000)
 		err := r.ParseMultipartForm(CFG.MaxFileSize)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -587,9 +630,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		tagString := r.FormValue("tags")
 
-		post := DM.NewPost()
+		//post := DM.NewPost()
 
-		err = post.New(file, fh.Size, tagString, contentType, user)
+		post, err := DM.CreatePost(file, fh.Size, tagString, contentType, user)
 		if err != nil {
 			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
 			log.Println(err)
@@ -597,13 +640,13 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(r.FormValue("chapter-id")) > 0 {
-			r.Form.Add("post-id", strconv.Itoa(post.QID(DM.DB)))
+			r.Form.Add("post-id", strconv.Itoa(post.ID))
 			r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
 			comicAddPageHandler(w, r)
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.QID(DM.DB)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusSeeOther)
 
 	} else {
 		notFoundHandler(w, r)
@@ -630,7 +673,8 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 
 		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		if post.QDeleted(DM.DB) >= 1 {
+		post.QMul(DM.DB, DM.PFDeleted)
+		if post.Deleted {
 			if err = post.UnDelete(DM.DB); err != nil {
 				log.Println(err)
 			}
@@ -806,14 +850,15 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i, _ := range p.Posts {
-		p.Posts[i].QID(DM.DB)
 		p.Posts[i] = DM.CachedPost(p.Posts[i])
 
-		p.Posts[i].QHash(DM.DB)
-		p.Posts[i].QThumbnails(DM.DB)
-		p.Posts[i].QDeleted(DM.DB)
-		p.Posts[i].QMime(DM.DB).QName(DM.DB)
-		p.Posts[i].QMime(DM.DB).QType(DM.DB)
+		p.Posts[i].QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+			DM.PFMime,
+		)
 	}
 
 	p.UserInfo = userCookies(w, r)

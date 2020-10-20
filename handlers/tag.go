@@ -13,6 +13,7 @@ type Sidebar struct {
 	TotalPosts int
 	Tags       []*DM.Tag
 	Query      string
+	Or	string
 	Filter     string
 	Unless     string
 
@@ -236,11 +237,12 @@ func preloadTagHistory(histories []*DM.TagHistory) {
 			e.Tag.QTag(DM.DB)
 			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
 		}
-		h.Post.QID(DM.DB)
-		h.Post.QHash(DM.DB)
-		h.Post.QThumbnails(DM.DB)
-		h.Post.QMime(DM.DB).QName(DM.DB)
-		h.Post.QMime(DM.DB).QType(DM.DB)
+		h.Post.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+		)
 
 		h.User.QName(DM.DB)
 		h.User.QID(DM.DB)

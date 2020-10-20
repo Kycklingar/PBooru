@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
 func NewTag() *Tag {
@@ -31,6 +32,19 @@ type Tag struct {
 	Tag       string
 	Namespace *Namespace
 	Count     int
+}
+
+func (t *Tag) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case FID:
+			sel.Rebind(&t.ID)
+		case FTag:
+			sel.Rebind(&t.Tag)
+		case FCount:
+			sel.Rebind(&t.Count)
+		case FNamespace:
+			sel.Rebind(&t.Namespace.Namespace)
+	}
 }
 
 func (t *Tag) String() string {
@@ -443,12 +457,67 @@ func (tc *TagCollector) Total() int {
 	return total
 }
 
+func (tc *TagCollector) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
+	switch field {
+		case FID:
+			sel.Bind(nil, "t.id", "")
+		case FTag:
+			sel.Bind(nil, "t.tag", "")
+		case FCount:
+			sel.Bind(nil, "t.count", "")
+		case FNamespace:
+			sel.Bind(nil, "n.nspace", "JOIN namespaces n ON t.namespace_id = n.id")
+	}
+}
+
+const (
+	FID sqlbinder.Field = iota
+	FTag
+	FCount
+	FNamespace
+)
+
+func (tc *TagCollector) FromPostMul(q querier, p *Post, fields... sqlbinder.Field) error {
+	selector := sqlbinder.BindFieldAddresses(tc, fields...)
+
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM post_tag_mappings ptm
+		JOIN tags t ON tag_id = t.id
+		%s
+		WHERE post_id = $1
+		`,
+		selector.Select(),
+		selector.Joins(),
+	)
+
+	rows, err := q.Query(query, p.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t = NewTag()
+		selector.ReBind(t, fields...)
+
+		err = rows.Scan(selector.Values()...)
+		if err != nil {
+			return err
+		}
+
+		tc.Tags = append(tc.Tags, t)
+	}
+
+	return nil
+}
+
 func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
 
-	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=$1", p.QID(q))
+	rows, err := q.Query("SELECT tag_id FROM post_tag_mappings WHERE post_id=$1", p.ID)
 	if err != nil {
 		return err
 	}
@@ -468,11 +537,11 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 }
 
 func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
-	if p.QID(q) == 0 {
+	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
 
-	if m := C.Cache.Get("TPC", strconv.Itoa(p.QID(q))); m != nil {
+	if m := C.Cache.Get("TPC", strconv.Itoa(p.ID)); m != nil {
 		switch mm := m.(type) {
 		case *TagCollector:
 			*tc = *mm
@@ -492,7 +561,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 			WHERE post_id=$1
 			)`,
 		//ORDER BY nspace, tag`,
-		p.QID(q))
+		p.ID)
 	if err != nil {
 		return err
 	}

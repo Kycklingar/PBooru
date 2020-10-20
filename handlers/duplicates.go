@@ -29,12 +29,18 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, report := range page.Reports {
 		report.Reporter.QName(DM.DB)
 		report.Dupe.Post = DM.CachedPost(report.Dupe.Post)
-		report.Dupe.Post.QThumbnails(DM.DB)
-		report.Dupe.Post.QDeleted(DM.DB)
+		report.Dupe.Post.QMul(
+			DM.DB,
+			DM.PFThumbnails,
+			DM.PFDeleted,
+		)
 		for _, post := range report.Dupe.Inferior {
 			post = DM.CachedPost(post)
-			post.QThumbnails(DM.DB)
-			post.QDeleted(DM.DB)
+			post.QMul(
+				DM.DB,
+				DM.PFThumbnails,
+				DM.PFDeleted,
+			)
 		}
 	}
 
@@ -150,14 +156,15 @@ func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 	for _, p := range page.Posts {
 		p = DM.CachedPost(p)
 
-		p.QHash(DM.DB)
-		p.QThumbnails(DM.DB)
-		p.QMime(DM.DB).QName(DM.DB)
-		p.QMime(DM.DB).QType(DM.DB)
-
-		p.QDimensions(DM.DB)
-		p.QSize(DM.DB)
-		p.QDeleted(DM.DB)
+		p.QMul(
+			DM.DB,
+			DM.PFHash,
+			DM.PFThumbnails,
+			DM.PFMime,
+			DM.PFDimension,
+			DM.PFSize,
+			DM.PFDeleted,
+		)
 	}
 
 	renderTemplate(w, "compare2", page)

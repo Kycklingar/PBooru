@@ -252,7 +252,7 @@ func (u *User) QFlag(q querier) flag {
 }
 
 func (u *User) Voted(q querier, p *Post) bool {
-	if p.QID(q) <= 0 {
+	if p.ID <= 0 {
 		return false
 	}
 
