@@ -1,3 +1,22 @@
+.forum #reply
+{
+	position:fixed;
+	right:0px;
+	bottom:0px;
+	margin:1em;
+}
+
+.forum #reply textarea
+{
+	margin-right: 5em;
+}
+
+.forum form input
+{
+	display:block;
+	margin:0.5em;
+}
+
 #catalog
 {
 	display: flex;

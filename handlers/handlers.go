@@ -318,6 +318,8 @@ func init() {
 
 	Handlers["/forum/"] = makeStatHandler(boardHandler)
 	Handlers["/forum/new/post/"] = makeStatHandler(newThreadHandler)
+	Handlers["/forum/new/category/"] = makeStatHandler(newCategoryHandler)
+	Handlers["/forum/new/board/"] = makeStatHandler(newBoardHandler)
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {

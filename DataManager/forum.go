@@ -12,6 +12,70 @@ type ForumPost struct {
 	Created timestamp
 }
 
+type Board struct {
+	Name string
+	Description string
+	Uri string
+}
+
+func GetCategories() ([]string, error) {
+	rows, err := DB.Query(`
+		SELECT name
+		FROM forum_category
+		`,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var cats []string
+
+	for rows.Next() {
+		var c string
+		err = rows.Scan(&c)
+		if err != nil {
+			return nil, err
+		}
+
+		cats = append(cats, c)
+	}
+
+	return cats, nil
+}
+
+func GetBoards() (map[string][]Board, error) {
+	rows, err := DB.Query(`
+		SELECT cat.name, b.name, b.description, b.uri
+		FROM forum_board b 
+		JOIN forum_category cat
+		ON cat.id = b.category
+		`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var boards = make(map[string][]Board)
+
+	for rows.Next() {
+		var (
+			b Board
+			cat string
+		)
+
+		if err = rows.Scan(&cat, &b.Name, &b.Description, &b.Uri); err != nil {
+			return nil, err
+		}
+
+		boards[cat] = append(boards[cat], b)
+	}
+
+	return boards, nil
+}
+
 func GetCatalog(board string) ([]Thread, error) {
 	rows, err := DB.Query(`
 		SELECT rid, title, body, created, (
@@ -152,4 +216,43 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 
 
 	return rid, err
+}
+
+func NewBoard(uri, name, description, category string) error {
+	_, err := DB.Exec(`
+		INSERT INTO forum_board (
+			uri,
+			name,
+			description,
+			category
+		)
+		VALUES(
+			$1,
+			$2,
+			$3,
+			(
+				SELECT id
+				FROM forum_category
+				WHERE name = $4
+			)
+		)
+		`,
+		uri,
+		name,
+		description,
+		category,
+	)
+
+	return err
+}
+
+func NewCategory(name string) error {
+	_, err := DB.Exec(`
+		INSERT INTO forum_category (name)
+		VALUES($1)
+		`,
+		name,
+	)
+
+	return err
 }

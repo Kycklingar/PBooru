@@ -1,22 +1,24 @@
 {{template "base"}}
-<form action="/forum/new/post/" method="POST">
-	<input name="board" type="hidden" value="{{.Board}}">
-	<input name="title" type="text">
-	<input name="body" type="text">
-	<input type="submit">
-</form>
+<div class="forum">
+	<form action="/forum/new/post/" method="POST">
+		<input name="board" type="hidden" value="{{.Board}}">
+		<input name="title" type="text" placeholder="Title">
+		<input name="body" type="text" placeholder="Body">
+		<input type="submit" value="New Thread">
+	</form>
 
-<div id="catalog">
-	{{range .Threads}}
-		<div class="thread-post">
-			<a href="thread/{{.Post.Id}}">
-			<span class="thread-id">{{.Post.Id}}</span>
-			<span class="thread-timestamp">{{.Post.Created}}</span>
-			</a>
-			<span>{{.Replies}}
-			<h3>{{.Post.Title}}</h3>
-			<p>{{.Post.Body}}</p>
-		</div>
-	{{end}}
+	<div id="catalog">
+		{{range .Threads}}
+			<div class="thread-post">
+				<a href="thread/{{.Post.Id}}">
+				<span class="thread-id">{{.Post.Id}}</span>
+				<span class="thread-timestamp">{{.Post.Created}}</span>
+				</a>
+				<span>{{.Replies}}
+				<h3>{{.Post.Title}}</h3>
+				<p>{{.Post.Body}}</p>
+			</div>
+		{{end}}
+	</div>
 </div>
 {{template "baseEnd"}}

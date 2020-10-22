@@ -23,7 +23,7 @@ func boardHandler(w http.ResponseWriter, r *http.Request) {
 
 	board, err := uri.getAtIndex(1)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		boardsHandler(w, r)
 		return
 	}
 
@@ -40,6 +40,33 @@ func boardHandler(w http.ResponseWriter, r *http.Request) {
 			catalogHandler(board, w, r)
 	}
 
+}
+
+func boardsHandler(w http.ResponseWriter, r *http.Request) {
+	page := struct {
+		User *DM.User
+		Boards map[string][]DM.Board
+		Categories []string
+	}{}
+
+	var err error
+
+	page.Boards, err = DM.GetBoards()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	page.User, _ = getUser(w, r)
+	if page.User.QFlag(DM.DB).Special() {
+		page.Categories, err = DM.GetCategories()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	renderTemplate(w, "forum", page)
 }
 
 func catalogHandler(board string, w http.ResponseWriter, r *http.Request) {
@@ -101,4 +128,41 @@ func newThreadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/forum/%s/thread/%d", board, rid), http.StatusSeeOther)
+}
+
+func newCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Special() {
+		permErr(w, "Special")
+		return
+	}
+
+	name := r.FormValue("name")
+
+	if err := DM.NewCategory(name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/forum/", http.StatusSeeOther)
+}
+
+func newBoardHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Special() {
+		permErr(w, "Special")
+		return
+	}
+
+	name := r.FormValue("name")
+	uri := r.FormValue("uri")
+	description := r.FormValue("description")
+	category := r.FormValue("category")
+
+	if err := DM.NewBoard(uri, name, description, category); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/forum/", http.StatusSeeOther)
 }

@@ -1,0 +1,40 @@
+{{template "base"}}
+
+<div class="forum">
+	{{if .User.Flag.Special}}
+		<details>
+		<summary>New Category</summary>
+			<form action="/forum/new/category/" method="POST">
+				<input name="name" type="text" placeholder="Name">
+				<input type="submit" value="Submit Category">
+			</form>
+		</details>
+		<details>
+		<summary>New Board</summary>
+			<form action="/forum/new/board/" method="POST">
+				<input name="name" type="text" placeholder="Name">
+				<input name="uri" type="text" placeholder="URI">
+				<input name="description" type="text" placeholder="Description">
+				<h3>Category:</h3>
+				{{range .Categories}}
+				<label><input name="category" type="radio" value="{{.}}" style="display:inline">
+				{{.}}
+				</label>
+				{{end}}
+				<input type="submit" value="Submit Board">
+			</form>
+		</details>
+	{{end}}
+
+	{{range $k, $v := .Boards}}
+	<div class="text-panel">
+		<h2>{{$k}}</h2>
+
+		{{range $v}}
+		<h3><a href="{{.Uri}}/">/{{.Uri}}/</a> | {{.Name}}</h3>
+		{{end}}
+	</div>
+	{{end}}
+</div>
+
+{{template "baseEnd"}}
