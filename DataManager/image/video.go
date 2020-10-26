@@ -34,7 +34,6 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 	}
 
 	cmd := exec.Command("ffprobe", args...)
-	cmd.Stdin = file
 
 	b, err := cmd.CombinedOutput()
 	if err != nil {
@@ -66,11 +65,13 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 
 	args = []string{
 		"-hide_banner",
+		"-loglevel",
+		"8",
 		"-i",
 		tmpFile.Name(),
 		"-f",
 		"mjpeg",
-		"-vframes",
+		"-frames",
 		"1",
 		"-ss",
 		fmt.Sprint(int(t.Seconds())),
@@ -79,32 +80,21 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 
 	file.Seek(0, 0)
 	cmd = exec.Command("ffmpeg", args...)
-	cmd.Stdin = file
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	defer stdout.Close()
-
-	err = cmd.Start()
-	//b, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	out, err := magickResize(stdout, format, size, quality)
+	br := bytes.NewReader(output)
+
+	out, err := magickResize(br, format, size, quality)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	if err = cmd.Wait(); err != nil {
-		log.Println(err)
-		return nil, err
-	}
 	return out, nil
 }
 
