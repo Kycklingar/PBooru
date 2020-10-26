@@ -57,8 +57,10 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 		return nil, err
 	}
 
+	// No duration, try using first second frame
 	if t <= 0 {
-		return nil, fmt.Errorf("video has no duration %s", duration)
+		//return nil, fmt.Errorf("video has no duration %s", duration)
+		t = time.Second
 	}
 
 	t = t / 2
@@ -67,14 +69,14 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 		"-hide_banner",
 		"-loglevel",
 		"8",
+		"-ss",
+		fmt.Sprint(int(t.Seconds())),
 		"-i",
 		tmpFile.Name(),
 		"-f",
 		"mjpeg",
 		"-frames",
 		"1",
-		"-ss",
-		fmt.Sprint(int(t.Seconds())),
 		"-",
 	}
 
