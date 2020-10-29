@@ -36,14 +36,14 @@ type Tag struct {
 
 func (t *Tag) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
-		case FID:
-			sel.Rebind(&t.ID)
-		case FTag:
-			sel.Rebind(&t.Tag)
-		case FCount:
-			sel.Rebind(&t.Count)
-		case FNamespace:
-			sel.Rebind(&t.Namespace.Namespace)
+	case FID:
+		sel.Rebind(&t.ID)
+	case FTag:
+		sel.Rebind(&t.Tag)
+	case FCount:
+		sel.Rebind(&t.Count)
+	case FNamespace:
+		sel.Rebind(&t.Namespace.Namespace)
 	}
 }
 
@@ -467,14 +467,14 @@ func (tc *TagCollector) Total() int {
 
 func (tc *TagCollector) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
-		case FID:
-			sel.Bind(nil, "t.id", "")
-		case FTag:
-			sel.Bind(nil, "t.tag", "")
-		case FCount:
-			sel.Bind(nil, "t.count", "")
-		case FNamespace:
-			sel.Bind(nil, "n.nspace", "JOIN namespaces n ON t.namespace_id = n.id")
+	case FID:
+		sel.Bind(nil, "t.id", "")
+	case FTag:
+		sel.Bind(nil, "t.tag", "")
+	case FCount:
+		sel.Bind(nil, "t.count", "")
+	case FNamespace:
+		sel.Bind(nil, "n.nspace", "JOIN namespaces n ON t.namespace_id = n.id")
 	}
 }
 
@@ -485,7 +485,7 @@ const (
 	FNamespace
 )
 
-func (tc *TagCollector) FromPostMul(q querier, p *Post, fields... sqlbinder.Field) error {
+func (tc *TagCollector) FromPostMul(q querier, p *Post, fields ...sqlbinder.Field) error {
 	selector := sqlbinder.BindFieldAddresses(tc, fields...)
 
 	query := fmt.Sprintf(`

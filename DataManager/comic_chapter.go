@@ -11,7 +11,7 @@ import (
 )
 
 func NewChapter() *Chapter {
-	return &Chapter{Order:-9999999999}
+	return &Chapter{Order: -9999999999}
 }
 
 func newChapter() *Chapter {

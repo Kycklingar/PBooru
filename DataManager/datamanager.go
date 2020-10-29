@@ -10,6 +10,7 @@ import (
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	st "github.com/kycklingar/PBooru/DataManager/storage"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,6 +34,8 @@ func txError(tx *sql.Tx, err error) error {
 }
 
 var DB *sql.DB
+
+var store st.Storage
 
 func Setup(iApi string) {
 	var err error
@@ -85,6 +88,13 @@ func Setup(iApi string) {
 	if !ipfs.IsUp() {
 		log.Printf("Your IPFS Daemon is not accessible on %s. Did you forget to start it?\n", iApi)
 	}
+
+	if CFG.UsePatcher {
+		store, err = newStorage("")
+		if err != nil {
+			log.Fatal(err)
+		}
+	} // else if CFG.UseMFS
 
 	// countCache.cache = make(map[string]int)
 }
@@ -221,6 +231,7 @@ type Config struct {
 	ConnectionString string
 	StdUserFlag      int
 	UseMFS           bool
+	UsePatcher       bool
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
@@ -229,7 +240,8 @@ type Config struct {
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
-	c.UseMFS = true
+	c.UseMFS = false
+	c.UsePatcher = true
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}

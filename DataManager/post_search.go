@@ -5,8 +5,8 @@ import "fmt"
 type group struct {
 	//nested []group
 
-	and []int
-	or []int
+	and    []int
+	or     []int
 	filter []int
 	unless []int
 }
@@ -29,18 +29,15 @@ func (g group) sel(wh string) string {
 		trail = "AND"
 	}
 
-	if !( len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
+	if !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
 		return where
 	}
-
-
-
 
 	sep := func(s []int, seperator string) string {
 		var out string
 		for i, v := range s {
 			out += fmt.Sprint(v)
-			if i < len(s) - 1 {
+			if i < len(s)-1 {
 				out += ","
 			}
 		}
@@ -102,7 +99,7 @@ func (g group) sel(wh string) string {
 
 		var unlessJ, unlessW string
 
-		if len(g.unless) > 0{
+		if len(g.unless) > 0 {
 			unlessJ = fmt.Sprintf(`
 				LEFT JOIN post_tag_mappings u
 				ON f.post_id = u.post_id

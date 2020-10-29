@@ -3,44 +3,41 @@ package DataManager
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"image/png"
 	"io"
 	"log"
 
 	"github.com/Nr90/imgsim"
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
-func makeThumbnail(parentCid string, file io.ReadSeeker, size, quality int) (string, error) {
+func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
 	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size, quality)
 	if err != nil {
 		log.Println(err)
 		return "", err
 	}
 
-	thumbHash, err := ipfsAdd(b)
+	cid, err := ipfs.Add(
+		b,
+		shell.Pin(false),
+		shell.CidVersion(1),
+	)
 	if err != nil {
 		log.Println(err)
 		return "", err
 	}
 
-	if thumbHash == "" {
-		return "", errors.New("thumbhash is empty")
+	if cid == "" {
+		return "", errors.New("cid is empty")
 	}
 
-	if CFG.UseMFS {
-		if err = mfsCP(parentCid, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), true); err != nil {
-			log.Println(err)
-			return "", err
-		}
-	}
-
-	return thumbHash, nil
+	return cid, nil
 
 }
 
-func makeThumbnails(parentCid string, file io.ReadSeeker) ([]Thumb, error) {
+func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 	var largestThumbnailSize int
 	for _, size := range CFG.ThumbnailSizes {
 		if largestThumbnailSize < size {
@@ -60,7 +57,7 @@ func makeThumbnails(parentCid string, file io.ReadSeeker) ([]Thumb, error) {
 
 	for _, size := range CFG.ThumbnailSizes {
 		f.Seek(0, 0)
-		thumbHash, err := makeThumbnail(parentCid, f, size, CFG.ThumbnailQuality)
+		thumbHash, err := makeThumbnail(f, size, CFG.ThumbnailQuality)
 		if err != nil {
 			return nil, err
 		}
