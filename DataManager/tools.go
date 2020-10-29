@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"path"
 	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/image"
@@ -193,7 +192,10 @@ func MigratePatcher() {
 		}
 		for _, post := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
-			if err = store.Store(post.Hash, path.Join("files", post.Hash[len(post.Hash)-2:], post.Hash)); err != nil {
+			if err = store.Store(
+				post.Hash,
+				storeFileDest(post.Hash),
+			); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -295,7 +297,7 @@ func MigrateMfs() {
 		}
 		for _, post := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
-			if err = mfsCP(post.Hash, CFG.MFSRootDir+"files/", false); err != nil {
+			if err = store.Store(post.Hash, storeFileDest(post.Hash)); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -307,29 +309,44 @@ func MigrateMfs() {
 
 	offset = 0
 
-	tquery := func(str string, offset int) ([]Thumb, error) {
+	type thmb struct {
+		pcid string
+		cid  string
+		size int
+	}
+
+	tquery := func(str string, offset int) ([]thmb, error) {
 		rows, err := DB.Query(str, offset*20000)
 		if err != nil {
 			return nil, err
 		}
 		defer rows.Close()
-		var thumbs []Thumb
+		var thumbs []thmb
 		for rows.Next() {
-			var t Thumb
-			rows.Scan(&t.Hash, &t.Size)
+			var t thmb
+			rows.Scan(&t.pcid, &t.cid, &t.size)
 			thumbs = append(thumbs, t)
 		}
 		return thumbs, rows.Err()
 	}
 
 	for {
-		var thumbs []Thumb
-		if thumbs, err = tquery("SELECT multihash, dimension FROM thumbnails ORDER BY post_id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(thumbs) <= 0 {
+		var thumbs []thmb
+		if thumbs, err = tquery(`
+			SELECT p.multihash, t.multihash, dimension
+			FROM thumbnails t
+			JOIN posts p
+			ON p.id = t.post_id
+			ORDER BY post_id ASC
+			LIMIT 20000 OFFSET $1
+			`,
+			offset,
+		); err != nil || len(thumbs) <= 0 {
 			break
 		}
 		for _, thumb := range thumbs {
 			fmt.Println("Working on thumbnail:", thumb)
-			if err = mfsCP(thumb.Hash, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), false); err != nil {
+			if err = store.Store(thumb.cid, storeThumbnailDest(thumb.pcid, thumb.size)); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -369,10 +386,26 @@ func GenerateThumbnail(postID int) error {
 	}
 
 	for _, thumb := range thumbs {
-		_, err = DB.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
+		tx, err := DB.Begin()
 		if err != nil {
 			log.Println(err)
+			continue
 		}
+
+		_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
+		if err != nil {
+			log.Println(err)
+			tx.Rollback()
+			continue
+		}
+
+		if err = store.Store(thumb.Hash, storeThumbnailDest(hash, thumb.Size)); err != nil {
+			log.Println(err)
+			tx.Rollback()
+			continue
+		}
+
+		tx.Commit()
 	}
 
 	return nil
@@ -443,14 +476,14 @@ func GenerateThumbnails(size int) {
 				failed++
 				continue
 			}
-			if CFG.UseMFS {
-				err = mfsCP(thash, fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), true)
-				if err != nil {
-					log.Println(err, thash)
-					failed++
-					continue
-				}
+
+			err = store.Store(thash, storeThumbnailDest(post.hash, size))
+			if err != nil {
+				log.Println(err, thash)
+				failed++
+				continue
 			}
+
 			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", post.id, size, thash)
 			if err != nil {
 				tx.Rollback()

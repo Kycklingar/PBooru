@@ -94,7 +94,11 @@ func Setup(iApi string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} // else if CFG.UseMFS
+	} else if CFG.UseMFS {
+		store = new(mfsStore)
+	} else {
+		store = new(st.NullStorage)
+	}
 
 	// countCache.cache = make(map[string]int)
 }

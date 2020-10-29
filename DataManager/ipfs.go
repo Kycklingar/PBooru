@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	shell "github.com/ipfs/go-ipfs-api"
@@ -52,38 +51,38 @@ var ipfs *shell.Shell
 // 	return fileHash, nil
 // }
 
-func ipfsAdd(file io.Reader) (string, error) {
-	opts := []shell.AddOpts{
-		shell.CidVersion(1),
-		func(rb *shell.RequestBuilder) error {
-			rb.Option("fscache", true)
-			return nil
-		},
-		shell.Pin(false),
-	}
+//func ipfsAdd(file io.Reader) (string, error) {
+//	opts := []shell.AddOpts{
+//		shell.CidVersion(1),
+//		func(rb *shell.RequestBuilder) error {
+//			rb.Option("fscache", true)
+//			return nil
+//		},
+//		shell.Pin(false),
+//	}
+//
+//	return ipfs.Add(file, opts...)
+//}
 
-	return ipfs.Add(file, opts...)
-}
-
-func mfsCP(hash, dest string, flush bool) error {
-	destination := fmt.Sprint(dest, hash[len(hash)-2:], "/")
-
-	ctx := context.Background()
-
-	if _, err := ipfs.FilesLs(ctx, destination); err != nil {
-		opts := []shell.FilesOpt{
-			shell.FilesMkdir.CidVersion(1),
-			shell.FilesMkdir.Parents(true),
-		}
-		ipfs.FilesMkdir(ctx, destination, opts...)
-	}
-
-	if _, err := ipfs.FilesLs(ctx, fmt.Sprint(destination, hash)); err == nil {
-		return nil
-	}
-
-	return ipfs.FilesCp(ctx, fmt.Sprint("/ipfs/", hash), fmt.Sprint(destination, hash))
-}
+//func mfsCP(hash, dest string, flush bool) error {
+//	destination := fmt.Sprint(dest, hash[len(hash)-2:], "/")
+//
+//	ctx := context.Background()
+//
+//	if _, err := ipfs.FilesLs(ctx, destination); err != nil {
+//		opts := []shell.FilesOpt{
+//			shell.FilesMkdir.CidVersion(1),
+//			shell.FilesMkdir.Parents(true),
+//		}
+//		ipfs.FilesMkdir(ctx, destination, opts...)
+//	}
+//
+//	if _, err := ipfs.FilesLs(ctx, fmt.Sprint(destination, hash)); err == nil {
+//		return nil
+//	}
+//
+//	return ipfs.FilesCp(ctx, fmt.Sprint("/ipfs/", hash), fmt.Sprint(destination, hash))
+//}
 
 //func ipfsPatchLink(rootHash, name, linkHash string) (string, error) {
 //	if rootHash == "" {
