@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"sync"
+	"fmt"
 
-	shell "github.com/ipfs/go-ipfs-api"
 	patcher "github.com/kycklingar/PBooru/DataManager/ipfs-patcher"
 )
 
@@ -53,7 +53,13 @@ func (s *storage) updateRoot() error {
 
 	var oldRoot string
 
-	err := DB.QueryRow(`
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrDie(tx, &err)
+
+	err = tx.QueryRow(`
 		SELECT cid
 		FROM roots
 		WHERE id = $1
@@ -66,12 +72,6 @@ func (s *storage) updateRoot() error {
 			return err
 		}
 
-		tx, err := DB.Begin()
-		if err != nil {
-			return err
-		}
-		defer commitOrDie(tx, &err)
-
 		_, err = tx.Exec(`
 			INSERT INTO roots(id, cid)
 			VALUES($1, $2)
@@ -82,33 +82,46 @@ func (s *storage) updateRoot() error {
 		if err != nil {
 			return err
 		}
-
-		err = ipfs.Pin(s.patcher.Root())
-		return err
+	} else {
+		_, err = tx.Exec(`
+			UPDATE roots
+			SET cid = $1
+			WHERE id = $2
+			`,
+			s.patcher.Root(),
+			s.id,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
-	tx, err := DB.Begin()
-	if err != nil {
-		return err
-	}
-	defer commitOrDie(tx, &err)
-
-	_, err = tx.Exec(`
-		UPDATE roots
-		SET cid = $1
-		WHERE id = $2
-		`,
-		s.patcher.Root(),
-		s.id,
-	)
-
-	rb := ipfs.Request("pin/update", oldRoot, s.patcher.Root())
-	var res *shell.Response
-	res, err = rb.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	res.Close()
-
+	err = s.updatePin(oldRoot)
 	return err
 }
+
+func (s *storage) updatePin(oldRoot string) error {
+	// Try updating old root
+	if oldRoot != "" {
+		// Check if oldRoot == patcher.Root
+		// There is a bug in IPFS where updating pinA with pinA even if pinA isn't pinned yields no error
+		if oldRoot == s.patcher.Root() {
+			// If pinned, return
+			err := ipfs.Request("pin/ls", oldRoot).Exec(context.Background(), nil)
+			if err == nil {
+				return nil
+			}
+		} else {
+			rb := ipfs.Request("pin/update", oldRoot, s.patcher.Root())
+			err := rb.Exec(context.Background(), nil)
+			if err == nil || (err != nil && err.Error() != "pin/update: 'from' cid was not recursively pinned already") {
+				return err
+			}
+		}
+	}
+
+	// Pin not found, create new
+	fmt.Println("Creating new pin: ", s.patcher.Root())
+	return ipfs.Pin(s.patcher.Root())
+}
+

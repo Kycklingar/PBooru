@@ -48,8 +48,7 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	migrateMfs := flag.Bool("migrate-mfs", false, "Migrate all files and thumbnails to the mfs.")
-	migratePatcher := flag.Bool("migrate-patcher", false, "Migrate all files and thumbnails to the patcher.")
+	migrateStore := flag.Int("migrate-store", -1, "Migrate all files and thumbnails to the configured store.")
 	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
 	configFilePath := flag.String("cfg", "config.cfg", "Load config file.")
 	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
@@ -139,13 +138,8 @@ func main() {
 		return
 	}
 
-	if *migrateMfs {
-		DM.MigrateMfs()
-		return
-	}
-
-	if *migratePatcher {
-		DM.MigratePatcher()
+	if *migrateStore >= 0 {
+		DM.MigrateStore(*migrateStore)
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"sort"
 
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
@@ -156,27 +157,70 @@ func CalculateChecksums() error {
 	return nil
 }
 
-func MigratePatcher() {
+func MigrateStore(start int) {
+	type thumb struct {
+		size int
+		cid string
+	}
 	type post struct {
-		Hash string
-		ID   int
+		cid string
+		id   int
+		thumbs []thumb
 	}
 
-	query := func(str string, offset int) ([]post, error) {
-		rows, err := DB.Query(str, offset*2000)
+	query := func(str string, start, offset int) ([]post, error) {
+		rows, err := DB.Query(str, start, offset*2000)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		defer rows.Close()
 
-		var posts []post
+		var postm = make(map[int]post)
 
 		for rows.Next() {
-			var p post
-			rows.Scan(&p.Hash, &p.ID)
-			posts = append(posts, p)
+			var (
+				p post
+				tsize sql.NullInt64
+				tcid sql.NullString
+			)
+
+			err = rows.Scan(&p.id, &p.cid, &tsize, &tcid)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, ok := postm[p.id]; !ok {
+				postm[p.id] = p
+			} else {
+				p = postm[p.id]
+			}
+
+			if tsize.Valid && tcid.Valid {
+				p.thumbs = append(
+					p.thumbs,
+					thumb{
+						int(tsize.Int64),
+						tcid.String,
+					},
+				)
+
+				postm[p.id] = p
+			}
 		}
+
+		var posts = make([]post, len(postm))
+		var i int
+
+		for _, v := range postm {
+			posts[i] = v
+			i++
+		}
+
+		sort.Slice(posts, func(i, j int) bool {
+			return posts[i].id < posts[j].id
+		})
+
 
 		return posts, nil
 	}
@@ -186,119 +230,43 @@ func MigratePatcher() {
 	offset := 0
 
 	for {
-		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 2000 OFFSET $1", offset)
+		posts, err := query(`
+			SELECT p.id, p.multihash, t.dimension, t.multihash
+			FROM thumbnails t
+			RIGHT JOIN (
+				SELECT id, multihash
+				FROM posts
+				WHERE id > $1
+				ORDER BY id ASC
+				LIMIT 2000
+				OFFSET $2
+			) AS p
+			ON p.id = t.post_id
+			`,
+			start,
+			offset,
+		)
 		if err != nil || len(posts) <= 0 {
 			break
 		}
-		for _, post := range posts {
-			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
+
+		for _, p:= range posts {
+			fmt.Printf("Working on file: [%d] %s\n", p.id, p.cid)
 			if err = store.Store(
-				post.Hash,
-				storeFileDest(post.Hash),
+				p.cid,
+				storeFileDest(p.cid),
 			); err != nil {
 				log.Fatal(err)
 			}
-		}
-		offset++
-	}
-	if err != nil && err != sql.ErrNoRows {
-		log.Fatal(err)
-	}
 
-	offset = 0
-
-	type thmb struct {
-		pcid string
-		cid  string
-		size int
-	}
-
-	tquery := func(str string, offset int) ([]thmb, error) {
-		rows, err := DB.Query(str, offset*20000)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		var thumbs []thmb
-		for rows.Next() {
-			var t thmb
-			rows.Scan(&t.pcid, &t.cid, &t.size)
-			thumbs = append(thumbs, t)
-		}
-		return thumbs, rows.Err()
-	}
-
-	for {
-		var thumbs []thmb
-		if thumbs, err = tquery(`
-			SELECT p.multihash, t.multihash, dimension
-			FROM thumbnails t
-			JOIN posts p
-			ON p.id = t.post_id
-			ORDER BY post_id ASC
-			LIMIT 20000 OFFSET $1
-			`,
-			offset,
-		); err != nil || len(thumbs) <= 0 {
-			break
-		}
-		for _, thumb := range thumbs {
-			fmt.Println("Working on thumbnail:", thumb)
-			if err = store.Store(
-				thumb.cid,
-				storeThumbnailDest(
-					thumb.pcid,
-					thumb.size,
-				),
-			); err != nil {
-				log.Fatal(err)
-			}
-		}
-		offset++
-	}
-
-	if err != nil && err != sql.ErrNoRows {
-		log.Fatal(err)
-	}
-}
-
-func MigrateMfs() {
-	type post struct {
-		Hash string
-		ID   int
-	}
-	query := func(str string, offset int) ([]post, error) {
-		rows, err := DB.Query(str, offset*20000)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		defer rows.Close()
-
-		var posts []post
-
-		for rows.Next() {
-			var p post
-			rows.Scan(&p.Hash, &p.ID)
-			posts = append(posts, p)
-		}
-
-		return posts, nil
-	}
-
-	var err error
-
-	offset := 0
-
-	for {
-		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset)
-		if err != nil || len(posts) <= 0 {
-			break
-		}
-		for _, post := range posts {
-			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
-			if err = store.Store(post.Hash, storeFileDest(post.Hash)); err != nil {
-				log.Fatal(err)
+			for _, t := range p.thumbs {
+				fmt.Printf("\tthumbnail: [%d] %s\n", t.size, t.cid)
+				if err = store.Store(
+					t.cid,
+					storeThumbnailDest(p.cid, t.size),
+				); err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 		offset++
@@ -307,55 +275,6 @@ func MigrateMfs() {
 		log.Fatal(err)
 	}
 
-	offset = 0
-
-	type thmb struct {
-		pcid string
-		cid  string
-		size int
-	}
-
-	tquery := func(str string, offset int) ([]thmb, error) {
-		rows, err := DB.Query(str, offset*20000)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		var thumbs []thmb
-		for rows.Next() {
-			var t thmb
-			rows.Scan(&t.pcid, &t.cid, &t.size)
-			thumbs = append(thumbs, t)
-		}
-		return thumbs, rows.Err()
-	}
-
-	for {
-		var thumbs []thmb
-		if thumbs, err = tquery(`
-			SELECT p.multihash, t.multihash, dimension
-			FROM thumbnails t
-			JOIN posts p
-			ON p.id = t.post_id
-			ORDER BY post_id ASC
-			LIMIT 20000 OFFSET $1
-			`,
-			offset,
-		); err != nil || len(thumbs) <= 0 {
-			break
-		}
-		for _, thumb := range thumbs {
-			fmt.Println("Working on thumbnail:", thumb)
-			if err = store.Store(thumb.cid, storeThumbnailDest(thumb.pcid, thumb.size)); err != nil {
-				log.Fatal(err)
-			}
-		}
-		offset++
-	}
-
-	if err != nil && err != sql.ErrNoRows {
-		log.Fatal(err)
-	}
 }
 
 func GenerateThumbnail(postID int) error {
