@@ -90,7 +90,7 @@ func Setup(iApi string) {
 	}
 
 	if CFG.UsePatcher {
-		store, err = newStorage("")
+		store, err = newPinstore("")
 		if err != nil {
 			log.Fatal(err)
 		}

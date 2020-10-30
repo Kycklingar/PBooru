@@ -9,27 +9,27 @@ import (
 	patcher "github.com/kycklingar/PBooru/DataManager/ipfs-patcher"
 )
 
-func newStorage(id string) (*storage, error) {
+func newPinstore(id string) (*pinstore, error) {
 	var root string
 	err := DB.QueryRow("SELECT cid FROM roots WHERE id = $1", id).Scan(&root)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	return &storage{
+	return &pinstore{
 		patcher: patcher.NewPatcher(ipfs, root),
 		id:      id,
 	}, nil
 }
 
-type storage struct {
+type pinstore struct {
 	patcher *patcher.Patcher
 	id      string
 
 	mutex sync.Mutex
 }
 
-func (s *storage) Store(cid, destination string) error {
+func (s *pinstore) Store(cid, destination string) error {
 	err := s.patcher.Cp(destination, cid)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (s *storage) Store(cid, destination string) error {
 	return s.updateRoot()
 }
 
-func (s *storage) Remove(src string) error {
+func (s *pinstore) Remove(src string) error {
 	err := s.patcher.Rm(src)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func (s *storage) Remove(src string) error {
 	return s.updateRoot()
 }
 
-func (s *storage) updateRoot() error {
+func (s *pinstore) updateRoot() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -100,7 +100,7 @@ func (s *storage) updateRoot() error {
 	return err
 }
 
-func (s *storage) updatePin(oldRoot string) error {
+func (s *pinstore) updatePin(oldRoot string) error {
 	// Try updating old root
 	if oldRoot != "" {
 		// Check if oldRoot == patcher.Root
