@@ -107,7 +107,7 @@ func (s *pinstore) updatePin(oldRoot string) error {
 		// There is a bug in IPFS where updating pinA with pinA even if pinA isn't pinned yields no error
 		if oldRoot == s.patcher.Root() {
 			// If pinned, return
-			err := ipfs.Request("pin/ls", oldRoot).Exec(context.Background(), nil)
+			err := ipfs.Request("pin/ls", oldRoot).Option("type", "recursive").Exec(context.Background(), nil)
 			if err == nil {
 				return nil
 			}
