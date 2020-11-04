@@ -675,11 +675,11 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 		post.SetID(DM.DB, postID)
 		post.QMul(DM.DB, DM.PFDeleted)
 		if post.Deleted {
-			if err = post.UnDelete(DM.DB); err != nil {
+			if err = post.Reinstate(DM.DB); err != nil {
 				log.Println(err)
 			}
 		} else {
-			if err = post.Delete(DM.DB); err != nil {
+			if err = post.Remove(DM.DB); err != nil {
 				log.Println(err)
 			}
 		}

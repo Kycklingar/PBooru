@@ -141,7 +141,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	for _, p := range dupe.Inferior {
-		if err = p.Delete(tx); err != nil {
+		if err = p.Remove(tx); err != nil {
 			log.Println(err)
 			return err
 		}
