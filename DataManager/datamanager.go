@@ -89,15 +89,16 @@ func Setup(iApi string) {
 		log.Printf("Your IPFS Daemon is not accessible on %s. Did you forget to start it?\n", iApi)
 	}
 
-	if CFG.UsePatcher {
-		store, err = newPinstore("")
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else if CFG.UseMFS {
-		store = new(mfsStore)
-	} else {
-		store = new(st.NullStorage)
+	switch CFG.Store {
+		case "pin":
+			store, err = st.NewPinstore(ipfs, st.NewPgRooter("", DB))
+			if err != nil {
+				log.Fatal(err)
+			}
+		case "mfs":
+			store = st.NewMfsStore(CFG.MFSRootDir, ipfs)
+		default:
+			store = new(st.NullStorage)
 	}
 
 	// countCache.cache = make(map[string]int)
@@ -234,8 +235,7 @@ type Config struct {
 	//Database string
 	ConnectionString string
 	StdUserFlag      int
-	UseMFS           bool
-	UsePatcher       bool
+	Store		 string
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
@@ -244,8 +244,7 @@ type Config struct {
 
 func (c *Config) Default() {
 	c.ConnectionString = "user=pbdb dbname=pbdb sslmode=disable"
-	c.UseMFS = false
-	c.UsePatcher = true
+	c.Store = "pin"
 	c.MFSRootDir = "/pbooru/"
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []int{1024, 512, 256}
