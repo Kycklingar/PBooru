@@ -209,14 +209,24 @@ function leftPostElement(post)
 		p.appendChild(el)
 	}
 
-	pEl("ID: " + post.id, e)
+	let ide = document.createElement("p")
+	ide.innerText = "ID: "
+	let pa = document.createElement("a")
+	pa.innerText = post.id
+	pa.href = "/post/" + post.id
+	pa.target = "_blank"
+	ide.appendChild(pa)
+	e.appendChild(ide)
+
 	if (!(post.dimensions.Width == 0 || post.dimensions.Height == 0))
 		pEl(post.dimensions.Width + "x" + post.dimensions.Height, e)
 	else
 		pEl("Dimensions unknown", e)
+
 	pEl(humanFileSize(post.filesize), e)
 	pEl(post.mime.Type + "/" + post.mime.Name , e)
 
+	// Remove button
 	let x = document.createElement("span")
 	x.innerText = "x"
 	x.className = "x"
@@ -312,7 +322,7 @@ function renderPost(post)
 
 	if (lt)
 		clearTimeout(lt)
-	lt = setTimeout(function(){loader.classList.remove("hidden")}, 1000)
+	lt = setTimeout(function(){loader.classList.remove("hidden")}, 250)
 
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
