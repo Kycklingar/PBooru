@@ -2,7 +2,7 @@
 
 {{define "printTags" -}}
 {{range . -}}
-{{if ne .Namespace.Namespace "none"}}{{.Namespace.Namespace}}:{{.Tag}}{{else}}{{.Tag}}{{end}}
+{{.EString}}
 {{end -}}
 {{end}}
 

@@ -55,6 +55,14 @@ func (t *Tag) String() string {
 	return fmt.Sprint(t.Namespace.Namespace, ":", t.Tag)
 }
 
+func (t *Tag) EString() string {
+	if t.Namespace.Namespace == "none" && strings.HasPrefix(t.Tag, ":") {
+		return ":" + t.Tag
+	}
+
+	return t.String()
+}
+
 func (t *Tag) QID(q querier) int {
 	if t.ID != 0 {
 		return t.ID
