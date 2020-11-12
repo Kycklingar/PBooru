@@ -15,8 +15,9 @@
 	<div class="thread">
 		{{range .Replies}}
 			<div class="thread-post">
+				<span class="thread-username">{{with .Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
 				<span class="thread-id">{{.Id}}</span>
-				<span class="thread-timestamp">{{.Created}}</span>
+				<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
 				<h4>{{.Title}}</h4>
 				<p>{{.Body}}</p>
 			</div>

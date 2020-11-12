@@ -1,3 +1,9 @@
+.forum .thread-timestamp
+{
+	font-size:0.6em;
+	font-family: Sans-serif;
+}
+
 .forum #reply
 {
 	position:fixed;
@@ -32,6 +38,7 @@
 	margin:1em;
 	padding:0.5em;
 	max-width:69em;
+	width:max-content;
 	color: #DDD;
 	background-color: #222;
 	word-break: break-word;

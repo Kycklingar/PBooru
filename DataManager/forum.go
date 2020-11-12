@@ -1,5 +1,7 @@
 package DataManager
 
+import "database/sql"
+
 type Thread struct {
 	Replies int
 	Post ForumPost
@@ -9,6 +11,7 @@ type ForumPost struct {
 	Id int
 	Title string
 	Body string
+	Poster *User
 	Created timestamp
 }
 
@@ -121,7 +124,7 @@ func GetCatalog(board string) ([]Thread, error) {
 
 func GetThread(board string, thread int) ([]ForumPost, error) {
 	rows, err := DB.Query(`
-		SELECT rid, title, body, created
+		SELECT rid, title, body, created, poster
 		FROM forum_post
 		JOIN forum_board fb
 		ON fb.id = board_id
@@ -151,13 +154,20 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 
 	for rows.Next() {
 		var fp ForumPost
+		var userid sql.NullInt64
 		if err = rows.Scan(
 			&fp.Id,
 			&fp.Title,
 			&fp.Body,
 			&fp.Created,
+			&userid,
 		); err != nil {
 			return nil, err
+		}
+
+		if userid.Valid {
+			fp.Poster = NewUser()
+			fp.Poster.ID = int(userid.Int64)
 		}
 
 		fps = append(fps, fp)
@@ -166,25 +176,43 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 	return fps, nil
 }
 
+// TODO: files
 func NewForumPost(replyto *int, board, title, body string) (int, error) {
-	var id, rid int
+	var id, rid, top int
 
-	//n := func() interface{}{
-	//	if replyto != nil {
-	//		return *replyto
-	//	}
-	//	return nil
-	//}
+	tx, err := DB.Begin()
+	if err != nil {
+		return rid, err
+	}
+	defer commitOrDie(tx, &err)
 
-	//fmt.Println(n())
-	err := DB.QueryRow(`
+	err = tx.QueryRow(`
+		UPDATE forum_board
+		SET top = top + 1
+		WHERE uri = $1
+		RETURNING top
+		`,
+		board,
+	).Scan(&top)
+	if err != nil {
+		return rid, err
+	}
+
+	err = tx.QueryRow(`
 		INSERT INTO forum_post (board_id, title, body, reply_to, rid)
 		VALUES(
 			(SELECT id FROM forum_board WHERE uri = $1),
 			$2,
 			$3,
-			(SELECT fp.id FROM forum_post fp JOIN forum_board fb ON fb.id = board_id WHERE fb.uri = $1 AND rid = $4),
-			(SELECT COALESCE(MAX(rid), 0) + 1 FROM forum_post JOIN forum_board fb ON board_id = fb.id WHERE fb.uri = $1)
+			(
+				SELECT fp.id
+				FROM forum_post fp
+				JOIN forum_board fb
+				ON fb.id = board_id
+				WHERE fb.uri = $1
+				AND rid = $4
+			),
+			$5
 		)
 		RETURNING id
 		`,
@@ -192,9 +220,14 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 		title,
 		body,
 		replyto,
+		top,
 	).Scan(&id)
+	if err != nil {
+		return rid, err
+	}
 
-	err = DB.QueryRow(`
+	// Return thread id
+	err = tx.QueryRow(`
 		SELECT COALESCE(
 			(
 				SELECT rid
@@ -213,7 +246,6 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 		)`,
 		id,
 	).Scan(&rid)
-
 
 	return rid, err
 }

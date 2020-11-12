@@ -7,26 +7,27 @@ ALTER TABLE posts RENAME COLUMN deleted TO removed;
 ALTER TABLE posts ADD COLUMN deleted BOOL NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS posts_removed_idx ON posts (removed);
 
-CREATE TABLE IF NOT EXISTS forum_category {
+CREATE TABLE IF NOT EXISTS forum_category (
+>>>>>>> e
 	id SERIAL PRIMARY KEY,
 	name TEXT,
 	CONSTRAINT category_name_unique UNIQUE(name)
-};
+);
 
 CREATE TABLE IF NOT EXISTS forum_board (
 	id SERIAL PRIMARY KEY,
 	uri TEXT NOT NULL,
 	name TEXT NOT NULL,
-	description TEXT NOT NULL
+	description TEXT NOT NULL,
 	category INT REFERENCES forum_category (id),
-	--top INT NOT NULL,
+	top INT NOT NULL DEFAULT 1,
 
-	CONSTRAINT board_uri_unique(uri)
+	CONSTRAINT board_uri_unique UNIQUE (uri)
 );
 
 CREATE TABLE IF NOT EXISTS forum_post (
 	id SERIAL PRIMARY KEY,
-	board_id INT REFERENCES forum_board(id) NOT NULL,
+	board_id INT REFERENCES forum_board(id) ON DELETE CASCADE NOT NULL,
 	rid INT NOT NULL,
 	poster INT REFERENCES users(id),
 	title TEXT,
@@ -37,12 +38,14 @@ CREATE TABLE IF NOT EXISTS forum_post (
 	CONSTRAINT board_rid_unique UNIQUE (board_id, rid)
 );
 
-CREATE TABLE IF NOT EXISTS forum_reply (
-	post_id INT REFERENCES forum_post(id)
+CREATE TABLE IF NOT EXISTS forum_replies (
+	post_id INT NOT NULL REFERENCES forum_post(id) ON DELETE CASCADE,
+	ref INT NOT NULL REFERENCES forum_post(id) ON DELETE CASCADE,
 );
 
---CREATE TABLE IF NOT EXISTS forum_file (
---	post_id INT REFERENCES forum_post (id),
---	cid TEXT NOT NULL
---);
+CREATE TABLE IF NOT EXISTS forum_file (
+	post_id INT REFERENCES forum_post (id) ON DELETE CASCADE,
+	cid TEXT NOT NULL,
+	filename TEXT NOT NULL
+);
 

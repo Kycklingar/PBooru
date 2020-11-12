@@ -12,8 +12,8 @@
 			<div class="thread-post">
 				<a href="thread/{{.Post.Id}}">
 				<span class="thread-id">{{.Post.Id}}</span>
-				<span class="thread-timestamp">{{.Post.Created}}</span>
 				</a>
+				<span class="thread-timestamp" title="{{.Post.Created}}">{{.Post.Created.Elapsed}}</span>
 				<span>{{.Replies}}
 				<h3>{{.Post.Title}}</h3>
 				<p>{{.Post.Body}}</p>
