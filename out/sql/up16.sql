@@ -5,3 +5,4 @@ CREATE TABLE roots(
 
 ALTER TABLE posts RENAME COLUMN deleted TO removed;
 ALTER TABLE posts ADD COLUMN deleted BOOL NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS posts_removed_idx ON posts (removed);
