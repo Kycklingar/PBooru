@@ -26,7 +26,7 @@ func GenerateFileSizes() error {
 
 	query := func(q querier) ([]p, error) {
 		limit := 500
-		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1", limit)
+		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 AND deleted IS FALSE LIMIT $1", limit)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,7 @@ func CalculateChecksums() error {
 
 	query := func() ([]P, error) {
 		var limit = 5000
-		rows, err := tx.Query("SELECT p.id, p.multihash FROM posts p LEFT JOIN hashes h ON p.id = h.post_id WHERE h.post_id IS NULL ORDER BY p.id LIMIT $1", limit)
+		rows, err := tx.Query("SELECT p.id, p.multihash FROM posts p LEFT JOIN hashes h ON p.id = h.post_id WHERE h.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id LIMIT $1", limit)
 		if err != nil {
 			return nil, err
 		}
@@ -236,6 +236,7 @@ func MigrateStore(start int) {
 				SELECT id, multihash
 				FROM posts
 				WHERE id > $1
+				AND deleted IS FALSE
 				ORDER BY id ASC
 				LIMIT 2000
 				OFFSET $2
@@ -278,7 +279,7 @@ func MigrateStore(start int) {
 
 func GenerateThumbnail(postID int) error {
 	var hash string
-	err := DB.QueryRow("SELECT multihash FROM posts WHERE id = $1", postID).Scan(&hash)
+	err := DB.QueryRow("SELECT multihash FROM posts WHERE id = $1 AND deleted IS FALSE", postID).Scan(&hash)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -337,7 +338,7 @@ func GenerateThumbnails(size int) {
 	}
 	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.deleted = false ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
@@ -488,7 +489,7 @@ func GenerateFileDimensions() {
 	}
 	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN post_info t ON p.id = t.post_id WHERE t.post_id IS NULL ORDER BY p.id ASC LIMIT 200 OFFSET $1", offset)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN post_info t ON p.id = t.post_id WHERE t.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id ASC LIMIT 200 OFFSET $1", offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
