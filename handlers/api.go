@@ -52,7 +52,7 @@ func (t *APIv1TagString) Parse(tag *DM.Tag) {
 type APIv1Tag struct {
 	Tag       string
 	Namespace string
-	Count int
+	Count     int
 }
 
 func (t *APIv1Tag) Parse(tag *DM.Tag) {
@@ -311,7 +311,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	AP.Posts = make([]APIv1Post, len(posts))
-	for i, post := range posts{
+	for i, post := range posts {
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
 		if err != nil {
 			log.Print(err)

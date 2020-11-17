@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"time"
 	"sort"
+	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
@@ -160,11 +160,11 @@ func CalculateChecksums() error {
 func MigrateStore(start int) {
 	type thumb struct {
 		size int
-		cid string
+		cid  string
 	}
 	type post struct {
-		cid string
-		id   int
+		cid    string
+		id     int
 		thumbs []thumb
 	}
 
@@ -180,9 +180,9 @@ func MigrateStore(start int) {
 
 		for rows.Next() {
 			var (
-				p post
+				p     post
 				tsize sql.NullInt64
-				tcid sql.NullString
+				tcid  sql.NullString
 			)
 
 			err = rows.Scan(&p.id, &p.cid, &tsize, &tcid)
@@ -221,7 +221,6 @@ func MigrateStore(start int) {
 			return posts[i].id < posts[j].id
 		})
 
-
 		return posts, nil
 	}
 
@@ -250,7 +249,7 @@ func MigrateStore(start int) {
 			break
 		}
 
-		for _, p:= range posts {
+		for _, p := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", p.id, p.cid)
 			if err = store.Store(
 				p.cid,

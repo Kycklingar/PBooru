@@ -51,7 +51,6 @@ var ipfs *shell.Shell
 // 	return fileHash, nil
 // }
 
-
 func ipfsCat(hash string) (io.ReadCloser, error) {
 	return ipfs.Cat(hash)
 }

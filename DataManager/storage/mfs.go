@@ -10,13 +10,13 @@ import (
 func NewMfsStore(rootDir string, ipfs *shell.Shell) *mfsStore {
 	return &mfsStore{
 		rootDir: rootDir,
-		ipfs: ipfs,
+		ipfs:    ipfs,
 	}
 }
 
 type mfsStore struct {
 	rootDir string
-	ipfs *shell.Shell
+	ipfs    *shell.Shell
 }
 
 func (s *mfsStore) Store(cid, dest string) error {

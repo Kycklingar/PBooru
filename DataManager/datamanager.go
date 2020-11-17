@@ -90,15 +90,15 @@ func Setup(iApi string) {
 	}
 
 	switch CFG.Store {
-		case "pin":
-			store, err = st.NewPinstore(ipfs, st.NewPgRooter("", DB))
-			if err != nil {
-				log.Fatal(err)
-			}
-		case "mfs":
-			store = st.NewMfsStore(CFG.MFSRootDir, ipfs)
-		default:
-			store = new(st.NullStorage)
+	case "pin":
+		store, err = st.NewPinstore(ipfs, st.NewPgRooter("", DB))
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "mfs":
+		store = st.NewMfsStore(CFG.MFSRootDir, ipfs)
+	default:
+		store = new(st.NullStorage)
 	}
 
 	// countCache.cache = make(map[string]int)
@@ -235,7 +235,7 @@ type Config struct {
 	//Database string
 	ConnectionString string
 	StdUserFlag      int
-	Store		 string
+	Store            string
 	MFSRootDir       string
 	ThumbnailFormat  string
 	ThumbnailSizes   []int
