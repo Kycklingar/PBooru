@@ -118,10 +118,12 @@ func newThreadHandler(w http.ResponseWriter, r *http.Request) {
 		*reply = i
 	}
 
+	u, _ := getUser(w, r)
+
 	title := r.FormValue("title")
 	body := r.FormValue("body")
 	board := r.FormValue("board")
-	rid, err := DM.NewForumPost(reply, board, title, body)
+	rid, err := DM.NewForumPost(u, reply, board, title, body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

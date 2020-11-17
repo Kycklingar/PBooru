@@ -38,6 +38,7 @@ func (t *timestamp) Scan(data interface{}) error {
 	case nil:
 	case time.Time:
 		t.time = &v
+
 	default:
 		err = fmt.Errorf("timestamp incorrect type", data)
 	}
@@ -75,8 +76,8 @@ func (t *timestamp) Elapsed() string {
 
 	var unit int
 	for i := 0; i < len(units); i++ {
+		unit = i
 		if e > units[i].d {
-			unit = i
 			break
 		}
 	}

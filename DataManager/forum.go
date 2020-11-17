@@ -124,10 +124,12 @@ func GetCatalog(board string) ([]Thread, error) {
 
 func GetThread(board string, thread int) ([]ForumPost, error) {
 	rows, err := DB.Query(`
-		SELECT rid, title, body, created, poster
+		SELECT rid, title, body, created, poster, users.username
 		FROM forum_post
 		JOIN forum_board fb
 		ON fb.id = board_id
+		LEFT JOIN users
+		ON users.id = poster
 		WHERE fb.uri = $1
 		AND (
 			reply_to = (
@@ -155,12 +157,14 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 	for rows.Next() {
 		var fp ForumPost
 		var userid sql.NullInt64
+		var username sql.NullString
 		if err = rows.Scan(
 			&fp.Id,
 			&fp.Title,
 			&fp.Body,
 			&fp.Created,
 			&userid,
+			&username,
 		); err != nil {
 			return nil, err
 		}
@@ -168,6 +172,7 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 		if userid.Valid {
 			fp.Poster = NewUser()
 			fp.Poster.ID = int(userid.Int64)
+			fp.Poster.Name = username.String
 		}
 
 		fps = append(fps, fp)
@@ -177,7 +182,7 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 }
 
 // TODO: files
-func NewForumPost(replyto *int, board, title, body string) (int, error) {
+func NewForumPost(user *User, replyto *int, board, title, body string) (int, error) {
 	var id, rid, top int
 
 	tx, err := DB.Begin()
@@ -185,6 +190,11 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 		return rid, err
 	}
 	defer commitOrDie(tx, &err)
+
+	var poster *int
+	if user.QID(tx) != 0 {
+		poster = &user.ID
+	}
 
 	err = tx.QueryRow(`
 		UPDATE forum_board
@@ -199,7 +209,7 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 	}
 
 	err = tx.QueryRow(`
-		INSERT INTO forum_post (board_id, title, body, reply_to, rid)
+		INSERT INTO forum_post (board_id, title, body, reply_to, rid, poster)
 		VALUES(
 			(SELECT id FROM forum_board WHERE uri = $1),
 			$2,
@@ -212,7 +222,8 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 				WHERE fb.uri = $1
 				AND rid = $4
 			),
-			$5
+			$5,
+			$6
 		)
 		RETURNING id
 		`,
@@ -221,6 +232,7 @@ func NewForumPost(replyto *int, board, title, body string) (int, error) {
 		body,
 		replyto,
 		top,
+		poster,
 	).Scan(&id)
 	if err != nil {
 		return rid, err
