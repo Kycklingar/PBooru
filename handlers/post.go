@@ -275,6 +275,34 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "post", pp)
 }
 
+func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Delete() {
+		permErr(w, "Delete")
+		return
+	}
+
+	postID, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = DM.GenerateThumbnail(postID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/", postID), http.StatusSeeOther)
+}
+
 func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w, r)
