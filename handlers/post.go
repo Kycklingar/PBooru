@@ -163,24 +163,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//p = DM.CachedPost(p)
-
-	//p.QHash(DM.DB)
-	//p.QChecksums(DM.DB)
-	//p.QDeleted(DM.DB)
-	//p.QSize(DM.DB)
-	//p.QMime(DM.DB).QType(DM.DB)
-	//p.QMime(DM.DB).QName(DM.DB)
-	//p.QThumbnails(DM.DB)
-	//p.QDescription(DM.DB)
-	//p.QScore(DM.DB)
-	//p.QSize(DM.DB)
-	//p.QDimensions(DM.DB)
-
 	if err = p.QMul(
 		DM.DB,
 		DM.PFHash,
 		DM.PFChecksums,
+		DM.PFRemoved,
 		DM.PFDeleted,
 		DM.PFSize,
 		DM.PFMime,
@@ -202,16 +189,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//pp.Dupe.Post = DM.CachedPost(pp.Dupe.Post)
-
-	//pp.Dupe.Post.QHash(DM.DB)
-	//pp.Dupe.Post.QDeleted(DM.DB)
-	//pp.Dupe.Post.QThumbnails(DM.DB)
-
 	if err = pp.Dupe.Post.QMul(
 		DM.DB,
 		DM.PFHash,
-		DM.PFDeleted,
+		DM.PFRemoved,
 		DM.PFThumbnails,
 	); err != nil {
 		log.Println(err)
@@ -222,7 +203,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFHash,
 			DM.PFThumbnails,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		); err != nil {
 			log.Println(err)
 		}
@@ -292,6 +273,34 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Delete() {
+		permErr(w, "Delete")
+		return
+	}
+
+	postID, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = DM.GenerateThumbnail(postID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/", postID), http.StatusSeeOther)
 }
 
 func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -673,13 +682,13 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 
 		var post = DM.NewPost()
 		post.SetID(DM.DB, postID)
-		post.QMul(DM.DB, DM.PFDeleted)
-		if post.Deleted {
-			if err = post.UnDelete(DM.DB); err != nil {
+		post.QMul(DM.DB, DM.PFRemoved)
+		if post.Removed {
+			if err = post.Reinstate(DM.DB); err != nil {
 				log.Println(err)
 			}
 		} else {
-			if err = post.Delete(DM.DB); err != nil {
+			if err = post.Remove(DM.DB); err != nil {
 				log.Println(err)
 			}
 		}
@@ -856,7 +865,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFHash,
 			DM.PFThumbnails,
-			DM.PFDeleted,
+			DM.PFRemoved,
 			DM.PFMime,
 		)
 	}

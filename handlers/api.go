@@ -26,6 +26,7 @@ type APIv1Post struct {
 	Md5         string
 	ThumbHashes []DM.Thumb
 	Mime        string
+	Removed     bool
 	Deleted     bool
 	Tags        []APIv1TagI
 	Dimension   DM.Dimension
@@ -52,7 +53,7 @@ func (t *APIv1TagString) Parse(tag *DM.Tag) {
 type APIv1Tag struct {
 	Tag       string
 	Namespace string
-	Count int
+	Count     int
 }
 
 func (t *APIv1Tag) Parse(tag *DM.Tag) {
@@ -179,6 +180,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		DM.DB,
 		DM.PFHash,
 		DM.PFMime,
+		DM.PFRemoved,
 		DM.PFDeleted,
 		DM.PFSize,
 		DM.PFChecksums,
@@ -195,6 +197,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.Mime.Str(),
+		Removed:     p.Removed,
 		Deleted:     p.Deleted,
 		Filesize:    p.Size,
 		Dimension:   p.Dimension,
@@ -311,7 +314,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	AP.Posts = make([]APIv1Post, len(posts))
-	for i, post := range posts{
+	for i, post := range posts {
 		APp, err := DMToAPIPost(post, includeTags, combineTags)
 		if err != nil {
 			log.Print(err)

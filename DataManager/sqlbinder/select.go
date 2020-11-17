@@ -17,7 +17,7 @@ type fieldAddress struct {
 }
 
 type Selection struct {
-	vals []fieldAddress
+	vals  []fieldAddress
 	index int
 }
 
@@ -30,8 +30,8 @@ func (sel *Selection) Rebind(v interface{}) {
 	sel.index = (sel.index + 1) % len(sel.vals)
 }
 
-func (sel *Selection) ReBind(v Rebinder, fields... Field) {
-	for _, f := range fields{
+func (sel *Selection) ReBind(v Rebinder, fields ...Field) {
+	for _, f := range fields {
 		v.Rebind(sel, f)
 		//sel.vals[i].addr = v.Rebind(sel, f)
 	}
@@ -63,7 +63,7 @@ func (sel Selection) Joins() (join string) {
 func (sel Selection) Select() (ret string) {
 	for i, v := range sel.vals {
 		ret += v.name
-		if i < len(sel.vals) - 1 {
+		if i < len(sel.vals)-1 {
 			ret += ", "
 		}
 	}
@@ -73,7 +73,7 @@ func (sel Selection) Select() (ret string) {
 	return
 }
 
-func BindFieldAddresses(b Binder, fields... Field) Selection {
+func BindFieldAddresses(b Binder, fields ...Field) Selection {
 	var sel Selection
 
 	for _, f := range fields {

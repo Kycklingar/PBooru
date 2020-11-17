@@ -12,7 +12,7 @@ var note = document.getElementById("note")
 
 canvas.onclick = function(){rightInterface.focus()}
 
-function postStruct(id, hash, thumb, dimensions, filesize, mime, deleted)
+function postStruct(id, hash, thumb, dimensions, filesize, mime, removed)
 {
 	return {
 		"id":id,
@@ -21,7 +21,7 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime, deleted)
 		"dimensions":dimensions,
 		"filesize":filesize,
 		"mime":mime,
-		"deleted":deleted,
+		"removed":removed,
 	}
 }
 
@@ -135,7 +135,7 @@ function getRemotePost(id)
 						j.Dimension,
 						j.Filesize,
 						mimeObj(j.Mime),
-						j.Deleted
+						j.Removed
 					)
 				)
 			}
@@ -190,8 +190,8 @@ function leftPostElement(post)
 	//e.ondrop = drop
 	e.ondragover = dragover
 
-	if(post.deleted)
-		e.classList.add("deleted")
+	if(post.removed)
+		e.classList.add("removed")
 
 	e.addEventListener("drop", drop, true)
 	

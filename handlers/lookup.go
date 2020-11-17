@@ -41,7 +41,7 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 				DM.DB,
 				DM.PFHash,
 				DM.PFThumbnails,
-				DM.PFDeleted,
+				DM.PFRemoved,
 				DM.PFMime,
 			)
 

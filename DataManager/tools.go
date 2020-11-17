@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/image"
@@ -25,7 +26,7 @@ func GenerateFileSizes() error {
 
 	query := func(q querier) ([]p, error) {
 		limit := 500
-		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 LIMIT $1", limit)
+		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 AND deleted IS FALSE LIMIT $1", limit)
 		if err != nil {
 			return nil, err
 		}
@@ -44,26 +45,29 @@ func GenerateFileSizes() error {
 	}
 
 	for {
-		ids, err := query(tx)
+		posts, err := query(tx)
 		if err != nil {
 			return txError(tx, err)
 		}
-		if len(ids) <= 0 {
+		if len(posts) <= 0 {
 			break
 		}
 
-		for _, id := range ids {
-			fmt.Printf("Working on id %d hash %s -> ", id.id, id.hash)
-			size := ipfsSize(id.hash)
+		for _, post := range posts {
+			fmt.Printf("Working on id %d hash %s -> ", post.id, post.hash)
+			size, err := ipfsSize(post.hash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			fmt.Println(size)
 			if size <= 0 {
 				log.Println("size returned was <= 0, skipping")
-				time.Sleep(time.Second)
+				//time.Sleep(time.Second)
 				continue
-				//return txError(tx, errors.New("size returned was <= 0"))
 			}
 
-			_, err := tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, id.id)
+			_, err = tx.Exec("UPDATE posts SET file_size = $1 WHERE id = $2", size, post.id)
 			if err != nil {
 				log.Println(err)
 				return txError(tx, err)
@@ -94,7 +98,7 @@ func CalculateChecksums() error {
 
 	query := func() ([]P, error) {
 		var limit = 5000
-		rows, err := tx.Query("SELECT p.id, p.multihash FROM posts p LEFT JOIN hashes h ON p.id = h.post_id WHERE h.post_id IS NULL ORDER BY p.id LIMIT $1", limit)
+		rows, err := tx.Query("SELECT p.id, p.multihash FROM posts p LEFT JOIN hashes h ON p.id = h.post_id WHERE h.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id LIMIT $1", limit)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +128,11 @@ func CalculateChecksums() error {
 
 		for _, p := range posts {
 			fmt.Printf("Calculating checksum on post: %d %s\n", p.id, p.hash)
-			file := ipfsCat(p.hash)
+			file, err := ipfsCat(p.hash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			sha, md := checksum(file)
 			file.Close()
 
@@ -149,26 +157,69 @@ func CalculateChecksums() error {
 	return nil
 }
 
-func MigrateMfs() {
-	type post struct {
-		Hash string
-		ID   int
+func MigrateStore(start int) {
+	type thumb struct {
+		size int
+		cid  string
 	}
-	query := func(str string, offset int) ([]post, error) {
-		rows, err := DB.Query(str, offset*20000)
+	type post struct {
+		cid    string
+		id     int
+		thumbs []thumb
+	}
+
+	query := func(str string, start, offset int) ([]post, error) {
+		rows, err := DB.Query(str, start, offset*2000)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		defer rows.Close()
 
-		var posts []post
+		var postm = make(map[int]post)
 
 		for rows.Next() {
-			var p post
-			rows.Scan(&p.Hash, &p.ID)
-			posts = append(posts, p)
+			var (
+				p     post
+				tsize sql.NullInt64
+				tcid  sql.NullString
+			)
+
+			err = rows.Scan(&p.id, &p.cid, &tsize, &tcid)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, ok := postm[p.id]; !ok {
+				postm[p.id] = p
+			} else {
+				p = postm[p.id]
+			}
+
+			if tsize.Valid && tcid.Valid {
+				p.thumbs = append(
+					p.thumbs,
+					thumb{
+						int(tsize.Int64),
+						tcid.String,
+					},
+				)
+
+				postm[p.id] = p
+			}
 		}
+
+		var posts = make([]post, len(postm))
+		var i int
+
+		for _, v := range postm {
+			posts[i] = v
+			i++
+		}
+
+		sort.Slice(posts, func(i, j int) bool {
+			return posts[i].id < posts[j].id
+		})
 
 		return posts, nil
 	}
@@ -176,80 +227,71 @@ func MigrateMfs() {
 	var err error
 
 	offset := 0
-	defer mfsFlush(CFG.MFSRootDir)
 
 	for {
-		posts, err := query("SELECT multihash, id FROM posts ORDER BY id ASC LIMIT 20000 OFFSET $1", offset)
+		posts, err := query(`
+			SELECT p.id, p.multihash, t.dimension, t.multihash
+			FROM thumbnails t
+			RIGHT JOIN (
+				SELECT id, multihash
+				FROM posts
+				WHERE id > $1
+				AND deleted IS FALSE
+				ORDER BY id ASC
+				LIMIT 2000
+				OFFSET $2
+			) AS p
+			ON p.id = t.post_id
+			`,
+			start,
+			offset,
+		)
 		if err != nil || len(posts) <= 0 {
 			break
 		}
-		for _, post := range posts {
-			fmt.Printf("Working on file: [%d] %s\n", post.ID, post.Hash)
-			if err = mfsCP(CFG.MFSRootDir+"files/", post.Hash, false); err != nil {
+
+		for _, p := range posts {
+			fmt.Printf("Working on file: [%d] %s\n", p.id, p.cid)
+			if err = store.Store(
+				p.cid,
+				storeFileDest(p.cid),
+			); err != nil {
 				log.Fatal(err)
+			}
+
+			for _, t := range p.thumbs {
+				fmt.Printf("\tthumbnail: [%d] %s\n", t.size, t.cid)
+				if err = store.Store(
+					t.cid,
+					storeThumbnailDest(p.cid, t.size),
+				); err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 		offset++
-		mfsFlush(CFG.MFSRootDir)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
 	}
 
-	offset = 0
-
-	tquery := func(str string, offset int) ([]Thumb, error) {
-		rows, err := DB.Query(str, offset*20000)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		var thumbs []Thumb
-		for rows.Next() {
-			var t Thumb
-			rows.Scan(&t.Hash, &t.Size)
-			thumbs = append(thumbs, t)
-		}
-		return thumbs, rows.Err()
-	}
-
-	for {
-		var thumbs []Thumb
-		if thumbs, err = tquery("SELECT multihash, dimension FROM thumbnails ORDER BY post_id ASC LIMIT 20000 OFFSET $1", offset); err != nil || len(thumbs) <= 0 {
-			break
-		}
-		for _, thumb := range thumbs {
-			fmt.Println("Working on thumbnail:", thumb)
-			if err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", thumb.Size, "/"), thumb.Hash, false); err != nil {
-				log.Fatal(err)
-			}
-		}
-		offset++
-		mfsFlush(CFG.MFSRootDir)
-	}
-
-	if err != nil && err != sql.ErrNoRows {
-		log.Fatal(err)
-	}
 }
 
 func GenerateThumbnail(postID int) error {
 	var hash string
-	err := DB.QueryRow("SELECT multihash FROM posts WHERE id = $1", postID).Scan(&hash)
+	err := DB.QueryRow("SELECT multihash FROM posts WHERE id = $1 AND deleted IS FALSE", postID).Scan(&hash)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	file := ipfsCat(hash)
-	if file == nil {
-		return errors.New("File is nil")
+	file, err := ipfsCat(hash)
+	if err != nil {
+		return err
 	}
 
-	var b bytes.Buffer
+	var b = new(bytes.Buffer)
 	b.ReadFrom(file)
-
-	file.Close()
 
 	f := bytes.NewReader(b.Bytes())
 
@@ -263,10 +305,26 @@ func GenerateThumbnail(postID int) error {
 	}
 
 	for _, thumb := range thumbs {
-		_, err = DB.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
+		tx, err := DB.Begin()
 		if err != nil {
 			log.Println(err)
+			continue
 		}
+
+		_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
+		if err != nil {
+			log.Println(err)
+			tx.Rollback()
+			continue
+		}
+
+		if err = store.Store(thumb.Hash, storeThumbnailDest(hash, thumb.Size)); err != nil {
+			log.Println(err)
+			tx.Rollback()
+			continue
+		}
+
+		tx.Commit()
 	}
 
 	return nil
@@ -280,7 +338,7 @@ func GenerateThumbnails(size int) {
 	}
 	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.deleted = false ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN thumbnails t ON p.id = t.post_id AND t.dimension = $1 WHERE t.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id ASC LIMIT 200 OFFSET $2", size, offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
@@ -308,17 +366,17 @@ func GenerateThumbnails(size int) {
 			log.Fatal(err)
 		}
 
-		hashes := query(tx, failed)
+		posts := query(tx, failed)
 
-		if len(hashes) <= 0 {
+		if len(posts) <= 0 {
 			break
 		}
 
-		for _, hash := range hashes {
-			fmt.Println("Working on post: ", hash.id, hash.hash)
-			file := ipfsCat(hash.hash)
-			if file == nil {
-				log.Println("File is nil")
+		for _, post := range posts {
+			fmt.Println("Working on post: ", post.id, post.hash)
+			file, err := ipfsCat(post.hash)
+			if err != nil {
+				log.Println(err)
 				time.Sleep(time.Second)
 				failed++
 				continue
@@ -329,23 +387,23 @@ func GenerateThumbnails(size int) {
 			thash, err := makeThumbnail(f, size, CFG.ThumbnailQuality)
 			file.Close()
 			if err != nil {
-				log.Println(err, hash)
+				log.Println(err, post)
 				failed++
 				continue
 			} else if thash == "" {
-				log.Println("makeThumbnail did not produce a hash", hash)
+				log.Println("makeThumbnail did not produce a hash", post)
 				failed++
 				continue
 			}
-			if CFG.UseMFS {
-				err = mfsCP(fmt.Sprint(CFG.MFSRootDir, "thumbnails/", size, "/"), thash, true)
-				if err != nil {
-					log.Println(err, thash)
-					failed++
-					continue
-				}
+
+			err = store.Store(thash, storeThumbnailDest(post.hash, size))
+			if err != nil {
+				log.Println(err, thash)
+				failed++
+				continue
 			}
-			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", hash.id, size, thash)
+
+			_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3)", post.id, size, thash)
 			if err != nil {
 				tx.Rollback()
 				log.Fatal(err)
@@ -431,7 +489,7 @@ func GenerateFileDimensions() {
 	}
 	query := func(tx *sql.Tx, offset int) []P {
 
-		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN post_info t ON p.id = t.post_id WHERE t.post_id IS NULL ORDER BY p.id ASC LIMIT 200 OFFSET $1", offset)
+		rows, err := tx.Query("SELECT p.multihash, p.id FROM posts p LEFT JOIN post_info t ON p.id = t.post_id WHERE t.post_id IS NULL AND p.deleted IS FALSE ORDER BY p.id ASC LIMIT 200 OFFSET $1", offset)
 		if err != nil {
 			tx.Rollback()
 			log.Fatal(err)
@@ -459,18 +517,18 @@ func GenerateFileDimensions() {
 			log.Fatal(err)
 		}
 
-		hashes := query(tx, failed)
+		posts := query(tx, failed)
 
-		if len(hashes) <= 0 {
+		if len(posts) <= 0 {
 			tx.Commit()
 			break
 		}
 
-		for _, hash := range hashes {
-			fmt.Println("Working on post: ", hash.id, hash.hash)
-			file := ipfsCat(hash.hash)
-			if file == nil {
-				log.Println("File is nil")
+		for _, post := range posts {
+			fmt.Println("Working on post: ", post.id, post.hash)
+			file, err := ipfsCat(post.hash)
+			if err != nil {
+				log.Println(err)
 				time.Sleep(time.Second)
 				failed++
 				continue
@@ -490,7 +548,7 @@ func GenerateFileDimensions() {
 				continue
 			}
 
-			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", hash.id, width, height)
+			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", post.id, width, height)
 			if err != nil {
 				tx.Rollback()
 				log.Fatal(err)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/Nr90/imgsim"
 	"github.com/frustra/bbcode"
 
+	shell "github.com/ipfs/go-ipfs-api"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
@@ -79,6 +81,7 @@ type Post struct {
 	Hash       string
 	thumbnails []Thumb
 	Mime       *Mime
+	Removed    bool
 	Deleted    bool
 	Size       int64
 	Dimension  Dimension
@@ -92,10 +95,11 @@ type Post struct {
 }
 
 const (
-	PFID sqlbinder.Field= iota
+	PFID sqlbinder.Field = iota
 	PFHash
 	PFThumbnails
 	PFMime
+	PFRemoved
 	PFDeleted
 	PFSize
 	PFDimension
@@ -121,30 +125,32 @@ type Thumb struct {
 
 func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
-		case PFID:
-			sel.Bind(&p.ID, "p.id", "")
-		case PFHash:
-			sel.Bind(&p.Hash, "p.multihash", "")
-		case PFMime:
-			sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
-			sel.Bind(&p.Mime.Type, "m.type", "")
-		case PFDeleted:
-			sel.Bind(&p.Deleted, "p.deleted", "")
-		case PFSize:
-			sel.Bind(&p.Size, "p.file_size", "")
-		case PFScore:
-			sel.Bind(&p.Score, "p.score", "")
-		case PFDimension:
-			sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
-			sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
-		case PFChecksums:
-			sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
-			sel.Bind(&p.Checksums.Md5, "md5", "")
+	case PFID:
+		sel.Bind(&p.ID, "p.id", "")
+	case PFHash:
+		sel.Bind(&p.Hash, "p.multihash", "")
+	case PFMime:
+		sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
+		sel.Bind(&p.Mime.Type, "m.type", "")
+	case PFRemoved:
+		sel.Bind(&p.Removed, "p.removed", "")
+	case PFDeleted:
+		sel.Bind(&p.Deleted, "p.deleted", "")
+	case PFSize:
+		sel.Bind(&p.Size, "p.file_size", "")
+	case PFScore:
+		sel.Bind(&p.Score, "p.score", "")
+	case PFDimension:
+		sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
+		sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
+	case PFChecksums:
+		sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
+		sel.Bind(&p.Checksums.Md5, "md5", "")
 		//case PFDescription:
 	}
 }
 
-func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
+func (p *Post) QMul(q querier, fields ...sqlbinder.Field) error {
 	selector := sqlbinder.BindFieldAddresses(p, fields...)
 
 	query := fmt.Sprintf(`
@@ -159,10 +165,10 @@ func (p *Post) QMul(q querier, fields... sqlbinder.Field) error {
 
 	var c = make(chan error)
 
-	go func(){
+	go func() {
 		c <- p.QThumbs(q, fields...)
 	}()
-	go func(){
+	go func() {
 		c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)
 	}()
 
@@ -182,21 +188,21 @@ type thumbnails []Thumb
 
 func (t *Thumb) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
-		case PFThumbnails:
-			sel.Rebind(&t.Hash)
-			sel.Rebind(&t.Size)
+	case PFThumbnails:
+		sel.Rebind(&t.Hash)
+		sel.Rebind(&t.Size)
 	}
 }
 
 func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
-	switch field{
-		case PFThumbnails:
-			sel.Bind(nil, "multihash", "")
-			sel.Bind(nil, "dimension", "")
+	switch field {
+	case PFThumbnails:
+		sel.Bind(nil, "multihash", "")
+		sel.Bind(nil, "dimension", "")
 	}
 }
 
-func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
+func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	var ok bool
 	for _, field := range fields {
 		if field == PFThumbnails {
@@ -261,7 +267,6 @@ func (p *Post) QThumbs(q querier, fields... sqlbinder.Field) error {
 func (p *Post) SetID(q querier, id int) error {
 	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
 }
-
 
 func (p *Post) Thumbnails() []Thumb {
 	var thumbs []Thumb
@@ -400,166 +405,205 @@ func (p *Post) QDescription(q querier) string {
 	return tmp
 }
 
-func CreatePost(file io.ReadSeeker, size int64, tagString, mime string, user *User) (*Post, error) {
-	cid, err := ipfsAdd(file)
+func storeFileDest(cid string) string {
+	return path.Join("files", cid[len(cid)-2:], cid)
+}
+
+func storeThumbnailDest(cid string, size int) string {
+	return path.Join("thumbnails", strconv.Itoa(size), cid[len(cid)-2:], cid)
+}
+
+func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *User) (*Post, error) {
+	// Hash file
+	// To prevent **DELETED** files from being added again
+	cid, err := ipfs.Add(
+		file,
+		shell.CidVersion(1),
+		shell.OnlyHash(true),
+	)
 	if err != nil {
-		log.Println("Error pinning file to ipfs: ", err)
 		return nil, err
 	}
 
+	// Check if file already exists
 	p, err := GetPostFromCID(cid)
 	if err != nil {
-		return p, err
+		return nil, err
 	}
 
-	p.Size = size
+	// It's a new post
+	if p.ID == 0 {
+		var cid2 string
 
-	var tx *sql.Tx
+		file.Seek(0, 0)
+		cid2, err = ipfs.Add(
+			file,
+			shell.CidVersion(1),
+			shell.Pin(false),
+		)
 
-	tx, err = DB.Begin()
+		if cid2 != cid {
+			return nil, fmt.Errorf("ipfs.add missmatch %s %s", cid, cid2)
+		}
+
+		// Store file
+		err = store.Store(cid, storeFileDest(cid))
+		if err != nil {
+			return nil, err
+		}
+
+		// Create thumbnails
+		file.Seek(0, 0)
+		thumbs, err := makeThumbnails(file)
+		if err != nil {
+			log.Println(err)
+		}
+
+		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
+			return nil, err
+		}
+
+		for _, thumb := range thumbs {
+			if _, err = DB.Exec(`
+				INSERT INTO thumbnails(post_id, dimension, multihash)
+				VALUES($1, $2, $3)
+				`,
+				p.ID,
+				thumb.Size,
+				thumb.Hash,
+			); err != nil {
+				return nil, err
+			}
+
+			err = store.Store(thumb.Hash, storeThumbnailDest(cid, thumb.Size))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		totalPosts = 0
+	}
+
+	// Add tags
+	tx, err := DB.Begin()
 	if err != nil {
-		log.Println("Error creating transaction: ", err)
-		return p, err
+		return nil, err
 	}
-
 	defer commitOrDie(tx, &err)
 
-	if p.ID == 0 {
-		if CFG.UseMFS {
-			file.Seek(0, 0)
-			if err = mfsCP(CFG.MFSRootDir+"files/", p.Hash, true); err != nil {
-				log.Println("Error copying file to mfs: ", err)
-				return p, err
-			}
-		}
-
-		file.Seek(0, 0)
-		p.thumbnails, err = makeThumbnails(file)
-		if err != nil {
-			log.Println(err)
-		}
-
-		file.Seek(0, 0)
-		var width, height int
-		width, height, err = image.GetDimensions(file)
-		if err != nil {
-			log.Println(err)
-		}
-
-		err = p.Mime.Parse(mime)
-		if err != nil {
-			log.Println(err)
-			return p, err
-		}
-
-		if p.Mime.ID == 0 {
-			err = p.Mime.Save(tx)
-			if err != nil {
-				log.Println(err)
-				return p, err
-			}
-		}
-
-		err = p.Save(tx, user)
-		if err != nil {
-			log.Println(err)
-			return p, err
-		}
-
-		file.Seek(0, 0)
-		sha, md := checksum(file)
-		_, err = tx.Exec("INSERT INTO hashes(post_id, sha256, md5) VALUES($1, $2, $3)", p.ID, sha, md)
-		if err != nil {
-			log.Println(err)
-			return p, err
-		}
-
-		if width > 0 && height > 0 {
-			_, err = tx.Exec("INSERT INTO post_info(post_id, width, height) VALUES($1, $2, $3)", p.ID, width, height)
-			if err != nil {
-				log.Println(err)
-				return p, err
-			}
-		}
-
-		if p.Mime.Type == "image" {
-			file.Seek(0, 0)
-			var u imgsim.Hash
-			u, err = dHash(file)
-			if err != nil {
-				return p, err
-			}
-
-			var ph phs
-			ph = phsFromHash(p.ID, u)
-			if err != nil {
-				return p, err
-			}
-
-			err = ph.insert(tx)
-			if err != nil {
-				return p, err
-			}
-
-			err = generateAppleTree(tx, ph)
-			if err != nil {
-				return p, err
-			}
-		}
-	}
-
 	err = p.editTagsAdd(tx, user, tagString)
-	if err != nil && err.Error() != "error decoding any tags" {
-		//log.Println(err)
-		return p, err
+	if err != nil {
+		return nil, err
 	}
-
-	err = nil
 
 	return p, err
 }
 
-func (p *Post) Save(q querier, user *User) error {
-	if p.ID != 0 {
-		return errors.New("post already exist")
+// The following actions will take place
+// Insert post
+// Insert checksums
+//
+// Insert file dimensions if available
+// Create a new mime if needed
+// Generate appletrees
+func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User) (int, error) {
+	var (
+		postID        int
+		mime          Mime
+		err, dhErr    error
+		u             imgsim.Hash
+		width, height int
+	)
+
+	if err := mime.Parse(mstr); err != nil {
+		return postID, err
 	}
 
-	if p.Mime.QID(q) == 0 {
-		err := p.Mime.Save(q)
-		if err != nil {
-			return err
-		}
-	}
+	// Do heavy tasks before starting a tx
+	file.Seek(0, 0)
+	sha, md := checksum(file)
 
-	if p.Hash == "" || p.Mime.QID(q) == 0 || user.QID(q) == 0 || p.Size == 0 {
-		return fmt.Errorf("post missing argument. Want Hash, Mime.ID, User.ID, Size Have: %s, %d, %d, %d", p.Hash, p.Mime.ID, user.ID, p.Size)
-	}
-
-	err := q.QueryRow("INSERT INTO posts(multihash, mime_id, uploader, file_size) VALUES($1, $2, $3, $4) RETURNING id", p.Hash, p.Mime.QID(q), user.QID(q), p.Size).Scan(&p.ID)
+	file.Seek(0, 0)
+	width, height, err = image.GetDimensions(file)
 	if err != nil {
-		log.Print(err)
-		return err
+		log.Println(err)
 	}
-	for _, t := range p.Thumbnails() {
-		_, err = q.Exec("INSERT INTO thumbnails (post_id, dimension, multihash) VALUES($1, $2, $3)", p.ID, t.Size, t.Hash)
+
+	if mime.Type == "image" {
+		file.Seek(0, 0)
+		u, dhErr = dHash(file)
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return postID, err
+	}
+
+	defer commitOrDie(tx, &err)
+
+	mime.Save(tx)
+
+	err = tx.QueryRow(`
+		INSERT INTO posts(multihash, mime_id, uploader, file_size)
+		VALUES($1, $2, $3, $4)
+		RETURNING id
+		`,
+		cid,
+		mime.ID,
+		user.ID,
+		fsize,
+	).Scan(&postID)
+	if err != nil {
+		return postID, err
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO hashes(post_id, sha256, md5)
+		VALUES($1, $2, $3)
+		`,
+		postID,
+		sha,
+		md,
+	)
+	if err != nil {
+		return postID, err
+	}
+
+	if width > 0 && height > 0 {
+		_, err = tx.Exec(`
+			INSERT INTO post_info(post_id, width, height)
+			VALUES($1, $2, $3)
+			`,
+			postID,
+			width,
+			height,
+		)
 		if err != nil {
-			log.Println(err)
-			log.Println(p)
-			return err
+			return postID, err
 		}
 	}
 
-	// Move this
-	totalPosts = 0
+	if dhErr == nil {
+		ph := phsFromHash(postID, u)
 
-	return nil
+		err = ph.insert(tx)
+		if err != nil {
+			return postID, err
+		}
+
+		err = generateAppleTree(tx, ph)
+	} else {
+		log.Println(dhErr)
+	}
+
+	return postID, err
 }
 
-func (p *Post) Delete(q querier) error {
+func (p *Post) Remove(q querier) error {
 	if p.ID == 0 {
 		return errors.New("post:delete: invalid post")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=true WHERE id=$1", p.ID)
+	_, err := q.Exec("UPDATE posts SET removed=true WHERE id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -580,11 +624,11 @@ func (p *Post) Delete(q querier) error {
 	return nil
 }
 
-func (p *Post) UnDelete(q querier) error {
+func (p *Post) Reinstate(q querier) error {
 	if p.ID == 0 {
 		return errors.New("post:undelete: invalid post id")
 	}
-	_, err := q.Exec("UPDATE posts SET deleted=false WHERE id=$1", p.ID)
+	_, err := q.Exec("UPDATE posts SET removed=false WHERE id=$1", p.ID)
 	if err != nil {
 		log.Print(err)
 		return err
@@ -602,6 +646,64 @@ func (p *Post) UnDelete(q querier) error {
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
 	return nil
+}
+
+// No going back
+func (p *Post) Delete() error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrDie(tx, &err)
+
+	err = p.QMul(tx, PFHash, PFThumbnails)
+	if err != nil {
+		return err
+	}
+
+	err = p.del(tx)
+	if err != nil {
+		return err
+	}
+
+	// Remove files from ipfs
+	for _, thumb := range p.thumbnails {
+		err = store.Remove(storeThumbnailDest(p.Hash, thumb.Size))
+		if err != nil {
+			return err
+		}
+	}
+
+	err = store.Remove(storeFileDest(p.Hash))
+
+	return err
+}
+
+func (p *Post) del(q querier) error {
+
+	// *Delete* from db
+	// Want to keep a record of it
+	// so it can't be readded later
+	if _, err := q.Exec(`
+		UPDATE posts
+		SET deleted = true,
+		removed = true
+		WHERE id = $1
+		`,
+		p.ID,
+	); err != nil {
+		return err
+	}
+
+	// Delete thumbnails
+	_, err := q.Exec(`
+		DELETE FROM thumbnails
+		WHERE post_id = $1
+		`,
+		p.ID,
+	)
+
+	return err
 }
 
 func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
@@ -1105,11 +1207,11 @@ func (p *Post) Comments(q querier) []*PostComment {
 }
 
 type PostCollector struct {
-	posts    map[int][]*Post
-	id       []int
-	or	 []int
+	posts  map[int][]*Post
+	id     []int
+	or     []int
 	filter []int
-	unless   []int
+	unless []int
 
 	tags       []*Tag //Sidebar
 	TotalPosts int
@@ -1330,11 +1432,6 @@ func (pc *PostCollector) idStr() string {
 	)
 }
 
-func (pc *PostCollector) Search(limit, offset int) []*Post {
-	pc.search(limit, offset)
-	return pc.GetW(limit, offset)
-}
-
 func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	sg := searchGroup(
 		pc.id,
@@ -1348,7 +1445,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	if len(pc.mimeIDs) > 0 {
 		for i, mi := range pc.mimeIDs {
 			mimes += fmt.Sprint(mi)
-			if i < len(pc.mimeIDs) - 1 {
+			if i < len(pc.mimeIDs)-1 {
 				mimes += ","
 			}
 		}
@@ -1358,12 +1455,12 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	var order string
 
 	switch pc.order {
-		case "RANDOM()":
-			order = "RANDOM()"
-		case "SCORE":
-			order = fmt.Sprint("p.score DESC, p.id DESC")
-		default:
-			order = "p.id " + pc.order
+	case "RANDOM()":
+		order = "RANDOM()"
+	case "SCORE":
+		order = fmt.Sprint("p.score DESC, p.id DESC")
+	default:
+		order = "p.id " + pc.order
 	}
 
 	// TODO: refactor
@@ -1374,7 +1471,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 				query := fmt.Sprintf(
 					`SELECT count(p.id)
 					FROM posts p %s `,
-					sg.sel(fmt.Sprintf("p.deleted = false %s", mimes)),
+					sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
 				)
 
 				//fmt.Println(query)
@@ -1402,7 +1499,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 		`,
 		sg.sel(
 			fmt.Sprintf(
-				"p.deleted = false %s",
+				"p.removed = false %s",
 				mimes,
 			),
 		),
@@ -1430,242 +1527,6 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	}
 
 	return tmpPosts, nil
-}
-
-func (pc *PostCollector) search(ulimit, uoffset int) error {
-
-	if pc.idStr() == "-1" {
-		return nil
-	}
-
-	orderF := func(pre, order string) string {
-		if order == "RANDOM()" {
-			return order
-		} else if order == "SCORE" {
-			return fmt.Sprint("(", pre, "score,", pre, "id) ", "DESC")
-		}
-		return fmt.Sprint(pre, "id ", order)
-	}
-
-	// emptyRand := func(pre, str string) string {
-	// 	if str == "RANDOM()" {
-	// 		return ""
-	// 	}
-	// 	return fmt.Sprintf(pre, str)
-	// }
-
-	//fmt.Println(orderF("test %s", pc.order))
-
-	//pc.id = tagString
-
-	//pc.Posts2.Get(ulimit, uoffset)
-
-	limit := perSlice
-	offset := ((uoffset + ulimit) / limit) * limit
-	//fmt.Println("Real Offset ", offset)
-	var rows *sql.Rows
-	var err error
-	//fmt.Println(pc.idStr())
-
-	if ok := pc.GetW(ulimit, uoffset); ok != nil {
-		return nil
-	}
-
-	var mimeStr string
-	if len(pc.mimeIDs) > 0 {
-		mimeStr = "mime_id IN("
-		for _, m := range pc.mimeIDs {
-			mimeStr += fmt.Sprint(m, ",")
-		}
-
-		mimeStr = mimeStr[:len(mimeStr)-1] + ")"
-	}
-
-	//fmt.Println(mimeStr)
-
-	if len(pc.id) > 0 {
-		var innerStr string
-		var endStr = "WHERE "
-		var blt string
-		if len(pc.filter) >= 1 {
-			endStr += "("
-			var or, un string
-			for _, t := range pc.filter {
-				or += fmt.Sprint(" f1.tag_id = ", t, " OR")
-			}
-			or = strings.TrimRight(or, " OR")
-
-			for _, t := range pc.unless {
-				un += fmt.Sprint(" u1.tag_id = ", t, " OR")
-			}
-			un = strings.TrimRight(un, " OR")
-			if un != "" {
-				un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON t1.post_id = u1.post_id AND(", un, ")")
-				endStr += "u1.post_id IS NOT NULL OR "
-			}
-
-			blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON t1.post_id = f1.post_id AND(", or, ") ", un)
-			// fmt.Println(blt)
-			endStr += "f1.post_id IS NULL) AND "
-		}
-
-		//innerStr = "SELECT DISTINCT t1.post_id FROM post_tag_mappings t1 "
-		innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
-
-		if len(pc.id) > 1 {
-			for i, tagID := range pc.id {
-				var tstr string
-				if i+1 == len(pc.id) {
-					endStr += fmt.Sprintf("t1.tag_id = %d ", tagID)
-				} else {
-					tstr = fmt.Sprintf("JOIN post_tag_mappings t%d ON t%d.post_id = t%d.post_id ", i+2, i+1, i+2)
-					endStr += fmt.Sprintf("t%d.tag_id = %d AND ", i+2, tagID)
-				}
-				innerStr += tstr
-			}
-		} else {
-			endStr = fmt.Sprintf(endStr+"t1.tag_id = %d", pc.id[0])
-		}
-		innerStr += blt + endStr
-
-		if len(pc.mimeIDs) > 0 {
-			mimeStr = "AND p1." + mimeStr
-		}
-
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("p1.", pc.order))
-
-		//fmt.Println(str)
-
-		if pc.TotalPosts <= 0 {
-			c := pc.ccGet()
-			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
-				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
-				if err != nil {
-					log.Print(err)
-					return err
-				}
-				pc.ccSet(pc.TotalPosts)
-			} else {
-				pc.TotalPosts = c
-			}
-		}
-
-		rows, err = DB.Query(str, limit, offset)
-		if err != nil {
-			log.Print(err)
-			return err
-		}
-
-	} else if len(pc.filter) > 0 {
-		var innerStr, endStr string
-		var blt string
-		var or, un string
-
-		endStr = "WHERE "
-		for _, t := range pc.filter {
-			or += fmt.Sprint(" f1.tag_id = ", t, " OR")
-		}
-		or = strings.TrimRight(or, " OR")
-
-		for _, t := range pc.unless {
-			un += fmt.Sprint(" u1.tag_id = ", t, " OR")
-		}
-		un = strings.TrimRight(un, " OR")
-		if un != "" {
-			un = fmt.Sprint(" LEFT OUTER JOIN post_tag_mappings u1 ON p1.id = u1.post_id AND(", un, ")")
-			endStr += "(u1.post_id IS NOT NULL OR f1.post_id IS NULL) "
-		} else {
-			endStr += "f1.post_id IS NULL "
-		}
-
-		blt = fmt.Sprint("FULL OUTER JOIN post_tag_mappings f1 ON p1.id = f1.post_id AND(", or, ") ", un)
-
-		// innerStr = "JOIN post_tag_mappings t1 ON p1.id = t1.post_id "
-		innerStr += blt + endStr
-
-		if len(pc.mimeIDs) > 0 {
-			mimeStr = "AND p1." + mimeStr
-		}
-
-		str := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts p1 %s %s AND p1.deleted = false ORDER BY %s LIMIT $1 OFFSET $2", innerStr, mimeStr, orderF("", pc.order))
-
-		//fmt.Println(str)
-
-		if pc.TotalPosts <= 0 {
-			c := pc.ccGet()
-			if c < 0 {
-				count := fmt.Sprintf("SELECT count(*) FROM posts p1 %s %s AND p1.deleted = false", innerStr, mimeStr)
-				err = DB.QueryRow(count).Scan(&pc.TotalPosts)
-				if err != nil {
-					log.Print(err)
-					return err
-				}
-				pc.ccSet(pc.TotalPosts)
-			} else {
-				pc.TotalPosts = c
-			}
-		}
-
-		//fmt.Println(str)
-		rows, err = DB.Query(str, limit, offset)
-		if err != nil {
-			log.Print(err)
-			return err
-		}
-	} else {
-		if len(pc.mimeIDs) > 0 {
-			mimeStr = "AND " + mimeStr
-
-			if pc.TotalPosts <= 0 {
-				c := pc.ccGet()
-				if c < 0 {
-					count := fmt.Sprintf("SELECT count(*) FROM posts WHERE deleted = false %s", mimeStr)
-
-					err = DB.QueryRow(count).Scan(&pc.TotalPosts)
-					if err != nil {
-						log.Println(err)
-						return err
-					}
-					pc.ccSet(pc.TotalPosts)
-				} else {
-					pc.TotalPosts = c
-				}
-			}
-		} else {
-			pc.TotalPosts = GetTotalPosts()
-		}
-
-		var err error
-		//query := fmt.Sprintf("SELECT id FROM posts ORDER BY id %s LIMIT $1 OFFSET $2", order)
-		query := fmt.Sprintf("SELECT id, multihash, deleted, mime_id FROM posts WHERE deleted = false %s ORDER BY %s LIMIT $1 OFFSET $2", mimeStr, orderF("", pc.order))
-		rows, err = DB.Query(query, limit, offset)
-		if err != nil {
-			return err
-		}
-	}
-	defer rows.Close()
-
-	var tmpPosts []*Post
-	for rows.Next() {
-		post := NewPost()
-
-		err := rows.Scan(&post.ID, &post.Hash, &post.Deleted, &post.Mime.ID)
-
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		tmpPosts = append(tmpPosts, post)
-	}
-
-	pc.set((uoffset+ulimit)/limit, tmpPosts)
-	//pc.Posts = pc.get(ulimit, uoffset)
-	err = rows.Err()
-
-	//C.Cache.Set("PC", pc.idStr(), pc)
-
-	return err
 }
 
 func (pc *PostCollector) Tags(maxTags int) []*Tag {
@@ -1748,7 +1609,7 @@ func GetTotalPosts() int {
 	if totalPosts != 0 {
 		return totalPosts
 	}
-	err := DB.QueryRow("SELECT count(*) FROM posts WHERE deleted=false").Scan(&totalPosts)
+	err := DB.QueryRow("SELECT count(*) FROM posts WHERE removed=false").Scan(&totalPosts)
 	if err != nil {
 		log.Println(err)
 		return totalPosts
@@ -1768,84 +1629,6 @@ func ccPurge(q querier, tagID int) {
 	if err != nil {
 		log.Println(err)
 	}
-}
-
-func (p *PostCollector) GetW(limit, offset int) []*Post {
-	p.pl.RLock()
-	if p.posts == nil {
-		p.pl.RUnlock()
-		p.pl.Lock()
-		p.posts = make(map[int][]*Post)
-		p.pl.Unlock()
-	} else {
-		p.pl.RUnlock()
-	}
-	if limit <= 0 || offset < 0 {
-		return nil
-	}
-	//fmt.Println("begOff", offset/perSlice) // beginning offset
-	begOff := offset / perSlice
-
-	//fmt.Println("endOff ", (offset+limit)/perSlice) // end offset
-	endOff := (offset + limit) / perSlice
-
-	//fmt.Println("first offset ", offset%perSlice)
-	frstOff := offset % perSlice
-
-	//fmt.Println("seccond offset ", (offset+limit)%perSlice)
-	secOff := (offset + limit) % perSlice
-
-	var posts = []*Post{}
-
-	if begOff == endOff {
-		//fmt.Println("Single")
-		p.pl.RLock()
-		tmp, ok := p.posts[begOff]
-		p.pl.RUnlock()
-		if !ok {
-			//log.Print("FATAL ERROR")
-			return nil
-		}
-		//fmt.Println(len(tmp), frstOff, secOff)
-		if (len(tmp) - 1) < frstOff {
-			return nil
-		}
-		//fmt.Println(frstOff, secOff, len(tmp))
-		posts = append(posts, tmp[frstOff:max(len(tmp), secOff)]...)
-	} else {
-		//fmt.Println("Double")
-		p.pl.RLock()
-		tmp, ok := p.posts[begOff]
-		p.pl.RUnlock()
-		if !ok {
-			//fmt.Println("Not ok1")
-			p.search(limit, offset-limit)
-			p.pl.RLock()
-			tmp, ok = p.posts[begOff]
-			p.pl.RUnlock()
-			if !ok {
-				//log.Print("Fatal erorr")
-				return nil
-			}
-		}
-		if tmp == nil {
-			return nil
-		}
-		posts = append(posts, tmp[max(len(tmp)-1, frstOff):]...)
-
-		p.pl.RLock()
-		tmp, ok = p.posts[endOff]
-		p.pl.RUnlock()
-		if ok {
-			if len(tmp) > 0 {
-				posts = append(posts, tmp[:max(len(tmp), secOff)]...)
-			}
-		} else {
-			//log.Print("FATAL error")
-			return nil
-		}
-	}
-	return posts
 }
 
 func (pc *PostCollector) ccGet() (c int) {
