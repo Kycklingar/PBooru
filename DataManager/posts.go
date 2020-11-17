@@ -452,36 +452,36 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 			return nil, err
 		}
 
-		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
-			return nil, err
-		}
-
-		totalPosts = 0
-
 		// Create thumbnails
 		file.Seek(0, 0)
 		thumbs, err := makeThumbnails(file)
 		if err != nil {
 			log.Println(err)
-		} else {
-			for _, thumb := range thumbs {
-				if _, err = DB.Exec(`
-					INSERT INTO thumbnails(post_id, dimension, multihash)
-					VALUES($1, $2, $3)
-					`,
-					p.ID,
-					thumb.Size,
-					thumb.Hash,
-				); err != nil {
-					return nil, err
-				}
+		}
 
-				err = store.Store(thumb.Hash, storeThumbnailDest(cid, thumb.Size))
-				if err != nil {
-					return nil, err
-				}
+		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
+			return nil, err
+		}
+
+		for _, thumb := range thumbs {
+			if _, err = DB.Exec(`
+				INSERT INTO thumbnails(post_id, dimension, multihash)
+				VALUES($1, $2, $3)
+				`,
+				p.ID,
+				thumb.Size,
+				thumb.Hash,
+			); err != nil {
+				return nil, err
+			}
+
+			err = store.Store(thumb.Hash, storeThumbnailDest(cid, thumb.Size))
+			if err != nil {
+				return nil, err
 			}
 		}
+
+		totalPosts = 0
 	}
 
 	// Add tags
