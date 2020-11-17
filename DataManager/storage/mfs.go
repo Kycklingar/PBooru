@@ -22,9 +22,11 @@ type mfsStore struct {
 func (s *mfsStore) Store(cid, dest string) error {
 	ctx := context.Background()
 
-	dir, _ := path.Split(dest)
+	finalDestination := path.Join(s.rootDir, dest)
 
-	if _, err := s.ipfs.FilesLs(ctx, path.Join(s.rootDir, dir)); err != nil {
+	dir, _ := path.Split(finalDestination)
+
+	if _, err := s.ipfs.FilesLs(ctx, dir); err != nil {
 		opts := []shell.FilesOpt{
 			shell.FilesMkdir.CidVersion(1),
 			shell.FilesMkdir.Parents(true),
@@ -32,11 +34,11 @@ func (s *mfsStore) Store(cid, dest string) error {
 		s.ipfs.FilesMkdir(ctx, dir, opts...)
 	}
 
-	if _, err := s.ipfs.FilesLs(ctx, dest); err == nil {
+	if _, err := s.ipfs.FilesLs(ctx, finalDestination); err == nil {
 		return nil
 	}
 
-	return s.ipfs.FilesCp(ctx, path.Join("/ipfs/", cid), dest)
+	return s.ipfs.FilesCp(ctx, path.Join("/ipfs/", cid), finalDestination)
 }
 
 func (s *mfsStore) Remove(target string) error {

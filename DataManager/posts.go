@@ -442,17 +442,17 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 			return nil, fmt.Errorf("ipfs.add missmatch %s %s", cid, cid2)
 		}
 
-		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
-			return nil, err
-		}
-
-		totalPosts = 0
-
 		// Store file
 		err = store.Store(cid, storeFileDest(cid))
 		if err != nil {
 			return nil, err
 		}
+
+		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
+			return nil, err
+		}
+
+		totalPosts = 0
 
 		// Create thumbnails
 		file.Seek(0, 0)
