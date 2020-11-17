@@ -57,6 +57,7 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFMime,
 			DM.PFDimension,
 			DM.PFSize,
+			DM.PFRemoved,
 		)
 	}
 
@@ -93,6 +94,7 @@ func compare2Handler(w http.ResponseWriter, r *http.Request) {
 			DM.PFMime,
 			DM.PFDimension,
 			DM.PFSize,
+			DM.PFRemoved,
 		)
 	}
 
