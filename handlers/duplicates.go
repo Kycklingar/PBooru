@@ -32,14 +32,14 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 		report.Dupe.Post.QMul(
 			DM.DB,
 			DM.PFThumbnails,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 		for _, post := range report.Dupe.Inferior {
 			post = DM.CachedPost(post)
 			post.QMul(
 				DM.DB,
 				DM.PFThumbnails,
-				DM.PFDeleted,
+				DM.PFRemoved,
 			)
 		}
 	}
@@ -163,7 +163,7 @@ func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFMime,
 			DM.PFDimension,
 			DM.PFSize,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 	}
 

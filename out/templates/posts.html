@@ -59,11 +59,11 @@
                 	<a href="/post/{{.ID}}/{{.Hash}}">
                 	    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
                 	        {{if eq $ct ""}}
-                	        <div class="mimetype centered {{if .Deleted}}deleted{{end}}">
+                	        <div class="mimetype centered {{if .Removed}}removed{{end}}">
                 	            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
                 	        </div>
                 	        {{else}}
-                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Deleted}}deleted{{end}}">
+                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
 					{{if $.User.ThumbHover}}
 						{{if $.User.ThumbHoverFull}}
 							{{if eq .Mime.Type "video"}}

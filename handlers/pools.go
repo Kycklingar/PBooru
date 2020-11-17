@@ -43,7 +43,7 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.DB,
 				DM.PFThumbnails,
 				DM.PFHash,
-				DM.PFDeleted,
+				DM.PFRemoved,
 			)
 		}
 	}
@@ -78,7 +78,7 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFThumbnails,
 			DM.PFHash,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 	}
 

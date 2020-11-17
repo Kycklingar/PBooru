@@ -42,10 +42,10 @@
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
         			{{if .User.Flag.Delete}}
-        		    		<form method="POST" action="/deletepost">
-        		    		    <h3>Delete Post</h3>
+        		    		<form method="POST" action="/post/edit/remove/">
+        		    		    <h3>Remove Post</h3>
         		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
-        		    		    <input type="submit" value="Delete/Undelete">
+        		    		    <input type="submit" value="{{if .Post.Removed}}Reinstate{{else}}Remove{{end}}">
         		    		</form>
         		    	{{end}}
         		</div>
@@ -182,7 +182,7 @@
 		{{end}}
             <p>{{ .Post.Mime.Str }}</p>
 	    <p>{{ .Post.SizePretty }}</p>
-            {{ if .Post.Deleted }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
+            {{ if .Post.Removed }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
             <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
 
             <div>

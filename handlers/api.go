@@ -26,6 +26,7 @@ type APIv1Post struct {
 	Md5         string
 	ThumbHashes []DM.Thumb
 	Mime        string
+	Removed     bool
 	Deleted     bool
 	Tags        []APIv1TagI
 	Dimension   DM.Dimension
@@ -179,6 +180,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		DM.DB,
 		DM.PFHash,
 		DM.PFMime,
+		DM.PFRemoved,
 		DM.PFDeleted,
 		DM.PFSize,
 		DM.PFChecksums,
@@ -195,6 +197,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Md5:         p.Checksums.Md5,
 		ThumbHashes: p.Thumbnails(),
 		Mime:        p.Mime.Str(),
+		Removed:     p.Removed,
 		Deleted:     p.Deleted,
 		Filesize:    p.Size,
 		Dimension:   p.Dimension,

@@ -52,14 +52,14 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFHash,
 			DM.PFThumbnails,
 			DM.PFMime,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 		for _, pear := range tree.Pears {
 			pear.QMul(
 				DM.DB,
 				DM.PFHash,
 				DM.PFMime,
-				DM.PFDeleted,
+				DM.PFRemoved,
 				DM.PFThumbnails,
 			)
 		}

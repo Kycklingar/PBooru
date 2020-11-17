@@ -585,7 +585,7 @@ li
 	margin-left:-1px;
 }
 
-.deleted
+.removed
 {
     border: 2px solid red;
 }
@@ -594,7 +594,7 @@ li
     border: 2px solid yellow;
 }
 
-.current.deleted
+.current.removed
 {
     border: 2px solid;
     border-image: linear-gradient(to bottom right, yellow, red) 1;

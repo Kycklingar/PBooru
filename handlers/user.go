@@ -58,7 +58,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFHash,
 			DM.PFThumbnails,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 	}
 
@@ -68,7 +68,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFHash,
 			DM.PFThumbnails,
-			DM.PFDeleted,
+			DM.PFRemoved,
 		)
 	}
 

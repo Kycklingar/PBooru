@@ -81,7 +81,7 @@ type Post struct {
 	Hash       string
 	thumbnails []Thumb
 	Mime       *Mime
-	Removed	   bool
+	Removed    bool
 	Deleted    bool
 	Size       int64
 	Dimension  Dimension
@@ -125,27 +125,27 @@ type Thumb struct {
 
 func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
-		case PFID:
-			sel.Bind(&p.ID, "p.id", "")
-		case PFHash:
-			sel.Bind(&p.Hash, "p.multihash", "")
-		case PFMime:
-			sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
-			sel.Bind(&p.Mime.Type, "m.type", "")
-		case PFRemoved:
-			sel.Bind(&p.Removed, "p.removed", "")
-		case PFDeleted:
-			sel.Bind(&p.Deleted, "p.deleted", "")
-		case PFSize:
-			sel.Bind(&p.Size, "p.file_size", "")
-		case PFScore:
-			sel.Bind(&p.Score, "p.score", "")
-		case PFDimension:
-			sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
-			sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
-		case PFChecksums:
-			sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
-			sel.Bind(&p.Checksums.Md5, "md5", "")
+	case PFID:
+		sel.Bind(&p.ID, "p.id", "")
+	case PFHash:
+		sel.Bind(&p.Hash, "p.multihash", "")
+	case PFMime:
+		sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
+		sel.Bind(&p.Mime.Type, "m.type", "")
+	case PFRemoved:
+		sel.Bind(&p.Removed, "p.removed", "")
+	case PFDeleted:
+		sel.Bind(&p.Deleted, "p.deleted", "")
+	case PFSize:
+		sel.Bind(&p.Size, "p.file_size", "")
+	case PFScore:
+		sel.Bind(&p.Score, "p.score", "")
+	case PFDimension:
+		sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
+		sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
+	case PFChecksums:
+		sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
+		sel.Bind(&p.Checksums.Md5, "md5", "")
 		//case PFDescription:
 	}
 }
@@ -684,7 +684,7 @@ func (p *Post) del(q querier) error {
 	// *Delete* from db
 	// Want to keep a record of it
 	// so it can't be readded later
-	if _, err  := q.Exec(`
+	if _, err := q.Exec(`
 		UPDATE posts
 		SET deleted = true,
 		removed = true

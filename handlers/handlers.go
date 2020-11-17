@@ -247,6 +247,7 @@ func init() {
 
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
+	Handlers["/post/edit/remove/"] = makeStatHandler(RemovePostHandler)
 	Handlers["/post/edit/tags/add/"] = makeStatHandler(postAddTagsHandler)
 	Handlers["/post/edit/tags/remove/"] = makeStatHandler(postRemoveTagsHandler)
 	Handlers["/post/taghistory/"] = postHistoryHandler
