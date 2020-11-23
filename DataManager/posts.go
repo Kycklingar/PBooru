@@ -413,7 +413,11 @@ func storeThumbnailDest(cid string, size int) string {
 	return path.Join("thumbnails", strconv.Itoa(size), cid[len(cid)-2:], cid)
 }
 
+var uploadQueue sync.Mutex
+
 func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *User) (*Post, error) {
+	uploadQueue.Lock()
+	defer uploadQueue.Unlock()
 	// Hash file
 	// To prevent **DELETED** files from being added again
 	cid, err := ipfs.Add(
