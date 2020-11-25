@@ -31,19 +31,19 @@
             <style>
                 .thumbnail
                 {
-                    width: {{.User.ImageSize}}px;
-                    height: {{.User.ImageSize}}px;
+                    width: {{.User.ThumbnailSize}}px;
+                    height: {{.User.ThumbnailSize}}px;
                 }
                 .thumbnail img
                 {
-                    max-width: {{.User.ImageSize}}px;
-                    max-height: {{.User.ImageSize}}px;
+                    max-width: {{.User.ThumbnailSize}}px;
+                    max-height: {{.User.ThumbnailSize}}px;
                 }
                 .thumbnail .mimetype
                 {
-                    {{if lt .User.ImageSize 50}}
+                    {{if lt .User.ThumbnailSize 50}}
                     font-size:8px;
-                    {{else if lt .User.ImageSize 100}}
+                    {{else if lt .User.ThumbnailSize 100}}
                     font-size:12px;
                     {{end}}
                 }
@@ -51,10 +51,10 @@
             {{ if .Posts }}
                 {{ range .Posts }}
 	    		{{$ct := 0}}
-	    		{{if le $.User.MinThumbnailSize 0}}
-				{{$ct = .ClosestThumbnail $.User.ImageSize}}
+	    		{{if le $.User.RealThumbnailSize 0}}
+				{{$ct = .ClosestThumbnail $.User.ThumbnailSize}}
 			{{else}}
-				{{$ct = .ClosestThumbnail $.User.MinThumbnailSize}}
+				{{$ct = .ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
                 	<a href="/post/{{.ID}}/{{.Hash}}">
                 	    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
@@ -63,16 +63,16 @@
                 	            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
                 	        </div>
                 	        {{else}}
-                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
+                	        <img src="{{$.User.Gateway}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
 					{{if $.User.ThumbHover}}
 						{{if $.User.ThumbHoverFull}}
 							{{if eq .Mime.Type "video"}}
 							<div hash="{{.Hash}}" class="placeholder"></div>
 							{{else if eq .Mime.Type "image"}}
-							<img loading="lazy" src="{{$.User.IpfsDaemon}}/ipfs/{{.Hash}}" alt="{{.Hash}}" class="preview">
+							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.Hash}}" alt="{{.Hash}}" class="preview">
 							{{end}}
 						{{else}}
-							<img loading="lazy" src="{{$.User.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 1024}}" alt="{{.Hash}}" class="preview">
+							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.ClosestThumbnail 1024}}" alt="{{.Hash}}" class="preview">
 						{{end}}
                 	        	{{end}}
 				{{end}}

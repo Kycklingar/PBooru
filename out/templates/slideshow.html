@@ -150,7 +150,7 @@
 
             let image = new Image()
 
-            image.src = "{{.IpfsDaemon}}/ipfs/" + thumbnail.Hash
+            image.src = "{{.Gateway}}/ipfs/" + thumbnail.Hash
             image.onclick = function(){
                 window.open("/post/" + post.ID + "/" + post.Hash, "_blank")
             }

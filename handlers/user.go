@@ -12,10 +12,10 @@ import (
 )
 
 type UserInfo struct {
-	IpfsDaemon       string
+	Gateway string
 	Limit            int
-	ImageSize        int
-	MinThumbnailSize int
+	ThumbnailSize	int
+	RealThumbnailSize int
 	SessionToken     string
 	ThumbHover       bool
 	ThumbHoverFull   bool
@@ -154,7 +154,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		//s := user.Session()
 		if user.Session.Key(DM.DB) != "" {
-			setC(w, "session", user.Session.Key(DM.DB))
+			setCookie(w, "session", user.Session.Key(DM.DB), true)
 		}
 
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
@@ -211,7 +211,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		if user.QID(DM.DB) > 0 {
 			user.Logout(DM.DB)
 		}
-		setC(w, "session", "")
+		removeCookie(w, "session")
 	}
 
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
@@ -262,7 +262,7 @@ func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {
 	user := DM.NewUser()
 	user.Session.Get(DM.DB, ui.SessionToken)
 	if user.QID(DM.DB) == 0 {
-		remC(w, "session")
+		removeCookie(w, "session")
 	} else {
 		user = DM.CachedUser(user)
 	}
@@ -297,7 +297,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		err = user.Login(DM.DB, username, password)
 		if err == nil {
 			if user.Session.Key(DM.DB) != "" {
-				setC(w, "session", user.Session.Key(DM.DB))
+				setCookie(w, "session", user.Session.Key(DM.DB), true)
 			}
 		}
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
@@ -309,123 +309,62 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "register", key)
 }
 
+var defaultUserInfo = UserInfo {
+	Limit: defaultPostsPerPage,
+	ThumbnailSize: defaultImageSize,
+	RealThumbnailSize: defaultMinThumbnailSize,
+	ThumbHover: false,
+	ThumbHoverFull: false,
+}
+
 func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
-	var user UserInfo
+	var user = defaultUserInfo
 
-	cookie, err := r.Cookie("daemon")
-	if err != nil {
-		daemon := CFG.IPFSDaemonMap[r.Host]
-		if daemon == "" {
-			daemon = CFG.IPFSDaemonMap["default"]
-		}
-		setC(w, "daemon", daemon)
-		user.IpfsDaemon = daemon
-	} else {
-		user.IpfsDaemon = cookie.Value
-		updateCookie(w, cookie)
+	var ok bool
+	if user.Gateway, ok = CFG.IPFSDaemonMap[r.Host]; !ok {
+		user.Gateway = CFG.IPFSDaemonMap["default"]
 	}
 
-	cookie, err = r.Cookie("limit")
-	//fmt.Println(cookie)
-
-	if err != nil {
-		setC(w, "limit", strconv.Itoa(defaultPostsPerPage))
-		user.Limit = defaultPostsPerPage
-	} else {
-		val, err := strconv.Atoi(cookie.Value)
-		if err != nil {
-			val = defaultPostsPerPage
+	for _, cookie := range r.Cookies() {
+		var httpOnly bool
+		switch cookie.Name {
+			case "session":
+				user.SessionToken = cookie.Value
+				httpOnly = true
+			case "gateway":
+				user.Gateway = cookie.Value
+			case "limit":
+				user.Limit, _ = strconv.Atoi(cookie.Value)
+				user.Limit = min(max(user.Limit, 250), 1)
+			case "thumbnail_size":
+				user.ThumbnailSize, _ = strconv.Atoi(cookie.Value)
+				user.ThumbnailSize = min(max(user.ThumbnailSize, largestThumbnailSize()), 16)
+			case "real_thumbnail_size":
+				user.RealThumbnailSize, _ = strconv.Atoi(cookie.Value)
+				user.RealThumbnailSize = min(max(user.RealThumbnailSize, largestThumbnailSize()), 0)
+			case "thumb_hover":
+				user.ThumbHover = cookie.Value == "on"
+			case "thumb_hover_full":
+				user.ThumbHoverFull = cookie.Value == "on"
 		}
-		user.Limit = min(max(val, 250), 1)
-		//user.Limit = val
-		updateCookie(w, cookie)
+
+		refreshCookie(w, cookie, httpOnly)
 	}
 
-	cookie, err = r.Cookie("ImageSize")
-	if err != nil {
-		setC(w, "ImageSize", strconv.Itoa(defaultImageSize))
-		user.ImageSize = defaultImageSize
-	} else {
-		val, err := strconv.Atoi(cookie.Value)
-		if err != nil {
-			val = defaultImageSize
-		}
-		if val < 1 {
-			val = 1
-		} else if val > largestThumbnailSize() {
-			val = largestThumbnailSize()
-		}
-		user.ImageSize = val
-		updateCookie(w, cookie)
-	}
-
-	cookie, err = r.Cookie("MinThumbnailSize")
-	if err != nil {
-		setC(w, "MinThumbnailSize", strconv.Itoa(defaultMinThumbnailSize))
-		user.MinThumbnailSize = defaultMinThumbnailSize
-	} else {
-		val, err := strconv.Atoi(cookie.Value)
-		if err != nil {
-			val = defaultMinThumbnailSize
-		}
-		if val < 0 {
-			val = 0
-		}
-		user.MinThumbnailSize = val
-		updateCookie(w, cookie)
-	}
-
-	cookie, err = r.Cookie("session")
-	if err != nil {
-		user.SessionToken = ""
-	} else {
-		user.SessionToken = cookie.Value
-		updateCookie(w, cookie)
-	}
-
-	cookie, err = r.Cookie("thumbhover")
-	if err != nil {
-		setC(w, "thumbhover", "false")
-		user.ThumbHover = false
-	} else {
-		if cookie.Value == "true" {
-			user.ThumbHover = true
-		} else {
-			user.ThumbHover = false
-		}
-		updateCookie(w, cookie)
-	}
-
-	cookie, err = r.Cookie("thumbhoverfull")
-	if err != nil {
-		setC(w, "thumbhoverfull", "false")
-		user.ThumbHoverFull = false
-	} else {
-		if cookie.Value == "true" {
-			user.ThumbHoverFull = true
-		} else {
-			user.ThumbHoverFull = false
-		}
-		updateCookie(w, cookie)
-	}
 	return user
 }
 
-func updateCookie(w http.ResponseWriter, cookie *http.Cookie) {
-	// var expire = time.Now().Add(time.Hour * 24 * 30)
-	// cookie.Expires = expire
-	// http.SetCookie(w, cookie)
-	setC(w, cookie.Name, cookie.Value)
-	return
+func refreshCookie(w http.ResponseWriter, cookie *http.Cookie, httpOnly bool) {
+	setCookie(w, cookie.Name, cookie.Value, httpOnly)
 }
 
-func setC(w http.ResponseWriter, name, value string) {
+func setCookie(w http.ResponseWriter, name, value string, httpOnly bool) {
 	var expire = time.Now().Add(time.Hour * 24 * 30)
-	cookie := &http.Cookie{Name: name, Value: value, Path: "/", Expires: expire}
+	cookie := &http.Cookie{Name: name, Value: value, Path: "/", Expires: expire, SameSite: http.SameSiteStrictMode, HttpOnly: httpOnly}
 	http.SetCookie(w, cookie)
 }
 
-func remC(w http.ResponseWriter, name string) {
+func removeCookie(w http.ResponseWriter, name string) {
 	expire := time.Unix(0, 0)
 	cookie := &http.Cookie{Name: name, Value: "", Path: "/", Expires: expire}
 	http.SetCookie(w, cookie)

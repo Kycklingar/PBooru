@@ -61,7 +61,7 @@
 		reportID = {{.Report}}
 	{{end}}
 
-	gateway = {{.UserInfo.IpfsDaemon}}
+	gateway = {{.UserInfo.Gateway}}
 	{{range .Posts}}
 		addPost(postStruct(
 			{{.ID}},
