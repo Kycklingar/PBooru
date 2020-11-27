@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,6 +13,45 @@ import (
 	"github.com/kycklingar/PBooru/benchmark"
 	"github.com/kycklingar/mimemagic"
 )
+
+func postFromForm(r *http.Request) (*DM.Post, error){
+	var formNames = []string{
+		"post-id",
+		"post-cid",
+		"post-sha256",
+		"post-md5",
+	}
+
+	var f, v string
+
+	for _, name := range formNames {
+		if v = r.FormValue(name); v != "" {
+			f = name
+			break
+		}
+	}
+
+	var (
+		p *DM.Post
+		err error
+	)
+
+	switch f {
+		case "post-id":
+			p = DM.NewPost()
+			p.ID, err = strconv.Atoi(v)
+		case "post-cid":
+			p, err = DM.GetPostFromCID(v)
+		case "post-sha256":
+			p, err = DM.GetPostFromHash("sha256", v)
+		case "post-md5":
+			p, err = DM.GetPostFromHash("md5", v)
+		default:
+			err = errors.New("No post identification provided")
+	}
+
+	return p, err
+}
 
 type Postpage struct {
 	Base     base
@@ -82,7 +122,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 				http.Error(w, "Oops", http.StatusInternalServerError)
 			}
-			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}
 		if !user.QFlag(DM.DB).Tagging() {
@@ -102,7 +142,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID(DM.DB), post.Hash(DM.DB)), http.StatusSeeOther)
-		http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 		return
 	}
 
@@ -288,19 +328,19 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID, err := strconv.Atoi(r.FormValue("id"))
+	post, err := postFromForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = DM.GenerateThumbnail(postID)
+	err = DM.GenerateThumbnail(post.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/", postID), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
 
 func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -316,10 +356,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post = DM.NewPost()
-	var err error
-
-	post.ID, err = strconv.Atoi(r.FormValue("post-id"))
+	post, err := postFromForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -330,7 +367,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
 
 func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -346,10 +383,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post = DM.NewPost()
-	var err error
-
-	post.ID, err = strconv.Atoi(r.FormValue("post-id"))
+	post, err := postFromForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -360,7 +394,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
 
 type tagSort []*DM.Tag
@@ -395,22 +429,18 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	u, _ := getUser(w, r)
 
-	postID, err := strconv.Atoi(r.FormValue("post-id"))
+	post, err := postFromForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	var post = DM.NewPost()
-	post.ID = postID
-	post = DM.CachedPost(post)
 
 	if err = post.Vote(DM.DB, u); err != nil {
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {
@@ -672,17 +702,19 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		postid := r.FormValue("postid")
 
-		postID, err := strconv.Atoi(postid)
-		if err != nil || postID <= 0 {
-			http.Error(w, "postid is empty", http.StatusInternalServerError)
+		post, err := postFromForm(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		var post = DM.NewPost()
-		post.SetID(DM.DB, postID)
-		post.QMul(DM.DB, DM.PFRemoved)
+		err = post.QMul(DM.DB, DM.PFRemoved)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		if post.Removed {
 			if err = post.Reinstate(DM.DB); err != nil {
 				log.Println(err)
@@ -692,8 +724,11 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			}
 		}
+		http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+		return
 	}
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+
+	notFoundHandler(w, r)
 }
 
 func postHistoryHandler(w http.ResponseWriter, r *http.Request) {

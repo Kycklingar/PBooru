@@ -44,13 +44,13 @@
         			{{if .User.Flag.Delete}}
 					<form method="POST" action="/post/edit/thumbnails/generate/">
 						<h3>Generate Thumbnails</h3>
-						<input type="hidden" name="id" value="{{.Post.ID}}">
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="submit">
 					</form>
 
         		    		<form method="POST" action="/post/edit/remove/">
         		    		    <h3>Remove Post</h3>
-        		    		    <input type="hidden" name="postid" value="{{.Post.ID}}">
+        		    		    <input type="hidden" name="post-id" value="{{.Post.ID}}">
         		    		    <input type="submit" value="{{if .Post.Removed}}Reinstate{{else}}Remove{{end}}">
         		    		</form>
         		    	{{end}}
