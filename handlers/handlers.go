@@ -317,7 +317,8 @@ func init() {
 
 
 	Handlers["/forum/"] = makeStatHandler(boardHandler)
-	Handlers["/forum/new/post/"] = makeStatHandler(newThreadHandler)
+	Handlers["/forum/new/post/"] = makeStatHandler(newReplyHandler)
+	Handlers["/forum/new/thread/"] = makeStatHandler(newThreadHandler)
 	Handlers["/forum/new/category/"] = makeStatHandler(newCategoryHandler)
 	Handlers["/forum/new/board/"] = makeStatHandler(newBoardHandler)
 

@@ -71,7 +71,7 @@ func (t *timestamp) Elapsed() string {
 		u{time.Hour, "Hour"},
 		u{time.Minute, "Minute"},
 		u{time.Second, "Second"},
-		u{time.Millisecond, "Milliseconds"},
+		u{time.Millisecond, "Millisecond"},
 	}
 
 	var unit int

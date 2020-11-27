@@ -2,6 +2,8 @@ package DataManager
 
 import "database/sql"
 
+const bumpLimit = 300
+
 type Thread struct {
 	Replies int
 	Post ForumPost
@@ -79,20 +81,30 @@ func GetBoards() (map[string][]Board, error) {
 	return boards, nil
 }
 
+func GetBoard(board string) (b Board, err error) {
+	err = DB.QueryRow(`
+		SELECT name, description, uri
+		FROM forum_board
+		WHERE uri = $1
+		`,
+		board,
+	).Scan(&b.Name, &b.Description, &b.Uri)
+
+	return
+}
+
 func GetCatalog(board string) ([]Thread, error) {
 	rows, err := DB.Query(`
 		SELECT rid, title, body, created, (
 			SELECT count(*)
-			FROM forum_post cfp
-			WHERE cfp.reply_to = fp.id
+			FROM forum_post cp
+			WHERE cp.thread_id = t.id
 		) as reply_count
-		FROM forum_post fp
-		JOIN forum_board fb
-		ON fb.id = board_id
-		WHERE reply_to IS NULL
-		AND fb.uri = $1
-		ORDER BY created DESC
-		LIMIT 20
+		FROM forum_thread t
+		JOIN forum_post p
+		ON t.start_post = p.id
+		WHERE board = $1
+		ORDER BY bumped DESC
 		`,
 		board,
 	)
@@ -122,30 +134,24 @@ func GetCatalog(board string) ([]Thread, error) {
 	return threads, nil
 }
 
-func GetThread(board string, thread int) ([]ForumPost, error) {
+func GetThread(board string, rid int) ([]ForumPost, error) {
 	rows, err := DB.Query(`
 		SELECT rid, title, body, created, poster, users.username
 		FROM forum_post
-		JOIN forum_board fb
-		ON fb.id = board_id
 		LEFT JOIN users
-		ON users.id = poster
-		WHERE fb.uri = $1
-		AND (
-			reply_to = (
-				SELECT fp.id
-				FROM forum_post fp
-				JOIN forum_board fb
-				ON fb.id = fp.board_id
-				WHERE rid = $2
-				AND fb.uri = $1
-			)
-			OR rid = $2
+		ON poster = users.id
+		WHERE thread_id = (
+			SELECT thread_id
+			FROM forum_post p
+			JOIN forum_thread t
+			ON t.id = p.thread_id
+			WHERE p.rid = $1
+			AND t.board = $2
 		)
-		ORDER BY rid ASC 
+		ORDER BY rid ASC
 		`,
+		rid,
 		board,
-		thread,
 	)
 	if err != nil {
 		return nil, err
@@ -181,9 +187,68 @@ func GetThread(board string, thread int) ([]ForumPost, error) {
 	return fps, nil
 }
 
+func NewThread(board, title, body string, user *User) (int, error) {
+	var (
+		threadID int
+		pid int
+		rid int
+	)
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer commitOrDie(tx, &err)
+
+	err = tx.QueryRow(`
+		INSERT INTO forum_thread(board, bump_limit)
+		VALUES(
+			$1,
+			$2
+		)
+		RETURNING id
+		`,
+		board,
+		bumpLimit,
+	).Scan(&threadID)
+	if err != nil {
+		return 0, err
+	}
+
+	pid, err = postTX(tx, threadID, board, title, body, user)
+	if err != nil {
+		return pid, err
+	}
+
+	_, err = tx.Exec(`
+		UPDATE forum_thread
+		SET start_post = $1
+		WHERE id = $2
+		`,
+		pid,
+		threadID,
+	)
+	if err != nil {
+		return rid, err
+	}
+
+	err = tx.QueryRow(`
+		SELECT rid
+		FROM forum_post
+		WHERE id = $1
+		`,
+		pid,
+	).Scan(&rid)
+
+	return rid, err
+}
+
 // TODO: files
-func NewForumPost(user *User, replyto *int, board, title, body string) (int, error) {
-	var id, rid, top int
+func ForumReply(replyID int, board, title, body string, user *User) (int, error) {
+	var (
+		rid int
+		threadID int
+	)
 
 	tx, err := DB.Begin()
 	if err != nil {
@@ -191,7 +256,44 @@ func NewForumPost(user *User, replyto *int, board, title, body string) (int, err
 	}
 	defer commitOrDie(tx, &err)
 
-	var poster *int
+	tx.QueryRow(`
+		SELECT thread_id
+		FROM forum_post
+		JOIN forum_thread t
+		ON t.id = thread_id
+		WHERE rid = $1
+		AND board = $2
+		`,
+		replyID,
+		board,
+	).Scan(&threadID)
+
+	_, err = postTX(tx, threadID, board, title, body, user)
+	if err != nil {
+		return rid, err
+	}
+
+	// Bump thread
+	_, err = tx.Exec(`
+		UPDATE forum_thread
+		SET bump_count = bump_count + 1,
+		bumped = CURRENT_TIMESTAMP
+		WHERE id = $1
+		`,
+		threadID,
+	)
+
+	return replyID, err
+}
+
+func postTX(tx querier, thread int, board, title, body string, user *User) (int, error) {
+	var (
+		id int
+		top int
+		poster *int
+		err error
+	)
+
 	if user.QID(tx) != 0 {
 		poster = &user.ID
 	}
@@ -205,61 +307,28 @@ func NewForumPost(user *User, replyto *int, board, title, body string) (int, err
 		board,
 	).Scan(&top)
 	if err != nil {
-		return rid, err
+		return id, err
 	}
 
 	err = tx.QueryRow(`
-		INSERT INTO forum_post (board_id, title, body, reply_to, rid, poster)
+		INSERT INTO forum_post (thread_id, rid, poster, title, body)
 		VALUES(
-			(SELECT id FROM forum_board WHERE uri = $1),
+			$1,
 			$2,
 			$3,
-			(
-				SELECT fp.id
-				FROM forum_post fp
-				JOIN forum_board fb
-				ON fb.id = board_id
-				WHERE fb.uri = $1
-				AND rid = $4
-			),
-			$5,
-			$6
+			$4,
+			$5
 		)
 		RETURNING id
 		`,
-		board,
-		title,
-		body,
-		replyto,
+		thread,
 		top,
 		poster,
+		title,
+		body,
 	).Scan(&id)
-	if err != nil {
-		return rid, err
-	}
 
-	// Return thread id
-	err = tx.QueryRow(`
-		SELECT COALESCE(
-			(
-				SELECT rid
-				FROM forum_post
-				WHERE id = (
-					SELECT reply_to
-					FROM forum_post
-					WHERE id = $1
-				)
-			),
-			(
-				SELECT rid
-				FROM forum_post
-				WHERE id = $1
-			)
-		)`,
-		id,
-	).Scan(&rid)
-
-	return rid, err
+	return id, err
 }
 
 func NewBoard(uri, name, description, category string) error {

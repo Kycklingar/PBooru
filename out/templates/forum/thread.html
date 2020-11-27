@@ -1,27 +1,33 @@
-{{template "base"}}
+{{template "forum-base"}}
 <div class="forum">
-	<div id="reply">
-		<details open>
-		<summary>Reply</summary>
-		<form action="/forum/new/post/" method="POST">
-			<input name="reply-to" type="hidden" value="{{.Thread}}">
-			<input name="board" type="hidden" value="{{.Board}}">
-			<textarea rows="10" cols="30" name="body" type="text" placeholder="Text"></textarea>
-			<input type="submit" value="Reply">
-		</form>
-		</details>
-	</div>
-
-	<div class="thread">
-		{{range .Replies}}
-			<div class="thread-post">
-				<span class="thread-username">{{with .Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
-				<span class="thread-id">{{.Id}}</span>
-				<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
-				<h4>{{.Title}}</h4>
-				<p>{{.Body}}</p>
+	<div id="threader">
+		<div class="thread">
+			{{range .Replies}}
+				<div class="thread-post">
+					<span class="thread-username">{{with .Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
+					<span class="thread-id">{{.Id}}</span>
+					<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
+					<h4>{{.Title}}</h4>
+					<p>{{.Body}}</p>
+				</div>
+			{{end}}
+		</div>
+		<div class="reply-box">
+			<div class="reply">
+				{{template "forum-banner" .Board}}
+				<div id="reply">
+					<details open>
+					<summary>Reply</summary>
+					<form action="/forum/new/post/" method="POST">
+						<input name="reply-to" type="hidden" value="{{.Thread}}">
+						<input name="board" type="hidden" value="{{.Board.Uri}}">
+						<textarea rows="10" cols="30" name="body" type="text" placeholder="Text"></textarea>
+						<input type="submit" value="Reply">
+					</form>
+					</details>
+				</div>
 			</div>
-		{{end}}
+		</div>
 	</div>
 </div>
 {{template "baseEnd"}}

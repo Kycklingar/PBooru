@@ -1,0 +1,95 @@
+.forum-banner
+{
+	background-color: #222;
+	position: relative;
+	display: inline-block;
+	left: 50%;
+	transform: translateX(-50%);
+	text-align: center;
+}
+
+.forum-banner input
+{
+	position: relative;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+.reply
+{
+	background-color: #222;
+	text-align: center;
+	width: max-content;
+	margin: 1em;
+	position: fixed;
+}
+
+.forum textarea, .forum input
+{
+	background-color: #333;
+	color: #4D7;
+	font-family: courier new;
+}
+
+#threader
+{
+	position:absolute;
+	display:inline-block;
+	width:100%;
+	min-width:50em;
+}
+
+#threader .thread
+{
+	float: left;
+	max-width: 50%;
+	min-width: 25em;
+}
+
+#threader .reply-box
+{
+	float: left;
+}
+
+.forum .thread-timestamp
+{
+	font-size:0.6em;
+	font-family: Sans-serif;
+}
+
+.forum form input
+{
+	display:block;
+	margin:0.5em;
+}
+
+#catalog
+{
+	display: flex;
+}
+
+#catalog .thread-post
+{
+	width: 15em;
+	max-height:15em;
+	overflow: auto;
+}
+
+.thread-post
+{
+	margin:1em;
+	padding:0.5em;
+	color: #DDD;
+	background-color: #222;
+	word-break: break-word;
+}
+
+.thread-post a:visited
+{
+	color: #A6E;
+}
+
+.thread-post a:link
+{
+	color: #67E;
+}

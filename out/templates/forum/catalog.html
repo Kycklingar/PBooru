@@ -1,11 +1,15 @@
-{{template "base"}}
+{{template "forum-base"}}
 <div class="forum">
-	<form action="/forum/new/post/" method="POST">
-		<input name="board" type="hidden" value="{{.Board}}">
-		<input name="title" type="text" placeholder="Title">
-		<input name="body" type="text" placeholder="Body">
-		<input type="submit" value="New Thread">
-	</form>
+	<div class="forum-banner">
+		{{template "forum-banner" .Board}}
+
+		<form action="/forum/new/thread/" method="POST">
+			<input name="board" type="hidden" value="{{.Board.Uri}}">
+			<input name="title" type="text" placeholder="Title">
+			<textarea name="body" placeholder="Body"></textarea>
+			<input type="submit" value="New Thread">
+		</form>
+	</div>
 
 	<div id="catalog">
 		{{range .Threads}}

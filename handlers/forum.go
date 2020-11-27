@@ -9,11 +9,11 @@ import (
 
 type catalog struct {
 	Threads []DM.Thread
-	Board string
+	Board DM.Board
 }
 
 type thread struct {
-	Board string
+	Board DM.Board
 	Thread int
 	Replies []DM.ForumPost
 }
@@ -21,17 +21,24 @@ type thread struct {
 func boardHandler(w http.ResponseWriter, r *http.Request) {
 	uri := uriSplitter(r)
 
-	board, err := uri.getAtIndex(1)
+	boardUri, err := uri.getAtIndex(1)
 	if err != nil {
 		boardsHandler(w, r)
 		return
 	}
+
 
 	res, _ := uri.getAtIndex(2)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusBadRequest)
 	//	return
 	//}
+
+	board, err := DM.GetBoard(boardUri)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	switch res {
 		case "thread":
@@ -69,12 +76,11 @@ func boardsHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "forum", page)
 }
 
-func catalogHandler(board string, w http.ResponseWriter, r *http.Request) {
-	var cat catalog
+func catalogHandler(board DM.Board, w http.ResponseWriter, r *http.Request) {
+	var cat = catalog{Board:board}
 	var err error
-	cat.Board = board
 
-	cat.Threads, err = DM.GetCatalog(cat.Board)
+	cat.Threads, err = DM.GetCatalog(cat.Board.Uri)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -83,7 +89,7 @@ func catalogHandler(board string, w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "catalog", cat)
 }
 
-func threadHandler(board string, w http.ResponseWriter, r *http.Request) {
+func threadHandler(board DM.Board, w http.ResponseWriter, r *http.Request) {
 	var (
 		th = thread{Board:board}
 		err error
@@ -97,7 +103,7 @@ func threadHandler(board string, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	th.Replies, err = DM.GetThread(board, th.Thread)
+	th.Replies, err = DM.GetThread(board.Uri, th.Thread)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -112,18 +118,40 @@ func newThreadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var reply *int
-	if i, err := strconv.Atoi(r.FormValue("reply-to")); err == nil {
-		reply = new(int)
-		*reply = i
-	}
-
-	u, _ := getUser(w, r)
+	user, _ := getUser(w, r)
 
 	title := r.FormValue("title")
 	body := r.FormValue("body")
 	board := r.FormValue("board")
-	rid, err := DM.NewForumPost(u, reply, board, title, body)
+	rid, err := DM.NewThread(board, title, body, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/forum/%s/thread/%d", board, rid), http.StatusSeeOther)
+}
+
+func newReplyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost{
+		notFoundHandler(w, r)
+		return
+	}
+
+	var reply int
+	var err error
+
+	if reply, err = strconv.Atoi(r.FormValue("reply-to")); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	title := r.FormValue("title")
+	body := r.FormValue("body")
+	board := r.FormValue("board")
+	rid, err := DM.ForumReply(reply, board, title, body, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
