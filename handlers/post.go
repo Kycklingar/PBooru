@@ -254,7 +254,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var tc DM.TagCollector
 
 	bm.Split("Queriying tags")
-	err = tc.GetPostTags(DM.DB, pp.Dupe.Post)
+	err = tc.FromPostMul(DM.DB, pp.Dupe.Post, DM.FTag, DM.FCount, DM.FNamespace)
 	if err != nil {
 		log.Print(err)
 	}
@@ -303,8 +303,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("Gathering creator tags")
 	for _, tag := range pp.Sidebar.Tags {
-		if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "creator" {
-			pp.Base.Title += " - " + tag.QTag(DM.DB)
+		if tag.Namespace.Namespace == "creator" {
+			pp.Base.Title += " - " + tag.Tag
 		}
 	}
 
