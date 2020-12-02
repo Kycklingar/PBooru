@@ -192,7 +192,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 
 	comicID, err := uri.getIntAtIndex(1)
 	if err != nil {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -204,7 +204,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 
 	if page.Comic, err = DM.NewComicByID(comicID); err != nil {
 		log.Println(err)
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -235,7 +235,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -267,7 +267,7 @@ func comicDeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -309,7 +309,7 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 	uri := uriSplitter(r)
 	if uri.length() > 3 {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -360,7 +360,7 @@ func chapterHandler(w http.ResponseWriter, r *http.Request) {
 
 	page.Chapter = comic.Chapter(DM.DB, chapterIndex)
 	if page.Chapter == nil {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -405,7 +405,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 
 func comicAddChapterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -443,7 +443,7 @@ func comicAddChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -481,7 +481,7 @@ func comicEditChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -524,7 +524,7 @@ func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicRemoveChapterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -558,7 +558,7 @@ func comicRemoveChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -603,7 +603,7 @@ func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -647,7 +647,7 @@ func comicEditPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func comicDeletePageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 

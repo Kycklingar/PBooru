@@ -48,8 +48,7 @@ type indexPage struct {
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" {
-		notFoundHandler(w, r)
-		//http.NotFound(w, r)
+		notFoundHandler(w)
 		return
 	}
 	if r.Method == http.MethodHead {
@@ -343,7 +342,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 
 func editCommentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 

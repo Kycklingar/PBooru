@@ -70,7 +70,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 func pluckApple(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 

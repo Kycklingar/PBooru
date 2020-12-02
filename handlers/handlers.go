@@ -197,7 +197,7 @@ func statisticsHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "statistics", p)
 }
 
-func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+func notFoundHandler(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound)
 	renderTemplate(w, "404", nil)
 }

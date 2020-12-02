@@ -142,7 +142,7 @@ func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notFoundHandler(w, r)
+	notFoundHandler(w)
 }
 
 func UserPoolAddHandler(w http.ResponseWriter, r *http.Request) {

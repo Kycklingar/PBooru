@@ -49,7 +49,7 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 
 func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 

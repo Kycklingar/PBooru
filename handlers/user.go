@@ -219,7 +219,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 

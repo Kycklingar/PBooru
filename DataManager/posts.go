@@ -40,9 +40,9 @@ func GetPostFromCID(cid string) (*Post, error) {
 		cid,
 	).Scan(&p.ID)
 
-	if err != nil && err == sql.ErrNoRows {
-		return p, nil
-	}
+	//if err != nil && err == sql.ErrNoRows {
+	//	return p, nil
+	//}
 
 	return p, err
 }
@@ -58,6 +58,10 @@ func GetPostFromHash(fnc, hash string) (*Post, error) {
 	),
 		hash,
 	).Scan(&p.ID)
+
+	//if err != nil && err == sql.ErrNoRows {
+	//	return p, nil
+	//}
 
 	return p, err
 }
@@ -431,7 +435,7 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 
 	// Check if file already exists
 	p, err := GetPostFromCID(cid)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 

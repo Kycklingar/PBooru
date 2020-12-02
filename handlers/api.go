@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -109,12 +110,12 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		APIError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		if err == sql.ErrNoRows {
+			APIError(w, "Post Not Found", http.StatusNotFound)
+			return
+		}
 
-	if p.ID == 0 {
-		APIError(w, "Post Not Found", http.StatusNotFound)
+		APIError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

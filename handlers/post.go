@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,7 +15,9 @@ import (
 	"github.com/kycklingar/mimemagic"
 )
 
-func postFromForm(r *http.Request) (*DM.Post, error){
+var errNoID = errors.New("No post identification provided")
+
+func postFromForm(r *http.Request) (*DM.Post, error) {
 	var formNames = []string{
 		"post-id",
 		"post-cid",
@@ -32,25 +35,36 @@ func postFromForm(r *http.Request) (*DM.Post, error){
 	}
 
 	var (
-		p *DM.Post
+		p   *DM.Post
 		err error
 	)
 
 	switch f {
-		case "post-id":
-			p = DM.NewPost()
-			p.ID, err = strconv.Atoi(v)
-		case "post-cid":
-			p, err = DM.GetPostFromCID(v)
-		case "post-sha256":
-			p, err = DM.GetPostFromHash("sha256", v)
-		case "post-md5":
-			p, err = DM.GetPostFromHash("md5", v)
-		default:
-			err = errors.New("No post identification provided")
+	case "post-id":
+		p = DM.NewPost()
+		p.ID, err = strconv.Atoi(v)
+	case "post-cid":
+		p, err = DM.GetPostFromCID(v)
+	case "post-sha256":
+		p, err = DM.GetPostFromHash("sha256", v)
+	case "post-md5":
+		p, err = DM.GetPostFromHash("md5", v)
+	default:
+		err = errNoID
 	}
 
 	return p, err
+}
+
+func postError(w http.ResponseWriter, err error) {
+	switch err {
+	case sql.ErrNoRows:
+		notFoundHandler(w)
+	case errNoID:
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 type Postpage struct {
@@ -91,23 +105,23 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		post := DM.NewPost()
 
 		if len(uri) <= 1 {
-			notFoundHandler(w, r)
+			notFoundHandler(w)
 			return
 		} else if len(uri) >= 2 && uri[1] != "hash" {
 			var err error
 			postID, err := strconv.Atoi(uri[1])
 			if err != nil {
-				notFoundHandler(w, r)
+				notFoundHandler(w)
 				//log.Println("Failed converting string to int")
 				return
 			}
 			err = post.SetID(DM.DB, postID)
 			if err != nil {
-				notFoundHandler(w, r)
+				notFoundHandler(w)
 				return
 			}
 		} else {
-			notFoundHandler(w, r)
+			notFoundHandler(w)
 			return
 		}
 
@@ -193,13 +207,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		notFoundHandler(w, r)
-		//http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if p.ID == 0 {
-		notFoundHandler(w, r)
+		postError(w, err)
 		return
 	}
 
@@ -317,7 +325,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -330,7 +338,7 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	post, err := postFromForm(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		postError(w, err)
 		return
 	}
 
@@ -345,7 +353,7 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 
 func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -358,7 +366,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	post, err := postFromForm(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		postError(w, err)
 		return
 	}
 
@@ -372,7 +380,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -385,7 +393,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	post, err := postFromForm(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		postError(w, err)
 		return
 	}
 
@@ -423,7 +431,7 @@ func (t tagSort) Less(i, j int) bool {
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
@@ -431,7 +439,7 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	post, err := postFromForm(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		postError(w, err)
 		return
 	}
 
@@ -463,7 +471,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		page, err = strconv.Atoi(uri[1])
 		if err != nil {
-			notFoundHandler(w, r)
+			notFoundHandler(w)
 			return
 		}
 		offset = (page - 1) * pageLimit
@@ -688,7 +696,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusSeeOther)
 
 	} else {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 }
@@ -702,10 +710,9 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-
 		post, err := postFromForm(r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			postError(w, err)
 			return
 		}
 
@@ -728,7 +735,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notFoundHandler(w, r)
+	notFoundHandler(w)
 }
 
 func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -739,7 +746,7 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	spl := splitURI(r.URL.Path)
 	if len(spl) < 3 {
-		notFoundHandler(w, r)
+		notFoundHandler(w)
 		return
 	}
 
