@@ -100,7 +100,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	// Find tags in common to superior
-	var cmnTags []*Tag
+	var cmnTags map[int]int
 	cmnTags, err = commonTags(tx, dupe)
 	if err != nil {
 		log.Println(err)
@@ -114,11 +114,10 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	// Recount common tags
-	for _, tag := range cmnTags {
-		err = tag.recount(tx)
-		if err != nil {
-			log.Println(err)
-			return err
+	for k, v := range cmnTags {
+		if v >= 1 {
+			var tag = &Tag{ID: k}
+			tag.updateCount(tx, -v)
 		}
 	}
 
@@ -293,43 +292,44 @@ func moveVotes(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func commonTags(tx querier, dupe Dupe) ([]*Tag, error) {
-	var tags []*Tag
-	q := func(p *Post) error {
-		rows, err := tx.Query(`
-			SELECT p1.tag_id FROM post_tag_mappings p1
-			JOIN post_tag_mappings p2
-			ON p1.tag_id = p2.tag_id
-			WHERE p1.post_id = $1
-			AND p2.post_id = $2
-			`,
-			dupe.Post.ID,
-			p.ID,
-		)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var t = new(Tag)
-			rows.Scan(&t.ID)
-			if !isTagIn(t, tags) {
-				tags = append(tags, t)
-			}
-		}
-
-		return nil
+func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
+	var pids string
+	for _, p := range dupe.Inferior {
+		pids += fmt.Sprint(p.ID, ",")
 	}
 
-	for _, p := range dupe.Inferior {
-		if err := q(p); err != nil {
+	pids += fmt.Sprint(dupe.Post.ID)
+
+	rows, err := tx.Query(
+		fmt.Sprintf(`
+			SELECT tag_id
+			FROM post_tag_mappings
+			WHERE post_id IN(%s)
+			`,
+			pids,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tids = make(map[int]int)
+
+	for rows.Next() {
+		var tid int
+		if err = rows.Scan(&tid); err != nil {
 			return nil, err
 		}
+
+		if _, ok := tids[tid]; !ok {
+			tids[tid] = 0
+		} else {
+			tids[tid]++
+		}
 	}
 
-	return tags, nil
+	return tids, nil
 }
 
 func moveTags(tx querier, dupe Dupe) (err error) {
