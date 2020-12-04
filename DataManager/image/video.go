@@ -65,28 +65,15 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 
 	t = t / 2
 
-	args = []string{
-		"-hide_banner",
-		"-loglevel",
-		"8",
-		"-ss",
-		fmt.Sprint(int(t.Seconds())),
-		"-i",
-		tmpFile.Name(),
-		"-f",
-		"mjpeg",
-		"-frames",
-		"1",
-		"-",
-	}
 
-	file.Seek(0, 0)
-	cmd = exec.Command("ffmpeg", args...)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Println(err)
-		return nil, err
+	output, err := run(int(t.Seconds()), tmpFile.Name())
+	if err != nil && !(len(output) > 0) {
+		// Retry with the first frame
+		output, err = run(0, tmpFile.Name())
+		if err != nil && !(len(output) > 0) {
+			log.Println(err)
+			return nil, err
+		}
 	}
 
 	br := bytes.NewReader(output)
@@ -98,6 +85,27 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 	}
 
 	return out, nil
+}
+
+func run(sec int, filename string) ([]byte, error) {
+	args := []string{
+		"-hide_banner",
+		"-loglevel",
+		"8",
+		"-ss",
+		fmt.Sprint(sec),
+		"-i",
+		filename,
+		"-f",
+		"mjpeg",
+		"-frames",
+		"1",
+		"-",
+	}
+
+	cmd := exec.Command("ffmpeg", args...)
+
+	return cmd.CombinedOutput()
 }
 
 //func vidDim() {
