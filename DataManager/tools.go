@@ -566,6 +566,7 @@ func GenPhash() error {
 			LEFT JOIN phash ph
 			ON p.id = ph.post_id
 			WHERE ph.post_id IS NULL
+			ORDER BY p.id
 			LIMIT 200
 			OFFSET $1
 			`,
