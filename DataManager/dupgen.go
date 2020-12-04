@@ -305,13 +305,22 @@ func generateAppleTree(tx querier, ph phs) error {
 
 	for _, h := range hashes {
 		if ph.distance(h) < 4 {
+			var apple, pear int
+			if h.postid < ph.postid {
+				apple = h.postid
+				pear = ph.postid
+			} else {
+				apple = ph.postid
+				pear = h.postid
+			}
+
 			_, err = tx.Exec(`
 				INSERT INTO apple_tree
 					(apple, pear)
 				VALUES ($1, $2)
 				`,
-				h.postid,
-				ph.postid,
+				apple,
+				pear,
 			)
 			if err != nil {
 				return err

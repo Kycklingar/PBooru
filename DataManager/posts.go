@@ -537,9 +537,10 @@ func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User
 		log.Println(err)
 	}
 
-	if mime.Type == "image" {
-		file.Seek(0, 0)
-		u, dhErr = dHash(file)
+	file.Seek(0, 0)
+	u, dhErr = dHash(file)
+	if dhErr != nil {
+		log.Println(dhErr)
 	}
 
 	tx, err := DB.Begin()
@@ -591,7 +592,7 @@ func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User
 		}
 	}
 
-	if dhErr == nil {
+	if u > 0 {
 		ph := phsFromHash(postID, u)
 
 		err = ph.insert(tx)
@@ -600,8 +601,6 @@ func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User
 		}
 
 		err = generateAppleTree(tx, ph)
-	} else {
-		log.Println(dhErr)
 	}
 
 	return postID, err

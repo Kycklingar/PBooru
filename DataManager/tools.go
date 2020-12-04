@@ -558,6 +558,103 @@ func GenerateFileDimensions() {
 	}
 }
 
+func GenPhash() error {
+	query := func(tx *sql.Tx, skip int) ([]*Post, error){
+		rows, err := tx.Query(`
+			SELECT p.id, p.multihash
+			FROM posts p
+			LEFT JOIN phash ph
+			ON p.id = ph.post_id
+			WHERE ph.post_id IS NULL
+			LIMIT 200
+			OFFSET $1
+			`,
+			skip,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var posts []*Post
+
+		for rows.Next() {
+			var p Post
+			err = rows.Scan(&p.ID, &p.Hash)
+			if err != nil {
+				return nil, err
+			}
+			posts = append(posts, &p)
+		}
+
+		return posts, nil
+	}
+
+	var (
+		tx *sql.Tx
+		err error
+		failed int
+		batch []*Post
+	)
+
+	for {
+		tx, err = DB.Begin()
+		if err != nil {
+			return err
+		}
+
+		batch, err = query(tx, failed)
+		if len(batch) <= 0 || err != nil {
+			tx.Commit()
+			break
+		}
+
+		for _, post := range batch {
+			fmt.Println("Working on ", post.ID, post.Hash)
+			f, err := ipfs.Cat(post.Hash)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+
+			var b bytes.Buffer
+			b.ReadFrom(f)
+			r := bytes.NewReader(b.Bytes())
+			f.Close()
+
+			u, err := dHash(r)
+			if err != nil {
+				log.Println(err)
+				failed++
+				continue
+			}
+
+
+			if u > 0 {
+				ph := phsFromHash(post.ID, u)
+				err = ph.insert(tx)
+				if err != nil {
+					tx.Rollback()
+					return err
+				}
+
+				err = generateAppleTree(tx, ph)
+				if err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else {
+				fmt.Println(u)
+				failed++
+			}
+		}
+
+		tx.Commit()
+	}
+
+	return err
+}
+
 func UpdateUserFlags(newFlag, oldFlag int) error {
 	_, err := DB.Exec("UPDATE users SET adminflag = $1 WHERE adminflag = $2", newFlag, oldFlag)
 	return err

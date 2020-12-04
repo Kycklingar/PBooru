@@ -59,6 +59,7 @@ func main() {
 	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
 	upgradePostCids := flag.Bool("upgrade-post-cids", false, "Upgrade post cids to base32")
 	genPears := flag.Bool("gen-pears", false, "Harvest apple tree")
+	genPhash := flag.Bool("gen-phash", false, "Generate phashes")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -88,6 +89,11 @@ func main() {
 			log.Fatal(err)
 		}
 
+		return
+	}
+
+	if *genPhash {
+		log.Print(DM.GenPhash())
 		return
 	}
 
