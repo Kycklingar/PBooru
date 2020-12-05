@@ -556,6 +556,58 @@ func comicRemoveChapterHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
+func comicAddPageApiHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
+		return
+	}
+
+	post, err := postFromForm(r)
+	if err != nil {
+		if err == errNoID {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		return
+	}
+
+	const (
+		postOrderKey = "order"
+		chapterIdKey = "chapter-id"
+	)
+
+	m, err := verifyInteger(r, postOrderKey, chapterIdKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+
+	cp := DM.NewComicPost()
+	cp.Post = post
+	cp.Chapter = DM.NewChapter()
+	cp.Chapter.ID = m[chapterIdKey]
+
+	cp.Order = m[postOrderKey]
+
+	if err = cp.Save(user, false); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func comicAddPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w)
