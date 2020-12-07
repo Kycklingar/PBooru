@@ -683,3 +683,13 @@ li
 {
     width:auto;
 }
+
+.clickable
+{
+	cursor: pointer;
+}
+
+.clickable:hover
+{
+	color:#69F;
+}

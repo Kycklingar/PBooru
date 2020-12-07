@@ -1,6 +1,6 @@
 {{template "forum-base"}}
 <div class="forum">
-	<div class="forum-banner">
+	<div class="forum-banner form">
 		{{template "forum-banner" .Board}}
 
 		<form action="/forum/new/thread/" method="POST">
@@ -14,13 +14,14 @@
 	<div id="catalog">
 		{{range .Threads}}
 			<div class="thread-post">
+				<span class="thread-username">{{with .Post.Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
 				<a href="thread/{{.Post.Id}}">
 				<span class="thread-id">{{.Post.Id}}</span>
 				</a>
 				<span class="thread-timestamp" title="{{.Post.Created}}">{{.Post.Created.Elapsed}}</span>
-				<span>{{.Replies}}
-				<h3>{{.Post.Title}}</h3>
-				<p>{{.Post.Body}}</p>
+				<span title="{{.Bumped.Elapsed}}"><i>{{.Replies}}</i></span>
+				<h3 class="title">{{.Post.Title}}</h3>
+				<p>{{.Post.Body.Compile | noescape}}</p>
 			</div>
 		{{end}}
 	</div>

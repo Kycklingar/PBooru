@@ -3,31 +3,48 @@
 	<div id="threader">
 		<div class="thread">
 			{{range .Replies}}
-				<div class="thread-post">
-					<span class="thread-username">{{with .Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
-					<span class="thread-id">{{.Id}}</span>
+				<div id="{{.Id}}" class="thread-post">
+					<span class="thread-username">{{with .Poster}}{{.Name}} <span class="clickable" onClick="appendReply('@{{.ID}}')">@{{.ID}}</span>{{else}}Anonymous{{end}}</span>
+					<span class="thread-id clickable" onClick="appendReply('>>{{.Id}}')">#{{.Id}}</span>
 					<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
-					<h4>{{.Title}}</h4>
-					<p>{{.Body}}</p>
+					<details>
+					<summary> </summary>
+						<form action="/forum/delete/post/" method="POST">
+							<input type="hidden" name="reply" value="{{.Id}}">
+							<input type="hidden" name="board" value="{{$.Board.Uri}}">
+							<input type="submit" value="Delete">
+						</form>
+					</details>
+					<h3 class="title">{{.Title}}</h3>
+					<p>{{.Body.Compile | noescape}}</p>
 				</div>
 			{{end}}
 		</div>
-		<div class="reply-box">
-			<div class="reply">
-				{{template "forum-banner" .Board}}
-				<div id="reply">
-					<details open>
-					<summary>Reply</summary>
-					<form action="/forum/new/post/" method="POST">
-						<input name="reply-to" type="hidden" value="{{.Thread}}">
-						<input name="board" type="hidden" value="{{.Board.Uri}}">
-						<textarea rows="10" cols="30" name="body" type="text" placeholder="Text"></textarea>
-						<input type="submit" value="Reply">
-					</form>
-					</details>
+		<details open>
+		<summary>Reply</summary>
+			<div class="reply-box">
+				<div class="reply form">
+					{{template "forum-banner" .Board}}
+					<div id="reply">
+						<form action="/forum/new/post/" method="POST">
+							<input name="reply-to" type="hidden" value="{{.Thread}}">
+							<input name="board" type="hidden" value="{{.Board.Uri}}">
+							<textarea rows="10" cols="30" name="body" type="text" placeholder="Text"></textarea>
+							<input type="submit" value="Reply">
+						</form>
+					</div>
 				</div>
 			</div>
-		</div>
+		</details>
 	</div>
 </div>
+
+<script>
+let replyInput = document.getElementById("reply").getElementsByTagName("textarea")[0]
+
+function appendReply(str)
+{
+	replyInput.value += str
+}
+</script>
 {{template "baseEnd"}}

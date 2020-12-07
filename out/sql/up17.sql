@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS forum_board (
 	category INT REFERENCES forum_category (id),
 	top INT NOT NULL DEFAULT 0,
 
+	thread_limit INT NOT NULL DEFAULT 60,
+
 	--Board characteristics
 	--cycle BOOLEAN DEFAULT FALSE,
 
@@ -23,6 +25,8 @@ CREATE TABLE IF NOT EXISTS forum_thread (
 	board TEXT REFERENCES forum_board(uri) ON DELETE CASCADE NOT NULL,
 
 	start_post INT REFERENCES forum_post(id) ON DELETE CASCADE,
+
+	--locked BOOLEAN NOT NULL DEFAULT false,
 
 	bump_limit INT NOT NULL,
 	bump_count INT NOT NULL DEFAULT 0,
@@ -48,5 +52,10 @@ CREATE TABLE IF NOT EXISTS forum_file (
 	post_id INT REFERENCES forum_post (id) ON DELETE CASCADE,
 	cid TEXT NOT NULL,
 	filename TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS forum_postref (
+	forum_post_id INT NOT NULL REFERENCES forum_post(id) ON DELETE CASCADE,
+	post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
 );
 

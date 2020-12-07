@@ -35,7 +35,6 @@
 {
 	position:absolute;
 	display:inline-block;
-	width:100%;
 	min-width:50em;
 }
 
@@ -57,10 +56,12 @@
 	font-family: Sans-serif;
 }
 
-.forum form input
+.forum .form input
 {
 	display:block;
-	margin:0.5em;
+	margin-bottom: 0.5em;
+	margin-top: 0.5em;
+	width:100%;
 }
 
 #catalog
@@ -77,11 +78,16 @@
 
 .thread-post
 {
-	margin:1em;
+	margin:0.4em;
 	padding:0.5em;
 	color: #DDD;
 	background-color: #222;
 	word-break: break-word;
+}
+
+.thread-post .title
+{
+	text-decoration: underline;
 }
 
 .thread-post a:visited

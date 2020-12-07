@@ -1,18 +1,22 @@
 package DataManager
 
-import "database/sql"
+import (
+	"database/sql"
+	"github.com/kycklingar/PBooru/DataManager/forum"
+)
 
 const bumpLimit = 300
 
 type Thread struct {
 	Replies int
 	Post ForumPost
+	Bumped timestamp
 }
 
 type ForumPost struct {
 	Id int
 	Title string
-	Body string
+	Body forum.Body
 	Poster *User
 	Created timestamp
 }
@@ -95,7 +99,7 @@ func GetBoard(board string) (b Board, err error) {
 
 func GetCatalog(board string) ([]Thread, error) {
 	rows, err := DB.Query(`
-		SELECT rid, title, body, created, (
+		SELECT rid, title, body, created, bumped, users.username, (
 			SELECT count(*)
 			FROM forum_post cp
 			WHERE cp.thread_id = t.id
@@ -103,6 +107,8 @@ func GetCatalog(board string) ([]Thread, error) {
 		FROM forum_thread t
 		JOIN forum_post p
 		ON t.start_post = p.id
+		JOIN users
+		ON users.id = p.poster
 		WHERE board = $1
 		ORDER BY bumped DESC
 		`,
@@ -117,15 +123,23 @@ func GetCatalog(board string) ([]Thread, error) {
 
 	for rows.Next() {
 		var t Thread
+		var username sql.NullString
 		err = rows.Scan(
 			&t.Post.Id,
 			&t.Post.Title,
 			&t.Post.Body,
 			&t.Post.Created,
+			&t.Bumped,
+			&username,
 			&t.Replies,
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		if username.Valid {
+			t.Post.Poster = NewUser()
+			t.Post.Poster.Name = username.String
 		}
 
 		threads = append(threads, t)
@@ -187,6 +201,25 @@ func GetThread(board string, rid int) ([]ForumPost, error) {
 	return fps, nil
 }
 
+func DeleteForumPost(board string, rid int) error {
+	_, err := DB.Exec(`
+		DELETE FROM forum_post
+		WHERE id = (
+			SELECT fp.id
+			FROM forum_post fp
+			JOIN forum_thread ft
+			ON fp.thread_id = ft.id
+			WHERE ft.board = $1
+			AND fp.rid = $2
+		)
+		`,
+		board,
+		rid,
+	)
+
+	return err
+}
+
 func NewThread(board, title, body string, user *User) (int, error) {
 	var (
 		threadID int
@@ -239,6 +272,11 @@ func NewThread(board, title, body string, user *User) (int, error) {
 		`,
 		pid,
 	).Scan(&rid)
+	if err != nil {
+		return rid, err
+	}
+
+	err = forum.PruneBoard(tx, board)
 
 	return rid, err
 }
@@ -273,15 +311,7 @@ func ForumReply(replyID int, board, title, body string, user *User) (int, error)
 		return rid, err
 	}
 
-	// Bump thread
-	_, err = tx.Exec(`
-		UPDATE forum_thread
-		SET bump_count = bump_count + 1,
-		bumped = CURRENT_TIMESTAMP
-		WHERE id = $1
-		`,
-		threadID,
-	)
+	err = forum.Bump(tx, threadID)
 
 	return replyID, err
 }

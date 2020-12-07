@@ -109,6 +109,11 @@ func threadHandler(board DM.Board, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(th.Replies) <= 0 {
+		notFoundHandler(w, r)
+		return
+	}
+
 	renderTemplate(w, "thread", th)
 }
 
@@ -123,6 +128,7 @@ func newThreadHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	body := r.FormValue("body")
 	board := r.FormValue("board")
+
 	rid, err := DM.NewThread(board, title, body, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -158,6 +164,33 @@ func newReplyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/forum/%s/thread/%d", board, rid), http.StatusSeeOther)
+}
+
+func deleteForumPostHandler (w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w, r)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Special() {
+		return
+	}
+
+	board := r.FormValue("board")
+	reply, err := strconv.Atoi(r.FormValue("reply"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = DM.DeleteForumPost(board, reply)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/forum/%s/", board) ,http.StatusSeeOther)
 }
 
 func newCategoryHandler(w http.ResponseWriter, r *http.Request) {
