@@ -85,6 +85,16 @@
 	word-break: break-word;
 }
 
+.thread-post .backlink
+{
+	font-size: 0.8em;
+}
+
+.thread-post:target
+{
+	box-shadow: 1px 1px 5px 2px #AAA;
+}
+
 .thread-post .title
 {
 	text-decoration: underline;

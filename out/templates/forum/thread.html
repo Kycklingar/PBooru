@@ -4,7 +4,7 @@
 		<div class="thread">
 			{{range .Replies}}
 				<div id="{{.Id}}" class="thread-post">
-					<span class="thread-username">{{with .Poster}}{{.Name}} <span class="clickable" onClick="appendReply('@{{.ID}}')">@{{.ID}}</span>{{else}}Anonymous{{end}}</span>
+					<span class="thread-username">{{with .Poster}}<a href="/user/{{.ID}}">{{.Name}}</a> <span class="clickable" onClick="appendReply('@{{.ID}}')">@{{.ID}}</span>{{else}}Anonymous{{end}}</span>
 					<span class="thread-id clickable" onClick="appendReply('>>{{.Id}}')">#{{.Id}}</span>
 					<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
 					<details>
@@ -17,6 +17,11 @@
 					</details>
 					<h3 class="title">{{.Title}}</h3>
 					<p>{{.Body.Compile | noescape}}</p>
+					<span class="backlink">
+						{{range .Backlinks}}
+						<a href="#{{.}}">>>{{.}}</a>
+						{{end}}
+					</span>
 				</div>
 			{{end}}
 		</div>

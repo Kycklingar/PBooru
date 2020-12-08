@@ -3,12 +3,14 @@ package forum
 import (
 	"regexp"
 	"html"
+	"log"
+	"strconv"
 )
 
 const (
-	regReference = "(&gt;&gt;([0-9]+))(\\s|$)"
+	regReference = "(&gt;&gt;([0-9]+))([^a-zA-Z]|$)"
 	regGreenText = "(?m)(?:^&gt;[^&gt;]|^&gt;&gt;(?:&gt;)+).*"
-	regMention   = "(@([0-9]+))(\\s|$)"
+	regMention   = "(@([0-9]+))([^a-zA-Z]|$)"
 	regNewLine   = "\\n"
 )
 
@@ -48,16 +50,27 @@ type Body string
 func (b Body) Compile() string {
 	escaped := html.EscapeString(string(b))
 
-	out := reference.ReplaceAllString(escaped, "<a class=\"ref\" href=\"#$2\">$1</a>")
+	out := reference.ReplaceAllString(escaped, "<a class=\"ref\" href=\"#$2\">$1</a>$3")
 	out = greenText.ReplaceAllString(out, "<span class=\"greentext\">$0</span>")
-	out = mention.ReplaceAllString(out, "<a class=\"mention\">$1</a>")
+	out = mention.ReplaceAllString(out, "<a class=\"mention\">$1</a>$3")
 	out = newLine.ReplaceAllString(out, "<br>")
 
 	return out
 }
 
-//func Mentions(text string) {
-//
-//	references := reference.FindAllStringSubmatch(text, -1)
-//	mentions := mention.FindAllStringSubmatch(b)
-//}
+func (b Body) Mentions() []int {
+	var r []int
+	bod := html.EscapeString(string(b))
+	refs := reference.FindAllStringSubmatch(bod, -1)
+	for i := range refs {
+		rid, err := strconv.Atoi(refs[i][2])
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		r = append(r, rid)
+	}
+	//mentions := mention.FindAllStringSubmatch(b)
+
+	return r
+}
