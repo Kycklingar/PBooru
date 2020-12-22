@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
+	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
@@ -69,7 +71,7 @@ type TagHistory struct {
 
 	User      *User
 	Post      *Post
-	Timestamp timestamp
+	Timestamp ts.Timestamp
 
 	ETags []*EditedTag
 }
@@ -134,7 +136,7 @@ func (th *TagHistory) Reverse() error {
 	return nil
 }
 
-func (th *TagHistory) QPost(q querier) error {
+func (th *TagHistory) QPost(q querier.Q) error {
 	if th.ID <= 0 {
 		return errors.New("taghistory has no ID")
 	}
@@ -142,7 +144,7 @@ func (th *TagHistory) QPost(q querier) error {
 	return q.QueryRow("SELECT post_id FROM tag_history WHERE id = $1", th.ID).Scan(&th.Post.ID)
 }
 
-func (th *TagHistory) QUser(q querier) error {
+func (th *TagHistory) QUser(q querier.Q) error {
 	if th.ID <= 0 {
 		return errors.New("taghistory has no ID")
 	}
@@ -150,7 +152,7 @@ func (th *TagHistory) QUser(q querier) error {
 	return q.QueryRow("SELECT user_id FROM tag_history WHERE id = $1", th.ID).Scan(&th.User.ID)
 }
 
-func (th *TagHistory) QETags(q querier) []*EditedTag {
+func (th *TagHistory) QETags(q querier.Q) []*EditedTag {
 	if th.ETags != nil {
 		return th.ETags
 	}

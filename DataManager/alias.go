@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func NewAlias() *Alias {
@@ -19,7 +21,7 @@ type Alias struct {
 	To   *Tag
 }
 
-func (a *Alias) QFrom(q querier) []*Tag {
+func (a *Alias) QFrom(q querier.Q) []*Tag {
 	if a.From != nil {
 		return a.From
 	}
@@ -46,7 +48,7 @@ func (a *Alias) QFrom(q querier) []*Tag {
 	return a.From
 }
 
-func (a *Alias) QTo(q querier) (*Tag, error) {
+func (a *Alias) QTo(q querier.Q) (*Tag, error) {
 	if a.Tag.QID(q) == 0 {
 		return a.To, nil
 	}
@@ -123,7 +125,7 @@ func (a *Alias) Save() error {
 	return err
 }
 
-func updatePtm(q querier, to, from *Tag) error {
+func updatePtm(q querier.Q, to, from *Tag) error {
 	// Is to, from aliased to something else
 	// If so return error
 	ato, err := to.aliasedTo(q)
@@ -184,7 +186,7 @@ func updatePtm(q querier, to, from *Tag) error {
 	return nil
 }
 
-func updateAliases(q querier, to, from *Tag) error {
+func updateAliases(q querier.Q, to, from *Tag) error {
 	// Update aliases
 	_, err := q.Exec(`
 			UPDATE alias
@@ -201,7 +203,7 @@ func updateAliases(q querier, to, from *Tag) error {
 	return err
 }
 
-func updateParents(q querier, to, from *Tag) error {
+func updateParents(q querier.Q, to, from *Tag) error {
 	_, err := q.Exec(`
 		INSERT INTO parent_tags(
 			parent_id,

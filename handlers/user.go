@@ -143,33 +143,28 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		user := DM.NewUser()
-
-		err := user.Login(DM.DB, username, password)
+		key, err := DM.Login(username, password)
 		if err != nil {
-			//log.Println(err)
-			//http.Error(w, "Login failed", http.StatusInternalServerError)
-			http.Redirect(w, r, "./#err-username", http.StatusSeeOther)
+			if err == DM.WrongPassword{
+				http.Redirect(w, r, "./#err-username", http.StatusSeeOther)
+			} else {
+				log.Println(err)
+				http.Error(w, ErrInternal, http.StatusInternalServerError)
+			}
 			return
 		}
-		//s := user.Session()
-		if user.Session.Key(DM.DB) != "" {
-			setC(w, "session", user.Session.Key(DM.DB))
-		}
+
+		setC(w, "session", key)
 
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
 		return
 
 	} else {
 		user, _ := getUser(w, r)
-		type s struct {
-			Key    string
-			Expire time.Time
-		}
 		p := struct {
 			User     *DM.User
 			Key      string
-			Sessions []s
+			Sessions []*DM.Session
 		}{}
 		//p.Username = user.QName(DM.DB)
 		p.User = user
@@ -181,13 +176,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		if user.QID(DM.DB) <= 0 {
 			p.Key = captcha.New()
 		} else {
-			sessions := user.Sessions(DM.DB)
-			for _, sess := range sessions {
-				var ss s
-				ss.Key = sess.Key(DM.DB)
-				ss.Expire = sess.Expire()
-				p.Sessions = append(p.Sessions, ss)
-			}
+			p.Sessions = user.Sessions(DM.DB)
 		}
 
 		renderTemplate(w, "login", p)
@@ -202,15 +191,11 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		u := DM.NewUser()
-		u.Session.Get(DM.DB, sessKey)
+		DM.Logout(sessKey)
 
-		u.Logout(DM.DB)
 	} else {
-		user, _ := getUser(w, r)
-		if user.QID(DM.DB) > 0 {
-			user.Logout(DM.DB)
-		}
+		_, ui := getUser(w, r)
+		DM.Logout(ui.SessionToken)
 		setC(w, "session", "")
 	}
 
@@ -259,13 +244,11 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {
 	ui := userCookies(w, r)
-	user := DM.NewUser()
-	user.Session.Get(DM.DB, ui.SessionToken)
-	if user.QID(DM.DB) == 0 {
+	user := DM.Sessioned(ui.SessionToken)
+	if user.ID == 0 {
 		remC(w, "session")
-	} else {
-		user = DM.CachedUser(user)
 	}
+
 	return user, ui
 }
 
@@ -286,20 +269,22 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var user = DM.NewUser()
-
-		err := user.Register(username, password)
+		err := DM.Register(username, password)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		err = user.Login(DM.DB, username, password)
-		if err == nil {
-			if user.Session.Key(DM.DB) != "" {
-				setC(w, "session", user.Session.Key(DM.DB))
-			}
+		key, err := DM.Login(username, password)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+
+		if key != "" {
+			setC(w, "session", key)
+		}
+
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
 		return
 	}

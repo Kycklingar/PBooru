@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	c "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 type Dupe struct {
@@ -14,7 +15,7 @@ type Dupe struct {
 	Inferior []*Post
 }
 
-func getDupeFromPost(q querier, p *Post) (Dupe, error) {
+func getDupeFromPost(q querier.Q, p *Post) (Dupe, error) {
 	var dup Dupe
 	dup.Post = p
 	rows, err := q.Query(`
@@ -169,7 +170,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	return nil
 }
 
-func updateAppleTrees(tx querier, dupe Dupe) error {
+func updateAppleTrees(tx querier.Q, dupe Dupe) error {
 	var err error
 	for _, p := range dupe.Inferior {
 
@@ -227,7 +228,7 @@ func updateAppleTrees(tx querier, dupe Dupe) error {
 	return nil
 }
 
-func movePoolPosts(tx querier, dupe Dupe) (err error) {
+func movePoolPosts(tx querier.Q, dupe Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
 			UPDATE pool_mappings
@@ -260,7 +261,7 @@ func movePoolPosts(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func moveVotes(tx querier, dupe Dupe) (err error) {
+func moveVotes(tx querier.Q, dupe Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
 			UPDATE post_score_mapping
@@ -293,7 +294,7 @@ func moveVotes(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func commonTags(tx querier, dupe Dupe) ([]*Tag, error) {
+func commonTags(tx querier.Q, dupe Dupe) ([]*Tag, error) {
 	var tags []*Tag
 	q := func(p *Post) error {
 		rows, err := tx.Query(`
@@ -332,7 +333,7 @@ func commonTags(tx querier, dupe Dupe) ([]*Tag, error) {
 	return tags, nil
 }
 
-func moveTags(tx querier, dupe Dupe) (err error) {
+func moveTags(tx querier.Q, dupe Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
 			INSERT INTO post_tag_mappings (post_id, tag_id)
@@ -363,7 +364,7 @@ func moveTags(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
+func replaceComicPages(tx querier.Q, user *User, dupe Dupe) (err error) {
 	exec := func(inferior *Post) ([]*ComicPost, error) {
 		rows, err := tx.Query(`
 			UPDATE comic_mappings
@@ -415,7 +416,7 @@ func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
 	return
 }
 
-func updateDupes(tx querier, dupe Dupe) error {
+func updateDupes(tx querier.Q, dupe Dupe) error {
 	for _, p := range dupe.Inferior {
 		dup, err := getDupeFromPost(tx, p)
 		if err != nil {
@@ -438,7 +439,7 @@ func updateDupes(tx querier, dupe Dupe) error {
 	return nil
 }
 
-func conflicts(tx querier, dupe Dupe) error {
+func conflicts(tx querier.Q, dupe Dupe) error {
 	in := func(dups []Dupe, p *Post) bool {
 		for _, d := range dups {
 			if d.Post.ID == p.ID {

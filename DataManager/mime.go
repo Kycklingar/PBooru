@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log"
 	"strings"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 var Mimes []*Mime
@@ -51,7 +53,7 @@ type Mime struct {
 	Type string
 }
 
-func (m *Mime) QID(q querier) int {
+func (m *Mime) QID(q querier.Q) int {
 	if m.ID != 0 {
 		return m.ID
 	}
@@ -68,7 +70,7 @@ func (m *Mime) QID(q querier) int {
 	return m.ID
 }
 
-func (m *Mime) QName(q querier) string {
+func (m *Mime) QName(q querier.Q) string {
 	if m.Name != "" {
 		return m.Name
 	}
@@ -85,7 +87,7 @@ func (m *Mime) QName(q querier) string {
 	return m.Name
 }
 
-func (m *Mime) QType(q querier) string {
+func (m *Mime) QType(q querier.Q) string {
 	if m.Type != "" {
 		return m.Type
 	}
@@ -102,7 +104,7 @@ func (m *Mime) QType(q querier) string {
 	return m.Type
 }
 
-func (m *Mime) Save(q querier) error {
+func (m *Mime) Save(q querier.Q) error {
 	if m.QID(q) != 0 {
 		return nil
 	}

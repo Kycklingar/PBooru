@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
@@ -63,7 +64,7 @@ func (t *Tag) EString() string {
 	return t.String()
 }
 
-func (t *Tag) QID(q querier) int {
+func (t *Tag) QID(q querier.Q) int {
 	if t.ID != 0 {
 		return t.ID
 	}
@@ -83,7 +84,7 @@ func (t *Tag) QID(q querier) int {
 	return t.ID
 }
 
-func (t *Tag) QueryAll(q querier) error {
+func (t *Tag) QueryAll(q querier.Q) error {
 	if t.ID <= 0 {
 		return errors.New("No identifier")
 	}
@@ -109,7 +110,7 @@ func (t *Tag) SetID(id int) {
 	t.ID = id
 }
 
-func (t *Tag) QTag(q querier) string {
+func (t *Tag) QTag(q querier.Q) string {
 	if t.Tag != "" {
 		return t.Tag
 	}
@@ -124,7 +125,7 @@ func (t *Tag) QTag(q querier) string {
 	return t.Tag
 }
 
-func (t *Tag) QNamespace(q querier) *Namespace {
+func (t *Tag) QNamespace(q querier.Q) *Namespace {
 	if t.Namespace.QID(q) != 0 {
 		return t.Namespace
 	}
@@ -141,7 +142,7 @@ func (t *Tag) QNamespace(q querier) *Namespace {
 	return t.Namespace
 }
 
-func (t *Tag) QCount(q querier) int {
+func (t *Tag) QCount(q querier.Q) int {
 	if t.Count > -1 {
 		return t.Count
 	}
@@ -159,7 +160,7 @@ func (t *Tag) QCount(q querier) int {
 	return t.Count
 }
 
-func (t *Tag) Save(q querier) error {
+func (t *Tag) Save(q querier.Q) error {
 	if t.QID(q) != 0 {
 		return nil
 	}
@@ -214,7 +215,7 @@ func (t *Tag) Parse(tagStr string) error {
 	return nil
 }
 
-func (t *Tag) recount(q querier) error {
+func (t *Tag) recount(q querier.Q) error {
 	_, err := q.Exec(`
 		UPDATE tags
 		SET count = (
@@ -229,7 +230,7 @@ func (t *Tag) recount(q querier) error {
 	return err
 }
 
-func (t *Tag) updateCount(q querier, count int) error {
+func (t *Tag) updateCount(q querier.Q, count int) error {
 	_, err := q.Exec(`
 		UPDATE tags
 		SET count = count + $1
@@ -242,7 +243,7 @@ func (t *Tag) updateCount(q querier, count int) error {
 }
 
 // Returns the tag it has been aliased to or itself if none
-func (t *Tag) aliasedTo(q querier) (*Tag, error) {
+func (t *Tag) aliasedTo(q querier.Q) (*Tag, error) {
 	var alias = NewAlias()
 	alias.Tag = t
 
@@ -258,7 +259,7 @@ func (t *Tag) aliasedTo(q querier) (*Tag, error) {
 	return to, nil
 }
 
-func (t *Tag) AddParent(q querier, parent *Tag) error {
+func (t *Tag) AddParent(q querier.Q, parent *Tag) error {
 	var err error
 	if err = parent.Save(q); err != nil {
 		log.Println(err)
@@ -322,7 +323,7 @@ func (t *Tag) AddParent(q querier, parent *Tag) error {
 	return nil
 }
 
-func (t *Tag) allParents(q querier) []*Tag {
+func (t *Tag) allParents(q querier.Q) []*Tag {
 	var parents []*Tag
 
 	// Recursivly resolve parents
@@ -342,7 +343,7 @@ func (t *Tag) allParents(q querier) []*Tag {
 	return parents
 }
 
-func (t *Tag) Parents(q querier) []*Tag {
+func (t *Tag) Parents(q querier.Q) []*Tag {
 	if t.QID(q) <= 0 {
 		return nil
 	}
@@ -375,7 +376,7 @@ func (t *Tag) Parents(q querier) []*Tag {
 	return tags
 }
 
-func (t *Tag) Children(q querier) []*Tag {
+func (t *Tag) Children(q querier.Q) []*Tag {
 	if t.QID(q) <= 0 {
 		return nil
 	}
@@ -485,7 +486,7 @@ const (
 	FNamespace
 )
 
-func (tc *TagCollector) FromPostMul(q querier, p *Post, fields ...sqlbinder.Field) error {
+func (tc *TagCollector) FromPostMul(q querier.Q, p *Post, fields ...sqlbinder.Field) error {
 	selector := sqlbinder.BindFieldAddresses(tc, fields...)
 
 	query := fmt.Sprintf(`
@@ -520,7 +521,7 @@ func (tc *TagCollector) FromPostMul(q querier, p *Post, fields ...sqlbinder.Fiel
 	return nil
 }
 
-func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
+func (tc *TagCollector) GetFromPost(q querier.Q, p *Post) error {
 	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
@@ -544,7 +545,7 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 	return rows.Err()
 }
 
-func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
+func (tc *TagCollector) GetPostTags(q querier.Q, p *Post) error {
 	if p.ID == 0 {
 		return errors.New("post invalid")
 	}
@@ -596,7 +597,7 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 	return rows.Err()
 }
 
-func (tc *TagCollector) save(tx querier) error {
+func (tc *TagCollector) save(tx querier.Q) error {
 	for _, tag := range tc.Tags {
 		if err := tag.Save(tx); err != nil {
 			return err
@@ -606,7 +607,7 @@ func (tc *TagCollector) save(tx querier) error {
 	return nil
 }
 
-func (tc *TagCollector) upgrade(q querier, upgradeParents bool) error {
+func (tc *TagCollector) upgrade(q querier.Q, upgradeParents bool) error {
 	var newTags []*Tag
 
 	for _, tag := range tc.Tags {
@@ -640,7 +641,7 @@ func (tc *TagCollector) upgrade(q querier, upgradeParents bool) error {
 	return nil
 }
 
-func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
+func (tc *TagCollector) SuggestedTags(q querier.Q) TagCollector {
 	var ntc TagCollector
 	for _, tag := range tc.Tags {
 		if c := C.Cache.Get("ST", tag.Namespace.Namespace+":"+tag.Tag); c != nil {

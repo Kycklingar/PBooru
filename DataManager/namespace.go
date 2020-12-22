@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func NewNamespace() *Namespace {
@@ -40,7 +41,7 @@ type Namespace struct {
 	Namespace string
 }
 
-func (n *Namespace) QID(q querier) int {
+func (n *Namespace) QID(q querier.Q) int {
 	if n.ID != 0 {
 		return n.ID
 	}
@@ -68,7 +69,7 @@ func (n *Namespace) QID(q querier) int {
 	return n.ID
 }
 
-func (n *Namespace) QNamespace(q querier) string {
+func (n *Namespace) QNamespace(q querier.Q) string {
 	if n.Namespace != "" {
 		return n.Namespace
 	}
@@ -120,7 +121,7 @@ func (n *Namespace) SetCache() {
 	C.Cache.Set("NSP", n.Namespace, n)
 }
 
-func (n *Namespace) Save(q querier) error {
+func (n *Namespace) Save(q querier.Q) error {
 	if n.Namespace == "" {
 		return errors.New("namespace: save: not enough arguments")
 	}

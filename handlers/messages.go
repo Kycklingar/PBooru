@@ -187,7 +187,7 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err = m.Send(); err != nil {
+		if err = m.Send(DM.DB); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

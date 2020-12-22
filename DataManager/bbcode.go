@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"github.com/frustra/bbcode"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
-func createCompiler(q querier, gateway string) bbcode.Compiler {
+func createCompiler(q querier.Q, gateway string) bbcode.Compiler {
 	cmp := bbcode.NewCompiler(true, true)
 	cmp.SetTag("img", nil)
 	cmp.SetTag("post", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
@@ -65,7 +66,7 @@ func createCompiler(q querier, gateway string) bbcode.Compiler {
 	return cmp
 }
 
-func compileBBCode(q querier, text, gateway string) string {
+func compileBBCode(q querier.Q, text, gateway string) string {
 	cmp := createCompiler(q, gateway)
 
 	// Comment reference

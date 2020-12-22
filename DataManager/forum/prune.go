@@ -37,4 +37,3 @@ func PruneBoard(tx *sql.Tx, board string) error {
 	)
 	return err
 }
-

@@ -3,6 +3,8 @@ package DataManager
 import (
 	"errors"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func NewReport() Report {
@@ -17,7 +19,7 @@ type Report struct {
 	Description string
 }
 
-func GetReports(q querier) ([]*Report, error) {
+func GetReports(q querier.Q) ([]*Report, error) {
 	rows, err := q.Query("SELECT id, post_id, reporter, reason, description FROM reports ORDER BY id DESC LIMIT 25")
 	if err != nil {
 		log.Println(err)
@@ -41,7 +43,7 @@ func GetReports(q querier) ([]*Report, error) {
 	return reports, nil
 }
 
-func (r Report) Delete(q querier) error {
+func (r Report) Delete(q querier.Q) error {
 	if r.ID <= 0 {
 		return errors.New("report.ID <= 0")
 	}

@@ -1,5 +1,7 @@
 package DataManager
 
+import "github.com/kycklingar/PBooru/DataManager/querier"
+
 type logAction int
 
 const (
@@ -8,7 +10,7 @@ const (
 	lRemove
 )
 
-func (c *Comic) log(q querier, action logAction, user *User) error {
+func (c *Comic) log(q querier.Q, action logAction, user *User) error {
 	_, err := q.Exec(`
 		INSERT INTO log_comic(
 			action,
@@ -25,7 +27,7 @@ func (c *Comic) log(q querier, action logAction, user *User) error {
 	return err
 }
 
-func (ch *Chapter) log(q querier, action logAction, user *User) error {
+func (ch *Chapter) log(q querier.Q, action logAction, user *User) error {
 	if err := ch.QComic(q); err != nil {
 		return err
 	}
@@ -49,7 +51,7 @@ func (ch *Chapter) log(q querier, action logAction, user *User) error {
 	return err
 }
 
-func (cp *ComicPost) log(q querier, action logAction, user *User) error {
+func (cp *ComicPost) log(q querier.Q, action logAction, user *User) error {
 	_, err := q.Exec(`
 		INSERT INTO log_comic_page(
 			action,

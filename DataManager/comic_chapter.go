@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func NewChapter() *Chapter {
@@ -99,7 +100,7 @@ func (c *Chapter) ShiftPosts(user *User, symbol, page, by int) error {
 	return nil
 }
 
-func (c *Chapter) QID(q querier) int {
+func (c *Chapter) QID(q querier.Q) int {
 	if c.ID != 0 {
 		return c.ID
 	}
@@ -118,7 +119,7 @@ func (c *Chapter) SetID(id int) {
 	c.ID = id
 }
 
-func (c *Chapter) QComic(q querier) error {
+func (c *Chapter) QComic(q querier.Q) error {
 	if c.Comic != nil {
 		return nil
 	}
@@ -136,7 +137,7 @@ func (c *Chapter) QComic(q querier) error {
 	return nil
 }
 
-func (c *Chapter) QTitle(q querier) string {
+func (c *Chapter) QTitle(q querier.Q) string {
 	if c.Title != "" {
 		return c.Title
 	}
@@ -152,7 +153,7 @@ func (c *Chapter) QTitle(q querier) string {
 	return c.Title
 }
 
-func (c *Chapter) QOrder(q querier) int {
+func (c *Chapter) QOrder(q querier.Q) int {
 	if c.Order > -999999 {
 		return c.Order
 	}
@@ -168,7 +169,7 @@ func (c *Chapter) QOrder(q querier) int {
 	return c.Order
 }
 
-func (c *Chapter) QPageCount(q querier) int {
+func (c *Chapter) QPageCount(q querier.Q) int {
 	if c.PageCount > 0 {
 		return c.PageCount
 	}
@@ -185,7 +186,7 @@ func (c *Chapter) QPageCount(q querier) int {
 	return c.PageCount
 }
 
-func (c *Chapter) Save(q querier, user *User) error {
+func (c *Chapter) Save(q querier.Q, user *User) error {
 	if c.QID(q) != 0 {
 		return errors.New("Chapter already exist")
 	}
@@ -220,7 +221,7 @@ func (c *Chapter) Save(q querier, user *User) error {
 	return err
 }
 
-func (c *Chapter) SaveEdit(q querier, user *User) error {
+func (c *Chapter) SaveEdit(q querier.Q, user *User) error {
 	if c.QID(q) <= 0 {
 		return errors.New("Chapter doesn't exist")
 	}
@@ -296,7 +297,7 @@ func (c *Chapter) Delete(user *User) error {
 	return nil
 }
 
-func (c *Chapter) QPosts(q querier) []*ComicPost {
+func (c *Chapter) QPosts(q querier.Q) []*ComicPost {
 	if c.QID(q) == 0 {
 		return nil
 	}

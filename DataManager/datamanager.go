@@ -12,7 +12,6 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 	st "github.com/kycklingar/PBooru/DataManager/storage"
 	_ "github.com/lib/pq"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -20,17 +19,25 @@ const (
 	postgresqlTimestamp = "2006-01-02T15:04:05.000000Z"
 	Sqlite3Timestamp    = "2006-01-02 15:04:05"
 	Fsqlite3Timestamp   = "2006-01-02T15:04:05Z"
+	sessionGCInterval   = time.Minute * 10
 )
-
-type querier interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-}
 
 func txError(tx *sql.Tx, err error) error {
 	tx.Rollback()
 	return err
+}
+
+func commitOrDie(tx *sql.Tx, err *error) {
+	var terr error
+	if *err != nil {
+		terr = tx.Rollback()
+	} else {
+		terr = tx.Commit()
+	}
+
+	if terr != nil {
+		log.Println(err)
+	}
 }
 
 var DB *sql.DB
@@ -76,7 +83,16 @@ func Setup(iApi string) {
 		panic(err)
 	}
 
-	go sessionGC()
+	// SessionGC
+	go func() {
+		for {
+			time.Sleep(sessionGCInterval)
+			if err := sessionGC(DB); err != nil {
+				log.Println(err)
+			}
+		}
+	}()
+
 	go updateCounter()
 	if err = cacheAllMimes(); err != nil {
 		log.Println(err)
@@ -191,24 +207,7 @@ func updateCode(ver int, tx *sql.Tx) error {
 				fmt.Println("Passwords do not match.")
 			}
 
-			u := NewUser()
-			u.flag = new(flag)
-			*u.flag = flag(flag(flagAll))
-			u.Name = "admin"
-			var err error
-			u.salt, err = createSalt()
-			if err != nil {
-				return err
-			}
-
-			hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
-			if err != nil {
-				return err
-			}
-			u.passwordHash = string(hash)
-
-			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.Flag())
-			if err != nil {
+			if err := register(tx, "admin", password, flag(flagAll)); err != nil {
 				return err
 			}
 		}

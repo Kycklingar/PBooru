@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 type Message struct {
@@ -22,12 +24,12 @@ func NewMessage() Message {
 	return Message{Sender: NewUser(), Recipient: NewUser()}
 }
 
-func (m Message) Send() error {
+func (m Message) Send(q querier.Q) error {
 	if m.Sender.ID <= 0 || m.Recipient.ID <= 0 {
 		return errors.New("No sender/recipient specified")
 	}
 
-	_, err := DB.Exec("INSERT INTO message(sender, recipient, title, text) VALUES($1, $2, $3, $4)", m.Sender.ID, m.Recipient.ID, m.Title, m.Text)
+	_, err := q.Exec("INSERT INTO message(sender, recipient, title, text) VALUES($1, $2, $3, $4)", m.Sender.ID, m.Recipient.ID, m.Title, m.Text)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -42,7 +44,7 @@ func (m Message) Send() error {
 	return nil
 }
 
-func (m *Message) QTitle(q querier) error {
+func (m *Message) QTitle(q querier.Q) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
@@ -55,7 +57,7 @@ func (m *Message) QTitle(q querier) error {
 	return nil
 }
 
-func (m *Message) QText(q querier) error {
+func (m *Message) QText(q querier.Q) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
@@ -68,7 +70,7 @@ func (m *Message) QText(q querier) error {
 	return nil
 }
 
-func (m *Message) QSender(q querier) error {
+func (m *Message) QSender(q querier.Q) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
@@ -76,7 +78,7 @@ func (m *Message) QSender(q querier) error {
 	return q.QueryRow("SELECT sender FROM message WHERE id = $1", m.ID).Scan(&m.Sender.ID)
 }
 
-func (m *Message) QRecipient(q querier) error {
+func (m *Message) QRecipient(q querier.Q) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
@@ -84,7 +86,7 @@ func (m *Message) QRecipient(q querier) error {
 	return q.QueryRow("SELECT recipient FROM message WHERE id = $1", m.ID).Scan(&m.Recipient.ID)
 }
 
-func (m *Message) SetRead(q querier) error {
+func (m *Message) SetRead(q querier.Q) error {
 	if m.ID <= 0 {
 		return errors.New("No message id")
 	}
@@ -98,7 +100,7 @@ type messages struct {
 	Sent   []Message
 }
 
-func (m *messages) SetRead(q querier, msg *Message) error {
+func (m *messages) SetRead(q querier.Q, msg *Message) error {
 	//fmt.Println(len(m.Unread), m)
 	for i, _ := range m.Unread {
 		//fmt.Println("Searching for:", msg.ID)
@@ -116,7 +118,7 @@ func (m *messages) SetRead(q querier, msg *Message) error {
 	return nil
 }
 
-func (u *User) QUnreadMessages(q querier) error {
+func (u *User) QUnreadMessages(q querier.Q) error {
 	if u.Messages.Unread != nil {
 		return nil
 	}
@@ -136,7 +138,7 @@ func (u *User) QUnreadMessages(q querier) error {
 	return err
 }
 
-func (u *User) QAllMessages(q querier) error {
+func (u *User) QAllMessages(q querier.Q) error {
 	if u.Messages.All != nil {
 		return nil
 	}
@@ -156,7 +158,7 @@ func (u *User) QAllMessages(q querier) error {
 	return err
 }
 
-func (u *User) QSentMessages(q querier) error {
+func (u *User) QSentMessages(q querier.Q) error {
 	if u.Messages.Sent != nil {
 		return nil
 	}

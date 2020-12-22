@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func newComicPost() *ComicPost {
@@ -31,7 +32,7 @@ type ComicPost struct {
 	Comic   *Comic
 }
 
-func (p *ComicPost) QID(q querier) int {
+func (p *ComicPost) QID(q querier.Q) int {
 	if p.ID != 0 {
 		return p.ID
 	}
@@ -43,7 +44,7 @@ func (p *ComicPost) QID(q querier) int {
 	return p.ID
 }
 
-func (p *ComicPost) QChapter(q querier) error {
+func (p *ComicPost) QChapter(q querier.Q) error {
 	if p.Chapter != nil {
 		return nil
 	}
@@ -59,7 +60,7 @@ func (p *ComicPost) QChapter(q querier) error {
 	return nil
 }
 
-//func (p *ComicPost) QComic(q querier) error {
+//func (p *ComicPost) QComic(q querier.Q) error {
 //	if p.Comic != nil {
 //		return nil
 //	}
@@ -75,7 +76,7 @@ func (p *ComicPost) QChapter(q querier) error {
 //	return nil
 //}
 
-func (p *ComicPost) QPost(q querier) error {
+func (p *ComicPost) QPost(q querier.Q) error {
 	if p.Post != nil {
 		return nil
 	}
@@ -92,7 +93,7 @@ func (p *ComicPost) QPost(q querier) error {
 	return nil
 }
 
-func (p *ComicPost) QOrder(q querier) int {
+func (p *ComicPost) QOrder(q querier.Q) int {
 	if p.Order >= 0 {
 		return p.Order
 	}
@@ -190,7 +191,7 @@ func (p *ComicPost) SaveEdit(user *User) error {
 	return nil
 }
 
-func (p *ComicPost) replacePost(q querier, new *Post) error {
+func (p *ComicPost) replacePost(q querier.Q, new *Post) error {
 	if new.ID == 0 {
 		return errors.New("new.id is zero")
 	}

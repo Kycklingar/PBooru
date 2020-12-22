@@ -6,6 +6,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
+	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 // CommentModel is used to retriev and save comments
@@ -18,7 +21,7 @@ type Comment struct {
 	User         *User
 	Text         string
 	CompiledText string
-	Time         timestamp
+	Time         ts.Timestamp
 }
 
 // Initialize a new comment
@@ -47,7 +50,7 @@ func CommentByID(id int) (*Comment, error) {
 }
 
 // Get the latest comments
-func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
+func (cm *CommentCollector) Get(q querier.Q, count int, daemon string) error {
 	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM comment_wall ORDER BY id DESC LIMIT $1", count)
 	if err != nil {
 		return err
@@ -158,7 +161,7 @@ type PostComment struct {
 }
 
 // Save a new comment on a post
-func (pc *PostComment) Save(q querier) error {
+func (pc *PostComment) Save(q querier.Q) error {
 	if pc.Text == "" || pc.Post.ID == 0 || pc.User.QID(q) == 0 {
 		return fmt.Errorf("expected: Text, PostID, UserID. Got: %s, %d, %d", pc.Text, pc.Post.ID, pc.User.ID)
 	}

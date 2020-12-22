@@ -2,14 +2,17 @@ package DataManager
 
 import (
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
+	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 type DupReport struct {
 	ID        int
 	Reporter  *User
 	Note      string
-	Approved  timestamp
-	Timestamp timestamp
+	Approved  ts.Timestamp
+	Timestamp ts.Timestamp
 	Dupe      Dupe
 }
 
@@ -60,7 +63,7 @@ func FetchDupReports(limit, offset int) ([]*DupReport, error) {
 	return reports, nil
 }
 
-func FetchDupReport(id int, q querier) (*DupReport, error) {
+func FetchDupReport(id int, q querier.Q) (*DupReport, error) {
 	var r DupReport
 	r.ID = id
 	r.Reporter = NewUser()
@@ -160,7 +163,7 @@ func ReportDuplicates(dupe Dupe, reporter *User, note string) error {
 
 }
 
-func (r *DupReport) QInferior(q querier) error {
+func (r *DupReport) QInferior(q querier.Q) error {
 	rows, err := q.Query(`
 		SELECT post_id
 		FROM duplicate_report_posts

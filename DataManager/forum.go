@@ -2,35 +2,39 @@ package DataManager
 
 import (
 	"database/sql"
-	"strings"
 	"fmt"
 	"strconv"
+	"strings"
+
 	"github.com/kycklingar/PBooru/DataManager/forum"
+	"github.com/kycklingar/PBooru/DataManager/querier"
+	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 const bumpLimit = 300
 
-type Thread struct {
-	Replies int
-	Post ForumPost
-	Bumped timestamp
-}
+//type Thread struct {
+//	ReplyCount int
+//	Post       ForumPost
+//	Bumped     ts.Timestamp
+//}
 
-type ForumPost struct {
-	Id int
-	Title string
-	Body forum.Body
-	Poster *User
-	Created timestamp
-	Backlinks []int
-	//Replies []ForumPost
-	//Refs []ForumPost
-}
+//type ForumPost struct {
+//	Thread    int
+//	Id        int
+//	Title     string
+//	Body      forum.Body
+//	Poster    *User
+//	Created   ts.Timestamp
+//	Backlinks []int
+//	//Replies []ForumPost
+//	//Refs []ForumPost
+//}
 
 type Board struct {
-	Name string
+	Name        string
 	Description string
-	Uri string
+	Uri         string
 }
 
 func GetCategories() ([]string, error) {
@@ -77,7 +81,7 @@ func GetBoards() (map[string][]Board, error) {
 
 	for rows.Next() {
 		var (
-			b Board
+			b   Board
 			cat string
 		)
 
@@ -103,7 +107,7 @@ func GetBoard(board string) (b Board, err error) {
 	return
 }
 
-func GetCatalog(board string) ([]Thread, error) {
+func GetCatalog(board string) ([]ForumThread, error) {
 	rows, err := DB.Query(`
 		SELECT rid, title, body, created, bumped, users.username, (
 			SELECT count(*)
@@ -125,19 +129,19 @@ func GetCatalog(board string) ([]Thread, error) {
 	}
 	defer rows.Close()
 
-	var threads []Thread
+	var threads []ForumThread
 
 	for rows.Next() {
-		var t Thread
+		var t ForumThread
 		var username sql.NullString
 		err = rows.Scan(
 			&t.Post.Id,
 			&t.Post.Title,
-			&t.Post.Body,
+			&t.Post.Body.Text,
 			&t.Post.Created,
 			&t.Bumped,
 			&username,
-			&t.Replies,
+			&t.ReplyCount,
 		)
 		if err != nil {
 			return nil, err
@@ -154,7 +158,7 @@ func GetCatalog(board string) ([]Thread, error) {
 	return threads, nil
 }
 
-func GetThread(board string, rid int) ([]ForumPost, error) {
+func GetThread(board string, rid int) (ForumThread, error) {
 	posts, err := func() ([]ForumPost, error) {
 		rows, err := DB.Query(`
 			SELECT fp.rid, fp.title, fp.body, fp.created, fp.poster, users.username, array_agg(re.rid)
@@ -184,17 +188,19 @@ func GetThread(board string, rid int) ([]ForumPost, error) {
 		}
 		defer rows.Close()
 
-		var fps []ForumPost
+		//var fps []ForumPost
+		var thread ForumThread
 
 		for rows.Next() {
 			var fp ForumPost
+			fp.Body.References = make(map[int]forum.Post)
 			var userid sql.NullInt64
 			var username sql.NullString
 			var backlinks string
 			if err = rows.Scan(
 				&fp.Id,
 				&fp.Title,
-				&fp.Body,
+				&fp.Body.Text,
 				&fp.Created,
 				&userid,
 				&username,
@@ -203,12 +209,12 @@ func GetThread(board string, rid int) ([]ForumPost, error) {
 				return nil, err
 			}
 
-			for _, val := range strings.Split(backlinks[1:len(backlinks)-1], ",") {
-				i, err := strconv.Atoi(val)
-				if err == nil {
-					fp.Backlinks = append(fp.Backlinks, i)
-				}
-			}
+			//for _, val := range strings.Split(backlinks[1:len(backlinks)-1], ",") {
+			//	i, err := strconv.Atoi(val)
+			//	if err == nil {
+			//		fp.Backlinks = append(fp.Backlinks, i)
+			//	}
+			//}
 
 			if userid.Valid {
 				fp.Poster = NewUser()
@@ -225,26 +231,33 @@ func GetThread(board string, rid int) ([]ForumPost, error) {
 		return nil, err
 	}
 
-	//replies, err := getReferences(board, rid)
-	//if err != nil {
-	//	return nil, err
-	//}
+	refs, err := getReferences(board, rid)
+	if err != nil {
+		return nil, err
+	}
 
-	//for k, v := range replies {
-	//	for i := range posts {
-	//		if posts[i].Id == k {
-	//			posts[i].Replies = append(posts[i].Replies, v...)
-	//			break
-	//		}
+	for k, v := range refs {
+		for i := range posts {
+			if posts[i].Id == k {
+				//posts[i].Replies = append(posts[i].Replies, v...)
+				for _, r := range v {
+					var fp = forum.Post{
+						Id:    r.Id,
+						Title: r.Title,
+						Body:  r.Body,
+					}
+					posts[i].Body.References[fp.Id] = fp
+				}
+				break
+			}
 
-	//		for _, r := range v {
-	//			if posts[i].Id == r.Id {
-	//				posts[i].Refs = append(posts[i].Refs, r)
-	//			}
-	//		}
-	//	}
-	//}
-
+			//for _, r := range v {
+			//	if posts[i].Id == r.Id {
+			//		posts[i].Refs = append(posts[i].Refs, r)
+			//	}
+			//}
+		}
+	}
 
 	return posts, nil
 }
@@ -280,12 +293,12 @@ func getReferences(board string, rid int) (map[int][]ForumPost, error) {
 
 	for rows.Next() {
 		var (
-			p int
-			r ForumPost
-			userID sql.NullInt64
+			p        int
+			r        ForumPost
+			userID   sql.NullInt64
 			username sql.NullString
 		)
-		err = rows.Scan(&p, &r.Id, &r.Title, &r.Body, &r.Created, &userID, &username)
+		err = rows.Scan(&p, &r.Id, &r.Title, &r.Body.Text, &r.Created, &userID, &username)
 		if err != nil {
 			return nil, err
 		}
@@ -298,7 +311,7 @@ func getReferences(board string, rid int) (map[int][]ForumPost, error) {
 
 		var (
 			rep []ForumPost
-			ok bool
+			ok  bool
 		)
 
 		if rep, ok = replies[p]; !ok {
@@ -336,8 +349,8 @@ func DeleteForumPost(board string, rid int) error {
 func NewThread(board, title, body string, user *User) (int, error) {
 	var (
 		threadID int
-		pid int
-		rid int
+		pid      int
+		rid      int
 	)
 
 	tx, err := DB.Begin()
@@ -397,7 +410,7 @@ func NewThread(board, title, body string, user *User) (int, error) {
 // TODO: files
 func ForumReply(replyID int, board, title, body string, user *User) (int, error) {
 	var (
-		rid int
+		rid      int
 		threadID int
 	)
 
@@ -429,12 +442,12 @@ func ForumReply(replyID int, board, title, body string, user *User) (int, error)
 	return replyID, err
 }
 
-func postTX(tx querier, thread int, board, title, body string, user *User) (int, error) {
+func postTX(tx querier.Q, thread int, board, title, body string, user *User) (int, error) {
 	var (
-		id int
-		top int
+		id     int
+		top    int
 		poster *int
-		err error
+		err    error
 	)
 
 	if user.QID(tx) != 0 {
@@ -471,9 +484,8 @@ func postTX(tx querier, thread int, board, title, body string, user *User) (int,
 		body,
 	).Scan(&id)
 
-
 	//References
-	bod := forum.Body(body)
+	bod := forum.Body{Text: body}
 
 	for _, ref := range bod.Mentions() {
 		_, err = tx.Exec(`

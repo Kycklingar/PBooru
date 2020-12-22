@@ -1,24 +1,24 @@
 package DataManager
 
 import (
-	"container/list"
-	"crypto/rand"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
-	mrand "math/rand"
 	"strconv"
-	"sync"
-	"time"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
+	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	WrongPassword = errors.New("Wrong Password")
 )
 
 func NewUser() *User {
 	var u User
-	u.Session = &Session{}
+	//u.Session = &Session{}
 	u.Messages = &messages{}
 	u.Messages.All = nil
 	u.Messages.Sent = nil
@@ -41,14 +41,123 @@ func CachedUser(u *User) *User {
 	return u
 }
 
+func Login(username, password string) (string, error) {
+	var (
+		hash, salt string
+		userID     int
+	)
+
+	err := DB.QueryRow(`
+		SELECT hash, salt, users.id
+		FROM passwords
+		JOIN users
+		ON user_id = users.id
+		WHERE username = $1
+		`,
+		username,
+	).Scan(&hash, &salt, &userID)
+	if err != nil {
+		return "", err
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password+salt)); err != nil {
+		return "", WrongPassword
+	}
+
+	return sessionNew(DB, userID)
+}
+
+func Logout(key string) error {
+	return sessionDestroy(DB, key)
+}
+
+func Sessioned(key string) *User {
+	var (
+		u   = NewUser()
+		err error
+	)
+
+	u.ID, err = sessionGet(DB, key)
+	if err != nil {
+		//log.Println(err)
+		return u
+	}
+
+	return CachedUser(u)
+}
+
+func Register(username, password string) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer commitOrDie(tx, &err)
+
+	err = register(tx, username, password, flag(CFG.StdUserFlag))
+
+	return err
+}
+
+func register(q querier.Q, username, password string, admFlag flag) error {
+	var (
+		id    int
+		salt  string = randomString(64)
+		bhash []byte
+		hash  string
+		err   error
+	)
+
+	bhash, err = bcrypt.GenerateFromPassword([]byte(password+salt), 0)
+	if err != nil {
+		return err
+	}
+
+	hash = string(bhash)
+
+	if err = q.QueryRow(`
+		SELECT id
+		FROM users
+		WHERE LOWER(username) = LOWER($1)
+		`,
+		username,
+	).Scan(&id); err != nil && err != sql.ErrNoRows {
+		return err
+	}
+
+	if id != 0 {
+		return errors.New("Username already exist")
+	}
+
+	if err = q.QueryRow(`
+		INSERT INTO users(username, datejoined, adminflag)
+		VALUES($1, CURRENT_TIMESTAMP, $2)
+		RETURNING id
+		`,
+		username,
+		admFlag,
+	).Scan(&id); err != nil {
+		return err
+	}
+
+	_, err = q.Exec(`
+		INSERT INTO passwords(user_id, hash, salt)
+		VALUES($1, $2, $3)
+		`,
+		id,
+		hash,
+		salt,
+	)
+
+	return err
+}
+
 type User struct {
 	ID           int
 	Name         string
 	passwordHash string
 	salt         string
-	Joined       time.Time
+	Joined       ts.Timestamp
 	flag         *flag
-	Session      *Session
 
 	Messages *messages
 
@@ -57,49 +166,7 @@ type User struct {
 	Pools []*Pool
 }
 
-type flag int
-
-const (
-	flagTagging = 1
-	flagUpload  = 2
-	flagComics  = 4
-	flagBanning = 8
-	flagDelete  = 16
-	flagTags    = 32
-	flagSpecial = 64
-
-	flagAll = 0xff
-)
-
-func (f flag) Tagging() bool {
-	return f&flagTagging != 0
-}
-
-func (f flag) Upload() bool {
-	return f&flagUpload != 0
-}
-
-func (f flag) Comics() bool {
-	return f&flagComics != 0
-}
-
-func (f flag) Banning() bool {
-	return f&flagBanning != 0
-}
-
-func (f flag) Delete() bool {
-	return f&flagDelete != 0
-}
-
-func (f flag) Tags() bool {
-	return f&flagTags != 0
-}
-
-func (f flag) Special() bool {
-	return f&flagSpecial != 0
-}
-
-func (u *User) QID(q querier) int {
+func (u *User) QID(q querier.Q) int {
 	if u.ID != 0 {
 		return u.ID
 	}
@@ -108,9 +175,6 @@ func (u *User) QID(q querier) int {
 		if err != nil {
 			log.Print(err)
 		}
-	}
-	if u.Session.userID != 0 {
-		u.ID = u.Session.userID
 	}
 
 	return u.ID
@@ -135,7 +199,7 @@ func (u *User) Title() string {
 	return title
 }
 
-func (u *User) tagEditCount(q querier) int {
+func (u *User) tagEditCount(q querier.Q) int {
 	if u.editCount != nil {
 		return *u.editCount
 	}
@@ -149,7 +213,7 @@ func (u *User) tagEditCount(q querier) int {
 	return *u.editCount
 }
 
-func (u *User) SetID(q querier, id int) error {
+func (u *User) SetID(q querier.Q, id int) error {
 	if u.ID > 0 {
 		return nil
 	}
@@ -161,7 +225,7 @@ func (u *User) SetID(q querier, id int) error {
 	return nil
 }
 
-func (u *User) RecentPosts(q querier, limit int) []*Post {
+func (u *User) RecentPosts(q querier.Q, limit int) []*Post {
 	rows, err := q.Query("SELECT id FROM posts WHERE uploader = $1 ORDER BY id DESC LIMIT $2", u.QID(q), limit)
 	if err != nil {
 		log.Println(err)
@@ -189,7 +253,7 @@ func (u *User) RecentPosts(q querier, limit int) []*Post {
 	return posts
 }
 
-func (u *User) QName(q querier) string {
+func (u *User) QName(q querier.Q) string {
 	if u.Name != "" {
 		return u.Name
 	}
@@ -214,7 +278,7 @@ func (u *User) Flag() flag {
 	return flag(0)
 }
 
-func (u *User) SetFlag(q querier, f int) error {
+func (u *User) SetFlag(q querier.Q, f int) error {
 	if u.ID <= 0 {
 		return errors.New("No user to set flag on")
 	}
@@ -234,7 +298,7 @@ func (u *User) SetFlag(q querier, f int) error {
 	return nil
 }
 
-func (u *User) QFlag(q querier) flag {
+func (u *User) QFlag(q querier.Q) flag {
 	if u.flag != nil {
 		return *u.flag
 	}
@@ -251,7 +315,7 @@ func (u *User) QFlag(q querier) flag {
 	return *u.flag
 }
 
-func (u *User) Voted(q querier, p *Post) bool {
+func (u *User) Voted(q querier.Q, p *Post) bool {
 	if p.ID <= 0 {
 		return false
 	}
@@ -269,107 +333,7 @@ func (u *User) Voted(q querier, p *Post) bool {
 	return v > 0
 }
 
-func (u *User) Salt(q querier) string {
-	return u.salt
-}
-
-func (u *User) PassHash(q querier) string {
-	if u.passwordHash != "" {
-		return u.passwordHash
-	}
-
-	if u.QID(q) == 0 {
-		return ""
-	}
-
-	err := q.QueryRow("SELECT hash, salt FROM passwords WHERE user_id=$1", u.QID(q)).Scan(&u.passwordHash, &u.salt)
-	if err != nil {
-		log.Print(err)
-	}
-
-	return u.passwordHash
-}
-
-func (u *User) Login(q querier, name, password string) error {
-	u.Name = name
-
-	if u.PassHash(q) == "" {
-		return errors.New("err")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(u.PassHash(q)), []byte(password+u.Salt(q))); err != nil {
-		return err
-	}
-	err := u.Session.create(u)
-	//err := sess.create(u)
-
-	return err
-}
-
-func (u *User) Logout(q querier) error {
-	u.Session.destroy(q)
-	return nil
-}
-
-func (u User) Register(name, password string) error {
-	u.Name = name
-	var err error
-	u.salt, err = createSalt()
-	if err != nil {
-		return err
-	}
-
-	u.flag = new(flag) //(CFG.StdUserFlag))
-	*u.flag = flag(CFG.StdUserFlag)
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
-	if err != nil {
-		return err
-	}
-	u.passwordHash = string(hash)
-
-	tx, err := DB.Begin()
-	if err != nil {
-		log.Print(err)
-		return err
-	}
-	var id int
-	err = tx.QueryRow("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", u.Name).Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
-		log.Print(err)
-		return txError(tx, err)
-	}
-
-	if id != 0 {
-		// TODO: proper error
-		return txError(tx, errors.New("Username already exist"))
-	}
-
-	err = tx.QueryRow("INSERT INTO users(username, datejoined, adminflag) VALUES($1, CURRENT_TIMESTAMP, $2) RETURNING id", u.Name, u.flag).Scan(&u.ID)
-	if err != nil {
-		log.Print(err)
-		return txError(tx, err)
-	}
-
-	_, err = tx.Exec(`
-		INSERT INTO passwords(user_id, hash, salt)
-		VALUES($1, $2, $3)
-		`,
-		u.ID,
-		u.passwordHash,
-		u.salt,
-	)
-	if err != nil {
-		log.Println(err)
-		return txError(tx, err)
-	}
-
-	err = tx.Commit()
-
-	return err
-}
-
-func (u *User) QPools(q querier) []*Pool {
+func (u *User) QPools(q querier.Q) []*Pool {
 	if u.Pools != nil {
 		return u.Pools
 	}
@@ -397,7 +361,7 @@ func (u *User) QPools(q querier) []*Pool {
 	return u.Pools
 }
 
-func (u *User) RecentVotes(q querier, limit int) (posts []*Post) {
+func (u *User) RecentVotes(q querier.Q, limit int) (posts []*Post) {
 	rows, err := q.Query("SELECT post_id FROM post_score_mapping WHERE user_id = $1 ORDER BY id DESC LIMIT $2", u.QID(DB), limit)
 	if err != nil {
 		log.Println(err)
@@ -420,36 +384,8 @@ func (u *User) RecentVotes(q querier, limit int) (posts []*Post) {
 	return
 }
 
-//func (u *User) QPoolsLimit(q querier, limit, offset int) []*Pool {
-//	rows, err := q.Query("SELECT id, title, description FROM user_pools WHERE user_id = $1 LIMIT $2 OFFSET $3", u.QID(q), limit, offset*limit)
-//	if err != nil {
-//		log.Println(err)
-//		return nil
-//	}
-//	defer rows.Close()
-//
-//	var pools []*Pool
-//	for rows.Next() {
-//		var pool Pool
-//		pool.User = u
-//		err = rows.Scan(&pool.ID, &pool.Title, &pool.Description)
-//		if err != nil {
-//			log.Println(err)
-//			return nil
-//		}
-//		pools = append(pools, &pool)
-//	}
-//
-//	if rows.Err() != nil {
-//		log.Println(rows.Err())
-//		return nil
-//	}
-//
-//	return pools
-//}
-
-func (u *User) Sessions(q querier) []*Session {
-	rows, err := q.Query("SELECT user_id, sesskey, to_char(expire, 'YYYY-MM-DD HH24:MI:SS') FROM sessions WHERE user_id=$1", u.QID(q))
+func (u *User) Sessions(q querier.Q) []*Session {
+	rows, err := q.Query("SELECT sesskey, expire FROM sessions WHERE user_id=$1", u.QID(q))
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -458,16 +394,10 @@ func (u *User) Sessions(q querier) []*Session {
 	var sessions []*Session
 
 	for rows.Next() {
-		s := &Session{}
-		var t string
-		if err = rows.Scan(&s.userID, &s.key, &t); err != nil {
+		s := &Session{User: u.ID}
+		if err = rows.Scan(&s.Key, &s.Accessed); err != nil {
 			log.Println(err)
 			return nil
-		}
-
-		s.expire, err = time.Parse(sqlite3Timestamp, t)
-		if err != nil {
-			log.Println(err)
 		}
 
 		sessions = append(sessions, s)
@@ -476,232 +406,3 @@ func (u *User) Sessions(q querier) []*Session {
 	return sessions
 }
 
-type Session struct {
-	userID int
-	key    string
-	expire time.Time
-}
-
-func (s *Session) Expire() time.Time {
-	return s.expire
-}
-
-func (s *Session) UserID(q querier) int {
-	if s.userID != 0 {
-		return s.userID
-	}
-
-	if s.key == "" {
-		return 0
-	}
-
-	err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=$1", s.key).Scan(&s.userID)
-	if err != nil {
-		log.Print(err)
-	}
-	return s.userID
-}
-
-func (s *Session) Key(q querier) string {
-	if s.key != "" {
-		return s.key
-	}
-
-	if s.UserID(q) == 0 {
-		return ""
-	}
-
-	return s.key
-}
-
-func (s *Session) create(user *User) error {
-	s.key = sessionCreate(user.QID(DB))
-	// s.key = randomString(64)
-	// sessions[s.key] = user.ID()
-
-	// _, err := q.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, DATETIME(CURRENT_TIMESTAMP, '+30 days'))", user.ID(), s.key)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	return nil
-}
-
-func (s *Session) Get(q querier, key string) {
-	// s.userID = sessions[key]
-	s.userID = sessionRead(key)
-	if s.userID == 0 {
-		err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=$1", key).Scan(&s.userID)
-		if err != nil {
-			return
-		}
-		sessionCreateNew(key, s.userID)
-		// exp, err := time.Parse("2006-01-02 15:04:05", expire)
-		// if err != nil {
-		// 	log.Println(err)
-		// 	s.key = ""
-		// 	return
-		// }
-		// if exp.UnixNano() < time.Now().UnixNano() {
-		// 	// Session has expired
-		// 	q.Exec("DELETE FROM sessions WHERE sesskey=$1", key)
-		// 	s.key = ""
-		// 	return
-		// }
-		// sessions[key] = s.userID
-	}
-	s.key = key
-}
-
-func (s *Session) destroy(q querier) {
-	sessionDestroy(s.Key(q))
-	if s.Key(q) != "" {
-		q.Exec("DELETE FROM sessions WHERE sesskey=$1", s.Key(q))
-	}
-}
-
-func createSalt() (string, error) {
-	b := make([]byte, 64)
-
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%x", b), nil
-}
-
-var alp = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-func randomString(n int) string {
-	var str string
-	for i := 0; i < n; i++ {
-		str += string(alp[mrand.Intn(len(alp))])
-	}
-	return str
-}
-
-var (
-	AdmFUser  = 0
-	AdmFAdmin = 1
-)
-
-func UpgradeUserToAdmin(userID int) error {
-	_, err := DB.Exec("UPDATE users SET adminflag=1 WHERE id=$1", userID)
-	return err
-}
-
-func GetUsernameFromID(userID int) string {
-	var username string
-	err := DB.QueryRow("SELECT username FROM users WHERE id=$1", userID).Scan(&username)
-	if err != nil {
-		return "Anonymous"
-	}
-	return username
-}
-
-// TODO: In memory sessions have a lifespan of 30min, when it expires put/update the session in the database for 30 days
-var sessions = make(map[string]int)
-
-var sesmap = make(map[string]*list.Element)
-var seslist = list.New()
-var lock sync.Mutex
-
-type sessions2 struct {
-	sessions map[string]int
-	sesmap   map[string]*list.Element
-	seslist  *list.List
-	l        sync.Mutex
-}
-
-func newSessions() *sessions2 {
-	var s sessions2
-	s.sessions = make(map[string]int)
-	s.sesmap = make(map[string]*list.Element)
-	seslist = list.New()
-	return &s
-}
-
-type sess struct {
-	lastAccess time.Time
-	key        string
-	userID     int
-}
-
-func sessionRead(key string) int {
-	if e, ok := sesmap[key]; ok {
-		sessionUpdate(key)
-		return e.Value.(*sess).userID
-	}
-	return 0
-}
-
-func sessionCreateNew(key string, userID int) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	s := &sess{time.Now(), key, userID}
-
-	e := seslist.PushBack(s)
-	sesmap[key] = e
-}
-
-func sessionUpdate(key string) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if e, ok := sesmap[key]; ok {
-		e.Value.(*sess).lastAccess = time.Now()
-		seslist.MoveToFront(e)
-	}
-}
-
-func sessionCreate(userID int) string {
-	lock.Lock()
-	defer lock.Unlock()
-
-	s := &sess{time.Now(), randomString(64), userID}
-	e := seslist.PushBack(s)
-	sesmap[s.key] = e
-
-	_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY')", userID, s.key)
-	if err != nil {
-		log.Println(err)
-	}
-	return s.key
-}
-
-func sessionDestroy(key string) {
-	if e, ok := sesmap[key]; ok {
-		delete(sesmap, key)
-		seslist.Remove(e)
-	}
-}
-
-func sessionGC() {
-	lock.Lock()
-	defer lock.Unlock()
-	for {
-		e := seslist.Back()
-		if e == nil {
-			break
-		}
-
-		if (e.Value.(*sess).lastAccess.Add(time.Hour).Unix()) < time.Now().Unix() {
-			seslist.Remove(e)
-			delete(sesmap, e.Value.(*sess).key)
-			_, err := DB.Exec("INSERT INTO sessions(user_id, sesskey, expire) VALUES($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 DAY') ON CONFLICT (sesskey) DO UPDATE SET expire = CURRENT_TIMESTAMP + INTERVAL '30 DAY'", e.Value.(*sess).userID, e.Value.(*sess).key)
-			if err != nil {
-				log.Print(err)
-			}
-		} else {
-			break
-		}
-	}
-	_, err := DB.Exec("DELETE FROM sessions WHERE expire < CURRENT_TIMESTAMP")
-	if err != nil {
-		log.Println(err)
-	}
-
-	time.AfterFunc(time.Minute*15, sessionGC)
-}

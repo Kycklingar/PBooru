@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Nr90/imgsim"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 type AppleTree struct {
@@ -249,7 +250,7 @@ func GeneratePears() error {
 	return err
 }
 
-func generateAppleTree(tx querier, ph phs) error {
+func generateAppleTree(tx querier.Q, ph phs) error {
 	query := func() ([]phs, error) {
 		rows, err := tx.Query(`
 				SELECT
@@ -358,7 +359,7 @@ func (a phs) distance(b phs) int {
 	return imgsim.Distance(a.hash(), b.hash())
 }
 
-func (a phs) insert(tx querier) error {
+func (a phs) insert(tx querier.Q) error {
 	_, err := tx.Exec(`
 		INSERT INTO phash (
 			post_id, h1, h2, h3, h4

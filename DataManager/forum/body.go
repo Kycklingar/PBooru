@@ -1,9 +1,10 @@
 package forum
 
 import (
-	"regexp"
+	"fmt"
 	"html"
 	"log"
+	"regexp"
 	"strconv"
 )
 
@@ -12,6 +13,7 @@ const (
 	regGreenText = "(?m)(?:^&gt;[^&gt;]|^&gt;&gt;(?:&gt;)+).*"
 	regMention   = "(@([0-9]+))([^a-zA-Z]|$)"
 	regNewLine   = "\\n"
+	regCodeBlock = "\\[\\[\\[\\n(.+)\\n\\]\\]\\]"
 )
 
 var (
@@ -19,6 +21,7 @@ var (
 	greenText *regexp.Regexp
 	mention   *regexp.Regexp
 	newLine   *regexp.Regexp
+	codeBlock *regexp.Regexp
 )
 
 func init() {
@@ -43,14 +46,21 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	//codeBlock, err = regex.Compile(regCodeBlock)
 }
 
-type Body string
+type Body struct {
+	Text       string
+	Backlinks  []Post
+	References map[int]Post
+}
 
 func (b Body) Compile() string {
-	escaped := html.EscapeString(string(b))
+	escaped := html.EscapeString(b.Text)
 
-	out := reference.ReplaceAllString(escaped, "<a class=\"ref\" href=\"#$2\">$1</a>$3")
+	//out := reference.ReplaceAllString(escaped, "<a class=\"ref\" href=\"#$2\">$1</a>$3")
+	out := reference.ReplaceAllStringFunc(escaped, b.refHtml)
 	out = greenText.ReplaceAllString(out, "<span class=\"greentext\">$0</span>")
 	out = mention.ReplaceAllString(out, "<a class=\"mention\">$1</a>$3")
 	out = newLine.ReplaceAllString(out, "<br>")
@@ -60,7 +70,7 @@ func (b Body) Compile() string {
 
 func (b Body) Mentions() []int {
 	var r []int
-	bod := html.EscapeString(string(b))
+	bod := html.EscapeString(b.Text)
 	refs := reference.FindAllStringSubmatch(bod, -1)
 	for i := range refs {
 		rid, err := strconv.Atoi(refs[i][2])
@@ -73,4 +83,29 @@ func (b Body) Mentions() []int {
 	//mentions := mention.FindAllStringSubmatch(b)
 
 	return r
+}
+
+func (b Body) refHtml(in string) string {
+	ref := reference.FindAllStringSubmatch(in, -1)
+	id, _ := strconv.Atoi(ref[0][2])
+	rep, ok := b.References[id]
+
+	var a string
+	if ok {
+		a = fmt.Sprintf(`<span class="ref"><a href="#%s">%s</a><span class="thread-post"><span class="title">%s</span><br><span>%s</span></span></span>%s`,
+			ref[0][2],
+			ref[0][1],
+			rep.Title,
+			rep.Body.Compile(),
+			ref[0][3],
+		)
+	} else {
+		a = fmt.Sprintf(`<span class="ref"><span class="dead">%s</span></span>`,
+			ref[0][1],
+		)
+	}
+
+	//a := fmt.Sprintf("<span class=\"ref\"><a href=\"#%s\">%s</a>%s%s</span>", ref[0][2], ref[0][1], inlinePost, ref[0][3])
+	fmt.Println(a)
+	return a
 }

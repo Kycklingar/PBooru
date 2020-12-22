@@ -18,6 +18,7 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
@@ -150,7 +151,7 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	}
 }
 
-func (p *Post) QMul(q querier, fields ...sqlbinder.Field) error {
+func (p *Post) QMul(q querier.Q, fields ...sqlbinder.Field) error {
 	selector := sqlbinder.BindFieldAddresses(p, fields...)
 
 	query := fmt.Sprintf(`
@@ -202,7 +203,7 @@ func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	}
 }
 
-func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
+func (p *Post) QThumbs(q querier.Q, fields ...sqlbinder.Field) error {
 	var ok bool
 	for _, field := range fields {
 		if field == PFThumbnails {
@@ -246,7 +247,7 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	return nil
 }
 
-//func (p *Post) QID(q querier) int {
+//func (p *Post) QID(q querier.Q) int {
 //	if p.ID != 0 {
 //		return p.ID
 //	}
@@ -264,7 +265,7 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 //	return p.ID
 //}
 
-func (p *Post) SetID(q querier, id int) error {
+func (p *Post) SetID(q querier.Q, id int) error {
 	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
 }
 
@@ -301,7 +302,7 @@ func (p *Post) ClosestThumbnail(size int) (ret string) {
 	return
 }
 
-func (p *Post) Vote(q querier, u *User) error {
+func (p *Post) Vote(q querier.Q, u *User) error {
 	if p.ID <= 0 {
 		return errors.New("no post-id")
 	}
@@ -320,7 +321,7 @@ func (p *Post) Vote(q querier, u *User) error {
 	return nil
 }
 
-func (p *Post) QTagHistoryCount(q querier) (int, error) {
+func (p *Post) QTagHistoryCount(q querier.Q) (int, error) {
 	if p.editCount >= 0 {
 		return p.editCount, nil
 	}
@@ -334,7 +335,7 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 	return p.editCount, err
 }
 
-func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
+func (p *Post) TagHistory(q querier.Q, limit, offset int) ([]*TagHistory, error) {
 	if p.ID <= 0 {
 		return nil, errors.New("no post id specified")
 	}
@@ -387,7 +388,7 @@ func (p *Post) Description() string {
 	return ""
 }
 
-func (p *Post) QDescription(q querier) string {
+func (p *Post) QDescription(q querier.Q) string {
 	if p.description != nil {
 		return *p.description
 	}
@@ -599,7 +600,7 @@ func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User
 	return postID, err
 }
 
-func (p *Post) Remove(q querier) error {
+func (p *Post) Remove(q querier.Q) error {
 	if p.ID == 0 {
 		return errors.New("post:delete: invalid post")
 	}
@@ -624,7 +625,7 @@ func (p *Post) Remove(q querier) error {
 	return nil
 }
 
-func (p *Post) Reinstate(q querier) error {
+func (p *Post) Reinstate(q querier.Q) error {
 	if p.ID == 0 {
 		return errors.New("post:undelete: invalid post id")
 	}
@@ -679,7 +680,7 @@ func (p *Post) Delete() error {
 	return err
 }
 
-func (p *Post) del(q querier) error {
+func (p *Post) del(q querier.Q) error {
 
 	// *Delete* from db
 	// Want to keep a record of it
@@ -706,7 +707,7 @@ func (p *Post) del(q querier) error {
 	return err
 }
 
-func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
+func (p *Post) addTags(tx querier.Q, currentTags, tags []*Tag) ([]*Tag, error) {
 	// Collect only new tags
 	var newTags []*Tag
 	for _, tag := range tags {
@@ -738,7 +739,7 @@ func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
 	return newTags, nil
 }
 
-func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
+func (p *Post) removeTags(tx querier.Q, currentTags, tags []*Tag) ([]*Tag, error) {
 	in := func(t *Tag, tags []*Tag) bool {
 		for _, tag := range tags {
 			if tag.ID == t.ID {
@@ -805,7 +806,7 @@ func (p *Post) RemoveTags(user *User, tagStr string) error {
 	return err
 }
 
-func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
+func (p *Post) editTagsRemove(tx querier.Q, user *User, tagStr string) error {
 	var tags TagCollector
 	err := tags.Parse(tagStr)
 	if err != nil {
@@ -849,7 +850,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 	return nil
 }
 
-func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
+func (p *Post) editTagsAdd(tx querier.Q, user *User, tagStr string) error {
 	var tags TagCollector
 	err := tags.Parse(tagStr)
 	if err != nil {
@@ -900,7 +901,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 	return nil
 }
 
-func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
+func (p *Post) EditTagsQ(q querier.Q, user *User, tagStr string) error {
 	var tags TagCollector
 	err := tags.Parse(tagStr)
 	if err != nil {
@@ -973,7 +974,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 	return err
 }
 
-func (p *Post) logTagEdit(tx querier, user *User, newTags, removedTags []*Tag) error {
+func (p *Post) logTagEdit(tx querier.Q, user *User, newTags, removedTags []*Tag) error {
 	var historyID int
 
 	err := tx.QueryRow(`
@@ -1041,7 +1042,7 @@ func (p *Post) EditTags(user *User, tagStr string) error {
 	return tx.Commit()
 }
 
-func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
+func (p *Post) FindSimilar(q querier.Q, dist int) ([]*Post, error) {
 	if p.ID == 0 {
 		return nil, errors.New("id = 0")
 	}
@@ -1095,7 +1096,7 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 	return posts, nil
 }
 
-func (p *Post) Chapters(q querier) []*Chapter {
+func (p *Post) Chapters(q querier.Q) []*Chapter {
 	if p.ID == 0 {
 		return nil
 	}
@@ -1141,7 +1142,7 @@ func (p *Post) Chapters(q querier) []*Chapter {
 	return chapters
 }
 
-func (p *Post) Comics(q querier) []*Comic {
+func (p *Post) Comics(q querier.Q) []*Comic {
 	if p.ID == 0 {
 		return nil
 	}
@@ -1163,7 +1164,7 @@ func (p *Post) Comics(q querier) []*Comic {
 	return comics
 }
 
-func (p *Post) Duplicates(q querier) (Dupe, error) {
+func (p *Post) Duplicates(q querier.Q) (Dupe, error) {
 	return getDupeFromPost(q, p)
 }
 
@@ -1173,7 +1174,7 @@ func (p *Post) NewComment() *PostComment {
 	return pc
 }
 
-func (p *Post) Comments(q querier) []*PostComment {
+func (p *Post) Comments(q querier.Q) []*PostComment {
 	if p.ID <= 0 {
 		return nil
 	}
@@ -1617,14 +1618,14 @@ func GetTotalPosts() int {
 	return totalPosts
 }
 
-func resetCacheTag(q querier, tagID int) {
+func resetCacheTag(q querier.Q, tagID int) {
 	C.Cache.Purge("PC", strconv.Itoa(tagID))
 	C.Cache.Purge("TAG", strconv.Itoa(tagID))
 	C.Cache.Purge("PC", "0")
 	ccPurge(q, tagID)
 }
 
-func ccPurge(q querier, tagID int) {
+func ccPurge(q querier.Q, tagID int) {
 	_, err := q.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
 	if err != nil {
 		log.Println(err)

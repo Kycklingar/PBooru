@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 const (
@@ -220,7 +221,7 @@ type Comic struct {
 	TagSummary []*Tag
 }
 
-func (c *Comic) QID(q querier) int {
+func (c *Comic) QID(q querier.Q) int {
 	if c.ID != 0 {
 		return c.ID
 	}
@@ -234,7 +235,7 @@ func (c *Comic) QID(q querier) int {
 	return c.ID
 }
 
-func (c *Comic) QTitle(q querier) string {
+func (c *Comic) QTitle(q querier.Q) string {
 	if c.Title != "" {
 		return c.Title
 	}
@@ -250,7 +251,7 @@ func (c *Comic) QTitle(q querier) string {
 	return c.Title
 }
 
-func (c *Comic) Chapter(q querier, order int) *Chapter {
+func (c *Comic) Chapter(q querier.Q, order int) *Chapter {
 	ch := newChapter()
 	ch.Comic = c
 	ch.Order = order
@@ -262,7 +263,7 @@ func (c *Comic) Chapter(q querier, order int) *Chapter {
 	return ch
 }
 
-func (c *Comic) QChapters(q querier) []*Chapter {
+func (c *Comic) QChapters(q querier.Q) []*Chapter {
 	if len(c.Chapters) > 0 {
 		return c.Chapters
 	}
@@ -300,7 +301,7 @@ func (c *Comic) ChaptersLimit(limit int) []*Chapter {
 	return c.QChapters(DB)[:max(limit, c.QChapterCount(DB))]
 }
 
-func (c *Comic) QPageCount(q querier) int {
+func (c *Comic) QPageCount(q querier.Q) int {
 	if c.PageCount != 0 {
 		return c.PageCount
 	}
@@ -316,7 +317,7 @@ func (c *Comic) QPageCount(q querier) int {
 	return c.PageCount
 }
 
-func (c *Comic) QChapterCount(q querier) int {
+func (c *Comic) QChapterCount(q querier.Q) int {
 	if c.ChapterCount != 0 {
 		return c.ChapterCount
 	}
@@ -332,7 +333,7 @@ func (c *Comic) QChapterCount(q querier) int {
 	return c.ChapterCount
 }
 
-func (c *Comic) QTagSummary(q querier) error {
+func (c *Comic) QTagSummary(q querier.Q) error {
 	if len(c.TagSummary) > 0 {
 		return nil
 	}

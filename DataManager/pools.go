@@ -3,6 +3,8 @@ package DataManager
 import (
 	"errors"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 type Pool struct {
@@ -26,7 +28,7 @@ type PoolMapping struct {
 	Position int
 }
 
-func (p *Pool) QTitle(q querier) string {
+func (p *Pool) QTitle(q querier.Q) string {
 	if len(p.Title) > 0 {
 		return p.Title
 	}
@@ -44,7 +46,7 @@ func (p *Pool) QTitle(q querier) string {
 	return p.Title
 }
 
-func (p *Pool) QUser(q querier) *User {
+func (p *Pool) QUser(q querier.Q) *User {
 	if p.User.QID(q) != 0 {
 		return p.User
 	}
@@ -61,7 +63,7 @@ func (p *Pool) QUser(q querier) *User {
 	return p.User
 }
 
-func (p *Pool) QDescription(q querier) string {
+func (p *Pool) QDescription(q querier.Q) string {
 	if len(p.Description) > 0 {
 		return p.Description
 	}
@@ -79,7 +81,7 @@ func (p *Pool) QDescription(q querier) string {
 	return p.Description
 }
 
-func (p *Pool) QPosts(q querier) error {
+func (p *Pool) QPosts(q querier.Q) error {
 	if len(p.Posts) > 0 {
 		return nil
 	}
@@ -109,7 +111,7 @@ func (p *Pool) PostsLimit(limit int) []PoolMapping {
 	return p.Posts[:Smal(limit, len(p.Posts))]
 }
 
-func (p *Pool) Save(q querier) error {
+func (p *Pool) Save(q querier.Q) error {
 	if len(p.Title) <= 0 {
 		return errors.New("Title cannot be empty")
 	}

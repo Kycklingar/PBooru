@@ -85,6 +85,19 @@
 	word-break: break-word;
 }
 
+.thread-post .ref .thread-post
+{
+	position:absolute;
+	pointer-events: none;
+	display: none;
+	background-color: #444;
+}
+
+.thread-post .ref:hover .thread-post
+{
+	display: inherit;
+}
+
 .thread-post .backlink
 {
 	font-size: 0.8em;
@@ -109,3 +122,35 @@
 {
 	color: #67E;
 }
+
+#beta-spinner
+{
+	position:relative;
+	font-size:2em;
+	font-family: courier new;
+	width:min-content;
+	animation-name: beta;
+	animation-duration: 200s;
+	animation-iteration-count: infinite;
+
+}
+
+@keyframes beta
+{
+	0% {transform:rotate(0deg);}
+	4.99% {transform:rotate(0deg);}
+	5% {transform:rotate(2deg);}
+	14.99% {transform:rotate(2deg);}
+	15% {transform:rotate(1deg);}
+	33.99% {transform:rotate(1deg);}
+	34% {transform:rotate(-7deg);}
+	59.99% {transform:rotate(-7deg);}
+	60% {transform:rotate(-1deg);}
+	68.99% {transform:rotate(-1deg);}
+	69% {transform:rotate(6deg);}
+	83.99% {transform:rotate(6deg);}
+	84% {transform:rotate(1deg);}
+	100% {transform:rotate(1deg);}
+
+}
+

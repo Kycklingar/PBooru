@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/image"
+	"github.com/kycklingar/PBooru/DataManager/querier"
 )
 
 func GenerateFileSizes() error {
@@ -24,7 +25,7 @@ func GenerateFileSizes() error {
 		return err
 	}
 
-	query := func(q querier) ([]p, error) {
+	query := func(q querier.Q) ([]p, error) {
 		limit := 500
 		rows, err := q.Query("SELECT id, multihash FROM posts WHERE file_size = 0 AND deleted IS FALSE LIMIT $1", limit)
 		if err != nil {

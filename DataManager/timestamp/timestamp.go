@@ -1,4 +1,4 @@
-package DataManager
+package timestamp
 
 import (
 	"fmt"
@@ -11,28 +11,28 @@ const (
 )
 
 const (
-	day = time.Hour * 24
-	week = day * 7
+	day   = time.Hour * 24
+	week  = day * 7
 	month = week * 4
-	year = month * 12
+	year  = month * 12
 )
 
-type timestamp struct {
+type Timestamp struct {
 	time *time.Time
 }
 
-func (t timestamp) Time() *time.Time {
+func (t Timestamp) Time() *time.Time {
 	return t.time
 }
 
-func (t timestamp) String() string {
+func (t Timestamp) String() string {
 	if t.time != nil {
 		return t.time.Format(displayTimestamp)
 	}
 	return ""
 }
 
-func (t *timestamp) Scan(data interface{}) error {
+func (t *Timestamp) Scan(data interface{}) error {
 	var err error
 	switch v := data.(type) {
 	case nil:
@@ -46,7 +46,7 @@ func (t *timestamp) Scan(data interface{}) error {
 	return err
 }
 
-func (t *timestamp) Elapsed() string {
+func (t *Timestamp) Elapsed() string {
 	var elapsed string
 
 	e := time.Since(*t.time)
@@ -57,7 +57,7 @@ func (t *timestamp) Elapsed() string {
 	}
 
 	str := func(un u, e time.Duration) string {
-		if e - un.d  < un.d {
+		if e-un.d < un.d {
 			return un.s
 		}
 		return un.s + "s"
@@ -90,7 +90,7 @@ func (t *timestamp) Elapsed() string {
 
 	unit++
 	if unit < len(units) {
-		mod := e%units[unit-1].d/units[unit].d
+		mod := e % units[unit-1].d / units[unit].d
 		if mod > 0 {
 			elapsed += fmt.Sprintf(
 				" %d %s",
@@ -102,7 +102,6 @@ func (t *timestamp) Elapsed() string {
 			)
 		}
 	}
-
 
 	return elapsed + " ago"
 }
