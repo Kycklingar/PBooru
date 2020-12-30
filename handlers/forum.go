@@ -8,14 +8,14 @@ import (
 )
 
 type catalog struct {
-	Threads []DM.Thread
+	Threads []DM.ForumThread
 	Board DM.Board
 }
 
 type thread struct {
+	User *DM.User
 	Board DM.Board
-	Thread int
-	Replies []DM.ForumPost
+	Thread *DM.ForumThread
 }
 
 func boardHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,27 +92,33 @@ func catalogHandler(board DM.Board, w http.ResponseWriter, r *http.Request) {
 func threadHandler(board DM.Board, w http.ResponseWriter, r *http.Request) {
 	var (
 		th = thread{Board:board}
+		threadID int
 		err error
 	)
 
 	uri := uriSplitter(r)
 
-	th.Thread, err = uri.getIntAtIndex(3)
+	threadID, err = uri.getIntAtIndex(3)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	th.Replies, err = DM.GetThread(board.Uri, th.Thread)
+	th.User, _ = getUser(w, r)
+	th.User.QFlag(DM.DB)
+
+	th.Thread, err = DM.GetThread(board.Uri, threadID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if len(th.Replies) <= 0 {
-		notFoundHandler(w, r)
-		return
-	}
+	th.Thread.CompileBodies()
+
+	//if len(th.Replies) <= 0 {
+	//	notFoundHandler(w, r)
+	//	return
+	//}
 
 	renderTemplate(w, "thread", th)
 }

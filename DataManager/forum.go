@@ -2,13 +2,9 @@ package DataManager
 
 import (
 	"database/sql"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/kycklingar/PBooru/DataManager/forum"
 	"github.com/kycklingar/PBooru/DataManager/querier"
-	ts "github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 const bumpLimit = 300
@@ -132,13 +128,16 @@ func GetCatalog(board string) ([]ForumThread, error) {
 	var threads []ForumThread
 
 	for rows.Next() {
-		var t ForumThread
-		var username sql.NullString
+		var (
+			t        ForumThread
+			username sql.NullString
+		)
+
 		err = rows.Scan(
-			&t.Post.Id,
-			&t.Post.Title,
-			&t.Post.Body.Text,
-			&t.Post.Created,
+			&t.Head.Id,
+			&t.Head.Title,
+			&t.Head.Body,
+			&t.Head.Created,
 			&t.Bumped,
 			&username,
 			&t.ReplyCount,
@@ -148,183 +147,14 @@ func GetCatalog(board string) ([]ForumThread, error) {
 		}
 
 		if username.Valid {
-			t.Post.Poster = NewUser()
-			t.Post.Poster.Name = username.String
+			t.Head.Poster = NewUser()
+			t.Head.Poster.Name = username.String
 		}
 
 		threads = append(threads, t)
 	}
 
 	return threads, nil
-}
-
-func GetThread(board string, rid int) (ForumThread, error) {
-	posts, err := func() ([]ForumPost, error) {
-		rows, err := DB.Query(`
-			SELECT fp.rid, fp.title, fp.body, fp.created, fp.poster, users.username, array_agg(re.rid)
-			FROM forum_post fp
-			LEFT JOIN forum_replies r
-			ON r.ref = fp.id
-			LEFT JOIN forum_post re
-			ON r.post_id = re.id
-			LEFT JOIN users
-			ON fp.poster = users.id
-			WHERE fp.thread_id = (
-				SELECT thread_id
-				FROM forum_post p
-				JOIN forum_thread t
-				ON t.id = p.thread_id
-				WHERE p.rid = $1
-				AND t.board = $2
-			)
-			GROUP BY fp.rid, fp.title, fp.body, fp.created, fp.poster, users.username
-			ORDER BY rid ASC
-			`,
-			rid,
-			board,
-		)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-
-		//var fps []ForumPost
-		var thread ForumThread
-
-		for rows.Next() {
-			var fp ForumPost
-			fp.Body.References = make(map[int]forum.Post)
-			var userid sql.NullInt64
-			var username sql.NullString
-			var backlinks string
-			if err = rows.Scan(
-				&fp.Id,
-				&fp.Title,
-				&fp.Body.Text,
-				&fp.Created,
-				&userid,
-				&username,
-				&backlinks,
-			); err != nil {
-				return nil, err
-			}
-
-			//for _, val := range strings.Split(backlinks[1:len(backlinks)-1], ",") {
-			//	i, err := strconv.Atoi(val)
-			//	if err == nil {
-			//		fp.Backlinks = append(fp.Backlinks, i)
-			//	}
-			//}
-
-			if userid.Valid {
-				fp.Poster = NewUser()
-				fp.Poster.ID = int(userid.Int64)
-				fp.Poster.Name = username.String
-			}
-
-			fps = append(fps, fp)
-		}
-
-		return fps, nil
-	}()
-	if err != nil {
-		return nil, err
-	}
-
-	refs, err := getReferences(board, rid)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range refs {
-		for i := range posts {
-			if posts[i].Id == k {
-				//posts[i].Replies = append(posts[i].Replies, v...)
-				for _, r := range v {
-					var fp = forum.Post{
-						Id:    r.Id,
-						Title: r.Title,
-						Body:  r.Body,
-					}
-					posts[i].Body.References[fp.Id] = fp
-				}
-				break
-			}
-
-			//for _, r := range v {
-			//	if posts[i].Id == r.Id {
-			//		posts[i].Refs = append(posts[i].Refs, r)
-			//	}
-			//}
-		}
-	}
-
-	return posts, nil
-}
-
-func getReferences(board string, rid int) (map[int][]ForumPost, error) {
-	rows, err := DB.Query(`
-		SELECT fp.rid, r.rid, r.title, r.body, r.created, users.id, users.username
-		FROM forum_post r
-		LEFT JOIN users
-		ON users.id = r.poster
-		JOIN forum_replies rp
-		ON r.id = rp.ref
-		JOIN forum_post fp
-		ON fp.id = rp.post_id
-		WHERE fp.thread_id = (
-			SELECT thread_id
-			FROM forum_post p
-			JOIN forum_thread t
-			ON t.id = p.thread_id
-			WHERE p.rid = $1
-			AND t.board = $2
-		)
-		`,
-		rid,
-		board,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var replies = make(map[int][]ForumPost)
-
-	for rows.Next() {
-		var (
-			p        int
-			r        ForumPost
-			userID   sql.NullInt64
-			username sql.NullString
-		)
-		err = rows.Scan(&p, &r.Id, &r.Title, &r.Body.Text, &r.Created, &userID, &username)
-		if err != nil {
-			return nil, err
-		}
-
-		if userID.Valid {
-			r.Poster = NewUser()
-			r.Poster.ID = int(userID.Int64)
-			r.Poster.Name = username.String
-		}
-
-		var (
-			rep []ForumPost
-			ok  bool
-		)
-
-		if rep, ok = replies[p]; !ok {
-			rep = []ForumPost{}
-		}
-
-		rep = append(rep, r)
-		replies[p] = rep
-	}
-
-	fmt.Println(replies)
-
-	return replies, nil
 }
 
 func DeleteForumPost(board string, rid int) error {

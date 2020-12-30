@@ -14,14 +14,14 @@
 	<div id="catalog">
 		{{range .Threads}}
 			<div class="thread-post">
-				<span class="thread-username">{{with .Post.Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
-				<a href="thread/{{.Post.Id}}">
-				<span class="thread-id">{{.Post.Id}}</span>
+				<span class="thread-username">{{with .Head.Poster}}{{.Name}}{{else}}Anonymous{{end}}</span>
+				<a href="thread/{{.Head.Id}}">
+				<span class="thread-id">{{.Head.Id}}</span>
 				</a>
-				<span class="thread-timestamp" title="{{.Post.Created}}">{{.Post.Created.Elapsed}}</span>
-				<span title="{{.Bumped.Elapsed}}"><i>{{.Replies}}</i></span>
-				<h3 class="title">{{.Post.Title}}</h3>
-				<p>{{.Post.Body.Compile | noescape}}</p>
+				<span class="thread-timestamp" title="{{.Head.Created}}">{{.Head.Created.Elapsed}}</span>
+				<span title="{{.Bumped.Elapsed}}"><i>{{.ReplyCount}}</i></span>
+				<h3 class="title">{{.Head.Title}}</h3>
+				<p>{{.Head.CompileBody | noescape}}</p>
 			</div>
 		{{end}}
 	</div>

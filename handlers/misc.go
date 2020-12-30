@@ -33,7 +33,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
 	err := Templates.ExecuteTemplate(w, tmpl+".html", p)
 	if err != nil {
 		//http.Error(w, err.Error(), http.StatusInternalServerError)
-		//log.Println(err)
+		log.Println(err)
 	}
 }
 

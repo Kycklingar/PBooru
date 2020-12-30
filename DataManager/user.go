@@ -405,4 +405,3 @@ func (u *User) Sessions(q querier.Q) []*Session {
 
 	return sessions
 }
-

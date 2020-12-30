@@ -2,11 +2,13 @@
 <div class="forum">
 	<div id="threader">
 		<div class="thread">
-			{{range .Replies}}
+			{{range .Thread.Posts}}
 				<div id="{{.Id}}" class="thread-post">
 					<span class="thread-username">{{with .Poster}}<a href="/user/{{.ID}}">{{.Name}}</a> <span class="clickable" onClick="appendReply('@{{.ID}}')">@{{.ID}}</span>{{else}}Anonymous{{end}}</span>
 					<span class="thread-id clickable" onClick="appendReply('>>{{.Id}}')">#{{.Id}}</span>
 					<span class="thread-timestamp" title="{{.Created}}">{{.Created.Elapsed}}</span>
+
+					{{if $.User.Flag.Special}}
 					<details>
 					<summary> </summary>
 						<form action="/forum/delete/post/" method="POST">
@@ -15,13 +17,19 @@
 							<input type="submit" value="Delete">
 						</form>
 					</details>
+					{{end}}
+
 					<h3 class="title">{{.Title}}</h3>
-					<p>{{.Body.Compile | noescape}}</p>
+					<span>{{.CompiledWithRefs | noescape}}</span>
+					{{/*
+					<!--
 					<span class="backlink">
 						{{range .Backlinks}}
 						<a href="#{{.}}">>>{{.}}</a>
 						{{end}}
 					</span>
+					-->
+					*/}}
 				</div>
 			{{end}}
 		</div>
@@ -32,7 +40,7 @@
 					{{template "forum-banner" .Board}}
 					<div id="reply">
 						<form action="/forum/new/post/" method="POST">
-							<input name="reply-to" type="hidden" value="{{.Thread}}">
+							<input name="reply-to" type="hidden" value="{{.Thread.Id}}">
 							<input name="board" type="hidden" value="{{.Board.Uri}}">
 							<textarea rows="10" cols="30" name="body" type="text" placeholder="Text"></textarea>
 							<input type="submit" value="Reply">

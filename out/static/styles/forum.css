@@ -85,6 +85,11 @@
 	word-break: break-word;
 }
 
+.ref.dead
+{
+	text-decoration: line-through;
+}
+
 .thread-post .ref .thread-post
 {
 	position:absolute;
