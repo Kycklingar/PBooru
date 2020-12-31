@@ -51,8 +51,8 @@
             {{ if .Result}}
                 {{range .Result}}
 	    		{{$ct := 0}}
-	    		{{if le $.User.MinThumbnailSize 0}}
-				{{$ct = .Post.ClosestThumbnail $.User.ThumnailSize}}
+	    		{{if le $.User.RealThumbnailSize 0}}
+				{{$ct = .Post.ClosestThumbnail $.User.ThumbnailSize}}
 			{{else}}
 				{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
@@ -63,7 +63,7 @@
                 	            <span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
                 	        </div>
                 	        {{else}}
-                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Post.Hash}}" class="{{if .Post.Removed}}removed{{end}}">
+                	        <img src="{{$.User.Gateway}}/ipfs/{{$ct}}" alt="{{.Post.Hash}}" class="{{if .Post.Removed}}removed{{end}}">
 					{{if $.User.ThumbHover}}
 						{{if $.User.ThumbHoverFull}}
 							{{if eq .Post.Mime.Type "video"}}

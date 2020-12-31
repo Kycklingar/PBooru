@@ -124,7 +124,21 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		combineTags = true
 	}
 
-	AP, err := DMToAPIPost(p, true, combineTags)
+	tc := DM.TagCollector{}
+	err = tc.FromPostMul(
+		DM.DB,
+		p,
+		DM.FTag,
+		DM.FCount,
+		DM.FNamespace,
+	)
+	if err != nil {
+		APIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+
+	AP, err := DMToAPIPost(p, tc.Tags, combineTags)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -174,7 +188,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 //	jsonEncode(w, dp)
 //}
 
-func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, error) {
+func DMToAPIPost(p *DM.Post, tags []*DM.Tag, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
 	if err := p.QMul(
@@ -204,21 +218,7 @@ func DMToAPIPost(p *DM.Post, includeTags, combineTagNamespace bool) (APIv1Post, 
 		Dimension:   p.Dimension,
 	}
 
-	tc := DM.TagCollector{}
-	if includeTags {
-		err := tc.FromPostMul(
-			DM.DB,
-			p,
-			DM.FTag,
-			DM.FCount,
-			DM.FNamespace,
-		)
-		if err != nil {
-			return AP, err
-		}
-	}
-
-	for _, tag := range tc.Tags {
+	for _, tag := range tags {
 		var t APIv1TagI
 		if combineTagNamespace {
 			t = new(APIv1TagString)
@@ -282,11 +282,6 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		combineTags = true
 	}
 
-	var includeTags bool
-	if len(r.FormValue("inclTags")) > 0 {
-		includeTags = true
-	}
-
 	bm := BM.Begin()
 
 	pc := DM.NewPostCollector()
@@ -316,7 +311,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	AP.Posts = make([]APIv1Post, len(result))
 	for i, set := range result{
-		APp, err := DMToAPIPost(set.Post, includeTags, combineTags)
+		APp, err := DMToAPIPost(set.Post, set.Tags, combineTags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)
@@ -427,7 +422,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, pst := range posts {
 		var ps APIv1Post
-		if ps, err = DMToAPIPost(pst, true, combineTags); err != nil {
+		if ps, err = DMToAPIPost(pst, nil, combineTags); err != nil {
 			APIError(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}

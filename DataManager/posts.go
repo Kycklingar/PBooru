@@ -1522,11 +1522,11 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 
 	// No more posts beyond this point
 	if pc.TotalPosts <= 0 || offset > pc.TotalPosts {
-		return []*Post{}, nil
+		return result, nil
 	}
 
 	query := fmt.Sprintf(`
-			SELECT p.id, ptm.tag_id, t.tag, n.nspace
+			SELECT p.id, ptm.tag_id, t.tag, t.count, n.nspace
 			FROM posts p
 			LEFT JOIN post_tag_mappings ptm
 			JOIN tags t
@@ -1572,11 +1572,12 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		post := NewPost()
 		var (
 			tagID sql.NullInt64
+			tagCount sql.NullInt64
 			tagName sql.NullString
 			namespace sql.NullString
 		)
 
-		err := rows.Scan(&post.ID, &tagID, &tagName, &namespace)
+		err := rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
 		if err != nil {
 			return result, err
 		}
@@ -1589,6 +1590,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		if tagID.Valid {
 			var t = NewTag()
 			t.ID = int(tagID.Int64)
+			t.Count = int(tagCount.Int64)
 			t.Tag = tagName.String
 			t.Namespace.Namespace = namespace.String
 			result[len(result)-1].Tags = append(result[len(result)-1].Tags, t)
