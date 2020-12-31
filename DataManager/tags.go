@@ -537,7 +537,7 @@ func (tc *TagCollector) GetFromPost(q querier, p *Post) error {
 		if err != nil {
 			return err
 		}
-		tag = CachedTag(tag)
+		//tag = CachedTag(tag)
 		tc.Tags = append(tc.Tags, tag)
 	}
 
@@ -577,18 +577,14 @@ func (tc *TagCollector) GetPostTags(q querier, p *Post) error {
 
 	for rows.Next() {
 		tag := NewTag()
-		c := NewTag()
-		err = rows.Scan(&c.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
+		err = rows.Scan(&tag.ID, &tag.Tag, &tag.Count, &tag.Namespace.ID, &tag.Namespace.Namespace)
 		if err != nil {
 			return err
 		}
 
-		tag.ID = c.ID
+		//tag = CachedTag(tag)
 
-		c = CachedTag(c)
-		c = tag
-
-		tc.Tags = append(tc.Tags, c)
+		tc.Tags = append(tc.Tags, tag)
 	}
 
 	C.Cache.Set("TPC", strconv.Itoa(p.ID), tc)
@@ -705,8 +701,8 @@ func (tc *TagCollector) SuggestedTags(q querier) TagCollector {
 				log.Print(err)
 				break
 			}
-			t = CachedTag(t)
-			t.Namespace = CachedNamespace(t.Namespace)
+			//t = CachedTag(t)
+			//t.Namespace = CachedNamespace(t.Namespace)
 			//fmt.Println(cnt)
 			newTags = append(newTags, t)
 		}

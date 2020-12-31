@@ -559,7 +559,7 @@ func GenerateFileDimensions() {
 }
 
 func GenPhash() error {
-	query := func(tx *sql.Tx, skip int) ([]*Post, error){
+	query := func(tx *sql.Tx, skip int) ([]*Post, error) {
 		rows, err := tx.Query(`
 			SELECT p.id, p.multihash
 			FROM posts p
@@ -592,10 +592,10 @@ func GenPhash() error {
 	}
 
 	var (
-		tx *sql.Tx
-		err error
+		tx     *sql.Tx
+		err    error
 		failed int
-		batch []*Post
+		batch  []*Post
 	)
 
 	for {
@@ -629,7 +629,6 @@ func GenPhash() error {
 				failed++
 				continue
 			}
-
 
 			if u > 0 {
 				ph := phsFromHash(post.ID, u)

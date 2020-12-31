@@ -65,7 +65,6 @@ func ffmpeg(file io.ReadSeeker, format string, size, quality int) (*bytes.Buffer
 
 	t = t / 2
 
-
 	output, err := run(int(t.Seconds()), tmpFile.Name())
 	if err != nil && !(len(output) > 0) {
 		// Retry with the first frame

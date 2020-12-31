@@ -857,6 +857,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 }
 
 func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
+
 	var tags TagCollector
 	err := tags.Parse(tagStr)
 	if err != nil {
@@ -1214,7 +1215,7 @@ func (p *Post) Comments(q querier) []*PostComment {
 }
 
 func NewPostCollector() *PostCollector {
-	return &PostCollector{TotalPosts:-1}
+	return &PostCollector{TotalPosts: -1}
 }
 
 type PostCollector struct {
@@ -1612,8 +1613,8 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	//}
 	arrLimit := max(maxTags, len(countMap))
 	for i := 0; i < arrLimit; i++ {
-		tag := CachedTag(countMap[i].tag)
-		pc.tags = append(pc.tags, tag)
+		//tag := CachedTag(countMap[i].tag)
+		pc.tags = append(pc.tags, countMap[i].tag)
 	}
 
 	return pc.tags
