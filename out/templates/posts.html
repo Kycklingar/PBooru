@@ -77,6 +77,10 @@
                 	        	{{end}}
 				{{end}}
 				<div class="tagbox hint">
+					<div>
+						<div>Score: {{.Post.Score}}</div>
+						<div>{{.Post.Mime.Str}}</div>
+					</div>
 					{{range .Tags}}
 						<span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
 					{{end}}

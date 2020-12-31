@@ -267,6 +267,11 @@ li
 	width: 20%;
 }
 
+.tagbox.hint div
+{
+	color: #AAA;
+}
+
 .thumbnail:hover .hint
 {
 	display:inherit;

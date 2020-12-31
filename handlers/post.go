@@ -584,6 +584,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			DM.DB,
 			DM.PFHash,
 			DM.PFMime,
+			DM.PFScore,
 			DM.PFThumbnails,
 		)
 		//p.Posts = append(p.Posts, post)
