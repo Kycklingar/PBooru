@@ -308,15 +308,15 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP APIv1Posts
 
-	posts, err := pc.Search2(limit, limit*offset)
+	result, err := pc.Search2(limit, limit*offset)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
-	AP.Posts = make([]APIv1Post, len(posts))
-	for i, post := range posts {
-		APp, err := DMToAPIPost(post, includeTags, combineTags)
+	AP.Posts = make([]APIv1Post, len(result))
+	for i, set := range result{
+		APp, err := DMToAPIPost(set.Post, includeTags, combineTags)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, ErrInternal, http.StatusInternalServerError)

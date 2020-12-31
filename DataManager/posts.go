@@ -1444,7 +1444,25 @@ func (pc *PostCollector) idStr() string {
 	)
 }
 
-func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
+//type SearchResult struct {
+//	Posts []*Post
+//	Tags map[int][]*Tag
+//}
+
+type SearchResult []resultSet
+
+type resultSet struct {
+	Post *Post
+	Tags []*Tag
+}
+
+// Where key is post id and val is tags
+//type sRes map[int][]int
+
+func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
+	//var result = SearchResult{Tags:make(map[int][]*Tag)}
+	var result SearchResult
+
 	sg := searchGroup(
 		pc.id,
 		pc.or,
@@ -1491,7 +1509,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 				err := DB.QueryRow(query).Scan(&pc.TotalPosts)
 				if err != nil {
 					log.Println(err)
-					return nil, err
+					return result, err
 				}
 				pc.ccSet(pc.TotalPosts)
 			} else {
@@ -1508,11 +1526,23 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	}
 
 	query := fmt.Sprintf(`
-			SELECT p.id FROM posts p
-			%s
+			SELECT p.id, ptm.tag_id, t.tag, n.nspace
+			FROM posts p
+			LEFT JOIN post_tag_mappings ptm
+			JOIN tags t
+			JOIN namespaces n
+			ON n.id = t.namespace_id
+			ON t.id = ptm.tag_id
+			ON p.id = ptm.post_id
+			WHERE p.id IN (
+				SELECT p.id
+				FROM posts p
+				%s
+				ORDER BY %s
+				LIMIT $1
+				OFFSET $2
+			)
 			ORDER BY %s
-			LIMIT $1
-			OFFSET $2
 		`,
 		sg.sel(
 			fmt.Sprintf(
@@ -1521,29 +1551,52 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 			),
 		),
 		order,
+		order,
 	)
 
 	//fmt.Println(query)
 
 	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	defer rows.Close()
 
-	var tmpPosts []*Post
+	//var tmpPosts []*Post
+
+	//var result make(sRes)
+
+	var prev int
 
 	for rows.Next() {
 		post := NewPost()
+		var (
+			tagID sql.NullInt64
+			tagName sql.NullString
+			namespace sql.NullString
+		)
 
-		err := rows.Scan(&post.ID)
+		err := rows.Scan(&post.ID, &tagID, &tagName, &namespace)
 		if err != nil {
-			return nil, err
+			return result, err
 		}
-		tmpPosts = append(tmpPosts, post)
+
+		if prev != post.ID {
+			result = append(result, resultSet{Post:post})
+			prev = post.ID
+		}
+
+		if tagID.Valid {
+			var t = NewTag()
+			t.ID = int(tagID.Int64)
+			t.Tag = tagName.String
+			t.Namespace.Namespace = namespace.String
+			result[len(result)-1].Tags = append(result[len(result)-1].Tags, t)
+
+		}
 	}
 
-	return tmpPosts, nil
+	return result, nil
 }
 
 func (pc *PostCollector) Tags(maxTags int) []*Tag {
@@ -1560,7 +1613,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	}
 
 	// Get the first batch
-	posts, err := pc.Search2(500, 0)
+	result, err := pc.Search2(500, 0)
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -1568,9 +1621,9 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 
 	// Get tags from all posts
 	pc.pl.RLock()
-	for _, post := range posts {
+	for _, set := range result{
 		var ptc TagCollector
-		err := ptc.GetFromPost(DB, post)
+		err := ptc.GetFromPost(DB, set.Post)
 		if err != nil {
 			continue
 		}

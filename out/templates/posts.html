@@ -48,35 +48,39 @@
                     {{end}}
                 }
             </style>
-            {{ if .Posts }}
-                {{ range .Posts }}
+            {{ if .Result}}
+                {{range .Result}}
 	    		{{$ct := 0}}
-	    		{{if le $.User.RealThumbnailSize 0}}
-				{{$ct = .ClosestThumbnail $.User.ThumbnailSize}}
+	    		{{if le $.User.MinThumbnailSize 0}}
+				{{$ct = .Post.ClosestThumbnail $.User.ThumnailSize}}
 			{{else}}
-				{{$ct = .ClosestThumbnail $.User.RealThumbnailSize}}
+				{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
-                	<a href="/post/{{.ID}}/{{.Hash}}">
-                	    <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
+                	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+                	    <div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}}">
                 	        {{if eq $ct ""}}
-                	        <div class="mimetype centered {{if .Removed}}removed{{end}}">
-                	            <span class="centered">{{.Mime.Type}} / {{.Mime.Name}}</span>
+                	        <div class="mimetype centered {{if .Post.Removed}}removed{{end}}">
+                	            <span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
                 	        </div>
                 	        {{else}}
-                	        <img src="{{$.User.Gateway}}/ipfs/{{$ct}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
+                	        <img src="{{$.User.IpfsDaemon}}/ipfs/{{$ct}}" alt="{{.Post.Hash}}" class="{{if .Post.Removed}}removed{{end}}">
 					{{if $.User.ThumbHover}}
 						{{if $.User.ThumbHoverFull}}
-							{{if eq .Mime.Type "video"}}
-							<div hash="{{.Hash}}" class="placeholder"></div>
-							{{else if eq .Mime.Type "image"}}
-							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.Hash}}" alt="{{.Hash}}" class="preview">
+							{{if eq .Post.Mime.Type "video"}}
+							<div hash="{{.Post.Hash}}" class="placeholder"></div>
+							{{else if eq .Post.Mime.Type "image"}}
+							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.Post.Hash}}" alt="{{.Post.Hash}}" class="preview">
 							{{end}}
 						{{else}}
-							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.ClosestThumbnail 1024}}" alt="{{.Hash}}" class="preview">
+							<img loading="lazy" src="{{$.User.Gateway}}/ipfs/{{.Post.ClosestThumbnail 1024}}" alt="{{.Post.Hash}}" class="preview">
 						{{end}}
                 	        	{{end}}
 				{{end}}
-				<div class="overlay"></div>
+				<div class="tagbox hint">
+					{{range .Tags}}
+						<span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
+					{{end}}
+				</div>
                 	    </div>
                 	</a>
                 {{ end }}

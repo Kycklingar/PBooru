@@ -83,7 +83,7 @@ type Postpage struct {
 
 type PostsPage struct {
 	Base          base
-	Posts         []*DM.Post
+	Result	      DM.SearchResult
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
 	ArgString     string
@@ -573,21 +573,22 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	pc = DM.CachedPostCollector(pc)
 
 	//fmt.Println(pc.TotalPosts)
-	posts, err := pc.Search2(pageLimit, offset)
+	result, err := pc.Search2(pageLimit, offset)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	for _, post := range posts {
-		post.QMul(
+	for i := range result{
+		result[i].Post.QMul(
 			DM.DB,
 			DM.PFHash,
 			DM.PFMime,
 			DM.PFThumbnails,
 		)
-		p.Posts = append(p.Posts, post)
+		//p.Posts = append(p.Posts, post)
 	}
+	p.Result = result
 	p.Sidebar.TotalPosts = pc.TotalPosts
 
 	bm.Split("After posts")
