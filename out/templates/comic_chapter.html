@@ -85,7 +85,7 @@
 	        <div class="comic-page" page="{{.Order}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
 	            <div>
 	                <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-	                    <img style="max-width:100%;" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
+	                    <img style="max-width:100%;" src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
 	                </a>
 	                <br>
 	                <p>Page:{{.Order}}</p>

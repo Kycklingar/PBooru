@@ -147,7 +147,7 @@
                     
                 }
             </script>
-            <img id="fullsize" onclick="resize(this)" src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+            <img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
 	    <h4>
 	    	<a href="#fullsize">Fullsize</a>
 	    	<a href="#">Shrink to fit</a>
@@ -156,7 +156,7 @@
         {{else if eq .Post.Mime.Type "video"}}
         <div>
             <video loop controls>
-                <source src="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}">
+                <source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
             </video>
         </div>
         {{else}}
@@ -166,7 +166,7 @@
         {{end}}
         <div style="padding-left: 4px;">
 	    <h3>
-            	<a href="{{.UserInfo.IpfsDaemon}}/ipfs/{{.Post.Hash}}" download>Download</a>
+            	<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
 	    </h3>
 	    {{with .Post.Description}}
 		<div class="panel">
@@ -182,7 +182,7 @@
 			<span>Thumbnails:</span>
 			<ul>
 	    		{{range .}}
-	    			<li>{{.Size}}px <a href="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}">{{.Hash}}</a></li>
+	    			<li>{{.Size}}px <a href="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}">{{.Hash}}</a></li>
 			{{end}}
 			</ul>
 		{{end}}

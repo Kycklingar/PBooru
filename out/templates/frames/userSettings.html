@@ -1,21 +1,34 @@
 {{ define "userSettings" }}
 <div class="text-panel">
 	<form action="/options" method="POST">
-		<p>Ipfs Gateway</p>
-		<input type="text" name="daemon" value="{{if .IpfsDaemon}}{{.IpfsDaemon}}{{end}}">
-		<p>Post Limit</p>
-		<input type="text" name="limit" value="{{if .Limit}}{{.Limit}}{{end}}">
-		<p>Thumbnail Size</p>
-		<input type="text" name="ImageSize" value="{{if .ImageSize}}{{.ImageSize}}{{end}}">
-		<p>Minimum Thumbnail Image Size</p>
-		<input type="text" name="MinThumbnailSize" title="0 clamps to thumbnail size" value="{{with .MinThumbnailSize}}{{.}}{{end}}">
+		<label>Ipfs Gateway<br>
+			<input type="text" name="gateway" value="{{.Gateway}}">
+		</label>
+		<br>
+		<label>Posts Per Page</br>
+			<input type="text" name="limit" value="{{.Limit}}">
+		</label>
+		<br>
+		<label>Thumbnail Size</br>
+			<input type="text" name="thumbnail-size" value="{{.ThumbnailSize}}">
+		</label>
+		<br>
+		<label>Thumbnail Image Size</br>
+			<input type="text" name="real-thumbnail-size" title="0 clamps to thumbnail size" value="{{.RealThumbnailSize}}">
+		</label>
 		<br>
 		<br>
-		<label for="thumbhover">Thumbnail Preview Hover</label>
-		<input type="checkbox" id="thumbhover" name="thumbhover" {{if .ThumbHover}}checked{{end}}>
-		<br>
-		<label for="thumbhoverfull">Previews Use Full Image (js)</label>
-		<input type="checkbox" id="thumbhoverfull" name="thumbhoverfull" {{if .ThumbHoverFull}}checked{{end}}>
+		<div>
+			<label>Thumbnail preview on hover
+				<input type="checkbox" name="thumb-hover" {{if .ThumbHover}}checked{{end}}>
+			</label>
+			<br>
+			<div>
+				<label>└ Previews use full image (js)
+					<input type="checkbox" name="thumb-hover-full" {{if .ThumbHoverFull}}checked{{end}}>
+				</label>
+			</div>
+		</div>
 		<br>
 		<br>
 		<input type="submit">
@@ -43,7 +56,7 @@
 		function thumbPreview(el)
 		{
 			var video = document.createElement("video")
-			video.src = "{{.IpfsDaemon}}/ipfs/" + el.getAttribute("hash")
+			video.src = "{{.Gateway}}/ipfs/" + el.getAttribute("hash")
 			video.className = "preview"
 			video.autoplay = true
 			video.loop = true

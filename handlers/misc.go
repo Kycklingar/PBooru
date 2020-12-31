@@ -160,24 +160,13 @@ func OptionsHandler(w http.ResponseWriter, r *http.Request) {
 		renderTemplate(w, "options", user)
 		return
 	}
-	setC(w, "daemon", r.FormValue("daemon"))
-	setC(w, "limit", r.FormValue("limit"))
-	setC(w, "ImageSize", r.FormValue("ImageSize"))
-	setC(w, "MinThumbnailSize", r.FormValue("MinThumbnailSize"))
 
-	th := r.FormValue("thumbhover")
-	if th == "on" {
-		setC(w, "thumbhover", "true")
-	} else {
-		setC(w, "thumbhover", "false")
-	}
-
-	thf := r.FormValue("thumbhoverfull")
-	if thf == "on" {
-		setC(w, "thumbhoverfull", "true")
-	} else {
-		setC(w, "thumbhoverfull", "false")
-	}
+	setCookie(w, "gateway", r.FormValue("gateway"), false)
+	setCookie(w, "limit", r.FormValue("limit"), false)
+	setCookie(w, "thumbnail_size", r.FormValue("thumbnail-size"), false)
+	setCookie(w, "real_thumbnail_size", r.FormValue("real-thumbnail-size"), false)
+	setCookie(w, "thumb_hover", r.FormValue("thumb-hover"), false)
+	setCookie(w, "thumb_hover_full", r.FormValue("thumb-hover-full"), false)
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
@@ -309,7 +298,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm := benchmark.Begin()
 	var commMod DM.CommentCollector
-	err := commMod.Get(DM.DB, 100, uinfo.IpfsDaemon)
+	err := commMod.Get(DM.DB, 100, uinfo.Gateway)
 	if err != nil {
 		http.Error(w, "Oops, something went wrong.", http.StatusInternalServerError)
 		log.Println(err)

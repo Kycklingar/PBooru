@@ -104,10 +104,10 @@
 		{{range .Posts}}
 		<span postid="{{.ID}}">
 		<span class="default">
-			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}"></a>
 		</span>
 		<span class="zoom5x">
-			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.Hash}}"></a>
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}"></a>
 		</span>
 		</span>
 		{{end}}
@@ -128,7 +128,7 @@
 		<span postid="{{.ID}}" class="interface-post">
 			<input type="hidden" name="post-ids" value="{{.ID}}">
 			<div style="position:relative;">
-				<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.IpfsDaemon}}/ipfs/{{.ClosestThumbnail 100}}">
+				<img style="border: solid #{{$.ColorID .ID}};" max-width="100px" max-height="100px" src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 100}}">
 				<a onclick="fit({{.ID}})" class="thumb-button" href="#img-{{.ID}}" style="top:0px; left:0px; right:0px; bottom:50%;">Fit</a>
 				<a onclick="zoom({{.ID}})" class="thumb-button" href="#zoom-{{.ID}}" style="top:50%; left:0px; right:0px; bottom:0px">Zoom</a>
 			</div>

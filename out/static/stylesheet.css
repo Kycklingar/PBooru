@@ -447,16 +447,6 @@ li
     margin:5px;
 }
 
-.text-panel
-{
-    background-color:#667;
-    padding:1em;
-    margin-top: 1em;
-    box-shadow: 3px 3px #213;
-    color:#000;
-    
-}
-
 .attention
 {
 	background-color:#222;
@@ -471,6 +461,21 @@ li
 
 .attention a:visited {
 	color: #A6E;
+}
+
+.text-panel
+{
+    background-color:#667;
+    padding:1em;
+    margin-top: 1em;
+    box-shadow: 3px 3px #213;
+    color:#000;
+    
+}
+
+.text-panel input
+{
+	margin:6px;
 }
 
 .text-panel table, .text-panel td, .text-panel th
