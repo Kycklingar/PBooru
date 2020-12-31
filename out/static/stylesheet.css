@@ -255,11 +255,18 @@ li
 
 .tagbox.hint
 {
+<<<<<<< HEAD
 	pointer-events: none;
 	z-index:500;
 	position:fixed;
 	left:0px;
 	bottom:0px;
+=======
+	z-index:500;
+	position:fixed;
+	left:0px;
+	top:0px;
+>>>>>>> show tags on thumbnail hover
 	display:none;
 	background-image: linear-gradient(rgba(0.2, 0.2, 0.2, 0.9), rgba(0.2, 0.2, 0.2, 0));
 	padding:1em;
@@ -267,11 +274,14 @@ li
 	width: 20%;
 }
 
+<<<<<<< HEAD
 .tagbox.hint .score
 {
 	color: #AAA;
 }
 
+=======
+>>>>>>> show tags on thumbnail hover
 .thumbnail:hover .hint
 {
 	display:inherit;
