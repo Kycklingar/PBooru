@@ -51,7 +51,7 @@
 			<div class="pagecount">{{.PageCount}}</div>
 			<div class="tagbox">
 				{{range .TagSummary}}
-					<a href="/comics/{{$.Query.AddEncode "append-tag" .String}}"><span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span></a>
+					<a href="/comics/{{$.Query.AddEncode "tags" .String}}"><span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span></a>
 				{{end}}
 			</div>
 		</div>

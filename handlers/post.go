@@ -562,7 +562,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("Before posts")
 
-	pc := &DM.PostCollector{}
+	pc := DM.NewPostCollector()
 	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
 	if err != nil {
 		//log.Println(err)

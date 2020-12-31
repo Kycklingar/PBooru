@@ -1213,6 +1213,10 @@ func (p *Post) Comments(q querier) []*PostComment {
 	return pcs
 }
 
+func NewPostCollector() *PostCollector {
+	return &PostCollector{TotalPosts:-1}
+}
+
 type PostCollector struct {
 	posts  map[int][]*Post
 	id     []int
@@ -1471,7 +1475,7 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 	}
 
 	// TODO: refactor
-	if pc.TotalPosts <= 0 {
+	if pc.TotalPosts < 0 {
 		if pc.countIDStr() != "0" {
 			c := pc.ccGet()
 			if c < 0 {
@@ -1495,6 +1499,11 @@ func (pc *PostCollector) Search2(limit, offset int) ([]*Post, error) {
 		} else {
 			pc.TotalPosts = GetTotalPosts()
 		}
+	}
+
+	// No more posts beyond this point
+	if pc.TotalPosts <= 0 || offset > pc.TotalPosts {
+		return []*Post{}, nil
 	}
 
 	query := fmt.Sprintf(`
@@ -1639,14 +1648,14 @@ func ccPurge(q querier, tagID int) {
 }
 
 func (pc *PostCollector) ccGet() (c int) {
-	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&c); err != nil {
+	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.countIDStr()).Scan(&c); err != nil {
 		return -1
 	}
 	return
 }
 
 func (pc *PostCollector) ccSet(c int) {
-	if c <= 0 {
+	if c < 0 {
 		return
 	}
 
@@ -1655,15 +1664,16 @@ func (pc *PostCollector) ccSet(c int) {
 		log.Println(err)
 		return
 	}
-	_, err = tx.Exec("INSERT INTO search_count_cache (str, count) VALUES($1, $2)", pc.idStr(), c)
-	if err != nil {
-		log.Println(err)
-		txError(tx, err)
-		return
-	}
 
 	var cid int
-	err = tx.QueryRow("SELECT id FROM search_count_cache WHERE str = $1", pc.idStr()).Scan(&cid)
+	err = tx.QueryRow(`
+		INSERT INTO search_count_cache (str, count)
+		VALUES($1, $2)
+		RETURNING id
+		`,
+		pc.countIDStr(),
+		c,
+	).Scan(&cid)
 	if err != nil {
 		log.Println(err)
 		txError(tx, err)
