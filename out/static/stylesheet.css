@@ -256,6 +256,7 @@ li
 
 .tagbox.hint
 {
+	pointer-events: none;
 	z-index:500;
 	position:fixed;
 	left:0px;
