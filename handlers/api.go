@@ -289,7 +289,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm := BM.Begin()
 
-	pc := &DM.PostCollector{}
+	pc := DM.NewPostCollector()
 	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs)
 	if err != nil {
 		log.Print(err)
