@@ -11,7 +11,7 @@ import (
 type lookupPage struct {
 	Base base
 	Posts []*DM.Post
-	User UserInfo
+	UserInfo UserInfo
 }
 
 func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,9 +54,9 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 			p.Posts = append(p.Posts, pst)
 		}
 
-		p.User = userCookies(w, r)
+		p.UserInfo = userCookies(w, r)
 
-		renderTemplate(w, "posts", p)
+		renderTemplate(w, "lookup", p)
 	} else {
 		renderTemplate(w, "lookup", nil)
 	}

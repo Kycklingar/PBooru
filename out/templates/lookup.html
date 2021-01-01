@@ -1,4 +1,11 @@
 {{template "base"}}
+{{with .}}
+<div id="posts">
+	{{range .Posts}}
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+	{{end}}
+</div>
+{{else}}
 <form enctype="multipart/form-data" method="POST">
 	<h3>Image Lookup</h3>
 	<input type="file" name="file"><br>
@@ -6,4 +13,5 @@
 	<input id="range" type="range" name="distance" min="1" max="10" value="5"><br>
 	<input type="submit">
 </form>
+{{end}}
 {{template "baseEnd"}}
