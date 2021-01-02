@@ -81,9 +81,27 @@ type Postpage struct {
 	Time     string
 }
 
+var catMap = map[string]int {
+	"creator": 0,
+	"gender": 1,
+	"character": 2,
+	"species": 3,
+}
+
+type postAndTags struct {
+	Post *DM.Post
+
+	// Namespaced tags displayed first
+	Namespace [][]*DM.Tag
+
+	// The rest
+	Tags []*DM.Tag
+}
+
 type PostsPage struct {
 	Base          base
-	Result	      DM.SearchResult
+	//Result	      DM.SearchResult
+	Result	      []postAndTags
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
 	ArgString     string
@@ -579,17 +597,33 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i := range result{
-		result[i].Post.QMul(
+	for _, set := range result{
+		var pt = postAndTags{
+			Post: set.Post,
+			Namespace: make([][]*DM.Tag, len(catMap)),
+		}
+
+		pt.Post.QMul(
 			DM.DB,
 			DM.PFHash,
 			DM.PFMime,
 			DM.PFScore,
 			DM.PFThumbnails,
 		)
-		//p.Posts = append(p.Posts, post)
+
+		for _, tag := range set.Tags {
+			if v, ok := catMap[tag.Namespace.Namespace]; ok {
+				pt.Namespace[v] = append(pt.Namespace[v], tag)
+			} else {
+				pt.Tags = append(pt.Tags, tag)
+			}
+
+		}
+
+		p.Result = append(p.Result, pt)
 	}
-	p.Result = result
+	//p.Result = result
+
 	p.Sidebar.TotalPosts = pc.TotalPosts
 
 	bm.Split("After posts")
