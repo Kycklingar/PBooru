@@ -19,8 +19,16 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	page.User, page.UserInfo = getUser(w, r)
 	page.User.QFlag(DM.DB)
 
-	var err error
-	page.Reports, err = DM.FetchDupReports(10, 0)
+
+	offset, _ := strconv.Atoi(r.FormValue("offset"))
+	limit, err := strconv.Atoi(r.FormValue("limit"))
+	if err != nil {
+		limit = 10
+	}
+
+	order := r.FormValue("order") == "asc"
+
+	page.Reports, err = DM.FetchDupReports(limit, offset, order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

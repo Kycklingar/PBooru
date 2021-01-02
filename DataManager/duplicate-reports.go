@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -13,17 +14,27 @@ type DupReport struct {
 	Dupe      Dupe
 }
 
-func FetchDupReports(limit, offset int) ([]*DupReport, error) {
+func FetchDupReports(limit, offset int, asc bool) ([]*DupReport, error) {
 	var reports []*DupReport
+
+	var order = "DESC"
+
+	if asc {
+		order = "ASC"
+	}
+
 	err := func() error {
-		rows, err := DB.Query(`
-			SELECT id, post_id, reporter, note, approved, timestamp
-			FROM duplicate_report
-			WHERE approved IS NULL
-			ORDER BY timestamp DESC
-			LIMIT $1
-			OFFSET $2
-			`,
+		rows, err := DB.Query(
+			fmt.Sprintf(`
+				SELECT id, post_id, reporter, note, approved, timestamp
+				FROM duplicate_report
+				WHERE approved IS NULL
+				ORDER BY timestamp %s
+				LIMIT $1
+				OFFSET $2
+				`,
+				order,
+			),
 			limit,
 			offset,
 		)

@@ -13,6 +13,19 @@
 	<button onclick="openAll()">Open All</button>
 </div>
 
+<form>
+	<label>
+		Order ascending
+		<input type="checkbox" name="order" value="asc">
+	</label>
+	<br>
+	<input type="number" name="limit" placeholder="Limit">
+	<br>
+	<input type="number" name="offset" placeholder="Offset">
+	<br>
+	<input type="submit">
+</form>
+
 {{range .Reports}}
 <div class="panel dupe-reports">
 	<span>{{.ID}}</span>
