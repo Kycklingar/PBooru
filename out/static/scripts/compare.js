@@ -1,4 +1,5 @@
 var posts = []
+var removed = []
 var gateway = "ass"
 var currentPost = null
 
@@ -154,17 +155,36 @@ function getRemotePost(id)
 	xhr.send(fd)
 }
 
+function removeCurrentPost()
+{
+	if(currentPost != null)
+	{
+		removePost(currentPost.id)
+	}
+}
+
 function removePost(id)
 {
+	// If the current post is removed, render previous
+	// Do not render if its the last post
+	if (currentPost != null && currentPost.id == id && posts.length > 1)
+	{
+		renderNextPost(-1)
+	} else {
+		blankCanvas()
+	}
+
+	// Splice posts array
 	for (let i = 0; i < posts.length; i++)
 	{
 		if (posts[i].id == id)
 		{
-			posts.splice(i, 1)
+			removed = removed.concat(posts.splice(i, 1))
 			break
 		}
 	}
 
+	// Remove post elements
 	for (let c = leftInterface.firstChild; c != null; c = c.nextSibling)
 	{
 		if (c.postid == id)
@@ -173,11 +193,18 @@ function removePost(id)
 			break
 		}
 	}
+}
 
-	if (currentPost.id == id)
+function restoreLastRemoved()
+{
+	if (removed.length <= 0)
 	{
-		renderNextPost(1)
+		return
 	}
+
+	addPost(removed[0])
+
+	removed.splice(0, 1)
 }
 
 function leftPostElement(post)
@@ -415,9 +442,7 @@ function renderImage(image)
 
 	canvas.style.filter = `contrast(${optContrast})`
 	
-	for (let c = canvas.firstChild; c != null; c = canvas.firstChild)
-		canvas.removeChild(c)
-
+	blankCanvas()
 	canvas.appendChild(image)
 
 
@@ -426,6 +451,12 @@ function renderImage(image)
 
 	b = rightInterface.scrollWidth - rightInterface.clientWidth
 	rightInterface.scrollLeft = b * scrollX
+}
+
+function blankCanvas()
+{
+	for (let c = canvas.firstChild; c != null; c = canvas.firstChild)
+		canvas.removeChild(c)
 }
 
 function toggleReport()
@@ -561,6 +592,12 @@ registerKeyMapping(82, function(){toggleReport()})
 // Next, previous post
 registerKeyMapping(78, function(){renderNextPost(1)})
 registerKeyMapping(80, function(){renderNextPost(-1)})
+
+// Remove post
+registerKeyMapping(89, function(){removeCurrentPost()})
+
+// Restore removed
+registerKeyMapping(85, function(){restoreLastRemoved()})
 
 // Anchor
 // Not needed anymore
