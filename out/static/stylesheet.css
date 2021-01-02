@@ -259,7 +259,7 @@ li
 	z-index:500;
 	position:fixed;
 	left:0px;
-	top:0px;
+	bottom:0px;
 	display:none;
 	background-image: linear-gradient(rgba(0.2, 0.2, 0.2, 0.9), rgba(0.2, 0.2, 0.2, 0));
 	padding:1em;

@@ -86,6 +86,7 @@ var catMap = map[string]int {
 	"gender": 1,
 	"character": 2,
 	"species": 3,
+	"series": 4,
 }
 
 type postAndTags struct {
