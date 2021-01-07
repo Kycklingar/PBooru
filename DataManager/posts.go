@@ -1482,7 +1482,9 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		mimes = fmt.Sprintf("AND p.mime_id IN(%s) ", mimes)
 	}
 
-	var order string
+	var (
+		order string
+	)
 
 	switch pc.order {
 	case "RANDOM()":
@@ -1566,36 +1568,106 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 
 	//var result make(sRes)
 
-	var prev int
+	var collectorFunc func(rows *sql.Rows) (SearchResult, error)
 
-	for rows.Next() {
-		post := NewPost()
-		var (
-			tagID sql.NullInt64
-			tagCount sql.NullInt64
-			tagName sql.NullString
-			namespace sql.NullString
-		)
+	if order == "RANDOM()" {
+		collectorFunc = func(rows *sql.Rows) (SearchResult, error) {
+			var pmap = make(map[int]resultSet)
 
-		err := rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
-		if err != nil {
-			return result, err
+			for rows.Next() {
+				var (
+					tagID sql.NullInt64
+					tagCount sql.NullInt64
+					tagName sql.NullString
+					namespace sql.NullString
+					post = NewPost()
+				)
+
+				rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
+				if err != nil {
+					return result, err
+				}
+
+
+				var (
+					set resultSet
+					ok bool
+				)
+
+				if set, ok = pmap[post.ID]; !ok {
+					set = resultSet{Post:post}
+				}
+
+				if tagID.Valid {
+					var t = NewTag()
+					t.ID = int(tagID.Int64)
+					t.Count = int(tagCount.Int64)
+					t.Tag = tagName.String
+					t.Namespace.Namespace = namespace.String
+					set.Tags = append(set.Tags, t)
+				}
+
+				pmap[post.ID] = set
+			}
+
+			var result = make(SearchResult, len(pmap))
+
+			var i int
+			for _, set := range pmap {
+				result[i] = set
+				i++
+			}
+
+			return result, rows.Err()
 		}
+	} else {
+		collectorFunc = func(rows *sql.Rows) (SearchResult, error) {
+			var (
+				res SearchResult
+				prev int
+				resCount int
+			)
 
-		if prev != post.ID {
-			result = append(result, resultSet{Post:post})
-			prev = post.ID
+			for rows.Next() {
+				var (
+					tagID sql.NullInt64
+					tagCount sql.NullInt64
+					tagName sql.NullString
+					namespace sql.NullString
+
+					post = NewPost()
+
+				)
+
+				err := rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
+				if err != nil {
+					return result, err
+				}
+
+				if prev != post.ID {
+					res = append(res, resultSet{Post:post})
+					prev = post.ID
+					resCount++
+				}
+
+				if tagID.Valid {
+					var t = NewTag()
+					t.ID = int(tagID.Int64)
+					t.Count = int(tagCount.Int64)
+					t.Tag = tagName.String
+					t.Namespace.Namespace = namespace.String
+					res[resCount-1].Tags = append(res[resCount-1].Tags, t)
+
+				}
+			}
+
+			return res, rows.Err()
 		}
+	}
 
-		if tagID.Valid {
-			var t = NewTag()
-			t.ID = int(tagID.Int64)
-			t.Count = int(tagCount.Int64)
-			t.Tag = tagName.String
-			t.Namespace.Namespace = namespace.String
-			result[len(result)-1].Tags = append(result[len(result)-1].Tags, t)
-
-		}
+	result, err = collectorFunc(rows)
+	if err != nil {
+		return result, err
 	}
 
 	return result, nil
