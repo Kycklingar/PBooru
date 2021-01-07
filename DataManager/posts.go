@@ -1624,12 +1624,13 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	// Get tags from all posts
 	pc.pl.RLock()
 	for _, set := range result{
-		var ptc TagCollector
-		err := ptc.GetFromPost(DB, set.Post)
-		if err != nil {
-			continue
-		}
-		allTags = append(allTags, ptc.Tags...)
+		//var ptc TagCollector
+		//err := ptc.GetFromPost(DB, set.Post)
+		//if err != nil {
+		//	continue
+		//}
+		//allTags = append(allTags, ptc.Tags...)
+		allTags = append(allTags, set.Tags...)
 	}
 	pc.pl.RUnlock()
 
