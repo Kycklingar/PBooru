@@ -202,9 +202,7 @@ function restoreLastRemoved()
 		return
 	}
 
-	addPost(removed[0])
-
-	removed.splice(0, 1)
+	addPost(removed.pop())
 }
 
 function leftPostElement(post)
