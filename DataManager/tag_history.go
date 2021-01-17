@@ -119,13 +119,13 @@ func (th *TagHistory) Reverse() error {
 		return txError(tx, err)
 	}
 
+	for _, et := range etags {
+		resetCacheTag(tx, et.Tag.QID(DB))
+	}
+
 	if err = tx.Commit(); err != nil {
 		log.Println(err)
 		return err
-	}
-
-	for _, et := range etags {
-		resetCacheTag(tx, et.Tag.QID(DB))
 	}
 
 	// Reset post cache

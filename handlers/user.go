@@ -99,7 +99,8 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p TagHistoryPage
-	p.UserInfo = userCookies(w, r)
+	p.User, p.UserInfo = getUser(w, r)
+	p.User.QFlag(DM.DB)
 
 	const pageLimit = 5
 	var total int
