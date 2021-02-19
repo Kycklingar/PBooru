@@ -235,6 +235,7 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 			FROM posts
 			WHERE id = $1
 		)
+		ORDER BY id DESC
 		`,
 		p.ID,
 	)
@@ -1619,7 +1620,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				SELECT DISTINCT ON (p.alt_group) p.*
 				FROM posts p
 				%s
-				ORDER BY p.alt_group DESC, p.id ASC
+				ORDER BY p.alt_group, p.score, p.id DESC
 			) AS p
 			ORDER BY %s
 			LIMIT $1

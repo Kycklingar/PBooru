@@ -350,8 +350,8 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Delete() {
-		permErr(w, "Delete")
+	if !user.QFlag(DM.DB).Upload() {
+		permErr(w, "Upload")
 		return
 	}
 
@@ -378,6 +378,38 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/post/%d/", p.ID), http.StatusSeeOther)
+}
+
+func unassignAltHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Upload() {
+		permErr(w, "Upload")
+		return
+	}
+
+	post, err := postFromForm(r)
+	if err != nil {
+		postError(w, err)
+		return
+	}
+
+	err = post.RemoveAlt(DM.DB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ref := r.FormValue("ref")
+	if ref == "" {
+		ref = fmt.Sprintf("/post/%d/", post.ID)
+	}
+
+	http.Redirect(w, r, ref, http.StatusSeeOther)
 }
 
 func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {

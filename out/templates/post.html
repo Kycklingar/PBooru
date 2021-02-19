@@ -41,13 +41,21 @@
 					</form>
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
-        			{{if .User.Flag.Delete}}
+				{{if .User.Flag.Upload}}
 					<form method="POST" action="/assignalts/">
-						<h3>Submit alt</h3>
+						<h3>Assign alt</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="number" name="post-id">
 						<input type="submit">
 					</form>
+					<form method="POST" action="/removealt/">
+						<h3>Remove alt</h3>
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
+						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">
+						<input type="submit">
+					</form>
+				{{end}}
+        			{{if .User.Flag.Delete}}
 					<form method="POST" action="/post/edit/thumbnails/generate/">
 						<h3>Generate Thumbnails</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
