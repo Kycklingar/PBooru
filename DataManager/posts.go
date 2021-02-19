@@ -1621,10 +1621,10 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				FROM posts p
 				%s
 				ORDER BY p.alt_group DESC, p.id ASC
-				LIMIT $1
-				OFFSET $2
 			) AS p
 			ORDER BY %s
+			LIMIT $1
+			OFFSET $2
 			`
 	} else {
 		query = `
