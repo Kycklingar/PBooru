@@ -123,6 +123,13 @@ func (th *TagHistory) Reverse() error {
 		resetCacheTag(tx, et.Tag.QID(DB))
 	}
 
+	// Recount tags
+	for _, et := range etags {
+		if err = et.Tag.recount(tx); err != nil {
+			return txError(tx, err)
+		}
+	}
+
 	if err = tx.Commit(); err != nil {
 		log.Println(err)
 		return err

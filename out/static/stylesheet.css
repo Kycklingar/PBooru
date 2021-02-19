@@ -42,15 +42,21 @@
 	box-shadow: 3px 3px 6px #213;
 }
 
-.comic .info .tagbox
+.tagbox
 {
 	color: black;
-	text-shadow: 1px 1px 3px white;
+	/*text-shadow: 1px 1px 3px white;*/
 	font-family: monospace;
 }
 
+.tagbox span
+{
+	display: inline-block;
+	padding:0.1em; 
+}
 
-.comic .info .tagbox .namespace-none
+
+.tagbox .namespace-none
 {
 	background-color: grey;
 }
@@ -243,6 +249,30 @@ li
 }
 
 .thumbnail:hover .preview
+{
+	display:inherit;
+}
+
+.tagbox.hint
+{
+	pointer-events: none;
+	z-index:500;
+	position:fixed;
+	left:0px;
+	bottom:0px;
+	display:none;
+	background-image: linear-gradient(rgba(0.2, 0.2, 0.2, 0.9), rgba(0.2, 0.2, 0.2, 0));
+	padding:1em;
+	padding-bottom:2em;
+	width: 20%;
+}
+
+.tagbox.hint .score
+{
+	color: #AAA;
+}
+
+.thumbnail:hover .hint
 {
 	display:inherit;
 }

@@ -7,12 +7,12 @@
     </style>
     <style id="stylesheet">
         .thumbnail{
-            width:{{.UserInfo.ImageSize}};
-            height:{{.UserInfo.ImageSize}};
+            width:{{.UserInfo.ThumbnailSize}};
+            height:{{.UserInfo.ThumbnailSize}};
         }
         .thumbnail img{
-            max-width:{{.UserInfo.ImageSize}};
-            max-height:{{.UserInfo.ImageSize}};
+            max-width:{{.UserInfo.ThumbnailSize}};
+            max-height:{{.UserInfo.ThumbnailSize}};
         }
     </style>
 
@@ -100,8 +100,8 @@
 </div>
 
 <div style="position:fixed; right:0px;bottom:10px;background-color:#2228">
-    <span id="sizeslidertext">{{.UserInfo.ImageSize}}</span>
-    <input id="sizeslider" type="range" min="50" max="1024" value="{{.UserInfo.ImageSize}}">
+    <span id="sizeslidertext">{{.UserInfo.ThumbnailSize}}</span>
+    <input id="sizeslider" type="range" min="50" max="1024" value="{{.UserInfo.RealThumbnailSize}}">
 </div>
 <menu type="context" id="postmenu">
     <menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)"></menuitem>
@@ -110,8 +110,8 @@
 
 <script>
     var UserInfo = {
-        "Daemon": "{{.UserInfo.Gateway}}",
-        "ThumbSize": "{{.UserInfo.ImageSize}}"
+        "Gateway": "{{.UserInfo.Gateway}}",
+        "ThumbSize": "{{.UserInfo.ThumbnailSize}}"
     }
 
     var offset = 0
@@ -238,7 +238,7 @@
         else {
 	    thumb = closestThumb(0, post.ThumbHashes)
             var img = new Image()
-            img.src = UserInfo.Daemon + "/ipfs/" + thumb.Hash
+            img.src = UserInfo.Gateway + "/ipfs/" + thumb.Hash
             img.alt = post.Hash
             // img.style.maxWidth = UserInfo.ThumbSize
             // img.style.maxHeight = UserInfo.ThumbSize
@@ -335,7 +335,7 @@
         else {
 	    thumb = closestThumb(0, post.ThumbHashes)
             var img = new Image()
-            img.src = UserInfo.Daemon + "/ipfs/" + thumb.Hash
+            img.src = UserInfo.Gateway + "/ipfs/" + thumb.Hash
             img.alt = post.Hash
             // img.style.maxWidth = UserInfo.ThumbSize
             // img.style.maxHeight = UserInfo.ThumbSize

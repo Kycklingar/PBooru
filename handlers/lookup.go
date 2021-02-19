@@ -8,6 +8,12 @@ import (
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
+type lookupPage struct {
+	Base base
+	Posts []*DM.Post
+	UserInfo UserInfo
+}
+
 func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
@@ -34,7 +40,7 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var p PostsPage
+		var p lookupPage
 
 		for _, pst := range posts {
 			pst.QMul(
@@ -48,9 +54,9 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 			p.Posts = append(p.Posts, pst)
 		}
 
-		p.User = userCookies(w, r)
+		p.UserInfo = userCookies(w, r)
 
-		renderTemplate(w, "posts", p)
+		renderTemplate(w, "lookup", p)
 	} else {
 		renderTemplate(w, "lookup", nil)
 	}
