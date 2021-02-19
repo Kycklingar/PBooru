@@ -1383,8 +1383,9 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
-	mimeIDs []int
-	order   string
+	mimeIDs     []int
+	order       string
+	collectAlts bool
 
 	altGroup    int
 	collectAlts bool
