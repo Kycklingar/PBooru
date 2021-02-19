@@ -241,6 +241,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFScore,
 		DM.PFDimension,
 		DM.PFThumbnails,
+		DM.PFAlts,
 	); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -340,6 +341,43 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Delete() {
+		permErr(w, "Delete")
+		return
+	}
+
+	var p *DM.Post
+
+	r.ParseForm()
+	for _, v := range r.Form["post-id"] {
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if p != nil {
+			err = p.SetAlt(DM.DB, id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			p = DM.NewPost()
+			p.ID = id
+		}
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/", p.ID), http.StatusSeeOther)
 }
 
 func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
@@ -582,7 +620,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.User.CollectAlts)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
@@ -610,6 +648,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFMime,
 			DM.PFScore,
 			DM.PFThumbnails,
+			DM.PFAlts,
 		)
 
 		for _, tag := range set.Tags {

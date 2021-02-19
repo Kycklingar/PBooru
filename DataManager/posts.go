@@ -93,6 +93,8 @@ type Post struct {
 
 	Checksums checksums
 
+	Alts []*Post
+
 	description *string
 
 	editCount int
@@ -109,6 +111,7 @@ const (
 	PFDimension
 	PFScore
 	PFChecksums
+	PFAlts
 	PFDescription
 )
 
@@ -172,12 +175,17 @@ func (p *Post) QMul(q querier, fields ...sqlbinder.Field) error {
 	go func() {
 		c <- p.QThumbs(q, fields...)
 	}()
+
+	go func() {
+		c <- p.QAlts(q, fields...)
+	}()
+
 	go func() {
 		c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)
 	}()
 
 	var err error
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		er := <-c
 		if er != nil {
 			log.Println(er)
@@ -204,6 +212,68 @@ func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		sel.Bind(nil, "multihash", "")
 		sel.Bind(nil, "dimension", "")
 	}
+}
+
+func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
+	var ok bool
+	for _, field := range fields {
+		if field == PFAlts {
+			ok = true
+			break
+		}
+	}
+
+	if !ok {
+		return nil
+	}
+
+	rows, err := q.Query(`
+		SELECT id
+		FROM posts
+		WHERE alt_group = (
+			SELECT alt_group
+			FROM posts
+			WHERE id = $1
+		)
+		`,
+		p.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var altIDs []int
+
+	var id int
+	for rows.Next() {
+		if err = rows.Scan(&id); err != nil {
+			return err
+		}
+
+		altIDs = append(altIDs, id)
+	}
+
+	if len(altIDs) <= 1 {
+		return nil
+	}
+
+	for _, id := range altIDs {
+		var alt = NewPost()
+		alt.ID = id
+		if err = alt.QMul(
+			q,
+			PFHash,
+			PFThumbnails,
+		); err != nil {
+			return err
+		}
+
+		p.Alts = append(p.Alts, alt)
+	}
+
+
+	return nil
 }
 
 func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
@@ -1230,6 +1300,7 @@ type PostCollector struct {
 
 	mimeIDs []int
 	order   string
+	collectAlts bool
 
 	tagLock sync.Mutex
 	pl      sync.RWMutex
@@ -1247,7 +1318,7 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int) error {
+func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int, collectAlts bool) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -1395,6 +1466,8 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		pc.order = "DESC"
 	}
 
+	pc.collectAlts = collectAlts
+
 	// Check if the mime id exist in the db
 	for _, mime := range Mimes {
 		if in(mime.ID, mimeIDs) {
@@ -1419,7 +1492,7 @@ func strSep(values []int, sep string) string {
 }
 
 func (pc *PostCollector) countIDStr() string {
-	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 {
+	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0  && !pc.collectAlts {
 		return "0"
 	}
 
@@ -1433,6 +1506,8 @@ func (pc *PostCollector) countIDStr() string {
 		strSep(pc.unless, " "),
 		" - ",
 		strSep(pc.mimeIDs, " "),
+		" - ",
+		pc.collectAlts,
 	)
 }
 
@@ -1498,11 +1573,22 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	// TODO: refactor
 	if pc.TotalPosts < 0 {
 		if pc.countIDStr() != "0" {
+			var query string
+			if pc.collectAlts {
+				query = `
+					SELECT COUNT(DISTINCT p.alt_group)
+					FROM posts p %s 
+					`
+			} else {
+				query = `
+					SELECT count(p.id)
+					FROM posts p %s
+					`
+			}
 			c := pc.ccGet()
 			if c < 0 {
 				query := fmt.Sprintf(
-					`SELECT count(p.id)
-					FROM posts p %s `,
+					query,
 					sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
 				)
 
@@ -1527,7 +1613,31 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		return result, nil
 	}
 
-	query := fmt.Sprintf(`
+	var query string
+	if pc.collectAlts {
+		query = `
+			SELECT id FROM (
+				SELECT DISTINCT ON (p.alt_group) *
+				FROM posts p
+				%s
+				ORDER BY p.alt_group DESC, p.id ASC
+				LIMIT $1
+				OFFSET $2
+			) AS p
+			ORDER BY %s
+			`
+	} else {
+		query = `
+			SELECT p.id
+			FROM posts p
+			%s
+			ORDER BY %s
+			LIMIT $1
+			OFFSET $2
+			`
+	}
+
+	query = fmt.Sprintf(`
 			SELECT p.id, ptm.tag_id, t.tag, t.count, n.nspace
 			FROM posts p
 			LEFT JOIN post_tag_mappings ptm
@@ -1537,15 +1647,11 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			ON t.id = ptm.tag_id
 			ON p.id = ptm.post_id
 			WHERE p.id IN (
-				SELECT p.id
-				FROM posts p
 				%s
-				ORDER BY %s
-				LIMIT $1
-				OFFSET $2
 			)
 			ORDER BY %s
 		`,
+		query,
 		sg.sel(
 			fmt.Sprintf(
 				"p.removed = false %s",

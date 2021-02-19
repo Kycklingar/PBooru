@@ -149,6 +149,12 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	// TODO
 	// Move post descriptions and comments
 
+	// Update alternatives
+	if err= updateAlts(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Update apple trees
 	if err = updateAppleTrees(tx, dupe); err != nil {
 		log.Println(err)
@@ -165,6 +171,20 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	a = tx.Commit
 
 	c.Cache.Purge("TPC", strconv.Itoa(dupe.Post.ID))
+	return nil
+}
+
+func updateAlts(tx querier, dupe Dupe) error {
+	for _, p := range dupe.Inferior {
+		if err := p.SetAlt(tx, dupe.Post.ID); err != nil {
+			return err
+		}
+		// Reset the inferior altgroup
+		if err := p.RemoveAlt(tx); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

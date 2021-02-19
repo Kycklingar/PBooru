@@ -1,10 +1,18 @@
 package DataManager
 
-func (p *Post) SetAlt(altof int, q querier) error {
+func (p *Post) SetAlt(q querier, altof int) error {
 	_, err := q.Exec(`
 		UPDATE posts
-		SET alt_group = $1
-		WHERE id = $2
+		SET alt_group = (
+			SELECT alt_group
+			FROM posts
+			WHERE id = $1
+		)
+		WHERE id = (
+			SELECT alt_group
+			FROM posts
+			WHERE id = $2
+		)
 		`,
 		altof,
 		p.ID,

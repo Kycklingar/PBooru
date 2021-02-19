@@ -17,7 +17,7 @@ type comparisonPage struct {
 	Report int
 }
 
-func (c comparisonPage) ColorID(id int) string {
+func colorID(id int) string {
 	runes := []rune("0123456789ABCDEF")
 	var cid string
 	var m = id * 77777
@@ -25,6 +25,10 @@ func (c comparisonPage) ColorID(id int) string {
 		cid += string(runes[i*m%len(runes)])
 	}
 	return fmt.Sprint(cid)
+}
+
+func (c comparisonPage) ColorID(id int) string {
+	return colorID(id)
 }
 
 func comparisonHandler(w http.ResponseWriter, r *http.Request) {

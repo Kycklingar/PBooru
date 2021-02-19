@@ -19,6 +19,7 @@ type UserInfo struct {
 	SessionToken     string
 	ThumbHover       bool
 	ThumbHoverFull   bool
+	CollectAlts	bool
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -347,6 +348,8 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 				user.ThumbHover = cookie.Value == "on"
 			case "thumb_hover_full":
 				user.ThumbHoverFull = cookie.Value == "on"
+			case "collect_alts":
+				user.CollectAlts = cookie.Value == "on"
 		}
 
 		refreshCookie(w, cookie, httpOnly)

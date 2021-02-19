@@ -229,6 +229,7 @@ func init() {
 			"wrap2":     wrap2,
 			"add":       add,
 			"mul":       mul,
+			"colorID":   colorID,
 		},
 	)
 
@@ -259,6 +260,8 @@ func init() {
 
 	Handlers["/compare/"] = comparisonHandler
 	Handlers["/compare2/"] = compare2Handler
+
+	Handlers["/assignalts/"] = assignAltsHandler
 
 	Handlers["/appletree/"] = appleTreeHandler
 

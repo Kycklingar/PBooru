@@ -64,7 +64,7 @@
 				{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
                 	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                	    <div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}}">
+                	    <div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}} {{if $.User.CollectAlts}}{{with .Post.Alts}}alts{{end}}{{end}}">
                 	        {{if eq $ct ""}}
                 	        <div class="mimetype centered {{if .Post.Removed}}removed{{end}}">
                 	            <span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
