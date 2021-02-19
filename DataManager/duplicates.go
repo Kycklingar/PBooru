@@ -150,7 +150,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	// Move post descriptions and comments
 
 	// Update alternatives
-	if err= updateAlts(tx, dupe); err != nil {
+	if err = updateAlts(tx, dupe); err != nil {
 		log.Println(err)
 		return err
 	}

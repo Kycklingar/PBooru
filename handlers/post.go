@@ -539,6 +539,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
+	p.Sidebar.Alts = r.FormValue("alts") == "on"
 
 	for _, mime := range DM.Mimes {
 		p.Sidebar.Mimes[mime.Type] = append(p.Sidebar.Mimes[mime.Type], mime)
@@ -580,6 +581,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	args = append(args, arg{"filter", p.Sidebar.Filter})
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
+	args = append(args, arg{"alts", r.FormValue("alts")})
 
 	for _, group := range mimeGroups {
 		args = append(args, arg{"mime-type", group})
@@ -620,7 +622,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.User.CollectAlts)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.Sidebar.Alts)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)

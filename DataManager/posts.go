@@ -272,7 +272,6 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 		p.Alts = append(p.Alts, alt)
 	}
 
-
 	return nil
 }
 
@@ -1298,8 +1297,8 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
-	mimeIDs []int
-	order   string
+	mimeIDs     []int
+	order       string
 	collectAlts bool
 
 	tagLock sync.Mutex
@@ -1492,7 +1491,7 @@ func strSep(values []int, sep string) string {
 }
 
 func (pc *PostCollector) countIDStr() string {
-	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0  && !pc.collectAlts {
+	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts {
 		return "0"
 	}
 
@@ -1617,7 +1616,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	if pc.collectAlts {
 		query = `
 			SELECT id FROM (
-				SELECT DISTINCT ON (p.alt_group) *
+				SELECT DISTINCT ON (p.alt_group) p.*
 				FROM posts p
 				%s
 				ORDER BY p.alt_group DESC, p.id ASC
@@ -1637,28 +1636,33 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			`
 	}
 
-	query = fmt.Sprintf(`
-			SELECT p.id, ptm.tag_id, t.tag, t.count, n.nspace
-			FROM posts p
-			LEFT JOIN post_tag_mappings ptm
-			JOIN tags t
-			JOIN namespaces n
-			ON n.id = t.namespace_id
-			ON t.id = ptm.tag_id
-			ON p.id = ptm.post_id
-			WHERE p.id IN (
-				%s
-			)
-			ORDER BY %s
-		`,
-		query,
+	query = fmt.Sprintf(
+		fmt.Sprintf(`
+				WITH res AS (
+					%s
+				)
+
+				SELECT p.id, ptm.tag_id, t.tag, t.count, n.nspace
+				FROM posts p
+				LEFT JOIN post_tag_mappings ptm
+				JOIN tags t
+				JOIN namespaces n
+				ON n.id = t.namespace_id
+				ON t.id = ptm.tag_id
+				ON p.id = ptm.post_id
+				JOIN res
+				ON res.id = p.id
+				ORDER BY %s
+			`,
+			query,
+			order,
+		),
 		sg.sel(
 			fmt.Sprintf(
 				"p.removed = false %s",
 				mimes,
 			),
 		),
-		order,
 		order,
 	)
 
@@ -1682,11 +1686,11 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 
 			for rows.Next() {
 				var (
-					tagID sql.NullInt64
-					tagCount sql.NullInt64
-					tagName sql.NullString
+					tagID     sql.NullInt64
+					tagCount  sql.NullInt64
+					tagName   sql.NullString
 					namespace sql.NullString
-					post = NewPost()
+					post      = NewPost()
 				)
 
 				rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
@@ -1694,14 +1698,13 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 					return result, err
 				}
 
-
 				var (
 					set resultSet
-					ok bool
+					ok  bool
 				)
 
 				if set, ok = pmap[post.ID]; !ok {
-					set = resultSet{Post:post}
+					set = resultSet{Post: post}
 				}
 
 				if tagID.Valid {
@@ -1729,20 +1732,19 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	} else {
 		collectorFunc = func(rows *sql.Rows) (SearchResult, error) {
 			var (
-				res SearchResult
-				prev int
+				res      SearchResult
+				prev     int
 				resCount int
 			)
 
 			for rows.Next() {
 				var (
-					tagID sql.NullInt64
-					tagCount sql.NullInt64
-					tagName sql.NullString
+					tagID     sql.NullInt64
+					tagCount  sql.NullInt64
+					tagName   sql.NullString
 					namespace sql.NullString
 
 					post = NewPost()
-
 				)
 
 				err := rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
@@ -1751,7 +1753,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				}
 
 				if prev != post.ID {
-					res = append(res, resultSet{Post:post})
+					res = append(res, resultSet{Post: post})
 					prev = post.ID
 					resCount++
 				}
@@ -1801,7 +1803,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 
 	// Get tags from all posts
 	pc.pl.RLock()
-	for _, set := range result{
+	for _, set := range result {
 		//var ptc TagCollector
 		//err := ptc.GetFromPost(DB, set.Post)
 		//if err != nil {

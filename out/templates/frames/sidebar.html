@@ -26,6 +26,10 @@
 	    <details>
 		<summary style="font-size:14px;">Advanced</summary>
 		<div id="advanced-search">
+			<label>Collect Alts
+				<input type="checkbox" name="alts" {{if .Alts}}checked{{end}}>
+			</label>
+			<br>
 		    <span>Order:</span>
 		    <br>
 		    <input id="order-desc" type="radio" name="order" value="" checked> <label for="order-desc">Descending</label><br>

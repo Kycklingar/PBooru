@@ -1,6 +1,9 @@
 package DataManager
 
+import "log"
+
 func (p *Post) SetAlt(q querier, altof int) error {
+	log.Println(p.ID, altof)
 	_, err := q.Exec(`
 		UPDATE posts
 		SET alt_group = (
@@ -8,7 +11,7 @@ func (p *Post) SetAlt(q querier, altof int) error {
 			FROM posts
 			WHERE id = $1
 		)
-		WHERE id = (
+		WHERE alt_group = (
 			SELECT alt_group
 			FROM posts
 			WHERE id = $2
