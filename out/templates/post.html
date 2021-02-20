@@ -42,13 +42,13 @@
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
 				{{if .User.Flag.Upload}}
-					<form method="POST" action="/assignalts/">
+					<form method="POST" action="/post/edit/assignalts/">
 						<h3>Assign alt</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="number" name="post-id">
 						<input type="submit">
 					</form>
-					<form method="POST" action="/removealt/">
+					<form method="POST" action="/post/edit/removealt/">
 						<h3>Remove alt</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">

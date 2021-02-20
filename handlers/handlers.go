@@ -255,14 +255,17 @@ func init() {
 	Handlers["/post/taghistory/"] = postHistoryHandler
 	Handlers["/post/report/"] = reportPostHandler
 	Handlers["/post/vote/"] = PostVoteHandler
+
+	Handlers["/post/edit/assignalts/"] = assignAltsHandler
+	Handlers["/post/edit/removealt/"] = unassignAltHandler
+
+
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)
 
 	Handlers["/compare/"] = comparisonHandler
 	Handlers["/compare2/"] = compare2Handler
 
-	Handlers["/assignalts/"] = assignAltsHandler
-	Handlers["/removealt/"] = unassignAltHandler
 
 	Handlers["/appletree/"] = appleTreeHandler
 

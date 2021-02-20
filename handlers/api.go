@@ -276,15 +276,13 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var combineTags bool
-	if len(r.FormValue("combTagNamespace")) > 0 {
-		combineTags = true
-	}
+	var combineTags = len(r.FormValue("combTagNamespace")) > 0
+	var groupAlts = len(r.FormValue("alts")) > 0
 
 	bm := BM.Begin()
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs, false)
+	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs, groupAlts)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)

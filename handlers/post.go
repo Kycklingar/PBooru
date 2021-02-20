@@ -377,6 +377,11 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if p == nil {
+		http.Error(w, "No post-id's provided", http.StatusBadRequest)
+		return
+	}
+
 	http.Redirect(w, r, fmt.Sprintf("/post/%d/", p.ID), http.StatusSeeOther)
 }
 
@@ -676,14 +681,24 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			Namespace: make([][]*DM.Tag, len(catMap)),
 		}
 
-		pt.Post.QMul(
-			DM.DB,
-			DM.PFHash,
-			DM.PFMime,
-			DM.PFScore,
-			DM.PFThumbnails,
-			DM.PFAlts,
-		)
+		if p.Sidebar.Alts {
+			pt.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFScore,
+				DM.PFThumbnails,
+				DM.PFAlts,
+			)
+		} else {
+			pt.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFScore,
+				DM.PFThumbnails,
+			)
+		}
 
 		for _, tag := range set.Tags {
 			if v, ok := catMap[tag.Namespace.Namespace]; ok {
