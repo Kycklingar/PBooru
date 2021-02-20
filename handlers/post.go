@@ -242,7 +242,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFMime,
 		DM.PFDimension,
 		DM.PFThumbnails,
-		DM.PFAlts,
 	); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
