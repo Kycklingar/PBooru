@@ -241,7 +241,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFScore,
 		DM.PFDimension,
 		DM.PFThumbnails,
-		DM.PFAlts,
 	); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -262,6 +261,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFHash,
 		DM.PFRemoved,
 		DM.PFThumbnails,
+		DM.PFAlts,
 	); err != nil {
 		log.Println(err)
 	}

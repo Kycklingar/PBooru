@@ -7,7 +7,19 @@ import (
 )
 
 func (p *Post) SetAlt(q querier, altof int) error {
-	_, err := q.Exec(`
+	d, err := getDupeFromPost(q, p)
+	if err != nil {
+		return err
+	}
+
+	p2 := NewPost()
+	p2.ID = altof
+	d2, err := getDupeFromPost(q, p2)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.Exec(`
 		UPDATE posts
 		SET alt_group = (
 			SELECT alt_group
@@ -27,8 +39,8 @@ func (p *Post) SetAlt(q querier, altof int) error {
 			)
 		)
 		`,
-		altof,
-		p.ID,
+		d2.Post.ID,
+		d.Post.ID,
 	)
 
 	tc := new(TagCollector)

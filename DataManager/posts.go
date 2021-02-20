@@ -637,6 +637,17 @@ func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User
 	}
 
 	_, err = tx.Exec(`
+		UPDATE posts
+		SET alt_group = id
+		WHERE id = $1
+		`,
+		postID,
+	)
+	if err != nil {
+		return postID, err
+	}
+
+	_, err = tx.Exec(`
 		INSERT INTO hashes(post_id, sha256, md5)
 		VALUES($1, $2, $3)
 		`,

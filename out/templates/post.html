@@ -182,7 +182,7 @@
 	    <h3>
             	<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
 	    </h3>
-	{{with .Post.Alts}}
+	{{with .Dupe.Post.Alts}}
 	<div class="cpage-container">
 		{{$zindex := 1000}}
 		{{range .}}
