@@ -282,7 +282,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs, groupAlts)
+	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs, 0, groupAlts)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)

@@ -17,6 +17,7 @@ type Sidebar struct {
 	Filter     string
 	Unless     string
 	Alts       bool
+	AltGroup int
 
 	Mimes map[string][]*DM.Mime
 }

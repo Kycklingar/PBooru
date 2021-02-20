@@ -3,7 +3,11 @@
 		{{if ne .TotalPosts 0}}
 			<div>{{.TotalPosts}}</div>
 		{{end}}
+
 		{{template "search field" .}}
+		{{with .AltGroup}}
+		<div>Alts: {{.}}</div>
+		{{end}}
 		{{template "sidebar tags" .}}
 	</div>
 {{ end }}
@@ -50,6 +54,9 @@
 		    </details>
 		</div>
 	    </details>
+	    {{with .AltGroup}}
+	    <input type="hidden" name="alt-group" value="{{.}}">
+	    {{end}}
 	</form>
 	</div>
 	<script type="text/javascript" src="/static/suggestions.js"></script>

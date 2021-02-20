@@ -93,6 +93,7 @@ type Post struct {
 
 	Checksums checksums
 
+	AltGroup int
 	Alts []*Post
 
 	description *string
@@ -112,6 +113,7 @@ const (
 	PFScore
 	PFChecksums
 	PFAlts
+	PFAltGroup
 	PFDescription
 )
 
@@ -147,6 +149,8 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		sel.Bind(&p.Size, "p.file_size", "")
 	case PFScore:
 		sel.Bind(&p.Score, "p.score", "")
+	case PFAltGroup:
+		sel.Bind(&p.AltGroup, "p.alt_group", "")
 	case PFDimension:
 		sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
 		sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
@@ -1311,6 +1315,8 @@ type PostCollector struct {
 
 	mimeIDs     []int
 	order       string
+
+	altGroup    int
 	collectAlts bool
 
 	tagLock sync.Mutex
@@ -1329,7 +1335,7 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int, collectAlts bool) error {
+func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int, altGroup int, collectAlts bool) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -1478,6 +1484,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	}
 
 	pc.collectAlts = collectAlts
+	pc.altGroup = altGroup
 
 	// Check if the mime id exist in the db
 	for _, mime := range Mimes {
@@ -1502,8 +1509,20 @@ func strSep(values []int, sep string) string {
 	return ret
 }
 
+func sepStr(sep string, values... string)string {
+	var ret string
+	for i, v := range values {
+		ret += fmt.Sprint(v)
+		if i < len(values) -1 {
+			ret += sep
+		}
+	}
+
+	return ret
+}
+
 func (pc *PostCollector) countIDStr() string {
-	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts {
+	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0{
 		return "0"
 	}
 
@@ -1517,6 +1536,8 @@ func (pc *PostCollector) countIDStr() string {
 		strSep(pc.unless, " "),
 		" - ",
 		strSep(pc.mimeIDs, " "),
+		" - ",
+		pc.altGroup,
 		" - ",
 		pc.collectAlts,
 	)
@@ -1556,7 +1577,13 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		pc.unless,
 	)
 
-	var mimes string
+	var (
+		order string
+		altGroup string
+		mimes string
+
+		wgr []string = []string{"p.removed = false"}
+	)
 
 	if len(pc.mimeIDs) > 0 {
 		for i, mi := range pc.mimeIDs {
@@ -1565,12 +1592,10 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				mimes += ","
 			}
 		}
-		mimes = fmt.Sprintf("AND p.mime_id IN(%s) ", mimes)
+		mimes = fmt.Sprintf("p.mime_id IN(%s) ", mimes)
+		wgr = append(wgr, mimes)
 	}
 
-	var (
-		order string
-	)
 
 	switch pc.order {
 	case "RANDOM()":
@@ -1579,6 +1604,11 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		order = fmt.Sprint("p.score DESC, p.id DESC")
 	default:
 		order = "p.id " + pc.order
+	}
+
+	if pc.altGroup > 0 {
+		altGroup = fmt.Sprintf("p.alt_group = %d", pc.altGroup)
+		wgr = append(wgr, altGroup)
 	}
 
 	// TODO: refactor
@@ -1600,7 +1630,9 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			if c < 0 {
 				query := fmt.Sprintf(
 					query,
-					sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
+					//sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
+					sg.sel(sepStr( " AND ", wgr...)),
+
 				)
 
 				//fmt.Println(query)
@@ -1670,9 +1702,13 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			order,
 		),
 		sg.sel(
-			fmt.Sprintf(
-				"p.removed = false %s",
-				mimes,
+			//fmt.Sprintf(
+			//	"p.removed = false %s",
+			//	mimes,
+			//),
+			sepStr(
+				" AND ",
+				wgr...,
 			),
 		),
 		order,

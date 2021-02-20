@@ -73,6 +73,7 @@ type Postpage struct {
 	Voted    bool
 	Comments []*DM.PostComment
 	Dupe     DM.Dupe
+	Alts []*DM.Post
 	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
@@ -262,6 +263,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFRemoved,
 		DM.PFThumbnails,
 		DM.PFAlts,
+		DM.PFAltGroup,
 	); err != nil {
 		log.Println(err)
 	}
@@ -275,6 +277,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		); err != nil {
 			log.Println(err)
 		}
+	}
+
+	for i := 0 ; i < 5 && i < len(pp.Dupe.Post.Alts); i++ {
+		pp.Alts = append(pp.Alts, pp.Dupe.Post.Alts[i])
 	}
 
 	pp.Voted = pp.User.Voted(DM.DB, p)
@@ -576,7 +582,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
+
 	p.Sidebar.Alts = r.FormValue("alts") == "on"
+	p.Sidebar.AltGroup, _ = strconv.Atoi(r.FormValue("alt-group"))
 
 	for _, mime := range DM.Mimes {
 		p.Sidebar.Mimes[mime.Type] = append(p.Sidebar.Mimes[mime.Type], mime)
@@ -619,6 +627,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	args = append(args, arg{"unless", p.Sidebar.Unless})
 	args = append(args, arg{"order", order})
 	args = append(args, arg{"alts", r.FormValue("alts")})
+	if p.Sidebar.AltGroup > 0 {
+		args = append(args, arg{"alt-group", strconv.Itoa(p.Sidebar.AltGroup)})
+	}
 
 	for _, group := range mimeGroups {
 		args = append(args, arg{"mime-type", group})
@@ -659,7 +670,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.Sidebar.Alts)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.Sidebar.AltGroup, p.Sidebar.Alts)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
