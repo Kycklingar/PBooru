@@ -267,9 +267,6 @@ func init() {
 	Handlers["/compare/"] = comparisonHandler
 	Handlers["/compare2/"] = compare2Handler
 
-	Handlers["/assignalts/"] = assignAltsHandler
-	Handlers["/removealt/"] = unassignAltHandler
-
 	Handlers["/appletree/"] = appleTreeHandler
 
 	Handlers["/reports/"] = makeStatHandler(reportsHandler)
