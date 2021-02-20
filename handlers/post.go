@@ -81,12 +81,12 @@ type Postpage struct {
 	Time     string
 }
 
-var catMap = map[string]int {
-	"creator": 0,
-	"gender": 1,
+var catMap = map[string]int{
+	"creator":   0,
+	"gender":    1,
 	"character": 2,
-	"species": 3,
-	"series": 4,
+	"species":   3,
+	"series":    4,
 }
 
 type postAndTags struct {
@@ -100,9 +100,9 @@ type postAndTags struct {
 }
 
 type PostsPage struct {
-	Base          base
+	Base base
 	//Result	      DM.SearchResult
-	Result	      []postAndTags
+	Result        []postAndTags
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
 	ArgString     string
@@ -670,9 +670,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, set := range result{
+	for _, set := range result {
 		var pt = postAndTags{
-			Post: set.Post,
+			Post:      set.Post,
 			Namespace: make([][]*DM.Tag, len(catMap)),
 		}
 

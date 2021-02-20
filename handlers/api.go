@@ -137,7 +137,6 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	AP, err := DMToAPIPost(p, tc.Tags, combineTags)
 	if err != nil {
 		log.Print(err)
@@ -310,7 +309,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	AP.Posts = make([]APIv1Post, len(result))
-	for i, set := range result{
+	for i, set := range result {
 		APp, err := DMToAPIPost(set.Post, set.Tags, combineTags)
 		if err != nil {
 			log.Print(err)

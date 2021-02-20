@@ -1,5 +1,11 @@
 package DataManager
 
+import (
+	"strconv"
+
+	c "github.com/kycklingar/PBooru/DataManager/cache"
+)
+
 func (p *Post) SetAlt(q querier, altof int) error {
 	_, err := q.Exec(`
 		UPDATE posts
@@ -8,15 +14,30 @@ func (p *Post) SetAlt(q querier, altof int) error {
 			FROM posts
 			WHERE id = $1
 		)
-		WHERE alt_group = (
-			SELECT alt_group
+		WHERE id IN (
+			SELECT id
 			FROM posts
-			WHERE id = $2
+			LEFT JOIN duplicates d
+			ON id = d.dup_id
+			WHERE d.dup_id IS NULL
+			AND alt_group = (
+				SELECT alt_group
+				FROM posts
+				WHERE id = $2
+			)
 		)
 		`,
 		altof,
 		p.ID,
 	)
+
+	tc := new(TagCollector)
+	tc.GetFromPost(q, p)
+	for _, tag := range tc.Tags {
+		resetCacheTag(q, tag.ID)
+	}
+
+	c.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return err
 }
@@ -46,6 +67,14 @@ func (p *Post) RemoveAlt(q querier) error {
 		`,
 		p.ID,
 	)
+
+	tc := new(TagCollector)
+	tc.GetFromPost(q, p)
+	for _, tag := range tc.Tags {
+		resetCacheTag(q, tag.ID)
+	}
+
+	c.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return err
 }

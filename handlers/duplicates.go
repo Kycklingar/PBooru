@@ -19,7 +19,6 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	page.User, page.UserInfo = getUser(w, r)
 	page.User.QFlag(DM.DB)
 
-
 	offset, _ := strconv.Atoi(r.FormValue("offset"))
 	limit, err := strconv.Atoi(r.FormValue("limit"))
 	if err != nil {
