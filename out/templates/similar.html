@@ -11,12 +11,13 @@
 <div id="content">
 	<form>
 	{{range .Posts}}
-		<span>
+		<span style="border: inset 4px #{{colorID .AltGroup}}">
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
 		<input type="checkbox" name="post-id" value="{{.ID}}">
 		</span>
 	{{end}}
 
+	<br>
 	<br>
 	<input type="submit" formaction="/compare/" value="Compare">
 	<input type="submit" formaction="/compare2/" value="Compare2.js">

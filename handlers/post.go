@@ -1046,6 +1046,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFThumbnails,
 			DM.PFRemoved,
 			DM.PFMime,
+			DM.PFAltGroup,
 		)
 	}
 
