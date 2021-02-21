@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,14 +19,20 @@ type comparisonPage struct {
 }
 
 func colorID(id int) string {
-	runes := []rune("0123456789ABCDEF")
-	var cid string
-	var m = id * 77777
-	for i := 1; i <= 6; i++ {
-		cid += string(runes[i*m%len(runes)])
-	}
-	return fmt.Sprint(cid)
+	n := strconv.Itoa(id)
+	h := sha256.Sum256([]byte(n))
+	return fmt.Sprintf("%x", h[:3])
 }
+
+//func colorID(id int) string {
+//	runes := []rune("0123456789ABCDEF")
+//	var cid string
+//	var m = id * 77777
+//	for i := 1; i <= 6; i++ {
+//		cid += string(runes[i*m%len(runes)])
+//	}
+//	return fmt.Sprint(cid)
+//}
 
 func (c comparisonPage) ColorID(id int) string {
 	return colorID(id)

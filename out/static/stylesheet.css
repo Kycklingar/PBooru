@@ -214,18 +214,13 @@ li
     /*border: 1px solid red;*/
 }
 
-.thumbnail.alts
-{
-	box-shadow: 0px 0px 5px 5px violet;
-}
-
 .thumbnail .overlay-bl
 {
 	position: absolute;
 	bottom: 0px;
 	left: 0px;
 	color: white;
-	text-shadow: 1px 1px 2px grey;
+	text-shadow: 1px 1px 2px black;
 }
 
 .thumbnail.video .overlay

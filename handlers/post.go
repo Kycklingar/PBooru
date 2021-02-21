@@ -700,6 +700,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFScore,
 				DM.PFThumbnails,
 				DM.PFAlts,
+				DM.PFAltGroup,
 			)
 		} else {
 			pt.Post.QMul(
