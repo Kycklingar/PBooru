@@ -1134,9 +1134,14 @@ func (p *Post) EditTags(user *User, tagStr string) error {
 	return tx.Commit()
 }
 
-func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
+func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 	if p.ID == 0 {
 		return nil, errors.New("id = 0")
+	}
+
+	var rem string
+	if !removed {
+		rem = "AND removed = FALSE"
 	}
 
 	type phash struct {
@@ -1154,7 +1159,29 @@ func (p *Post) FindSimilar(q querier, dist int) ([]*Post, error) {
 		return nil, err
 	}
 
-	rows, err := q.Query("SELECT * FROM phash WHERE h1=$1 OR h2=$2 OR h3=$3 OR h4=$4 ORDER BY post_id DESC", ph.h1, ph.h2, ph.h3, ph.h4)
+	rows, err := q.Query(
+		fmt.Sprintf(
+			`
+			SELECT post_id, h1, h2, h3, h4
+			FROM phash
+			JOIN posts
+			ON post_id = id
+			WHERE (
+				h1=$1
+				OR h2=$2
+				OR h3=$3
+				OR h4=$4
+			)
+			%s
+			ORDER BY post_id DESC
+			`,
+			rem,
+		),
+		ph.h1,
+		ph.h2,
+		ph.h3,
+		ph.h4,
+	)
 	if err != nil {
 		return nil, err
 	}

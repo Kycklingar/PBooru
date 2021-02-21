@@ -1001,6 +1001,7 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	distStr := r.FormValue("distance")
+	removed := r.FormValue("removed") == "on"
 
 	bm := benchmark.Begin()
 
@@ -1024,14 +1025,20 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p struct {
+	var p = struct {
+		Id int
+		Distance int
+
 		Posts    []*DM.Post
 		UserInfo UserInfo
 
 		Time string
+	}{
+		Id: id,
+		Distance: dist,
 	}
 
-	p.Posts, err = post.FindSimilar(DM.DB, dist)
+	p.Posts, err = post.FindSimilar(DM.DB, dist, removed)
 	if err != nil {
 		//http.Error(w, ErrInternal, http.StatusInternalServerError)
 		//return

@@ -412,7 +412,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var posts []*DM.Post
-	if posts, err = post.FindSimilar(DM.DB, 5); err != nil {
+	if posts, err = post.FindSimilar(DM.DB, 5, true); err != nil {
 		APIError(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
