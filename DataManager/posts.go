@@ -1663,7 +1663,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				SELECT DISTINCT ON (p.alt_group) p.*
 				FROM posts p
 				%s
-				ORDER BY p.alt_group, p.score, p.id DESC
+				ORDER BY p.alt_group, p.score DESC, p.id DESC
 			) AS p
 			ORDER BY %s
 			LIMIT $1
