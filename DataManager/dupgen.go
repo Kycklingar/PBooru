@@ -46,6 +46,16 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				OR pear = rep.lp
 				OR pear = rep.rp
 			)
+			LEFT JOIN (
+				SELECT dr.post_id AS lp, drp.post_id AS rp
+				FROM duplicate_report dr
+				LEFT JOIN duplicate_report_posts drp
+				ON dr.id = drp.report_id
+				WHERE approved IS NULL
+				AND report_type = 1
+			) plucked
+			ON apple = plucked.lp
+			AND pear = plucked.rp
 			WHERE apple IN(
 				SELECT apple
 				FROM apple_tree
@@ -65,15 +75,18 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 					OR pear = reports.rp
 				)
 				LEFT JOIN (
-					SELECT post_id
-					FROM duplicate_report
+					SELECT dr.post_id AS lp, drp.post_id AS rp
+					FROM duplicate_report dr
+					LEFT JOIN duplicate_report_posts drp
+					ON dr.id = drp.report_id
 					WHERE approved IS NULL
 					AND report_type = 1
 				) plucked
-				ON apple = plucked.post_id
+				ON apple = plucked.lp
+				AND pear = plucked.rp
 				%s
 				WHERE processed IS NULL
-				AND plucked.post_id IS NULL
+				AND plucked.lp IS NULL
 				%s
 				GROUP BY apple
 				ORDER BY apple
@@ -82,6 +95,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 			)
 			AND processed IS NULL
 			AND rep.lp IS NULL
+			AND plucked.lp IS NULL
 			ORDER BY apple
 			`,
 		join,

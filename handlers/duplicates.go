@@ -25,9 +25,11 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
+	plucked := r.FormValue("plucked") == "on"
+
 	order := r.FormValue("order") == "asc"
 
-	page.Reports, err = DM.FetchDupReports(limit, offset, order)
+	page.Reports, err = DM.FetchDupReports(limit, offset, order, plucked)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
