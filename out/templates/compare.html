@@ -123,6 +123,18 @@
 		{{end}}
 		<input type="submit" value="Add post to compare">
 	</form>
+	{{range .Posts}}
+	<form style="display:inline" method="GET">
+		{{range $.Posts}}
+		<input type="hidden" name="post-id" value="{{.ID}}">
+		{{end}}
+		{{range $.Removed}}
+		<input type="hidden" name="removed-id" value="{{.ID}}">
+		{{end}}
+		<input type="hidden" name="removed-id" value="{{.ID}}">
+		<input type="submit" style="border:solid #{{$.ColorID .ID}}" value="Remove {{.ID}}">
+	</form>
+	{{end}}
 	<form action="/duplicate/report/" method="POST">
 		{{range .Posts}}
 		<span postid="{{.ID}}" class="interface-post">
@@ -145,7 +157,13 @@
 			<button type="submit" name="best-id" value="{{.ID}}">Report as superior</button>
 		</span>
 		{{end}}
+		{{range .Removed}}
+		<input type="hidden" name="removed-ids" value="{{.ID}}">
+		{{end}}
 		<textarea rows="1" name="note" placeholder="Optional note"></textarea>
+		<label>Submit removed as non duplicates
+		<input type="checkbox" name="non-dupes" checked>
+		</label>
 	</form>
 </details>
 

@@ -15,7 +15,7 @@ type DupReport struct {
 	Dupe      Dupe
 }
 
-func FetchDupReports(limit, offset int, asc bool) ([]*DupReport, error) {
+func FetchDupReports(limit, offset int, asc bool, pluckedReports bool) ([]*DupReport, error) {
 	var reports []*DupReport
 
 	var order = "DESC"
@@ -24,16 +24,23 @@ func FetchDupReports(limit, offset int, asc bool) ([]*DupReport, error) {
 		order = "ASC"
 	}
 
+	var pluck = "AND report_type = 0"
+	if pluckedReports {
+		pluck = "AND report_type = 1"
+	}
+
 	err := func() error {
 		rows, err := DB.Query(
 			fmt.Sprintf(`
 				SELECT id, report_type, post_id, reporter, note, approved, timestamp
 				FROM duplicate_report
 				WHERE approved IS NULL
+				%s
 				ORDER BY timestamp %s
 				LIMIT $1
 				OFFSET $2
 				`,
+				pluck,
 				order,
 			),
 			limit,
