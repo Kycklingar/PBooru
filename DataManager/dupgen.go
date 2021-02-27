@@ -32,11 +32,48 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	query := fmt.Sprintf(`
 			SELECT apple, pear
 			FROM apple_tree
+			LEFT JOIN (
+				SELECT dr.post_id AS lp, drp.post_id AS rp
+				FROM duplicate_report dr
+				LEFT JOIN duplicate_report_posts drp
+				ON dr.id = drp.report_id
+				WHERE dr.approved IS NULL
+				AND dr.report_type = 0
+			) rep
+			ON (
+				apple = rep.lp
+				OR apple = rep.rp
+				OR pear = rep.lp
+				OR pear = rep.rp
+			)
 			WHERE apple IN(
 				SELECT apple
 				FROM apple_tree
+				LEFT JOIN (
+					SELECT dr.post_id AS lp, drp.post_id AS rp
+					FROM duplicate_report dr
+					LEFT JOIN duplicate_report_posts drp
+					ON dr.id = drp.report_id
+					WHERE dr.approved IS NULL
+					AND dr.report_type = 0
+				) reports
+				ON reports.lp IS NULL
+				AND (
+					apple = reports.lp
+					OR apple = reports.rp
+					OR pear = reports.lp
+					OR pear = reports.rp
+				)
+				LEFT JOIN (
+					SELECT post_id
+					FROM duplicate_report
+					WHERE approved IS NULL
+					AND report_type = 1
+				) plucked
+				ON apple = plucked.post_id
 				%s
 				WHERE processed IS NULL
+				AND plucked.post_id IS NULL
 				%s
 				GROUP BY apple
 				ORDER BY apple
@@ -44,6 +81,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				OFFSET $2
 			)
 			AND processed IS NULL
+			AND rep.lp IS NULL
 			ORDER BY apple
 			`,
 		join,

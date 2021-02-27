@@ -7,7 +7,6 @@
 <script type="text/javascript" src="/static/suggestions.js"></script>
 
 <h3>Ignore false positives</h3>
-{{if .User.Flag.Delete}}
 	{{range .Trees}}
 	<div class="panel">
 		<form method="POST">
@@ -34,26 +33,6 @@
 		</form>
 	</div>
 	{{end}}
-{{else}}
-	{{range .Trees}}
-	<div class="panel">
-		<form target="_blank">
-			{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
-			<input type="hidden" name="post-id" value="{{.Apple.ID}}">
-			<div class="comic-strip">
-			{{range .Pears}}
-				<span>
-					{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .}}
-					<input type="checkbox" checked name="post-id" value="{{.ID}}">
-				</span>
-			{{end}}
-			</div>
-			<input type="submit" formaction="/compare2/" value="Compare2.js">
-			<input type="submit" formaction="/compare/" value="Compare">
-		</form>
-	</div>
-	{{end}}
-{{end}}
 
 <form>
 	<input type="hidden" name="tags" value="{{.Query}}">

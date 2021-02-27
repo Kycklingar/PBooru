@@ -133,7 +133,7 @@ type reportType int
 
 const (
 	RDupe reportType = iota
-	RRemoved
+	RNonDupe
 )
 
 
