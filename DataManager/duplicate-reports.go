@@ -7,6 +7,7 @@ import (
 
 type DupReport struct {
 	ID        int
+	ReportType reportType
 	Reporter  *User
 	Note      string
 	Approved  timestamp
@@ -26,7 +27,7 @@ func FetchDupReports(limit, offset int, asc bool) ([]*DupReport, error) {
 	err := func() error {
 		rows, err := DB.Query(
 			fmt.Sprintf(`
-				SELECT id, post_id, reporter, note, approved, timestamp
+				SELECT id, report_type, post_id, reporter, note, approved, timestamp
 				FROM duplicate_report
 				WHERE approved IS NULL
 				ORDER BY timestamp %s
@@ -47,7 +48,7 @@ func FetchDupReports(limit, offset int, asc bool) ([]*DupReport, error) {
 			var dr = new(DupReport)
 			dr.Reporter = NewUser()
 			dr.Dupe.Post = NewPost()
-			err = rows.Scan(&dr.ID, &dr.Dupe.Post.ID, &dr.Reporter.ID, &dr.Note, &dr.Approved, &dr.Timestamp)
+			err = rows.Scan(&dr.ID, &dr.ReportType, &dr.Dupe.Post.ID, &dr.Reporter.ID, &dr.Note, &dr.Approved, &dr.Timestamp)
 			if err != nil {
 				return err
 			}
@@ -78,16 +79,23 @@ func FetchDupReport(id int, q querier) (*DupReport, error) {
 	r.Dupe.Post = NewPost()
 
 	err := q.QueryRow(`
-		SELECT post_id, reporter, note, approved, timestamp
+		SELECT post_id, report_type, reporter, note, approved, timestamp
 		FROM duplicate_report
 		WHERE id = $1
-		`, id).Scan(&r.Dupe.Post.ID, &r.Reporter.ID, &r.Note, &r.Approved, &r.Timestamp)
+		`, id).Scan(&r.Dupe.Post.ID, &r.ReportType, &r.Reporter.ID, &r.Note, &r.Approved, &r.Timestamp)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	rows, err := q.Query("SELECT post_id FROM duplicate_report_posts WHERE report_id = $1", id)
+
+	query := `
+		SELECT post_id
+		FROM duplicate_report_posts
+		WHERE report_id = $1
+		`
+
+	rows, err := q.Query(query, id)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -121,7 +129,15 @@ func ProcessDupReport(reportID int) error {
 	return err
 }
 
-func ReportDuplicates(dupe Dupe, reporter *User, note string) error {
+type reportType int
+
+const (
+	RDupe reportType = iota
+	RRemoved
+)
+
+
+func ReportDuplicates(dupe Dupe, reporter *User, note string, repT reportType) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err
@@ -135,31 +151,37 @@ func ReportDuplicates(dupe Dupe, reporter *User, note string) error {
 		INSERT INTO duplicate_report (
 			post_id,
 			reporter,
-			note
+			note,
+			report_type
 		)
 		VALUES(
 			$1,
 			$2,
-			$3
+			$3,
+			$4
 		)
 		RETURNING id`,
 		dupe.Post.ID,
 		reporter.ID,
 		note,
+		repT,
 	).Scan(&reportID); err != nil {
 		return err
 	}
 
+	query := `
+	INSERT INTO duplicate_report_posts (
+		report_id,
+		post_id
+	)
+	VALUES(
+		$1,
+		$2
+	)`
+
 	for _, p := range dupe.Inferior {
-		if _, err = tx.Exec(`
-			INSERT INTO duplicate_report_posts (
-				report_id,
-				post_id
-			)
-			VALUES(
-				$1,
-				$2
-			)`,
+		if _, err = tx.Exec(
+			query,
 			reportID,
 			p.ID,
 		); err != nil {
