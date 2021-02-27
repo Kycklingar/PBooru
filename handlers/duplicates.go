@@ -125,7 +125,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if reportNonDupes {
+		if reportNonDupes && len(removed.Inferior) >= 1 {
 			if err = DM.PluckApple(removed); err != nil {
 				log.Println(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -144,8 +144,8 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if reportNonDupes {
-			if err = DM.ReportDuplicates(removed, user, note, DM.RRemoved); err != nil {
+		if reportNonDupes && len(removed.Inferior) >= 1 {
+			if err = DM.ReportDuplicates(removed, user, note, DM.RNonDupe); err != nil {
 				log.Println(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -179,7 +179,7 @@ func processReportHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
-func pluckReportHandler(w http.ResponseWriter, r *http.Request) {
+func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

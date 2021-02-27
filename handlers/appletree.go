@@ -75,10 +75,6 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Delete() {
-		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
-		return
-	}
 
 	var (
 		dupes = DM.Dupe{Post:DM.NewPost()}
@@ -104,9 +100,18 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 		dupes.Inferior = append(dupes.Inferior, p)
 	}
 
-	err = DM.PluckApple(dupes)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if user.QFlag(DM.DB).Delete() {
+		err = DM.PluckApple(dupes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err = DM.ReportDuplicates(dupes, user, "", DM.RNonDupe)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
