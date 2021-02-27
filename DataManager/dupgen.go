@@ -90,7 +90,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	return trees, nil
 }
 
-func PluckApple(apple int, pears []int) error {
+func PluckApple(dupe Dupe) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err
@@ -98,15 +98,15 @@ func PluckApple(apple int, pears []int) error {
 
 	defer commitOrDie(tx, &err)
 
-	for _, pear := range pears {
+	for _, pear := range dupe.Inferior {
 		_, err := tx.Exec(`
 			UPDATE apple_tree
 			SET processed = CURRENT_TIMESTAMP
 			WHERE apple = $1
 			AND pear = $2
 			`,
-			apple,
-			pear,
+			dupe.Post.ID,
+			pear.ID,
 		)
 		if err != nil {
 			return err
