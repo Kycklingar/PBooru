@@ -154,8 +154,13 @@ func PluckApple(dupe Dupe) error {
 		_, err := tx.Exec(`
 			UPDATE apple_tree
 			SET processed = CURRENT_TIMESTAMP
-			WHERE apple = $1
-			AND pear = $2
+			WHERE (
+				apple = $1
+				AND pear = $2
+			) OR (
+				apple = $2
+				AND pear = $1
+			)
 			`,
 			dupe.Post.ID,
 			pear.ID,
