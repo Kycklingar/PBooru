@@ -103,6 +103,7 @@ form.block input
 {
 	width:auto;
 	height:auto;
+	margin: 0.3em;
 }
 
 .comic-strip .thumbnail img
@@ -204,14 +205,27 @@ li
 	white-space:pre-line;
 }
 
+#posts > a
+{
+	margin: 0.4em;
+	background-color: #0002;
+}
+
 .thumbnail
 {
     position: relative;
-    margin:3px;
+    /*margin:3px;*/
     width:256px;
     height:256px;
     word-wrap: break-word;
     /*border: 1px solid red;*/
+}
+
+.thumbnail .overlay-bl:hover
+{
+	z-index: 10000;
+	background-color: #0003;
+	outline: solid white 1px;
 }
 
 .thumbnail .overlay-bl
@@ -221,6 +235,23 @@ li
 	left: 0px;
 	color: white;
 	text-shadow: 1px 1px 2px black;
+
+}
+
+.thumbnail form
+{
+	margin: unset;
+}
+
+.thumbnail .overlay-bl button
+{
+	color: inherit;
+	background-color: unset;
+	border: unset;
+	font-size: inherit;
+	padding: inherit;
+	text-shadow: inherit;
+	cursor: pointer;
 }
 
 .thumbnail.video .overlay

@@ -259,13 +259,11 @@ func init() {
 	Handlers["/post/edit/assignalts/"] = assignAltsHandler
 	Handlers["/post/edit/removealt/"] = unassignAltHandler
 
-
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)
 
 	Handlers["/compare/"] = comparisonHandler
 	Handlers["/compare2/"] = compare2Handler
-
 
 	Handlers["/appletree/"] = appleTreeHandler
 

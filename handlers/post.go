@@ -73,7 +73,7 @@ type Postpage struct {
 	Voted    bool
 	Comments []*DM.PostComment
 	Dupe     DM.Dupe
-	Alts []*DM.Post
+	Alts     []*DM.Post
 	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
@@ -106,10 +106,10 @@ type PostsPage struct {
 	Result        []postAndTags
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
-	ArgString     string
-	Pageinator    Pageination
-	User          UserInfo
-	Time          string
+	//ArgString     string
+	Pageinator Pageination
+	User       UserInfo
+	Time       string
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -279,7 +279,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for i := 0 ; i < 5 && i < len(pp.Dupe.Post.Alts); i++ {
+	for i := 0; i < 5 && i < len(pp.Dupe.Post.Alts); i++ {
 		pp.Alts = append(pp.Alts, pp.Dupe.Post.Alts[i])
 	}
 
@@ -583,7 +583,19 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
 
-	p.Sidebar.Alts = r.FormValue("alts") == "on"
+	//p.Sidebar.Alts = r.FormValue("alts") == "on"
+
+	for _, alt := range r.Form["alts"] {
+		if alt == "off" {
+			p.Sidebar.Alts = false
+			r.Form.Del("alts")
+			break
+		} else if alt == "on" {
+			p.Sidebar.Alts = true
+		}
+
+	}
+
 	p.Sidebar.AltGroup, _ = strconv.Atoi(r.FormValue("alt-group"))
 
 	for _, mime := range DM.Mimes {
@@ -616,46 +628,18 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type arg struct {
-		name  string
-		value string
-	}
-
-	args := []arg{}
-	args = append(args, arg{"or", p.Sidebar.Or})
-	args = append(args, arg{"filter", p.Sidebar.Filter})
-	args = append(args, arg{"unless", p.Sidebar.Unless})
-	args = append(args, arg{"order", order})
-	args = append(args, arg{"alts", r.FormValue("alts")})
-	if p.Sidebar.AltGroup > 0 {
-		args = append(args, arg{"alt-group", strconv.Itoa(p.Sidebar.AltGroup)})
-	}
-
-	for _, group := range mimeGroups {
-		args = append(args, arg{"mime-type", group})
-	}
-
-	for _, mimeID := range mimes {
-		args = append(args, arg{"mime", mimeID})
-	}
-
-	argString := func(arguments []arg) string {
-		var str string
-		for _, arg := range arguments {
-			if arg.value != "" {
-				str += fmt.Sprintf("%s=%s&", arg.name, arg.value)
-			}
+	// Cleanup empty keys
+	for k, _ := range r.Form {
+		if r.FormValue(k) == "" {
+			r.Form.Del(k)
 		}
-		if str != "" {
-			str = "?" + str
-		}
-		return str
 	}
 
-	p.ArgString = argString(args)
+	p.Sidebar.Form = r.Form
+	p.Sidebar.Form.Del("tags")
 
 	if tagString != "" {
-		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), p.ArgString)
+		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), "?"+r.Form.Encode())
 		http.Redirect(w, r, red, http.StatusSeeOther)
 		return
 	}
@@ -1026,7 +1010,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p = struct {
-		Id int
+		Id       int
 		Distance int
 
 		Posts    []*DM.Post
@@ -1034,7 +1018,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 
 		Time string
 	}{
-		Id: id,
+		Id:       id,
 		Distance: dist,
 	}
 
