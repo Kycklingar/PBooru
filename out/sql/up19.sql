@@ -1,0 +1,2 @@
+ALTER TABLE duplicate_report ADD COLUMN report_type INTEGER NOT NULL DEFAULT 0;
+
