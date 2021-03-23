@@ -25,7 +25,13 @@
 .comic
 {
 	margin: 1em;
-	max-width: 300px;
+	max-width: min-content;
+	min-width: 250px;
+}
+
+.comic .tag
+{
+	white-space: initial;
 }
 
 .comic a:visited, .comic a:link
@@ -35,6 +41,8 @@
 
 .comic img
 {
+	max-width: 400px;
+	max-height: 400px;
 	position:relative;
 	margin-bottom: 0.6em;
 	left: 50%;
