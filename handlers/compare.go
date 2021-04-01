@@ -13,7 +13,7 @@ import (
 type comparisonPage struct {
 	UserInfo UserInfo
 
-	Posts []*DM.Post
+	Posts   []*DM.Post
 	Removed []*DM.Post
 
 	Report int
@@ -85,7 +85,6 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 			page.Posts = append(page.Posts, p)
 		}
 	}
-
 
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])

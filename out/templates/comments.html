@@ -1,10 +1,16 @@
 {{ template "base" }}
+<script>
+function appendComment(e)
+{
+	document.getElementById("comment-input").value += e.innerText + " "
+}
+</script>
 
 <div class="postcomment">
     <div class="text-panel">
         <h2>{{.Username}}</h2>
         <form method="POST">
-            <textarea maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
+            <textarea id="comment-input" maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
             <br>
 	    {{with .Captcha}}
 	    <img style="background-color:white;" src="/captcha/{{.}}.png">
@@ -37,9 +43,9 @@
         <div id="c{{.ID}}" class="comment">
             <b>
             <span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
-            <span class="comment-id">#{{.ID}}</span>
+            <span class="comment-id" onclick="appendComment(this)">#{{.ID}}</span>
             <span class="comment-time">{{.Time}}</span>
-	    {{if .Editable}}
+	    {{if index $.Editable .ID}}
 	    	<details>
 		<summary>Edit</summary>
 			<form action="/wall/edit/" method="POST">
@@ -47,6 +53,13 @@
 				<textarea name="text">{{.Text}}</textarea>
 				<input type="submit">
 			</form>
+			{{if $.User.Flag.Special}}
+			<form action="/wall/delete/" method="POST">
+			    <input type="hidden" name="id" value="{{.ID}}">
+			    <input type="checkbox" name="confirm">
+			    <input type="submit" value="Delete">
+			</form>
+			{{end}}
 		</details>
 	    {{end}}
             </b>
@@ -55,6 +68,14 @@
     </li>
 {{ end}}
 </ul>
+
+<script>
+let comments = document.getElementsByClassName("comment-id")
+for(let i = 0; i < comments.length; i++)
+{
+	comments[i].style.cursor = "pointer"
+}
+</script>
 
 {{ template "benchmark" .Time}}
 {{ template "baseEnd" }}

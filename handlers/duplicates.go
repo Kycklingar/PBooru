@@ -63,7 +63,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		note = r.FormValue("note")
+		note           = r.FormValue("note")
 		reportNonDupes = r.FormValue("non-dupes") == "on"
 	)
 
@@ -80,7 +80,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		dupes DM.Dupe
+		dupes   DM.Dupe
 		removed DM.Dupe
 	)
 

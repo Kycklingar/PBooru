@@ -77,8 +77,8 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
 	var (
-		dupes = DM.Dupe{Post:DM.NewPost()}
-		err error
+		dupes = DM.Dupe{Post: DM.NewPost()}
+		err   error
 	)
 
 	dupes.Post.ID, err = strconv.Atoi(r.FormValue("apple"))
@@ -86,7 +86,6 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 
 	pearsStr := r.Form["pears"]
 	for _, pearStr := range pearsStr {
@@ -117,4 +116,3 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 	return
 }
-
