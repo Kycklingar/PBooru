@@ -86,6 +86,7 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])
 
