@@ -1389,9 +1389,6 @@ type PostCollector struct {
 	altGroup    int
 	collectAlts bool
 
-	altGroup    int
-	collectAlts bool
-
 	tagLock sync.Mutex
 	pl      sync.RWMutex
 }
