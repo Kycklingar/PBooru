@@ -10,6 +10,7 @@ var rightInterface = document.getElementById("interface-right")
 var canvas = document.getElementById("canvas")
 
 var note = document.getElementById("note")
+var reportNoneDupes = document.getElementById("non-dupes")
 
 canvas.onclick = function(){rightInterface.focus()}
 
@@ -49,6 +50,12 @@ function submitReport()
 	for (let i = 0; i < posts.length; i++)
 	{
 		fd.append("post-ids", posts[i].id)
+	}
+
+	fd.append("non-dupes", reportNoneDupes.value)
+	for (let i = 0; i < removed.length; i++)
+	{
+		fd.append("removed-ids", removed[i].id)
 	}
 
 	fd.append("best-id", currentPost.id)
@@ -352,9 +359,11 @@ function renderPost(post)
 	let img = new Image()
 	img.src = ipfsLink(post.hash)
 	img.onload = function(){
-		clearTimeout(lt)
-		loader.classList.add("hidden")
-		renderImage(img)
+		img.decode().then(function(){
+			clearTimeout(lt)
+			loader.classList.add("hidden")
+			renderImage(img)
+		})
 	}
 
 	currentPost = post
@@ -442,7 +451,6 @@ function renderImage(image)
 	
 	blankCanvas()
 	canvas.appendChild(image)
-
 
 	var b = rightInterface.scrollHeight - rightInterface.clientHeight
 	rightInterface.scrollTop = b * scrollY

@@ -262,14 +262,16 @@ li
 	cursor: pointer;
 }
 
-.thumbnail.video .overlay
+.thumbnail.video .overlay-br
 {
 	position:absolute;
 	background-image:url(/static/video.png);
 	background-repeat:no-repeat;
-	background-position:bottom right;
-	height:100%;
-	width:100%;
+	background-size:contain;
+	height:32px;
+	width:32px;
+	right:0px;
+	bottom:0px;
 }
 
 .thumbnail img
@@ -730,8 +732,8 @@ li
 
 .dupe-reports img
 {
-	max-width:100px;
-	max-height:100px;
+	max-width:256px;
+	max-height:256px;
 	transform:none;
 	left:0px;
 	top:0px;
@@ -740,8 +742,6 @@ li
 
 .dupe-reports .comic-strip img
 {
-	max-width:50px;
-	max-height:50px;
 }
 
 @keyframes struggle

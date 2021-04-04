@@ -13,7 +13,8 @@ import (
 type comparisonPage struct {
 	UserInfo UserInfo
 
-	Posts []*DM.Post
+	Posts   []*DM.Post
+	Removed []*DM.Post
 
 	Report int
 }
@@ -45,6 +46,31 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
+	in := func(id int, posts []*DM.Post) bool {
+		for _, p := range posts {
+			if p.ID == id {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	for _, id := range r.Form["removed-id"] {
+		var err error
+		p := DM.NewPost()
+		p.ID, err = strconv.Atoi(id)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Invalid post ID", http.StatusBadRequest)
+			return
+		}
+
+		if !in(p.ID, page.Removed) {
+			page.Removed = append(page.Removed, p)
+		}
+	}
+
 	for _, id := range r.Form["post-id"] {
 		var err error
 		var p = DM.NewPost()
@@ -55,8 +81,11 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		page.Posts = append(page.Posts, p)
+		if !in(p.ID, page.Posts) && !in(p.ID, page.Removed) {
+			page.Posts = append(page.Posts, p)
+		}
 	}
+
 
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])

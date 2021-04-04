@@ -3,16 +3,12 @@ package handlers
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/dchest/captcha"
 	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 )
 
 const (
@@ -230,31 +226,24 @@ type Comment struct {
 	Editable     bool
 }
 
-func canEditComment(min time.Duration, user *DM.User, c *DM.Comment) bool {
-	_, toff := time.Now().Zone()
-	return user.ID > 0 && (user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(*c.Time.Time())+time.Second*time.Duration(toff) < time.Minute*min))
-}
-
-const commentEditTimeoutMinutes = 30
-
-func tComment(user *DM.User, c *DM.Comment) Comment {
-	c.User.QName(DM.DB)
-	return Comment{
-		c.ID,
-		c.User,
-		c.Text,
-		c.CompiledText,
-		c.Time.String(),
-		canEditComment(commentEditTimeoutMinutes, user, c),
-	}
-}
-
-func tComments(user *DM.User, cm []*DM.Comment) (r []Comment) {
-	for _, c := range cm {
-		r = append(r, tComment(user, c))
-	}
-	return
-}
+//func tComment(user *DM.User, c *DM.Comment) Comment {
+//	c.User.QName(DM.DB)
+//	return Comment{
+//		c.ID,
+//		c.User,
+//		c.Text,
+//		c.CompiledText,
+//		c.Time.String(),
+//		canEditComment(commentEditTimeoutMinutes, user, c),
+//	}
+//}
+//
+//func tComments(user *DM.User, cm []*DM.Comment) (r []Comment) {
+//	for _, c := range cm {
+//		r = append(r, tComment(user, c))
+//	}
+//	return
+//}
 
 func tPostComment(c *DM.PostComment) Comment {
 	return Comment{c.ID, c.User, c.Text, c.Text, c.Time, false}
@@ -265,104 +254,6 @@ func tPostComments(cm []*DM.PostComment) (r []Comment) {
 		r = append(r, tPostComment(c))
 	}
 	return
-}
-
-func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
-	user, uinfo := getUser(w, r)
-	if r.Method == http.MethodPost {
-		if CFG.EnableCommentCaptcha == captchaEveryone || (CFG.EnableCommentCaptcha == captchaAnon && user.QID(DM.DB) <= 0) {
-			if !verifyCaptcha(w, r) {
-				http.Error(w, "Captcha failed", http.StatusBadRequest)
-				return
-			}
-		}
-
-		text := r.FormValue("text")
-		if len(text) < 3 || len(text) > 7500 {
-			http.Error(w, "Minimum 3 characters. Maximum 7500 characters.", http.StatusBadRequest)
-			return
-		}
-
-		var c DM.Comment
-		err := c.Save(user.QID(DM.DB), text)
-		if err != nil {
-			if err.Error() == "Post does not exist" {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			log.Println(err)
-		}
-
-		http.Redirect(w, r, "/wall", http.StatusSeeOther)
-	}
-
-	bm := benchmark.Begin()
-	var commMod DM.CommentCollector
-	err := commMod.Get(DM.DB, 100, uinfo.Gateway)
-	if err != nil {
-		http.Error(w, "Oops, something went wrong.", http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
-	type P struct {
-		Username   string
-		Comments   []Comment
-		ServerTime string
-		Time       string
-		Captcha    string
-	}
-	var p P
-	p.Comments = tComments(user, commMod.Comments)
-
-	p.Username = user.QName(DM.DB)
-	if p.Username == "" {
-		p.Username = "Anonymous"
-	}
-
-	p.ServerTime = time.Now().Format(DM.Sqlite3Timestamp)
-	p.Time = bm.EndStr(performBenchmarks)
-
-	if CFG.EnableCommentCaptcha == captchaEveryone || (CFG.EnableCommentCaptcha == captchaAnon && user.QID(DM.DB) <= 0) {
-		p.Captcha = captcha.New()
-	}
-
-	renderTemplate(w, "comments", p)
-}
-
-func editCommentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		notFoundHandler(w)
-		return
-	}
-
-	user, _ := getUser(w, r)
-
-	const (
-		cID = "id"
-	)
-
-	m, err := verifyInteger(r, cID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	comment, err := DM.CommentByID(m[cID])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if canEditComment(commentEditTimeoutMinutes, user, comment) {
-		err = comment.Edit(r.FormValue("text"))
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
 func UrlEncode(uri string) string {

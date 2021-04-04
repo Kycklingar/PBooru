@@ -23,6 +23,10 @@
 	<br>
 	<input type="number" name="offset" placeholder="Offset">
 	<br>
+	<label>Plucked:
+	<input type="checkbox" name="plucked">
+	</label>
+	<br>
 	<input type="submit">
 </form>
 
@@ -62,6 +66,12 @@
 	{{end}}
 	</div>
 	<h4><a href="/duplicate/compare/?report-id={{.ID}}">Compare</a></h4>
+	{{if .ReportType}}
+	<form method="POST" action="/duplicate/pluck/">
+		<input type="hidden" name="report-id" value="{{.ID}}">
+		<input type="submit" value="Pluck">
+	</form>
+	{{end}}
 </div>
 {{end}}
 

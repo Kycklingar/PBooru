@@ -100,6 +100,13 @@ func (s *pinstore) updatePin(oldRoot, newRoot string) error {
 		} else {
 			rb := s.ipfs.Request("pin/update", oldRoot, newRoot)
 			err := rb.Exec(context.Background(), nil)
+			// Some new pin check in IPFS
+			// Destroy old pin and return operation
+			if err != nil && err.Error() == "pin/update: 'to' cid was already recursively pinned" {
+				err = s.ipfs.Unpin(oldRoot)
+			}
+			// Return if no error OR error is other than 'not pinned already'
+			// Otherwise fall back to creating new pin
 			if err == nil || (err != nil && err.Error() != "pin/update: 'from' cid was not recursively pinned already") {
 				return err
 			}

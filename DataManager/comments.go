@@ -119,6 +119,17 @@ func (cm Comment) Username() string {
 	return cm.User.Name
 }
 
+func DeleteComment(id int) error {
+	_, err := DB.Exec(`
+		DELETE FROM comment_wall
+		WHERE id = $1
+		`,
+		id,
+	)
+
+	return err
+}
+
 //Save a new comment to the wall
 func (cm *Comment) Save(userID int, text string) error {
 

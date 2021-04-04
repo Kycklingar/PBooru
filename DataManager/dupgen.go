@@ -32,11 +32,61 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	query := fmt.Sprintf(`
 			SELECT apple, pear
 			FROM apple_tree
+			LEFT JOIN (
+				SELECT dr.post_id AS lp, drp.post_id AS rp
+				FROM duplicate_report dr
+				LEFT JOIN duplicate_report_posts drp
+				ON dr.id = drp.report_id
+				WHERE dr.approved IS NULL
+				AND dr.report_type = 0
+			) rep
+			ON (
+				apple = rep.lp
+				OR apple = rep.rp
+				OR pear = rep.lp
+				OR pear = rep.rp
+			)
+			LEFT JOIN (
+				SELECT dr.post_id AS lp, drp.post_id AS rp
+				FROM duplicate_report dr
+				LEFT JOIN duplicate_report_posts drp
+				ON dr.id = drp.report_id
+				WHERE approved IS NULL
+				AND report_type = 1
+			) plucked
+			ON apple = plucked.lp
+			AND pear = plucked.rp
 			WHERE apple IN(
 				SELECT apple
 				FROM apple_tree
+				LEFT JOIN (
+					SELECT dr.post_id AS lp, drp.post_id AS rp
+					FROM duplicate_report dr
+					LEFT JOIN duplicate_report_posts drp
+					ON dr.id = drp.report_id
+					WHERE dr.approved IS NULL
+					AND dr.report_type = 0
+				) reports
+				ON reports.lp IS NULL
+				AND (
+					apple = reports.lp
+					OR apple = reports.rp
+					OR pear = reports.lp
+					OR pear = reports.rp
+				)
+				LEFT JOIN (
+					SELECT dr.post_id AS lp, drp.post_id AS rp
+					FROM duplicate_report dr
+					LEFT JOIN duplicate_report_posts drp
+					ON dr.id = drp.report_id
+					WHERE approved IS NULL
+					AND report_type = 1
+				) plucked
+				ON apple = plucked.lp
+				AND pear = plucked.rp
 				%s
 				WHERE processed IS NULL
+				AND plucked.lp IS NULL
 				%s
 				GROUP BY apple
 				ORDER BY apple
@@ -44,6 +94,8 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				OFFSET $2
 			)
 			AND processed IS NULL
+			AND rep.lp IS NULL
+			AND plucked.lp IS NULL
 			ORDER BY apple
 			`,
 		join,
@@ -90,7 +142,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	return trees, nil
 }
 
-func PluckApple(apple int, pears []int) error {
+func PluckApple(dupe Dupe) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err
@@ -98,15 +150,20 @@ func PluckApple(apple int, pears []int) error {
 
 	defer commitOrDie(tx, &err)
 
-	for _, pear := range pears {
+	for _, pear := range dupe.Inferior {
 		_, err := tx.Exec(`
 			UPDATE apple_tree
 			SET processed = CURRENT_TIMESTAMP
-			WHERE apple = $1
-			AND pear = $2
+			WHERE (
+				apple = $1
+				AND pear = $2
+			) OR (
+				apple = $2
+				AND pear = $1
+			)
 			`,
-			apple,
-			pear,
+			dupe.Post.ID,
+			pear.ID,
 		)
 		if err != nil {
 			return err

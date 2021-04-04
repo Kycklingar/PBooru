@@ -25,9 +25,11 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
+	plucked := r.FormValue("plucked") == "on"
+
 	order := r.FormValue("order") == "asc"
 
-	page.Reports, err = DM.FetchDupReports(limit, offset, order)
+	page.Reports, err = DM.FetchDupReports(limit, offset, order, plucked)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -60,7 +62,11 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var note = r.FormValue("note")
+	var (
+		note           = r.FormValue("note")
+		reportNonDupes = r.FormValue("non-dupes") == "on"
+	)
+
 	user, _ := getUser(w, r)
 
 	const (
@@ -73,7 +79,10 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var d DM.Dupe
+	var (
+		dupes   DM.Dupe
+		removed DM.Dupe
+	)
 
 	for _, idstr := range r.Form["post-ids"] {
 		p := DM.NewPost()
@@ -85,23 +94,45 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if p.ID == m[bestPostIDKey] {
-			d.Post = p
+			dupes.Post = p
+			removed.Post = p
 		} else {
-			d.Inferior = append(d.Inferior, p)
+			dupes.Inferior = append(dupes.Inferior, p)
 		}
 	}
 
-	if d.Post == nil {
+	for _, idstr := range r.Form["removed-ids"] {
+		p := DM.NewPost()
+
+		p.ID, err = strconv.Atoi(idstr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		removed.Inferior = append(removed.Inferior, p)
+	}
+
+	if dupes.Post == nil {
 		http.Error(w, "No superior post has been choosen", http.StatusBadRequest)
+		return
 	}
 
 	// Assign duplicates if having sufficient privileges
 	// otherwise submit a report
 	if user.QFlag(DM.DB).Delete() {
-		if err = DM.AssignDuplicates(d, user); err != nil {
+		if err = DM.AssignDuplicates(dupes, user); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if reportNonDupes && len(removed.Inferior) >= 1 {
+			if err = DM.PluckApple(removed); err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if report := r.FormValue("report-id"); report != "" {
@@ -109,10 +140,18 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		if err = DM.ReportDuplicates(d, user, note); err != nil {
+		if err = DM.ReportDuplicates(dupes, user, note, DM.RDupe); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if reportNonDupes && len(removed.Inferior) >= 1 {
+			if err = DM.ReportDuplicates(removed, user, note, DM.RNonDupe); err != nil {
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 
@@ -130,6 +169,41 @@ func processReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !user.QFlag(DM.DB).Delete() {
 		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
+		return
+	}
+
+	err = DM.ProcessDupReport(reportID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+}
+
+func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
+	reportID, err := strconv.Atoi(r.FormValue("report-id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Delete() {
+		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
+		return
+	}
+
+	rep, err := DM.FetchDupReport(reportID, DM.DB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = DM.PluckApple(rep.Dupe)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

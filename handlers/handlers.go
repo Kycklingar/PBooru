@@ -274,6 +274,7 @@ func init() {
 	Handlers["/duplicate/report/"] = dupReportHandler
 	Handlers["/duplicate/process/"] = processReportHandler
 	Handlers["/duplicate/compare/"] = compareReportHandler
+	Handlers["/duplicate/pluck/"] = processPluckReportHandler
 
 	Handlers["/upload"] = makeStatHandler(UploadHandler)
 	Handlers["/upload/"] = makeStatHandler(UploadHandler)
@@ -304,8 +305,11 @@ func init() {
 	Handlers["/register/"] = makeStatHandler(RegisterHandler)
 
 	Handlers["/deletepost"] = makeStatHandler(RemovePostHandler)
+
 	Handlers["/wall/"] = makeStatHandler(CommentWallHandler)
 	Handlers["/wall/edit/"] = makeStatHandler(editCommentHandler)
+	Handlers["/wall/delete/"] = makeStatHandler(deleteCommentHandler)
+
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
 	Handlers["/comic/"] = makeStatHandler(comicHandler)
 	Handlers["/comic/delete/"] = makeStatHandler(comicDeleteHandler)
