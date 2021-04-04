@@ -345,6 +345,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Sorting tags")
 	sort.Sort(tagSort(pp.Sidebar.Tags))
 
+	DM.RegisterPostView(pp.Dupe.Post.ID)
+
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
 }

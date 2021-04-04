@@ -6,13 +6,13 @@ import (
 )
 
 type DupReport struct {
-	ID        int
+	ID         int
 	ReportType reportType
-	Reporter  *User
-	Note      string
-	Approved  timestamp
-	Timestamp timestamp
-	Dupe      Dupe
+	Reporter   *User
+	Note       string
+	Approved   timestamp
+	Timestamp  timestamp
+	Dupe       Dupe
 }
 
 func FetchDupReports(limit, offset int, asc bool, pluckedReports bool) ([]*DupReport, error) {
@@ -95,7 +95,6 @@ func FetchDupReport(id int, q querier) (*DupReport, error) {
 		return nil, err
 	}
 
-
 	query := `
 		SELECT post_id
 		FROM duplicate_report_posts
@@ -142,7 +141,6 @@ const (
 	RDupe reportType = iota
 	RNonDupe
 )
-
 
 func ReportDuplicates(dupe Dupe, reporter *User, note string, repT reportType) error {
 	tx, err := DB.Begin()

@@ -94,7 +94,7 @@ type Post struct {
 	Checksums checksums
 
 	AltGroup int
-	Alts []*Post
+	Alts     []*Post
 
 	description *string
 
@@ -1340,8 +1340,8 @@ type PostCollector struct {
 	tags       []*Tag //Sidebar
 	TotalPosts int
 
-	mimeIDs     []int
-	order       string
+	mimeIDs []int
+	order   string
 
 	altGroup    int
 	collectAlts bool
@@ -1536,11 +1536,11 @@ func strSep(values []int, sep string) string {
 	return ret
 }
 
-func sepStr(sep string, values... string)string {
+func sepStr(sep string, values ...string) string {
 	var ret string
 	for i, v := range values {
 		ret += fmt.Sprint(v)
-		if i < len(values) -1 {
+		if i < len(values)-1 {
 			ret += sep
 		}
 	}
@@ -1549,7 +1549,7 @@ func sepStr(sep string, values... string)string {
 }
 
 func (pc *PostCollector) countIDStr() string {
-	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0{
+	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0 {
 		return "0"
 	}
 
@@ -1605,9 +1605,9 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	)
 
 	var (
-		order string
+		order    string
 		altGroup string
-		mimes string
+		mimes    string
 
 		wgr []string = []string{"p.removed = false"}
 	)
@@ -1622,7 +1622,6 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		mimes = fmt.Sprintf("p.mime_id IN(%s) ", mimes)
 		wgr = append(wgr, mimes)
 	}
-
 
 	switch pc.order {
 	case "RANDOM()":
@@ -1664,8 +1663,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				query := fmt.Sprintf(
 					query,
 					//sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
-					sg.sel(sepStr( " AND ", wgr...)),
-
+					sg.sel(sepStr(" AND ", wgr...)),
 				)
 
 				//fmt.Println(query)
