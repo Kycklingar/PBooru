@@ -1634,7 +1634,13 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	}
 
 	if pc.altGroup > 0 {
-		altGroup = fmt.Sprintf("p.alt_group = %d", pc.altGroup)
+		altGroup = fmt.Sprintf(`
+			p.alt_group = (
+				SELECT alt_group
+				FROM posts
+				WHERE id = %d
+			)
+			`, pc.altGroup)
 		wgr = append(wgr, altGroup)
 	}
 
