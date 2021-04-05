@@ -17,7 +17,7 @@ BEGIN
 		WHERE post_id = NEW.post_id
 		OR post_id = OLD.post_id
 	) + (
-		SELECT SUM(views) / 1000
+		SELECT COALESCE(SUM(views), 0) / 1000
 		FROM post_views
 		WHERE post_id = NEW.post_id
 		OR post_id = OLD.post_id
