@@ -545,6 +545,8 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	post.QMul(DM.DB, DM.PFHash)
+
 	if err = post.Vote(DM.DB, u); err != nil {
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return

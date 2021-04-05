@@ -62,20 +62,7 @@ func (pv *postViews) collect() {
 	}()
 
 	func() {
-		stmt, err := DB.Prepare(`
-			UPDATE posts
-			SET score = (
-				SELECT count(*)
-				FROM post_score_mapping
-				WHERE post_id = $1
-			) + (
-				SELECT COALESCE(SUM(views), 0) / 1000
-				FROM post_views
-				WHERE post_id = $1
-			)
-			WHERE id = $1
-			`,
-		)
+		stmt, err := DB.Prepare(sqlUpdatePostScores)
 		if err != nil {
 			log.Println(err)
 			return

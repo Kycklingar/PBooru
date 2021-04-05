@@ -89,7 +89,7 @@ type Post struct {
 	Deleted    bool
 	Size       int64
 	Dimension  Dimension
-	Score      int
+	Score      float64
 
 	Checksums checksums
 
@@ -100,6 +100,22 @@ type Post struct {
 
 	editCount int
 }
+
+const (
+	sqlUpdatePostScores = `
+		UPDATE posts
+		SET score = (
+			SELECT count(*) * 1000
+			FROM post_score_mapping
+			WHERE post_id = $1
+		) + (
+			SELECT COALESCE(SUM(views), 0)
+			FROM post_views
+			WHERE post_id = $1
+		)
+		WHERE id = $1
+	`
+)
 
 const (
 	PFID sqlbinder.Field = iota
@@ -148,7 +164,7 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	case PFSize:
 		sel.Bind(&p.Size, "p.file_size", "")
 	case PFScore:
-		sel.Bind(&p.Score, "p.score", "")
+		sel.Bind(&p.Score, "p.score / 1000.0", "")
 	case PFAltGroup:
 		sel.Bind(&p.AltGroup, "p.alt_group", "")
 	case PFDimension:
@@ -395,7 +411,12 @@ func (p *Post) Vote(q querier, u *User) error {
 
 	p.Score = -1
 
-	return nil
+	return p.updateScore(q)
+}
+
+func (p *Post) updateScore(q querier) error {
+	_, err := q.Exec(sqlUpdatePostScores, p.ID)
+	return err
 }
 
 func (p *Post) QTagHistoryCount(q querier) (int, error) {
