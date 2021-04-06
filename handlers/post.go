@@ -239,7 +239,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFDeleted,
 		DM.PFSize,
 		DM.PFMime,
-		DM.PFScore,
 		DM.PFDimension,
 		DM.PFThumbnails,
 	); err != nil {
@@ -264,6 +263,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFThumbnails,
 		DM.PFAlts,
 		DM.PFAltGroup,
+		DM.PFScore,
 	); err != nil {
 		log.Println(err)
 	}
@@ -283,7 +283,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		pp.Alts = append(pp.Alts, pp.Dupe.Post.Alts[i])
 	}
 
-	pp.Voted = pp.User.Voted(DM.DB, p)
+	pp.Voted = pp.User.Voted(DM.DB, pp.Dupe.Post)
 
 	var tc DM.TagCollector
 

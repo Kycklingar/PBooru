@@ -6,8 +6,10 @@ CREATE TABLE IF NOT EXISTS post_views(
 );
 
 CREATE INDEX IF NOT EXISTS post_views_post_id_index ON post_views(post_id);
+CREATE INDEX IF NOT EXISTS post_score_post_id_index ON post_score_mapping(post_id);
 
 DROP TRIGGER IF EXISTS post_score_delete_trigger ON post_score_mapping;
+DROP TRIGGER IF EXISTS post_score_update_trigger ON post_score_mapping;
 DROP TRIGGER IF EXISTS post_score_insert_trigger ON post_score_mapping;
 DROP FUNCTION IF EXISTS score_update;
 

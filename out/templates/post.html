@@ -11,12 +11,12 @@
 	{{ template "search field" .Sidebar}}
 		{{if .User.ID}}
 			<form action="/post/vote/" method="POST">
-				<input type="hidden" name="post-id" value="{{.Post.ID}}">
+				<input type="hidden" name="post-id" value="{{.Dupe.Post.ID}}">
 				<span>Score:</span>
-				<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
+				<input style="width:auto" type="submit" value="{{.Dupe.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
 			</form>
 		{{else}}
-			<div>Score: {{.Post.Score}}</div>
+			<div>Score: {{.Dupe.Post.Score}}</div>
 			<br>
 		{{end}}
 	{{ template "sidebar tags" .Sidebar}}
