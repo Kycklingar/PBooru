@@ -437,7 +437,7 @@ func MigrateStore(start int) {
 	}
 
 	query := func(str string, start, offset int) ([]post, error) {
-		rows, err := DB.Query(str, start, offset*2000)
+		rows, err := DB.Query(str, start, offset*500)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -506,7 +506,7 @@ func MigrateStore(start int) {
 				WHERE id > $1
 				AND deleted IS FALSE
 				ORDER BY id ASC
-				LIMIT 2000
+				LIMIT 500
 				OFFSET $2
 			) AS p
 			ON p.id = t.post_id
@@ -517,6 +517,41 @@ func MigrateStore(start int) {
 		if err != nil || len(posts) <= 0 {
 			break
 		}
+
+		refs := func(c chan string, wg *sync.WaitGroup) {
+			for cid := range c {
+				fmt.Println("Prefetch -> ", cid)
+				r, err := ipfs.Refs(cid, true)
+				if err != nil {
+					log.Println(err)
+				}
+
+				for range r {
+				}
+			}
+
+			wg.Done()
+		}
+
+		var wg sync.WaitGroup
+		var c = make(chan string, 5)
+
+		wg.Add(5)
+		for i := 0; i < 5; i++ {
+			go refs(c, &wg)
+		}
+
+		go func() {
+			for _, p := range posts {
+				c <- p.cid
+
+				for _, t := range p.thumbs {
+					c <- t.cid
+				}
+			}
+
+			close(c)
+		}()
 
 		for _, p := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", p.id, p.cid)
@@ -538,6 +573,8 @@ func MigrateStore(start int) {
 			}
 		}
 		offset++
+
+		wg.Wait()
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
