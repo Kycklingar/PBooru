@@ -30,74 +30,55 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 	}
 
 	query := fmt.Sprintf(`
+			WITH reports AS (
+				SELECT rep.post_id AS rl, dp.post_id AS rr, report_type
+				FROM duplicate_report rep
+				JOIN duplicate_report_posts dp
+				ON rep.id = dp.report_id
+				WHERE approved IS NULL
+			)
+			
 			SELECT apple, pear
 			FROM apple_tree
-			LEFT JOIN (
-				SELECT dr.post_id AS lp, drp.post_id AS rp
-				FROM duplicate_report dr
-				LEFT JOIN duplicate_report_posts drp
-				ON dr.id = drp.report_id
-				WHERE dr.approved IS NULL
-				AND dr.report_type = 0
-			) rep
+			LEFT JOIN reports
 			ON (
-				apple = rep.lp
-				OR apple = rep.rp
-				OR pear = rep.lp
-				OR pear = rep.rp
+				apple = rr
+				AND pear = rl
+			) OR (
+				apple = rl
+				AND pear = rr
 			)
-			LEFT JOIN (
-				SELECT dr.post_id AS lp, drp.post_id AS rp
-				FROM duplicate_report dr
-				LEFT JOIN duplicate_report_posts drp
-				ON dr.id = drp.report_id
-				WHERE approved IS NULL
-				AND report_type = 1
-			) plucked
-			ON apple = plucked.lp
-			AND pear = plucked.rp
 			WHERE apple IN(
 				SELECT apple
-				FROM apple_tree
-				LEFT JOIN (
-					SELECT dr.post_id AS lp, drp.post_id AS rp
-					FROM duplicate_report dr
-					LEFT JOIN duplicate_report_posts drp
-					ON dr.id = drp.report_id
-					WHERE dr.approved IS NULL
-					AND dr.report_type = 0
-				) reports
-				ON reports.lp IS NULL
-				AND (
-					apple = reports.lp
-					OR apple = reports.rp
-					OR pear = reports.lp
-					OR pear = reports.rp
-				)
-				LEFT JOIN (
-					SELECT dr.post_id AS lp, drp.post_id AS rp
-					FROM duplicate_report dr
-					LEFT JOIN duplicate_report_posts drp
-					ON dr.id = drp.report_id
-					WHERE approved IS NULL
-					AND report_type = 1
-				) plucked
-				ON apple = plucked.lp
-				AND pear = plucked.rp
-				%s
-				WHERE processed IS NULL
-				AND plucked.lp IS NULL
-				%s
-				GROUP BY apple
+				FROM (
+					SELECT apple
+					FROM apple_tree
+					%s
+					LEFT JOIN reports
+					ON (
+						apple = rl
+						AND pear = rr
+					) OR (
+						apple = rr
+						AND pear = rl
+					)
+					WHERE processed IS NULL
+					AND rl IS NULL
+					%s
+					GROUP BY apple
+					ORDER BY apple
+				) l
+				LEFT JOIN reports
+				ON apple = reports.rr
+				AND report_type = 0
+				WHERE rr IS NULL
 				ORDER BY apple
 				LIMIT $1
 				OFFSET $2
 			)
-			AND processed IS NULL
-			AND rep.lp IS NULL
-			AND plucked.lp IS NULL
-			ORDER BY apple
-			`,
+			AND rl IS NULL
+			ORDER BY apple, pear
+		`,
 		join,
 		where,
 	)
