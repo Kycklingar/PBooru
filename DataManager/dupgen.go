@@ -77,6 +77,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				OFFSET $2
 			)
 			AND rl IS NULL
+			AND processed IS NULL
 			ORDER BY apple, pear
 		`,
 		join,
