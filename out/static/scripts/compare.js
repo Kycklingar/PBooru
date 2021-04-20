@@ -2,6 +2,7 @@ var posts = []
 var removed = []
 var gateway = "ass"
 var currentPost = null
+var preload = {}
 
 var reportID = null
 
@@ -29,7 +30,25 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime, removed)
 
 function preloadImage(post)
 {
-	new Image().src = gateway + "/ipfs/" + post.hash
+	if(preload[post.id] == null)
+	{
+		let img = new Image()
+		preload[post.id] = img
+		img.onLoad = function(){
+			delete preload[post.id]
+		}
+
+		img.src = ipfsLink(post.hash)
+	}
+}
+
+function cancelPreload(id)
+{
+	if(preload[id] == null)
+		return
+
+	preload[id].src = ""
+	delete preload[id]
 }
 
 function submitReport()
@@ -172,6 +191,12 @@ function removeCurrentPost()
 
 function removePost(id)
 {
+	// Cancel preloading image
+	cancelPreload(id)
+
+	// Cancel currently loading image
+	niload()
+
 	// If the current post is removed, render previous
 	// Do not render if its the last post
 	if (currentPost != null && currentPost.id == id && posts.length > 1)
@@ -334,6 +359,17 @@ function ipfsLink(hash)
 }
 
 let lt = null
+let iload = null
+
+function niload()
+{
+	if (iload)
+	{
+		iload.onload = null
+		iload.src = ""
+		iload = null
+	}
+}
 
 function renderPost(post)
 {
@@ -356,7 +392,12 @@ function renderPost(post)
 		clearTimeout(lt)
 	lt = setTimeout(function(){loader.classList.remove("hidden")}, 250)
 
+	// Remove any attemting-to-load images
+	niload()
+
 	let img = new Image()
+	iload = img
+
 	img.src = ipfsLink(post.hash)
 	img.onload = function(){
 		img.decode().then(function(){
@@ -449,8 +490,12 @@ function renderImage(image)
 
 	canvas.style.filter = `contrast(${optContrast})`
 	
-	blankCanvas()
-	canvas.appendChild(image)
+	if (iload == image)
+	{
+		iload = null
+		blankCanvas()
+		canvas.appendChild(image)
+	}
 
 	var b = rightInterface.scrollHeight - rightInterface.clientHeight
 	rightInterface.scrollTop = b * scrollY
