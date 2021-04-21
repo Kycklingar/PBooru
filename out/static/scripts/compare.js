@@ -15,12 +15,13 @@ var reportNoneDupes = document.getElementById("non-dupes")
 
 canvas.onclick = function(){rightInterface.focus()}
 
-function postStruct(id, hash, thumb, dimensions, filesize, mime, removed)
+function postStruct(id, hash, thumb, preview, dimensions, filesize, mime, removed)
 {
 	return {
 		"id":id,
 		"hash":hash,
 		"thumbnail":thumb,
+		"preview":preview,
 		"dimensions":dimensions,
 		"filesize":filesize,
 		"mime":mime,
@@ -32,6 +33,9 @@ function preloadImage(post)
 {
 	if(preload[post.id] == null)
 	{
+		let preview = new Image()
+		preview.src = ipfsLink(post.preview)
+
 		let img = new Image()
 		preload[post.id] = img
 		img.onLoad = function(){
@@ -159,6 +163,7 @@ function getRemotePost(id)
 						j.ID,
 						j.Hash,
 						closestThumb(100, j.ThumbHashes),
+						closestThumb(1024, j.ThumbHashes),
 						j.Dimension,
 						j.Filesize,
 						mimeObj(j.Mime),
@@ -398,7 +403,13 @@ function renderPost(post)
 	let img = new Image()
 	iload = img
 
-	img.src = ipfsLink(post.hash)
+	let src = ipfsLink(post.hash)
+	if (optElim)
+	{
+		src = ipfsLink(post.preview)
+	}
+
+	img.src = src
 	img.onload = function(){
 		img.decode().then(function(){
 			clearTimeout(lt)
@@ -449,6 +460,7 @@ var optScale = 1
 var optContrast = 1
 var optFit = false
 var optGlue = false
+var optElim = false
 
 var gluedW, gluedH
 
@@ -508,6 +520,15 @@ function blankCanvas()
 {
 	for (let c = canvas.firstChild; c != null; c = canvas.firstChild)
 		canvas.removeChild(c)
+}
+
+function toggleEliminationMode()
+{
+	optElim = !optElim
+
+	document.getElementById("button-elim").classList.toggle("highlighted")
+	document.getElementById("elimination-warning").classList.toggle("hidden")
+	renderPost(currentPost)
 }
 
 function toggleReport()
@@ -659,6 +680,9 @@ registerKeyMapping(81, function(){glue()})
 
 // Fit
 registerKeyMapping(70, function(){fit()})
+
+// Elimination mode
+registerKeyMapping(84, function(){toggleEliminationMode()})
 
 // Scale
 registerKeyMapping(83, function(){
