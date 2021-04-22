@@ -7,40 +7,38 @@ import (
 )
 
 func (p *Post) SetAlt(q querier, altof int) error {
-	d, err := getDupeFromPost(q, p)
-	if err != nil {
-		return err
-	}
-
-	p2 := NewPost()
-	p2.ID = altof
-	d2, err := getDupeFromPost(q, p2)
-	if err != nil {
-		return err
-	}
-
-	_, err = q.Exec(`
-		UPDATE posts
-		SET alt_group = (
-			SELECT alt_group
+	_, err := q.Exec(`
+		WITH d1 AS (
+			SELECT * FROM get_dupe($1)
+		),
+		d2 AS (
+			SELECT * FROM get_dupe($2)
+		),
+		altgroups AS (
+			SELECT *
 			FROM posts
-			WHERE id = $1
-		)
-		WHERE id IN (
-			SELECT id
-			FROM posts
-			LEFT JOIN duplicates d
-			ON id = d.dup_id
-			WHERE d.dup_id IS NULL
-			AND alt_group = (
+			WHERE alt_group IN(
 				SELECT alt_group
 				FROM posts
-				WHERE id = $2
+				WHERE id IN(
+					(SELECT * FROM d1),
+					(SELECT * FROM d2)
+				)
 			)
 		)
+
+		UPDATE posts
+		SET alt_group = (
+			SELECT MAX(id)
+			FROM altgroups
+		)
+		WHERE id IN(
+			SELECT id
+			FROM altgroups
+		)
 		`,
-		d2.Post.ID,
-		d.Post.ID,
+		p.ID,
+		altof,
 	)
 
 	tc := new(TagCollector)
@@ -59,11 +57,10 @@ func (p *Post) RemoveAlt(q querier) error {
 	_, err := q.Exec(`
 		UPDATE posts
 		SET alt_group = (
-			SELECT id
+			SELECT MAX(id)
 			FROM posts
 			WHERE alt_group = $1
 			AND id != $1
-			LIMIT 1
 		) WHERE alt_group = $1
 		`,
 		p.ID,
@@ -72,6 +69,7 @@ func (p *Post) RemoveAlt(q querier) error {
 		return err
 	}
 
+	// Reset to default
 	_, err = q.Exec(`
 		UPDATE posts
 		SET alt_group = id
