@@ -74,7 +74,6 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		return err
 	}
 
-
 	// Handle conflicts
 	if err = conflicts(tx, dupe); err != nil {
 		return err
@@ -184,11 +183,11 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 
 func updateAlts(tx querier, dupe Dupe) error {
 	for _, p := range dupe.Inferior {
-		if err := p.SetAlt(tx, dupe.Post.ID); err != nil {
+		if err := p.setAlt(tx, dupe.Post.ID); err != nil {
 			return err
 		}
 		// Reset the inferior altgroup
-		if err := p.RemoveAlt(tx); err != nil {
+		if err := p.removeAlt(tx); err != nil {
 			return err
 		}
 	}

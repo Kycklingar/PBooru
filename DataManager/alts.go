@@ -6,7 +6,16 @@ import (
 	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
-func (p *Post) SetAlt(q querier, altof int) error {
+func (p *Post) SetAlt(q querier, altof int, user *User) error {
+	err := p.setAlt(q, altof)
+	if err != nil {
+		return err
+	}
+
+	return logAlt(q, p.ID, altof, user)
+}
+
+func (p *Post) setAlt(q querier, b int) error {
 	_, err := q.Exec(`
 		WITH d1 AS (
 			SELECT * FROM get_dupe($1)
@@ -38,7 +47,7 @@ func (p *Post) SetAlt(q querier, altof int) error {
 		)
 		`,
 		p.ID,
-		altof,
+		b,
 	)
 
 	tc := new(TagCollector)
@@ -52,7 +61,15 @@ func (p *Post) SetAlt(q querier, altof int) error {
 	return err
 }
 
-func (p *Post) RemoveAlt(q querier) error {
+func (p *Post) RemoveAlt(q querier, user *User) (err error) {
+	if err = p.removeAlt(q); err != nil {
+		return
+	}
+
+	return logAlt(q, p.ID, 0, user)
+}
+
+func (p *Post) removeAlt(q querier) error {
 	// Reassign alt_group id's away from the removed
 	_, err := q.Exec(`
 		UPDATE posts
@@ -87,4 +104,40 @@ func (p *Post) RemoveAlt(q querier) error {
 	c.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
 	return err
+
+}
+
+func logAlt(q querier, a, b int, user *User) (err error) {
+	// Null b indicates removal
+	if b == 0 {
+		_, err = q.Exec(`
+			INSERT INTO log_alts(
+				user_id,
+				alt_a
+			)
+			VALUES(
+				$1,
+				(SELECT * FROM get_dupe($2))
+			)`,
+			user.ID,
+			a,
+		)
+		return
+	}
+	_, err = q.Exec(`
+		INSERT INTO log_alts(
+			user_id,
+			alt_a,
+			alt_b
+		)
+		VALUES (
+			$1,
+			(SELECT * FROM get_dupe($2)),
+			(SELECT * FROM get_dupe($3))
+		)`,
+		user.ID,
+		a,
+		b,
+	)
+	return
 }

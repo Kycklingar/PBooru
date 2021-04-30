@@ -374,7 +374,7 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if p != nil {
-			err = p.SetAlt(DM.DB, id)
+			err = p.SetAlt(DM.DB, id, user)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -411,7 +411,7 @@ func unassignAltHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = post.RemoveAlt(DM.DB)
+	err = post.RemoveAlt(DM.DB, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
