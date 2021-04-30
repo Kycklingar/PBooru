@@ -15,6 +15,7 @@
 				<p>[Y] Remove</p>
 				<p>[U] Restore</p>
 				<p>[R] Report tab</p>
+				<p>[T] Elimination mode</p>
 				<p>[F] Fit to screen</p>
 				<p>[Q] Glue</p>
 				<p>[S][1-3] Zoom</p>
@@ -30,8 +31,17 @@
 			</details>
 			<details id="report-tab">
 				<summary>Report</summary>
+				<div id="elimination-warning" class="hidden">
+					<p>You are in Elimination Mode.<br>
+					Make sure you compare the actual images before reporting</p>
+				</div>
 				<div>
-				<span>Submit the selected post as superior</span>
+				<h5 style="margin:0px;padding:0px;">Submit the selected post as superior</h5>
+				<br>
+				<label>Submit removed as non dupes of superior:
+				<br>
+				<input type="checkbox" id="non-dupes" checked>
+				</label>
 				<br>
 				<textarea onfocus="disableKeymap()" onfocusout="enableKeymap()" placeholder="Optional note" id="note"></textarea>
 				<br>
@@ -45,6 +55,7 @@
 <div id="interface-float">
 	<span title="[Q]" id="button-glue" onclick="glue()">Glue</span>
 	<span title="[F]" id="button-fit" onclick="fit()">Fit</span>
+	<span title="[T]" id="button-elim" onclick="toggleEliminationMode()">Eliminate</span>
 	<br>
 	<span id="scale" style="cursor:inherit">Scale:
 		<span title="[S,1]" id="button-scale1" class="highlighted" onclick="scale(1)">1x</span>
@@ -71,6 +82,7 @@
 			{{.ID}},
 			{{.Hash}},
 			{{.ClosestThumbnail 100}},
+			{{.ClosestThumbnail 1024}},
 			{{.Dimension}},//{{with .Dimension}}{"width":{{.Width}},"height":{{.Height}}}{{else}}null{{end}},
 			{{.Size}},
 			{{.Mime}},

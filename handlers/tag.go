@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -12,10 +13,13 @@ import (
 type Sidebar struct {
 	TotalPosts int
 	Tags       []*DM.Tag
+	Form       url.Values
 	Query      string
 	Or         string
 	Filter     string
 	Unless     string
+	Alts       bool
+	AltGroup   int
 
 	Mimes map[string][]*DM.Mime
 }

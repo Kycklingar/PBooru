@@ -73,6 +73,7 @@ type Postpage struct {
 	Voted    bool
 	Comments []*DM.PostComment
 	Dupe     DM.Dupe
+	Alts     []*DM.Post
 	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
@@ -81,12 +82,12 @@ type Postpage struct {
 	Time     string
 }
 
-var catMap = map[string]int {
-	"creator": 0,
-	"gender": 1,
+var catMap = map[string]int{
+	"creator":   0,
+	"gender":    1,
 	"character": 2,
-	"species": 3,
-	"series": 4,
+	"species":   3,
+	"series":    4,
 }
 
 type postAndTags struct {
@@ -100,15 +101,15 @@ type postAndTags struct {
 }
 
 type PostsPage struct {
-	Base          base
+	Base base
 	//Result	      DM.SearchResult
-	Result	      []postAndTags
+	Result        []postAndTags
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
-	ArgString     string
-	Pageinator    Pageination
-	User          UserInfo
-	Time          string
+	//ArgString     string
+	Pageinator Pageination
+	User       UserInfo
+	Time       string
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +239,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFDeleted,
 		DM.PFSize,
 		DM.PFMime,
-		DM.PFScore,
 		DM.PFDimension,
 		DM.PFThumbnails,
 	); err != nil {
@@ -261,6 +261,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFHash,
 		DM.PFRemoved,
 		DM.PFThumbnails,
+		DM.PFAlts,
+		DM.PFAltGroup,
+		DM.PFScore,
 	); err != nil {
 		log.Println(err)
 	}
@@ -276,7 +279,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	pp.Voted = pp.User.Voted(DM.DB, p)
+	for i := 0; i < 5 && i < len(pp.Dupe.Post.Alts); i++ {
+		pp.Alts = append(pp.Alts, pp.Dupe.Post.Alts[i])
+	}
+
+	pp.Voted = pp.User.Voted(DM.DB, pp.Dupe.Post)
 
 	var tc DM.TagCollector
 
@@ -338,8 +345,84 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Sorting tags")
 	sort.Sort(tagSort(pp.Sidebar.Tags))
 
+	DM.RegisterPostView(pp.Dupe.Post.ID)
+
 	pp.Time = bm.EndStr(performBenchmarks)
 	renderTemplate(w, "post", pp)
+}
+
+func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Upload() {
+		permErr(w, "Upload")
+		return
+	}
+
+	var p *DM.Post
+
+	r.ParseForm()
+	for _, v := range r.Form["post-id"] {
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if p != nil {
+			err = p.SetAlt(DM.DB, id, user)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			p = DM.NewPost()
+			p.ID = id
+		}
+	}
+
+	if p == nil {
+		http.Error(w, "No post-id's provided", http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/", p.ID), http.StatusSeeOther)
+}
+
+func unassignAltHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Upload() {
+		permErr(w, "Upload")
+		return
+	}
+
+	post, err := postFromForm(r)
+	if err != nil {
+		postError(w, err)
+		return
+	}
+
+	err = post.RemoveAlt(DM.DB, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ref := r.FormValue("ref")
+	if ref == "" {
+		ref = fmt.Sprintf("/post/%d/", post.ID)
+	}
+
+	http.Redirect(w, r, ref, http.StatusSeeOther)
 }
 
 func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
@@ -462,6 +545,8 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	post.QMul(DM.DB, DM.PFHash)
+
 	if err = post.Vote(DM.DB, u); err != nil {
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
@@ -502,6 +587,21 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
 
+	//p.Sidebar.Alts = r.FormValue("alts") == "on"
+
+	for _, alt := range r.Form["alts"] {
+		if alt == "off" {
+			p.Sidebar.Alts = false
+			r.Form.Del("alts")
+			break
+		} else if alt == "on" {
+			p.Sidebar.Alts = true
+		}
+
+	}
+
+	p.Sidebar.AltGroup, _ = strconv.Atoi(r.FormValue("alt-group"))
+
 	for _, mime := range DM.Mimes {
 		p.Sidebar.Mimes[mime.Type] = append(p.Sidebar.Mimes[mime.Type], mime)
 	}
@@ -532,42 +632,18 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type arg struct {
-		name  string
-		value string
-	}
-
-	args := []arg{}
-	args = append(args, arg{"or", p.Sidebar.Or})
-	args = append(args, arg{"filter", p.Sidebar.Filter})
-	args = append(args, arg{"unless", p.Sidebar.Unless})
-	args = append(args, arg{"order", order})
-
-	for _, group := range mimeGroups {
-		args = append(args, arg{"mime-type", group})
-	}
-
-	for _, mimeID := range mimes {
-		args = append(args, arg{"mime", mimeID})
-	}
-
-	argString := func(arguments []arg) string {
-		var str string
-		for _, arg := range arguments {
-			if arg.value != "" {
-				str += fmt.Sprintf("%s=%s&", arg.name, arg.value)
-			}
+	// Cleanup empty keys
+	for k, _ := range r.Form {
+		if r.FormValue(k) == "" {
+			r.Form.Del(k)
 		}
-		if str != "" {
-			str = "?" + str
-		}
-		return str
 	}
 
-	p.ArgString = argString(args)
+	p.Sidebar.Form = r.Form
+	p.Sidebar.Form.Del("tags")
 
 	if tagString != "" {
-		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), p.ArgString)
+		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), "?"+r.Form.Encode())
 		http.Redirect(w, r, red, http.StatusSeeOther)
 		return
 	}
@@ -582,7 +658,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs)
+	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.Sidebar.AltGroup, p.Sidebar.Alts)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
@@ -598,19 +674,31 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, set := range result{
+	for _, set := range result {
 		var pt = postAndTags{
-			Post: set.Post,
+			Post:      set.Post,
 			Namespace: make([][]*DM.Tag, len(catMap)),
 		}
 
-		pt.Post.QMul(
-			DM.DB,
-			DM.PFHash,
-			DM.PFMime,
-			DM.PFScore,
-			DM.PFThumbnails,
-		)
+		if p.Sidebar.Alts {
+			pt.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFScore,
+				DM.PFThumbnails,
+				DM.PFAlts,
+				DM.PFAltGroup,
+			)
+		} else {
+			pt.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFScore,
+				DM.PFThumbnails,
+			)
+		}
 
 		for _, tag := range set.Tags {
 			if v, ok := catMap[tag.Namespace.Namespace]; ok {
@@ -901,6 +989,7 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	distStr := r.FormValue("distance")
+	removed := r.FormValue("removed") == "on"
 
 	bm := benchmark.Begin()
 
@@ -924,14 +1013,20 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p struct {
+	var p = struct {
+		Id       int
+		Distance int
+
 		Posts    []*DM.Post
 		UserInfo UserInfo
 
 		Time string
+	}{
+		Id:       id,
+		Distance: dist,
 	}
 
-	p.Posts, err = post.FindSimilar(DM.DB, dist)
+	p.Posts, err = post.FindSimilar(DM.DB, dist, removed)
 	if err != nil {
 		//http.Error(w, ErrInternal, http.StatusInternalServerError)
 		//return
@@ -946,6 +1041,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 			DM.PFThumbnails,
 			DM.PFRemoved,
 			DM.PFMime,
+			DM.PFAltGroup,
 		)
 	}
 

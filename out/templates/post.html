@@ -11,12 +11,12 @@
 	{{ template "search field" .Sidebar}}
 		{{if .User.ID}}
 			<form action="/post/vote/" method="POST">
-				<input type="hidden" name="post-id" value="{{.Post.ID}}">
+				<input type="hidden" name="post-id" value="{{.Dupe.Post.ID}}">
 				<span>Score:</span>
-				<input style="width:auto" type="submit" value="{{.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
+				<input style="width:auto" type="submit" value="{{.Dupe.Post.Score}}{{if .Voted}}--{{else}}++{{end}}">
 			</form>
 		{{else}}
-			<div>Score: {{.Post.Score}}</div>
+			<div>Score: {{.Dupe.Post.Score}}</div>
 			<br>
 		{{end}}
 	{{ template "sidebar tags" .Sidebar}}
@@ -41,6 +41,20 @@
 					</form>
         		    		<script type="text/javascript" src="/static/suggestions.js"></script>
 			    	{{end}}
+				{{if .User.Flag.Upload}}
+					<form method="POST" action="/post/edit/assignalts/">
+						<h3>Assign alt</h3>
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
+						<input type="number" name="post-id">
+						<input type="submit">
+					</form>
+					<form method="POST" action="/post/edit/removealt/">
+						<h3>Remove alt</h3>
+						<input type="hidden" name="post-id" value="{{.Post.ID}}">
+						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">
+						<input type="submit">
+					</form>
+				{{end}}
         			{{if .User.Flag.Delete}}
 					<form method="POST" action="/post/edit/thumbnails/generate/">
 						<h3>Generate Thumbnails</h3>
@@ -168,6 +182,25 @@
 	    <h3>
             	<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
 	    </h3>
+	{{with .Alts}}
+	<div class="cpage-container nolink">
+		{{$zindex := 1000}}
+		<a href="/posts/1/?alt-group={{$.Dupe.Post.AltGroup}}">
+		<div style="z-index:1001;" class="comic-thumb cover">
+			Browse all {{len $.Dupe.Post.Alts}} alts
+		</div>
+		</a>
+		{{range .}}
+			<div style="z-index:{{$zindex}};" class="comic-thumb" >
+				{{$zindex = add $zindex -1}}
+				<a href="/post/{{.ID}}/{{.Hash}}">
+					<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
+				</a>
+			</div>
+		{{end}}
+		<br>
+	</div>
+	{{end}}
 	    {{with .Post.Description}}
 		<div class="panel">
 	    		<h3>Description</h3>

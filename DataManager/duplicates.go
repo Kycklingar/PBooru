@@ -67,6 +67,13 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		}
 	}()
 
+	// Update alternatives
+	// must happen before dupe updates
+	if err = updateAlts(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Handle conflicts
 	if err = conflicts(tx, dupe); err != nil {
 		return err
@@ -133,6 +140,12 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		return err
 	}
 
+	// Move views
+	if err = moveViews(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Move user pool posts
 	if err = movePoolPosts(tx, dupe); err != nil {
 		log.Println(err)
@@ -165,6 +178,20 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	a = tx.Commit
 
 	c.Cache.Purge("TPC", strconv.Itoa(dupe.Post.ID))
+	return nil
+}
+
+func updateAlts(tx querier, dupe Dupe) error {
+	for _, p := range dupe.Inferior {
+		if err := p.setAlt(tx, dupe.Post.ID); err != nil {
+			return err
+		}
+		// Reset the inferior altgroup
+		if err := p.removeAlt(tx); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -290,6 +317,28 @@ func moveVotes(tx querier, dupe Dupe) (err error) {
 	}
 
 	return
+}
+
+func moveViews(tx querier, dupe Dupe) error {
+	stmt, err := tx.Prepare(`
+		UPDATE post_views
+		SET post_id = $1
+		WHERE post_id = $2
+	`)
+	defer stmt.Close()
+
+	for _, p := range dupe.Inferior {
+		_, err = stmt.Exec(dupe.Post.ID, p.ID)
+		if err != nil {
+			return err
+		}
+		if err = p.updateScore(tx); err != nil {
+			return err
+		}
+
+	}
+
+	return dupe.Post.updateScore(tx)
 }
 
 func commonTags(tx querier, dupe Dupe) (map[int]int, error) {

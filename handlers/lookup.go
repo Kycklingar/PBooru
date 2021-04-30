@@ -9,8 +9,8 @@ import (
 )
 
 type lookupPage struct {
-	Base base
-	Posts []*DM.Post
+	Base     base
+	Posts    []*DM.Post
 	UserInfo UserInfo
 }
 

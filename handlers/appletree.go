@@ -75,35 +75,45 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Delete() {
-		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
-		return
-	}
 
-	apple, err := strconv.Atoi(r.FormValue("apple"))
+	var (
+		dupes = DM.Dupe{Post: DM.NewPost()}
+		err   error
+	)
+
+	dupes.Post.ID, err = strconv.Atoi(r.FormValue("apple"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var pears []int
-
 	pearsStr := r.Form["pears"]
 	for _, pearStr := range pearsStr {
-		pear, err := strconv.Atoi(pearStr)
+		var p = DM.NewPost()
+		p.ID, err = strconv.Atoi(pearStr)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		pears = append(pears, pear)
+		dupes.Inferior = append(dupes.Inferior, p)
 	}
 
-	err = DM.PluckApple(apple, pears)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if user.QFlag(DM.DB).Delete() {
+		err = DM.PluckApple(dupes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err = DM.ReportDuplicates(dupes, user, "", DM.RNonDupe)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 	return
 }
+

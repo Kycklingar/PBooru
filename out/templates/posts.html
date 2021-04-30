@@ -64,7 +64,7 @@
 				{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
                 	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-                	    <div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}}">
+                	    <div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}} {{with .Post.Alts}}alts{{end}}">
                 	        {{if eq $ct ""}}
                 	        <div class="mimetype centered {{if .Post.Removed}}removed{{end}}">
                 	            <span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
@@ -97,7 +97,22 @@
 						<span class="tag namespace-{{.Namespace.Namespace}}">{{.String}}</span>
 					{{end}}
 				</div>
-				<div class="overlay"></div>
+				{{if $.Sidebar.Alts}}
+					{{if .Post.Alts}}
+					<form action="/posts/" method="GET">
+					{{range $k, $v := $.Sidebar.Form}}
+						{{range $v}}
+						<input type="hidden" name="{{$k}}" value="{{.}}">
+						{{end}}
+					{{end}}
+					<input type="hidden" name="tags" value="{{$.Sidebar.Query}}">
+					<input type="hidden" name="alts" value="off">
+					<input type="hidden" name="alt-group" value="{{.Post.AltGroup}}">
+					<div class="overlay-bl"><button type="submit">{{len .Post.Alts}}</button></div>
+					</form>
+					{{end}}
+				{{end}}
+				<div class="overlay-br"></div>
                 	    </div>
                 	</a>
                 {{ end }}
@@ -141,12 +156,17 @@
 
 <div class="nolink" id="pageinator">
 
+{{$q := ""}}
+{{with .Sidebar.Form.Encode}}
+	{{$q = print "?"  .}}
+{{end}}
+
 {{ if ne 0 $.Pageinator.Prev}}
-    <a href="/posts/{{.Pageinator.First}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
+    <a href="/posts/{{.Pageinator.First}}{{with .Sidebar.Query}}/{{. | urlEncode}}{{end}}{{$q}}">
         First
     </a>
 
-    <a href="/posts/{{$.Pageinator.Prev}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}" id="prev">
+    <a href="/posts/{{$.Pageinator.Prev}}{{with .Sidebar.Query}}/{{. | urlEncode}}{{end}}{{$q}}" id="prev">
         Previous
     </a>
 {{ end }}
@@ -157,17 +177,17 @@
             {{.}}
         </span>
         {{ else }}
-        <a href="/posts/{{.}}{{if $.Sidebar.Query}}/{{$.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
+        <a href="/posts/{{.}}{{with $.Sidebar.Query}}/{{. | urlEncode}}{{end}}{{$q}}">
             {{.}}
         </a>
         {{ end }}
     </span>
 {{ end }}
 {{ if ne 0 $.Pageinator.Next}}
-    <a href="/posts/{{.Pageinator.Next}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
+    <a href="/posts/{{.Pageinator.Next}}{{with .Sidebar.Query}}/{{. | urlEncode}}{{end}}{{$q}}">
         Next
     </a>
-    <a href="/posts/{{.Pageinator.Last}}{{if .Sidebar.Query}}/{{.Sidebar.Query | urlEncode}}{{end}}{{$.ArgString}}">
+    <a href="/posts/{{.Pageinator.Last}}{{with .Sidebar.Query}}/{{. | urlEncode}}{{end}}{{$q}}">
         Last
     </a>
 {{ end }}

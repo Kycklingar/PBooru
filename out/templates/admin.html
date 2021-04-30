@@ -36,6 +36,7 @@
         <input id="inputunless" class="stinput" type="text" name="unless" placeholder="Unless"><br>
 	<details>
 	<summary>Advanced</summary>
+	<input type="checkbox" id="inp-alts" name="alts"><label for="inp-alts">Alts</label><br>
         <input type="radio" id="inp-desc" name="order" value="desc" checked><label for="inp-desc">Descending</label><br>
         <input type="radio" id="inp-asc" name="order" value="asc"><label for="inp-asc">Ascending</label><br>
         <input type="radio" id="inp-rand" name="order" value="random"><label for="inp-rand">Random</label><br>
@@ -56,8 +57,8 @@
 </div>
 <div class="separator controlls">
 	<div>
-		<h4>Delete</h4>
-		<button onClick="deletePosts()">Delete</button>
+		<h4>Remove</h4>
+		<button onClick="removePost()">Remove</button>
 	</div>
 	<div>
 	    <h4>Tags</h4>
@@ -79,10 +80,17 @@
 	    </form>
 	</div>
 	<div>
+		<button onClick="assignAlts()">Assign Alts</button>
+	</div>
+	<div>
 		<button onclick="openComparePage()">Compare</button>
 	</div>
 </div>
 <div>
+	<div>
+		<button onClick="selectAll()">Select All</button>
+		<button onClick="clearAll()">Clear</button>
+	</div>
     <div style="border:dotted; display:flex; flex-flow:row wrap;" id="postlist">
     </div>
     <button onclick="refreshPage()">Refresh</button>
@@ -101,7 +109,7 @@
 
 <div style="position:fixed; right:0px;bottom:10px;background-color:#2228">
     <span id="sizeslidertext">{{.UserInfo.ThumbnailSize}}</span>
-    <input id="sizeslider" type="range" min="50" max="1024" value="{{.UserInfo.RealThumbnailSize}}">
+    <input id="sizeslider" type="range" min="50" max="1024" value="{{.UserInfo.ThumbnailSize}}">
 </div>
 <menu type="context" id="postmenu">
     <menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)"></menuitem>
@@ -287,6 +295,18 @@
 
     }
 
+    function selectAll() {
+    	for(let i = 0; i < fetchedPosts.length; i++)
+	{
+		appendToSelectionList(constructSelectionPost(fetchedPosts[i]))
+	}
+    }
+
+	function clearAll() {
+		selectedPosts = []
+		cleanDiv(selectionDiv)
+	}
+
     function getDupInfo(postID, callback) {
         let res = new XMLHttpRequest()
         res.onreadystatechange = function () {
@@ -364,6 +384,23 @@
         }
         div.appendChild(xdiv)
 
+	let sdiv = document.createElement("div")
+        sdiv.style.position = "absolute"
+        sdiv.style.left = "0px"
+        sdiv.style.top = "0px"
+        sdiv.style.backgroundColor = "#832"
+        sdiv.innerText = "\\"
+        sdiv.style.cursor = "pointer"
+
+        sdiv.onmousedown = function (c) {
+            var t = c.target
+            while (!t.className.includes("thumbContainer")) {
+                t = t.parentElement
+            }
+	    gotoSimilar(t)
+        }
+        div.appendChild(sdiv)
+
         let ldiv = document.createElement("div")
         ldiv.style.position = "absolute"
         ldiv.style.left = "0px"
@@ -409,7 +446,7 @@
         label.innerText = post.ID
         let inp = document.createElement("input")
         inp.type = "text"
-        getDupInfo(e.getAttribute("postid"), inp)
+        //getDupInfo(e.getAttribute("postid"), inp)
 
         e.appendChild(div)
         e.appendChild(label)
@@ -481,7 +518,7 @@
         }
     }
 
-    function deletePosts() 
+    function removePost() 
     {
     	function d(posts, index)
 	{
@@ -510,12 +547,47 @@
 		let postID = posts[index].getAttribute("postid")
 		console.log("working on postid ", postID)
 		let fd = new FormData()
-		fd.append("postid", postID)
-		req.open("POST", "/deletepost", true)
+		fd.append("post-id", postID)
+		req.open("POST", "/post/edit/remove/", true)
 		req.send(fd)
 	}
 
 	d(selectedPosts, 0)
+    }
+
+    function assignAlts()
+    {
+    	let req = new XMLHttpRequest()
+	req.onreadystatechange = function() {
+		if (this.readyState == 4)
+		{
+			if(this.status != 200)
+			{
+				console.log(this.status, this.responseText)
+				alert("Error, check log")
+				return
+			} else
+			{
+				alert("Finished:", this.status)
+			}
+		}
+	}
+
+	//let fd = new FormData()
+	let q = "?"
+
+	for (let i = 0; i < selectedPosts.length; i++)
+	{
+		q += "post-id=" + selectedPosts[i].getAttribute("postid") + "&"
+		//console.log(selectedPosts[i])
+		//fd.append("post-id", selectedPosts[i].getAttribute("postid"))
+	}
+
+	//console.log(fd)
+
+	req.open("POST", "/post/edit/assignalts/" + q, true)
+	req.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+	req.send()
     }
 
     function editTags(caller){

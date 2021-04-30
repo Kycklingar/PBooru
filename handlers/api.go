@@ -137,7 +137,6 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	AP, err := DMToAPIPost(p, tc.Tags, combineTags)
 	if err != nil {
 		log.Print(err)
@@ -277,15 +276,13 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var combineTags bool
-	if len(r.FormValue("combTagNamespace")) > 0 {
-		combineTags = true
-	}
+	var combineTags = len(r.FormValue("combTagNamespace")) > 0
+	var groupAlts = len(r.FormValue("alts")) > 0
 
 	bm := BM.Begin()
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs)
+	err = pc.Get(tagStr, orStr, filterStr, unlessStr, order, mimeIDs, 0, groupAlts)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -310,7 +307,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	AP.Posts = make([]APIv1Post, len(result))
-	for i, set := range result{
+	for i, set := range result {
 		APp, err := DMToAPIPost(set.Post, set.Tags, combineTags)
 		if err != nil {
 			log.Print(err)
@@ -415,7 +412,7 @@ func APIv1SimilarPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var posts []*DM.Post
-	if posts, err = post.FindSimilar(DM.DB, 5); err != nil {
+	if posts, err = post.FindSimilar(DM.DB, 5, false); err != nil {
 		APIError(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}

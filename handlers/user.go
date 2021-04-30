@@ -12,13 +12,14 @@ import (
 )
 
 type UserInfo struct {
-	Gateway string
-	Limit            int
-	ThumbnailSize	int
+	Gateway           string
+	Limit             int
+	ThumbnailSize     int
 	RealThumbnailSize int
-	SessionToken     string
-	ThumbHover       bool
-	ThumbHoverFull   bool
+	SessionToken      string
+	ThumbHover        bool
+	ThumbHoverFull    bool
+	CollectAlts       bool
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -310,12 +311,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "register", key)
 }
 
-var defaultUserInfo = UserInfo {
-	Limit: defaultPostsPerPage,
-	ThumbnailSize: defaultImageSize,
+var defaultUserInfo = UserInfo{
+	Limit:             defaultPostsPerPage,
+	ThumbnailSize:     defaultImageSize,
 	RealThumbnailSize: defaultMinThumbnailSize,
-	ThumbHover: false,
-	ThumbHoverFull: false,
+	ThumbHover:        false,
+	ThumbHoverFull:    false,
 }
 
 func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
@@ -329,24 +330,24 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 	for _, cookie := range r.Cookies() {
 		var httpOnly bool
 		switch cookie.Name {
-			case "session":
-				user.SessionToken = cookie.Value
-				httpOnly = true
-			case "gateway":
-				user.Gateway = cookie.Value
-			case "limit":
-				user.Limit, _ = strconv.Atoi(cookie.Value)
-				user.Limit = min(max(user.Limit, 250), 1)
-			case "thumbnail_size":
-				user.ThumbnailSize, _ = strconv.Atoi(cookie.Value)
-				user.ThumbnailSize = min(max(user.ThumbnailSize, largestThumbnailSize()), 16)
-			case "real_thumbnail_size":
-				user.RealThumbnailSize, _ = strconv.Atoi(cookie.Value)
-				user.RealThumbnailSize = min(max(user.RealThumbnailSize, largestThumbnailSize()), 0)
-			case "thumb_hover":
-				user.ThumbHover = cookie.Value == "on"
-			case "thumb_hover_full":
-				user.ThumbHoverFull = cookie.Value == "on"
+		case "session":
+			user.SessionToken = cookie.Value
+			httpOnly = true
+		case "gateway":
+			user.Gateway = cookie.Value
+		case "limit":
+			user.Limit, _ = strconv.Atoi(cookie.Value)
+			user.Limit = min(max(user.Limit, 250), 1)
+		case "thumbnail_size":
+			user.ThumbnailSize, _ = strconv.Atoi(cookie.Value)
+			user.ThumbnailSize = min(max(user.ThumbnailSize, largestThumbnailSize()), 16)
+		case "real_thumbnail_size":
+			user.RealThumbnailSize, _ = strconv.Atoi(cookie.Value)
+			user.RealThumbnailSize = min(max(user.RealThumbnailSize, largestThumbnailSize()), 0)
+		case "thumb_hover":
+			user.ThumbHover = cookie.Value == "on"
+		case "thumb_hover_full":
+			user.ThumbHoverFull = cookie.Value == "on"
 		}
 
 		refreshCookie(w, cookie, httpOnly)

@@ -591,7 +591,6 @@ func comicAddPageApiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	cp := DM.NewComicPost()
 	cp.Post = post
 	cp.Chapter = DM.NewChapter()

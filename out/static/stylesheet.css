@@ -25,7 +25,13 @@
 .comic
 {
 	margin: 1em;
-	max-width: 300px;
+	max-width: min-content;
+	min-width: 250px;
+}
+
+.comic .tag
+{
+	white-space: initial;
 }
 
 .comic a:visited, .comic a:link
@@ -35,6 +41,8 @@
 
 .comic img
 {
+	max-width: 400px;
+	max-height: 400px;
 	position:relative;
 	margin-bottom: 0.6em;
 	left: 50%;
@@ -103,6 +111,7 @@ form.block input
 {
 	width:auto;
 	height:auto;
+	margin: 0.3em;
 }
 
 .comic-strip .thumbnail img
@@ -204,24 +213,65 @@ li
 	white-space:pre-line;
 }
 
+#posts > a
+{
+	margin: 0.4em;
+	background-color: #0002;
+}
+
 .thumbnail
 {
     position: relative;
-    margin:3px;
+    /*margin:3px;*/
     width:256px;
     height:256px;
     word-wrap: break-word;
     /*border: 1px solid red;*/
 }
 
-.thumbnail.video .overlay
+.thumbnail .overlay-bl:hover
+{
+	z-index: 10000;
+	background-color: #0003;
+	outline: solid white 1px;
+}
+
+.thumbnail .overlay-bl
+{
+	position: absolute;
+	bottom: 0px;
+	left: 0px;
+	color: white;
+	text-shadow: 1px 1px 2px black;
+
+}
+
+.thumbnail form
+{
+	margin: unset;
+}
+
+.thumbnail .overlay-bl button
+{
+	color: inherit;
+	background-color: unset;
+	border: unset;
+	font-size: inherit;
+	padding: inherit;
+	text-shadow: inherit;
+	cursor: pointer;
+}
+
+.thumbnail.video .overlay-br
 {
 	position:absolute;
 	background-image:url(/static/video.png);
 	background-repeat:no-repeat;
-	background-position:bottom right;
-	height:100%;
-	width:100%;
+	background-size:contain;
+	height:32px;
+	width:32px;
+	right:0px;
+	bottom:0px;
 }
 
 .thumbnail img
@@ -608,6 +658,16 @@ li
 	transition:margin-left 0.07s;
 }
 
+.comic-thumb.cover
+{
+	background-image: linear-gradient(to right, rgba(0.2, 0.2, 0.2, 1.0), rgba(0.5, 0.5, 0.5, 0.7));
+	text-align: center;
+	color: white;
+	width: 150px;
+	height: 256px;
+	box-shadow: 3px 3px 6px #213;
+}
+
 .comic-thumb img
 {
 	max-width:256px;
@@ -672,8 +732,8 @@ li
 
 .dupe-reports img
 {
-	max-width:100px;
-	max-height:100px;
+	max-width:256px;
+	max-height:256px;
 	transform:none;
 	left:0px;
 	top:0px;
@@ -682,8 +742,6 @@ li
 
 .dupe-reports .comic-strip img
 {
-	max-width:50px;
-	max-height:50px;
 }
 
 @keyframes struggle

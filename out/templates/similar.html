@@ -8,18 +8,26 @@
 </style>
 
 <div class="text-panel">Check out <a href="/appletree/">/appletree/</a> for generated duplicate pairs!</div>
+<form>
+	<input type="hidden" name="id" value="{{.Id}}">
+	<input type="hidden" name="distance" value="{{.Distance}}">
+	<input type="hidden" name="removed" value="on">
+	<input type="submit" value="Removed posts">
+</form>
 <div id="content">
 	<form>
 	{{range .Posts}}
-		<span>
+		<span style="border-bottom: ridge 4px #{{colorID .AltGroup}}">
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
-		<input type="checkbox" name="post-id" value="{{.ID}}">
+		<input type="checkbox" class="centHorizont" name="post-id" value="{{.ID}}">
 		</span>
 	{{end}}
 
 	<br>
+	<br>
 	<input type="submit" formaction="/compare/" value="Compare">
 	<input type="submit" formaction="/compare2/" value="Compare2.js">
+	<input type="submit" formmethod="POST" formaction="/post/edit/assignalts/" value="Assign alts">
 	</form>
 
 </div>

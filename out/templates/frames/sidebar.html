@@ -3,7 +3,11 @@
 		{{if ne .TotalPosts 0}}
 			<div>{{.TotalPosts}}</div>
 		{{end}}
+
 		{{template "search field" .}}
+		{{with .AltGroup}}
+		<div>Alts: {{.}}</div>
+		{{end}}
 		{{template "sidebar tags" .}}
 	</div>
 {{ end }}
@@ -14,11 +18,11 @@
 	<form action="/posts/">
 	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search (AND)" class="stinput" id="searchinput" type="text" name="tags" value="{{ .Query }}">
 	    <br>
-	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search (OR)" class="stinput" id="searchinput" type="text" name="or" value="{{ .Or }}">
+	    <input onfocus="setInput(this)" title="Search for posts with these tags" placeholder="Search (OR)" class="stinput" id="searchinput" type="text" name="or" value="{{ .Form.Get "or" }}">
 	    <br>
-	    <input onfocus="setInput(this)" title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Filter}}">
+	    <input onfocus="setInput(this)" title="Remove posts with these tags" placeholder="Filter" class="stinput" id="blacklistinput" type="text" name="filter" value="{{.Form.Get "filter"}}">
 	    <br>
-	    <input onfocus="setInput(this)" title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Unless}}">
+	    <input onfocus="setInput(this)" title="Ignore the filter if the post includes these tags" placeholder="Unless" class="stinput" id="unlessinput" type="text" name="unless" value="{{.Form.Get "unless"}}">
 	    <input type="submit" value="Search">
 	    <script>
 	    	setInput(document.getElementById("searchinput"))
@@ -26,12 +30,16 @@
 	    <details>
 		<summary style="font-size:14px;">Advanced</summary>
 		<div id="advanced-search">
+			<label>Collect Alts
+				<input type="checkbox" name="alts" {{if .Alts}}checked{{end}}>
+			</label>
+			<br>
 		    <span>Order:</span>
 		    <br>
 		    <input id="order-desc" type="radio" name="order" value="" checked> <label for="order-desc">Descending</label><br>
-		    <input id="order-asc" type="radio" name="order" value="asc"> <label for="order-asc">Ascending</label><br>
-		    <input id="order-rand" type="radio" name="order" value="random"> <label for="order-rand">Random</label><br>
-		    <input id="order-score" type="radio" name="order" value="score"> <label for="order-score">Score</label><br>
+		    <input id="order-asc" type="radio" name="order" value="asc" {{if eq (.Form.Get "order") "asc"}}checked{{end}} > <label for="order-asc">Ascending</label><br>
+		    <input id="order-rand" type="radio" name="order" value="random" {{if eq (.Form.Get "order") "random"}}checked{{end}}> <label for="order-rand">Random</label><br>
+		    <input id="order-score" type="radio" name="order" value="score" {{if eq (.Form.Get "order") "score"}}checked{{end}}> <label for="order-score">Score</label><br>
 		    <details>
 			<summary>Mimes:</summary>
 			<br>
@@ -46,6 +54,9 @@
 		    </details>
 		</div>
 	    </details>
+	    {{with .AltGroup}}
+	    <input type="hidden" name="alt-group" value="{{.}}">
+	    {{end}}
 	</form>
 	</div>
 	<script type="text/javascript" src="/static/suggestions.js"></script>

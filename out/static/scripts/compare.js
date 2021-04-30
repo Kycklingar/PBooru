@@ -2,6 +2,7 @@ var posts = []
 var removed = []
 var gateway = "ass"
 var currentPost = null
+var preload = {}
 
 var reportID = null
 
@@ -10,15 +11,17 @@ var rightInterface = document.getElementById("interface-right")
 var canvas = document.getElementById("canvas")
 
 var note = document.getElementById("note")
+var reportNoneDupes = document.getElementById("non-dupes")
 
 canvas.onclick = function(){rightInterface.focus()}
 
-function postStruct(id, hash, thumb, dimensions, filesize, mime, removed)
+function postStruct(id, hash, thumb, preview, dimensions, filesize, mime, removed)
 {
 	return {
 		"id":id,
 		"hash":hash,
 		"thumbnail":thumb,
+		"preview":preview,
 		"dimensions":dimensions,
 		"filesize":filesize,
 		"mime":mime,
@@ -28,7 +31,28 @@ function postStruct(id, hash, thumb, dimensions, filesize, mime, removed)
 
 function preloadImage(post)
 {
-	new Image().src = gateway + "/ipfs/" + post.hash
+	if(preload[post.id] == null)
+	{
+		let preview = new Image()
+		preview.src = ipfsLink(post.preview)
+
+		let img = new Image()
+		preload[post.id] = img
+		img.onLoad = function(){
+			delete preload[post.id]
+		}
+
+		img.src = ipfsLink(post.hash)
+	}
+}
+
+function cancelPreload(id)
+{
+	if(preload[id] == null)
+		return
+
+	preload[id].src = ""
+	delete preload[id]
 }
 
 function submitReport()
@@ -49,6 +73,12 @@ function submitReport()
 	for (let i = 0; i < posts.length; i++)
 	{
 		fd.append("post-ids", posts[i].id)
+	}
+
+	fd.append("non-dupes", reportNoneDupes.value)
+	for (let i = 0; i < removed.length; i++)
+	{
+		fd.append("removed-ids", removed[i].id)
 	}
 
 	fd.append("best-id", currentPost.id)
@@ -133,6 +163,7 @@ function getRemotePost(id)
 						j.ID,
 						j.Hash,
 						closestThumb(100, j.ThumbHashes),
+						closestThumb(1024, j.ThumbHashes),
 						j.Dimension,
 						j.Filesize,
 						mimeObj(j.Mime),
@@ -165,6 +196,12 @@ function removeCurrentPost()
 
 function removePost(id)
 {
+	// Cancel preloading image
+	cancelPreload(id)
+
+	// Cancel currently loading image
+	niload()
+
 	// If the current post is removed, render previous
 	// Do not render if its the last post
 	if (currentPost != null && currentPost.id == id && posts.length > 1)
@@ -327,6 +364,17 @@ function ipfsLink(hash)
 }
 
 let lt = null
+let iload = null
+
+function niload()
+{
+	if (iload)
+	{
+		iload.onload = null
+		iload.src = ""
+		iload = null
+	}
+}
 
 function renderPost(post)
 {
@@ -349,12 +397,25 @@ function renderPost(post)
 		clearTimeout(lt)
 	lt = setTimeout(function(){loader.classList.remove("hidden")}, 250)
 
+	// Remove any attemting-to-load images
+	niload()
+
 	let img = new Image()
-	img.src = ipfsLink(post.hash)
+	iload = img
+
+	let src = ipfsLink(post.hash)
+	if (optElim)
+	{
+		src = ipfsLink(post.preview)
+	}
+
+	img.src = src
 	img.onload = function(){
-		clearTimeout(lt)
-		loader.classList.add("hidden")
-		renderImage(img)
+		img.decode().then(function(){
+			clearTimeout(lt)
+			loader.classList.add("hidden")
+			renderImage(img)
+		})
 	}
 
 	currentPost = post
@@ -399,6 +460,7 @@ var optScale = 1
 var optContrast = 1
 var optFit = false
 var optGlue = false
+var optElim = false
 
 var gluedW, gluedH
 
@@ -440,9 +502,12 @@ function renderImage(image)
 
 	canvas.style.filter = `contrast(${optContrast})`
 	
-	blankCanvas()
-	canvas.appendChild(image)
-
+	if (iload == image)
+	{
+		iload = null
+		blankCanvas()
+		canvas.appendChild(image)
+	}
 
 	var b = rightInterface.scrollHeight - rightInterface.clientHeight
 	rightInterface.scrollTop = b * scrollY
@@ -455,6 +520,15 @@ function blankCanvas()
 {
 	for (let c = canvas.firstChild; c != null; c = canvas.firstChild)
 		canvas.removeChild(c)
+}
+
+function toggleEliminationMode()
+{
+	optElim = !optElim
+
+	document.getElementById("button-elim").classList.toggle("highlighted")
+	document.getElementById("elimination-warning").classList.toggle("hidden")
+	renderPost(currentPost)
 }
 
 function toggleReport()
@@ -606,6 +680,9 @@ registerKeyMapping(81, function(){glue()})
 
 // Fit
 registerKeyMapping(70, function(){fit()})
+
+// Elimination mode
+registerKeyMapping(84, function(){toggleEliminationMode()})
 
 // Scale
 registerKeyMapping(83, function(){

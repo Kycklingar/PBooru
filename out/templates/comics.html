@@ -34,7 +34,7 @@
 		{{end}}
 		<a href="/comic/{{.ID}}/">
 		{{if $post}}
-			<img src="{{$.UserInfo.Gateway}}/ipfs/{{$post.ClosestThumbnail 256}}" alt="{{.Title}}">
+			<img src="{{$.UserInfo.Gateway}}/ipfs/{{$post.ClosestThumbnail 512}}" alt="{{.Title}}">
 		{{else}}
 			<h1>{{.Title}}</h1>
 		{{end}}
