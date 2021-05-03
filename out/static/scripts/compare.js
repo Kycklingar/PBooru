@@ -33,16 +33,17 @@ function preloadImage(post)
 {
 	if(preload[post.id] == null)
 	{
-		let preview = new Image()
-		preview.src = ipfsLink(post.preview)
-
 		let img = new Image()
 		preload[post.id] = img
-		img.onLoad = function(){
+
+		img.onload = function(){
 			delete preload[post.id]
 		}
 
-		img.src = ipfsLink(post.hash)
+		if (optElim)
+			img.src = ipfsLink(post.preview)
+		else
+			img.src = ipfsLink(post.hash)
 	}
 }
 
@@ -53,6 +54,15 @@ function cancelPreload(id)
 
 	preload[id].src = ""
 	delete preload[id]
+}
+
+function cancelPreloads()
+{
+	let keys = Object.keys(preload)
+	for(let i = 0; i < keys.length; i++)
+	{
+		cancelPreload(keys[i])
+	}
 }
 
 function submitReport()
@@ -206,7 +216,8 @@ function removePost(id)
 	// Do not render if its the last post
 	if (currentPost != null && currentPost.id == id && posts.length > 1)
 	{
-		renderNextPost(-1)
+		// Render previous post unless at the top
+		currentPost == posts[0] ? renderNextPost(1) : renderNextPost(-1)
 	} else {
 		blankCanvas()
 	}
@@ -426,6 +437,7 @@ function renderPost(post)
 		if(c.postid == post.id)
 		{
 			c.classList.add("highlighted")
+			c.scrollIntoView({behavior:"smooth", block:"nearest"})
 		} else {
 			c.classList.remove("highlighted")
 		}
@@ -525,6 +537,13 @@ function blankCanvas()
 function toggleEliminationMode()
 {
 	optElim = !optElim
+
+	cancelPreloads()
+
+	for (let i = 0; i < posts.length; i++)
+	{
+		preloadImage(posts[i])
+	}
 
 	document.getElementById("button-elim").classList.toggle("highlighted")
 	document.getElementById("elimination-warning").classList.toggle("hidden")
