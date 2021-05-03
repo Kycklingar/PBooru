@@ -36,10 +36,6 @@ function preloadImage(post)
 		let img = new Image()
 		preload[post.id] = img
 
-		img.onload = function(){
-			delete preload[post.id]
-		}
-
 		if (optElim)
 			img.src = ipfsLink(post.preview)
 		else
@@ -706,13 +702,16 @@ registerKeyMapping(84, function(){toggleEliminationMode()})
 // Scale
 registerKeyMapping(83, function(){
 	registerKeyMapping(49, function(){
-		scale(1)	
+		scale(1)
 	})
 	registerKeyMapping(50, function(){
-		scale(2)	
+		scale(2)
 	})
 	registerKeyMapping(51, function(){
-		scale(5)	
+		scale(5)
+	})
+	registerKeyMapping(52, function(){
+		scale(10)
 	})
 })
 
@@ -720,12 +719,12 @@ registerKeyMapping(83, function(){
 registerKeyMapping(67, function(){
 	
 	registerKeyMapping(49, function(){
-		cont(1)	
+		cont(1)
 	})
 	registerKeyMapping(50, function(){
-		cont(2)	
+		cont(2)
 	})
 	registerKeyMapping(51, function(){
-		cont(3)	
+		cont(3)
 	})
 })
