@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kycklingar/mimemagic"
+	"github.com/gabriel-vasile/mimetype"
 )
 
 func ThumbnailerInstalled() {
@@ -61,35 +61,33 @@ func ThumbnailerInstalled() {
 func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize, quality int) (*bytes.Buffer, error) {
 	var err error
 
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
+	mime, err := mimetype.DetectReader(file)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	mime := mimemagic.MatchMagic(buffer)
+	mimeStr := mime.String()
 
-	//fmt.Println(mime.MediaType())
 	file.Seek(0, 0)
 
 	var b *bytes.Buffer
 
-	switch mime.MediaType() {
+	switch mimeStr {
 	case "application/pdf", "application/epub+zip":
 		var m string
-		if strings.Contains(mime.MediaType(), "pdf") {
+		if strings.Contains(mimeStr, "pdf") {
 			m = "pdf"
-		} else if strings.Contains(mime.MediaType(), "epub") {
+		} else if strings.Contains(mimeStr, "epub") {
 			m = "epub"
 		}
 		b, err = mupdf(file, m, thumbnailFormat, thumbnailSize, quality)
 	case "application/x-mobipocket-ebook":
 		b, err = gnomeMobi(file, thumbnailFormat, thumbnailSize, quality)
 	default:
-		if strings.Contains(mime.MediaType(), "image") {
+		if strings.Contains(mimeStr, "image") {
 			b, err = magickResize(file, thumbnailFormat, thumbnailSize, quality)
-		} else if strings.Contains(mime.MediaType(), "video") {
+		} else if strings.Contains(mimeStr, "video") {
 			b, err = ffmpeg(file, thumbnailFormat, thumbnailSize, quality)
 		} else {
 			return nil, errors.New("unsupported mime")

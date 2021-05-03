@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gabriel-vasile/mimetype"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
-	"github.com/kycklingar/mimemagic"
 )
 
 var errNoID = errors.New("No post identification provided")
@@ -772,29 +772,24 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize+1000000)
-		err := r.ParseMultipartForm(CFG.MaxFileSize)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 
 		file, fh, err := r.FormFile("file")
 		if err != nil {
+			log.Println(err)
 			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
 			return
 		}
 		defer file.Close()
 
-		buffer := make([]byte, 512)
-		_, err = file.Read(buffer)
+		mime, err := mimetype.DetectReader(file)
 		if err != nil {
+			log.Println(err)
+			http.Error(w, "Read error", http.StatusInternalServerError)
 			return
 		}
 
-		file.Seek(0, 0)
+		contentType := mime.String()
 
-		mime := mimemagic.MatchMagic(buffer)
-		contentType := mime.MediaType()
 		if !allowedContentType(contentType) {
 			http.Error(w, "Filetype not allowed: "+contentType, http.StatusBadRequest)
 			return
@@ -802,7 +797,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		tagString := r.FormValue("tags")
 
-		//post := DM.NewPost()
+		file.Seek(0, 0)
 
 		post, err := DM.CreatePost(file, fh.Size, tagString, contentType, user)
 		if err != nil {
