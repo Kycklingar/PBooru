@@ -20,7 +20,7 @@ func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
 	}
 
 	cid, err := ipfs.Add(
-		b,
+		io.NopCloser(b),
 		shell.Pin(false),
 		shell.CidVersion(1),
 	)

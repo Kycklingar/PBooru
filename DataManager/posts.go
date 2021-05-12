@@ -519,8 +519,11 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 	defer uploadQueue.Unlock()
 	// Hash file
 	// To prevent **DELETED** files from being added again
+
+	// Undocumented behaviour in go-ipfs-api
+	// shell.Add will close the file if it implements the Close interface
 	cid, err := ipfs.Add(
-		file,
+		io.NopCloser(file),
 		shell.CidVersion(1),
 		shell.OnlyHash(true),
 	)
@@ -538,9 +541,13 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 	if p.ID == 0 {
 		var cid2 string
 
-		file.Seek(0, 0)
+		if _, err = file.Seek(0, 0); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
 		cid2, err = ipfs.Add(
-			file,
+			io.NopCloser(file),
 			shell.CidVersion(1),
 			shell.Pin(false),
 		)

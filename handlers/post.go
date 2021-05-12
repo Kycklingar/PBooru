@@ -797,7 +797,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		tagString := r.FormValue("tags")
 
-		file.Seek(0, 0)
+		if _, err = file.Seek(0, 0); err != nil {
+			log.Println(err)
+			return
+		}
 
 		post, err := DM.CreatePost(file, fh.Size, tagString, contentType, user)
 		if err != nil {
