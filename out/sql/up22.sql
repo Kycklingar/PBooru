@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS tombstone (
+	e621_id INTEGER PRIMARY KEY,
+	md5 TEXT NOT NULL,
+	reason TEXT NOT NULL,
+	removed TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX ON tombstone (md5);

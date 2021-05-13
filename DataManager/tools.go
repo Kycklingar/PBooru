@@ -1,14 +1,17 @@
 package DataManager
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -923,4 +926,88 @@ func GenPhash() error {
 func UpdateUserFlags(newFlag, oldFlag int) error {
 	_, err := DB.Exec("UPDATE users SET adminflag = $1 WHERE adminflag = $2", newFlag, oldFlag)
 	return err
+}
+
+func UpdateTombstone(filep string) error {
+	f, err := os.Open(filep)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	var tombs []Tombstone
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		str := strings.SplitN(line, "\t", 5)
+		if len(str) != 5 {
+			if len(tombs) > 0 {
+				tombs[len(tombs)-1].Reason += line
+			}
+			continue
+		}
+
+		id, err := strconv.Atoi(str[0])
+		if err != nil {
+			return err
+		}
+
+		var t time.Time
+
+		// Check missing flag
+		if str[4] == "Flag missing" {
+			t = time.Unix(0, 0)
+		} else {
+			t, err = time.Parse(time.RFC3339, str[3])
+			if err != nil {
+				return err
+			}
+		}
+
+		var ts = timestamp{&t}
+
+		var tomb = Tombstone{
+			E6id:    id,
+			Md5:     str[1],
+			Reason:  str[4],
+			Removed: ts,
+		}
+
+		tombs = append(tombs, tomb)
+	}
+
+	return insertTombstones(tombs)
+}
+
+func VerifyFileIntegrity() error {
+	rows, err := DB.Query("SELECT multihash FROM posts WHERE deleted = false ORDER BY id ASC")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid string
+
+		if err = rows.Scan(&cid); err != nil {
+			return err
+		}
+
+		fmt.Print(cid, ":[")
+
+		ch, err := ipfs.Refs(cid, true)
+		if err != nil {
+			return err
+		}
+
+		for range ch {
+			fmt.Print("x")
+		}
+		fmt.Print("]\n")
+	}
+
+	return nil
 }

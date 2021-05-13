@@ -137,6 +137,10 @@ func (m *Mime) Parse(str string) error {
 	return nil
 }
 
+func (m Mime) String() string {
+	return m.Str()
+}
+
 func (m Mime) Str() string {
 	return m.QType(DB) + "/" + m.QName(DB)
 }
