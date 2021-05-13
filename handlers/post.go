@@ -264,6 +264,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFAlts,
 		DM.PFAltGroup,
 		DM.PFScore,
+		DM.PFTombstone,
 	); err != nil {
 		log.Println(err)
 	}

@@ -325,7 +325,8 @@ func init() {
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
 
-	Handlers["/tombstone/"] = tombstoneHandler
+	Handlers["/tombstone/"] = makeStatHandler(tombstoneHandler)
+	Handlers["/tombstone/search/"] = makeStatHandler(tombstoneSearchHandler)
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {

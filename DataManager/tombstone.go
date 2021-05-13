@@ -2,9 +2,9 @@ package DataManager
 
 import (
 	"fmt"
-)
 
-var Tombstones int
+	c "github.com/kycklingar/PBooru/DataManager/cache"
+)
 
 type Tombstone struct {
 	Post    *Post
@@ -14,23 +14,42 @@ type Tombstone struct {
 	Removed timestamp
 }
 
-func GetTombstonedPosts(limit, offset int) ([]Tombstone, error) {
-	rows, err := DB.Query(`
-		SELECT p.id, t.e621_id, reason, t.removed 
-		FROM tombstone t
-		JOIN hashes h
-		ON t.md5 = h.md5
-		LEFT JOIN posts p
-		ON h.post_id = p.id
-		ORDER BY t.removed DESC, p.id DESC
-		LIMIT $1
-		OFFSET $2
+func GetTombstonedPosts(query string, limit, offset int) (int, []Tombstone, error) {
+	var where string
+	var data []interface{}
+	var pos int
+	if query != "" {
+		where = "WHERE reason LIKE('%'||$1||'%')"
+		data = append(data, query)
+		pos = 1
+	}
+
+	data = append(data, []interface{}{limit, offset}...)
+
+	var from = fmt.Sprintf(`
+			FROM tombstone t
+			JOIN posts p
+			ON t.post_id = p.id
+			%s
 		`,
-		limit,
-		offset,
+		where,
 	)
+
+	var q = fmt.Sprintf(`
+		SELECT p.id, t.e621_id, reason, t.removed 
+		%s
+		ORDER BY t.removed DESC, p.id DESC
+		LIMIT $%d
+		OFFSET $%d
+		`,
+		from,
+		pos+1,
+		pos+2,
+	)
+
+	rows, err := DB.Query(q, data...)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 
@@ -47,29 +66,41 @@ func GetTombstonedPosts(limit, offset int) ([]Tombstone, error) {
 			&t.Reason,
 			&t.Removed,
 		); err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 
 		tomb = append(tomb, t)
 	}
 
-	return tomb, countTombstones()
+	total, err := countTombstones(from, query)
+
+	return total, tomb, err
 }
 
-func countTombstones() error {
-	if Tombstones == 0 {
-		return DB.QueryRow(`
-			SELECT count(*)
-			FROM tombstone t
-			JOIN hashes h
-			ON t.md5 = h.md5
-			LEFT JOIN posts p
-			ON h.post_id = p.id
-			`,
-		).Scan(&Tombstones)
+func countTombstones(query, param string) (int, error) {
+	if t := c.Cache.Get("TOMB", param); t != nil {
+		return t.(int), nil
 	}
 
-	return nil
+	var data []interface{}
+	if param != "" {
+		data = append(data, param)
+	}
+
+	var total int
+	err := DB.QueryRow(
+		fmt.Sprintf(`
+			SELECT count(*)
+			%s
+			`,
+			query,
+		),
+		data...,
+	).Scan(&total)
+
+	c.Cache.Set("TOMB", param, total)
+
+	return total, err
 }
 
 func insertTombstones(tombs []Tombstone) error {

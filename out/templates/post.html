@@ -6,9 +6,17 @@
 {{end -}}
 {{end}}
 
+{{define "tombhint" -}}
+{{.Removed}}
+{{.Reason}}
+{{end}}
+
 <div id="content">
     <div id="sidebar">
 	{{ template "search field" .Sidebar}}
+		{{if .Post.Tombstone.Reason}}
+		<div class="tombstone" title="{{template "tombhint" .Post.Tombstone}}">RIP</div>
+		{{end}}
 		{{if .User.ID}}
 			<form action="/post/vote/" method="POST">
 				<input type="hidden" name="post-id" value="{{.Dupe.Post.ID}}">

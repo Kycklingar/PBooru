@@ -1,5 +1,9 @@
 {{template "base"}}
 <h3>{{.Total}} Coffins</h3>
+<form action="/tombstone/search/">
+	<input type="text" name="reason" placeholder="Find a reason" title="I can't">
+	<input type="submit" value="Search">
+</form>
 <div class="content">
 {{range .Tombstone}}
 	{{template "thumbnail-open" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}

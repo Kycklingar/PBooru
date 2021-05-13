@@ -4,9 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
+
+func tombstoneSearchHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	http.Redirect(w, r, "/tombstone/?"+r.Form.Encode(), http.StatusSeeOther)
+}
 
 func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -22,6 +28,8 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, page.UserInfo = getUser(w, r)
 
+	var query = r.FormValue("reason")
+
 	var currentPage int
 
 	uri := splitURI(r.URL.Path)
@@ -34,13 +42,11 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	page.Tombstone, err = DM.GetTombstonedPosts(limit, (currentPage-1)*limit)
+	page.Total, page.Tombstone, err = DM.GetTombstonedPosts(query, limit, (currentPage-1)*limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	page.Total = DM.Tombstones
 
 	for _, p := range page.Tombstone {
 		if err = p.Post.QMul(
@@ -55,11 +61,16 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var q = r.Form.Encode()
+	if q != "" {
+		q = "?" + q
+	}
+
 	page.Paginator = paginator{
 		current: currentPage,
-		last:    DM.Tombstones / limit,
+		last:    page.Total / limit,
 		plength: 30,
-		format:  fmt.Sprintf("/tombstone/%s/", "%d"),
+		format:  fmt.Sprintf("/tombstone/%%d/%s", strings.ReplaceAll(q, "%", "%%")),
 	}
 
 	renderTemplate(w, "tombstone", page)

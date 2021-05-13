@@ -96,6 +96,8 @@ type Post struct {
 	AltGroup int
 	Alts     []*Post
 
+	Tombstone Tombstone
+
 	description *string
 
 	editCount int
@@ -131,6 +133,7 @@ const (
 	PFAlts
 	PFAltGroup
 	PFDescription
+	PFTombstone
 )
 
 type checksums struct {
@@ -167,6 +170,9 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		sel.Bind(&p.Score, "p.score / 1000.0", "")
 	case PFAltGroup:
 		sel.Bind(&p.AltGroup, "p.alt_group", "")
+	case PFTombstone:
+		sel.Bind(&p.Tombstone.Reason, "COALESCE(t.reason, '')", "LEFT JOIN tombstone t ON t.post_id = p.id")
+		sel.Bind(&p.Tombstone.Removed, "COALESCE(t.removed, CURRENT_TIMESTAMP)", "")
 	case PFDimension:
 		sel.Bind(&p.Dimension.Width, "COALESCE(width, 0)", "LEFT JOIN post_info ON p.id = post_info.post_id")
 		sel.Bind(&p.Dimension.Height, "COALESCE(height, 0)", "")
