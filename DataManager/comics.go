@@ -133,7 +133,7 @@ func parseTags(tagQuery string) ([]*Tag, error) {
 	}
 	var tc TagCollector
 
-	err := tc.Parse(tagQuery)
+	err := tc.Parse(tagQuery, ",")
 	if err != nil {
 		return nil, err
 	}

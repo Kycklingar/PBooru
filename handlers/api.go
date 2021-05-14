@@ -346,7 +346,7 @@ func APIv1SuggestTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
 	timer := BM.Begin()
 	var tc DM.TagCollector
-	tc.Parse(tagStr)
+	tc.Parse(tagStr, ",")
 
 	if len(r.FormValue("opensearch")) >= 1 {
 		jsonEncode(w, openSearchSuggestions(tagStr, tc))

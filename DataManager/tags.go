@@ -175,10 +175,6 @@ func (t *Tag) Save(q querier) error {
 		}
 	}
 
-	if strings.ContainsAny(t.Tag, ",") {
-		return errors.New("Tag cannot contain ','")
-	}
-
 	err := q.QueryRow("INSERT INTO tags(tag, namespace_id) VALUES($1, $2) RETURNING id", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
 	if err != nil {
 		return err
@@ -413,8 +409,14 @@ type TagCollector struct {
 	Tags []*Tag
 }
 
-func (tc *TagCollector) Parse(tagStr string) error {
-	tags := strings.Split(strings.Replace(tagStr, "\n", ",", -1), ",")
+func (tc *TagCollector) Parse(tagStr, delim string, delims ...string) error {
+	for _, d := range delims {
+		tagStr = strings.Replace(tagStr, d, delim, -1)
+	}
+
+	tags := strings.Split(tagStr, delim)
+
+	//tags := strings.Split(strings.Replace(tagStr, "\n", ",", -1), ",")
 	for _, tag := range tags {
 		if strings.TrimSpace(tag) == "" {
 			continue

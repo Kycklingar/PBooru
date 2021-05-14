@@ -719,7 +719,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("After posts")
 
 	var tc DM.TagCollector
-	tc.Parse(tagString)
+	tc.Parse(tagString, ",")
 
 	for _, t := range tc.SuggestedTags(DM.DB).Tags {
 		t.QTag(DM.DB)

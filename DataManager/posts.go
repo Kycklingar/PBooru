@@ -938,7 +938,7 @@ func (p *Post) RemoveTags(user *User, tagStr string) error {
 
 func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 	var tags TagCollector
-	err := tags.Parse(tagStr)
+	err := tags.Parse(tagStr, "\n")
 	if err != nil {
 		return err
 	}
@@ -983,7 +983,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 
 	var tags TagCollector
-	err := tags.Parse(tagStr)
+	err := tags.Parse(tagStr, "\n")
 	if err != nil {
 		return err
 	}
@@ -1034,7 +1034,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 
 func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 	var tags TagCollector
-	err := tags.Parse(tagStr)
+	err := tags.Parse(tagStr, "\n")
 	if err != nil {
 		//log.Print(err)
 	}
@@ -1413,7 +1413,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(tagString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(tagString)
+		err := tc.Parse(tagString, ",", "\n")
 		if err != nil {
 			return err
 		}
@@ -1443,7 +1443,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(orString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(orString)
+		err := tc.Parse(orString, ",", "\n")
 		if err != nil {
 			return err
 		}
@@ -1473,7 +1473,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(filterString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(filterString)
+		err := tc.Parse(filterString, ",", "\n")
 		if err != nil {
 			return err
 		}
@@ -1510,7 +1510,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(unlessString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(unlessString)
+		err := tc.Parse(unlessString, ",", "\n")
 		if err != nil {
 			return err
 		}
