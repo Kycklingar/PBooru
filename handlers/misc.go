@@ -256,7 +256,7 @@ func tPostComments(cm []*DM.PostComment) (r []Comment) {
 	return
 }
 
-func UrlEncode(uri string) string {
+func PathEscape(uri string) string {
 	res := strings.Replace(uri, "%", "%25", -1)
 	res = strings.Replace(res, "/", "%25-2F", -1)
 	res = strings.Replace(res, "?", "%25-3F", -1)
@@ -264,7 +264,7 @@ func UrlEncode(uri string) string {
 	return res
 }
 
-func UrlDecode(uri string) string {
+func PathUnescape(uri string) string {
 	res := strings.Replace(uri, "%-2F", "/", -1)
 	res = strings.Replace(res, "%-3F", "?", -1)
 	res = strings.Replace(res, "%-D", ".", -1)
