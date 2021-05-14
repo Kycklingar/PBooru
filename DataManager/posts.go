@@ -1413,7 +1413,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(tagString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(tagString, ",", "\n")
+		err := tc.ParseEscape(tagString, ',')
 		if err != nil {
 			return err
 		}
@@ -1443,7 +1443,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(orString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(orString, ",", "\n")
+		err := tc.ParseEscape(orString, ',')
 		if err != nil {
 			return err
 		}
@@ -1473,7 +1473,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(filterString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(filterString, ",", "\n")
+		err := tc.ParseEscape(filterString, ',')
 		if err != nil {
 			return err
 		}
@@ -1510,7 +1510,7 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	if len(unlessString) >= 1 {
 		var tc TagCollector
 
-		err := tc.Parse(unlessString, ",", "\n")
+		err := tc.ParseEscape(unlessString, ',')
 		if err != nil {
 			return err
 		}

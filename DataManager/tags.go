@@ -55,12 +55,15 @@ func (t *Tag) String() string {
 	return fmt.Sprint(t.Namespace.Namespace, ":", t.Tag)
 }
 
-func (t *Tag) EString() string {
+func (t *Tag) EditString() string {
 	if t.Namespace.Namespace == "none" && strings.HasPrefix(t.Tag, ":") {
 		return ":" + t.Tag
 	}
-
 	return t.String()
+}
+
+func (t *Tag) Escaped() string {
+	return strings.Replace(t.EditString(), ",", "\\,", -1)
 }
 
 func (t *Tag) QID(q querier) int {
@@ -435,6 +438,57 @@ func (tc *TagCollector) Parse(tagStr, delim string, delims ...string) error {
 		err = errors.New("error decoding any tags")
 	}
 	return err
+}
+
+func (tc *TagCollector) ParseEscape(tagstr string, delim rune) error {
+	tagSpitter := make(chan string)
+	go func(spitter chan string) {
+		const (
+			next = iota
+			unescape
+		)
+
+		var (
+			state = next
+			tag   string
+		)
+
+		for _, c := range tagstr {
+			switch state {
+			case next:
+				switch c {
+				case '\\':
+					state = unescape
+				case delim:
+					spitter <- strings.TrimSpace(tag)
+					tag = ""
+				default:
+					tag += string(c)
+				}
+			case unescape:
+				tag += string(c)
+				state = next
+			}
+		}
+
+		spitter <- tag
+		close(spitter)
+	}(tagSpitter)
+
+	for tag := range tagSpitter {
+		if tag == "" {
+			continue
+		}
+
+		t := NewTag()
+		if err := t.Parse(tag); err != nil {
+			continue
+		}
+
+		tc.Tags = append(tc.Tags, t)
+	}
+
+	return nil
 }
 
 func (tc *TagCollector) Get(limit, offset int) error {

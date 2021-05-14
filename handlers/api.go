@@ -344,9 +344,14 @@ func APIv1ComicsHandler(w http.ResponseWriter, r *http.Request) {
 
 func APIv1SuggestTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
+	delim := r.FormValue("delim")
+	if delim == "" {
+		delim = ","
+	}
+
 	timer := BM.Begin()
 	var tc DM.TagCollector
-	tc.Parse(tagStr, ",")
+	tc.ParseEscape(tagStr, rune(delim[0]))
 
 	if len(r.FormValue("opensearch")) >= 1 {
 		jsonEncode(w, openSearchSuggestions(tagStr, tc))

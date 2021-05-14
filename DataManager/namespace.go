@@ -40,6 +40,10 @@ type Namespace struct {
 	Namespace string
 }
 
+func (n *Namespace) String() string {
+	return n.Namespace
+}
+
 func (n *Namespace) QID(q querier) int {
 	if n.ID != 0 {
 		return n.ID
