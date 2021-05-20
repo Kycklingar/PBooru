@@ -982,8 +982,8 @@ func UpdateTombstone(filep string) error {
 	return insertTombstones(tombs)
 }
 
-func VerifyFileIntegrity() error {
-	rows, err := DB.Query("SELECT multihash FROM posts WHERE deleted = false ORDER BY id ASC")
+func VerifyFileIntegrity(start int) error {
+	rows, err := DB.Query("SELECT multihash FROM posts WHERE deleted = false AND id > $1 ORDER BY id ASC", start)
 	if err != nil {
 		return err
 	}

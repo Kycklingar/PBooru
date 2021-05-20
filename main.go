@@ -62,7 +62,7 @@ func main() {
 	genPears := flag.Bool("gen-pears", false, "Harvest apple tree")
 	genPhash := flag.Bool("gen-phash", false, "Generate phashes")
 	tombstoneFile := flag.String("read-tombstone", "", "Read tombstones from a tombstone file")
-	verifyFiles := flag.Bool("verify-files", false, "Verify the integrity of the files in ipfs")
+	verifyFiles := flag.Int("verify-files", -1, "Verify the integrity of the files in ipfs")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -87,8 +87,8 @@ func main() {
 
 	go catchSignals()
 
-	if *verifyFiles {
-		log.Println(DM.VerifyFileIntegrity())
+	if *verifyFiles >= 0 {
+		log.Println(DM.VerifyFileIntegrity(*verifyFiles))
 		return
 	}
 
