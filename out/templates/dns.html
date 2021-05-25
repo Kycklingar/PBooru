@@ -1,0 +1,32 @@
+{{template "base"}}
+
+<style>
+table, td, th
+{
+	border: ridge 4px #666;
+	border-collapse: collapse;
+	background-color: #222;
+}
+</style>
+<div>
+	Pool funds: 40xmr
+</div>
+<table>
+	<tr>
+		<th>Name</th>
+		<th>Score</th>
+		<th>Tags</th>
+	</tr>
+	{{range .}}
+	<tr>
+		<td>{{.Name}}</td>
+		<td>{{.Score}}</td>
+		<td>
+		{{range .Tags}}
+		<span class="dns-tag dns-tag-{{.Id}}" title="{{.Score}} {{.Description}}">{{.Name}}</span>
+		{{end}}
+		</td>
+	{{end}}
+</table>
+
+{{template "baseEnd"}}

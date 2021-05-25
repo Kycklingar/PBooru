@@ -1,1 +1,34 @@
 ALTER TABLE duplicate_report_posts ADD COLUMN id SERIAL PRIMARY KEY;
+
+CREATE TABLE IF NOT EXISTS dns_creator (
+	id SERIAL PRIMARY KEY,
+	name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dns_domain (
+	id SERIAL PRIMARY KEY,
+	domain TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dns_creator_urls (
+	id INTEGER NOT NULL REFERENCES dns_creator(id),
+	domain INTEGER NOT NULL REFERENCES dns_domain(id),
+	url TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dns_tag (
+	id VARCHAR(10) PRIMARY KEY,
+	name TEXT NOT NULL,
+	description TEXT NOT NULL,
+	score INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dns_tags (
+	creator_id INTEGER REFERENCES dns_creator(id),
+	tag_id VARCHAR(10) REFERENCES dns_tag(id) 
+);
+
+CREATE TABLE IF NOT EXISTS dns_votes (
+	creator_id INTEGER REFERENCES dns_creator(id),
+	timestmap TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

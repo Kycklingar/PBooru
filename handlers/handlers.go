@@ -354,6 +354,9 @@ func init() {
 		renderTemplate(w, "slideshow", ui)
 	})
 
+	Handlers["/dns"] = dnsHandler
+	Handlers["/dns/"] = dnsCreatorHandler
+
 	Handlers["/similar/"] = makeStatHandler(findSimilarHandler)
 
 	Handlers["/api/"] = makeStatHandler(APIHandler)
