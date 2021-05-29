@@ -359,6 +359,7 @@ func init() {
 	Handlers["/captcha/"] = makeStatHandler(captcha.Server(150, 64).ServeHTTP)
 	//Handlers["/verify/"] = verifyCaptcha
 	Handlers["/test/"] = testHandler
+	Handlers["/root/"] = rootHandler
 
 	//http.HandleFunc("/ssl"] = RedirectHandler
 	// http.HandleFunc("/upload2/", uploadHandler2

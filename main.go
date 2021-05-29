@@ -48,7 +48,8 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	migrateStore := flag.Int("migrate-store", -1, "Migrate all files and thumbnails to the configured store.")
+	migrateStore := flag.Int("migrate-store", -1, "Migrate all files and thumbnails to the configured store")
+	initDir := flag.Bool("init-dir", false, "Initialize an ipfs directory of all files")
 	initConfig := flag.Bool("init-cfg", false, "Initialize the configfile and exit.")
 	configFilePath := flag.String("cfg", "config.cfg", "Load config file.")
 	generateThumbnails := flag.Int("gen-thumbs", 0, "Generate (missing) thumbnails for this size")
@@ -141,6 +142,11 @@ func main() {
 		if err := DM.GenerateFileSizes(); err != nil {
 			log.Fatal(err)
 		}
+		return
+	}
+
+	if *initDir {
+		DM.InitDir()
 		return
 	}
 

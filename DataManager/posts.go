@@ -504,12 +504,17 @@ func (p *Post) QDescription(q querier) string {
 	return tmp
 }
 
+func cidDir(cid string) string {
+	c := len(cid) - 3
+	return cid[c : c+2]
+}
+
 func storeFileDest(cid string) string {
-	return path.Join("files", cid[len(cid)-2:], cid)
+	return path.Join("files", cidDir(cid), cid)
 }
 
 func storeThumbnailDest(cid string, size int) string {
-	return path.Join("thumbnails", strconv.Itoa(size), cid[len(cid)-2:], cid)
+	return path.Join("thumbnails", strconv.Itoa(size), cidDir(cid), cid)
 }
 
 var uploadQueue sync.Mutex

@@ -44,3 +44,11 @@ func (s *mfsStore) Store(cid, dest string) error {
 func (s *mfsStore) Remove(target string) error {
 	return s.ipfs.FilesRm(context.Background(), target, false)
 }
+
+func (s *mfsStore) Root() string {
+	stat, err := s.ipfs.FilesStat(context.Background(), s.rootDir)
+	if err != nil {
+		return ""
+	}
+	return stat.Hash
+}

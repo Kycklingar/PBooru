@@ -86,6 +86,20 @@ func (s *pinstore) Remove(target string) error {
 	return err
 }
 
+func (s *pinstore) Root() string {
+	var (
+		root string
+		err  error
+	)
+
+	err = s.rooter.Lock()
+	defer s.rooter.Unlock(&err)
+
+	root, err = s.rooter.Root()
+
+	return root
+}
+
 func (s *pinstore) updatePin(oldRoot, newRoot string) error {
 	// Try updating old root
 	if oldRoot != "" {
