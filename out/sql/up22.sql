@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS tombstone (
 CREATE INDEX ON tombstone (md5);
 CREATE INDEX ON tombstone (post_id);
 
-CREATE PROCEDURE IF NOT EXISTS update_tombstone()
+DROP PROCEDURE IF EXISTS update_tombstone();
+CREATE PROCEDURE update_tombstone()
 LANGUAGE SQL
 AS $$
 	UPDATE tombstone
