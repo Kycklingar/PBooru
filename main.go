@@ -61,6 +61,8 @@ func main() {
 	upgradePostCids := flag.Bool("upgrade-post-cids", false, "Upgrade post cids to base32")
 	genPears := flag.Bool("gen-pears", false, "Harvest apple tree")
 	genPhash := flag.Bool("gen-phash", false, "Generate phashes")
+	tombstoneFile := flag.String("read-tombstone", "", "Read tombstones from a tombstone file")
+	verifyFiles := flag.Int("verify-files", -1, "Verify the integrity of the files in ipfs")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -84,6 +86,16 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *verifyFiles >= 0 {
+		log.Println(DM.VerifyFileIntegrity(*verifyFiles))
+		return
+	}
+
+	if *tombstoneFile != "" {
+		log.Println(DM.UpdateTombstone(*tombstoneFile))
+		return
+	}
 
 	if *genPears {
 		if err := DM.GeneratePears(); err != nil {

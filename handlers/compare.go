@@ -44,8 +44,6 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, page.UserInfo = getUser(w, r)
 
-	r.ParseForm()
-
 	in := func(id int, posts []*DM.Post) bool {
 		for _, p := range posts {
 			if p.ID == id {
@@ -55,6 +53,27 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 		return false
 	}
+
+	addPost := func(pidstr string) error {
+		if pidstr == "" {
+			return nil
+		}
+
+		var err error
+		var p = DM.NewPost()
+		p.ID, err = strconv.Atoi(pidstr)
+		if err != nil {
+			return err
+		}
+
+		if !in(p.ID, page.Posts) && !in(p.ID, page.Removed) {
+			page.Posts = append(page.Posts, p)
+		}
+
+		return nil
+	}
+
+	r.ParseForm()
 
 	for _, id := range r.Form["removed-id"] {
 		var err error
@@ -71,21 +90,19 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, id := range r.Form["post-id"] {
-		var err error
-		var p = DM.NewPost()
-		p.ID, err = strconv.Atoi(id)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "Invalid post ID", http.StatusBadRequest)
-			return
-		}
+	addPost(r.FormValue("apple"))
 
-		if !in(p.ID, page.Posts) && !in(p.ID, page.Removed) {
-			page.Posts = append(page.Posts, p)
-		}
+	for _, id := range r.Form["post-id"] {
+		addPost(id)
 	}
 
+	for _, id := range r.Form["pears"] {
+		addPost(id)
+	}
+
+	for _, id := range r.Form["post-id"] {
+		addPost(id)
+	}
 
 	for i := range page.Posts {
 		page.Posts[i] = DM.CachedPost(page.Posts[i])
@@ -109,19 +126,31 @@ func compare2Handler(w http.ResponseWriter, r *http.Request) {
 
 	_, page.UserInfo = getUser(w, r)
 
-	r.ParseForm()
+	addPost := func(pidstr string) error {
+		if pidstr == "" {
+			return nil
+		}
 
-	for _, id := range r.Form["post-id"] {
 		var err error
 		var p = DM.NewPost()
-		p.ID, err = strconv.Atoi(id)
+		p.ID, err = strconv.Atoi(pidstr)
 		if err != nil {
-			log.Println(err)
-			http.Error(w, "Invalid post ID", http.StatusBadRequest)
-			return
+			return err
 		}
 
 		page.Posts = append(page.Posts, p)
+
+		return nil
+	}
+
+	addPost(r.FormValue("apple"))
+
+	for _, id := range r.Form["post-id"] {
+		addPost(id)
+	}
+
+	for _, id := range r.Form["pears"] {
+		addPost(id)
 	}
 
 	for i := range page.Posts {

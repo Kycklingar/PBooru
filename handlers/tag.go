@@ -56,7 +56,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		var tc DM.TagCollector
 
 		if len(tagStr) > 0 {
-			tc.Parse(tagStr)
+			tc.Parse(tagStr, ",")
 			tc = tc.SuggestedTags(DM.DB)
 			p.Query = "?tag=" + tagStr
 		} else {
@@ -135,13 +135,13 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		alias := DM.NewAlias()
 
 		tc := DM.TagCollector{}
-		if err := tc.Parse(from); err != nil {
+		if err := tc.Parse(from, ","); err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
 		alias.Tag = tc.Tags[0]
 		tc = DM.TagCollector{}
-		if err := tc.Parse(to); err != nil {
+		if err := tc.Parse(to, ","); err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}

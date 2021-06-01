@@ -1,0 +1,40 @@
+{{template "base"}}
+<h3>{{.Total}} Coffins</h3>
+<form action="/tombstone/search/">
+	<input type="text" name="reason" placeholder="Find a reason" title="I can't">
+	<input type="submit" value="Search">
+</form>
+<details class="attention">
+	<summary>Notable takedowns</summary>
+	<ul>
+		<li><a href="?reason=%2312408">Furstang</a></li>
+		<li>Trunchbull <a href="?reason=%234874">1</a> <a href="?reason=%235002">2</a></li>
+		<li><a href="?reason=%237124">Sif</a></li>
+		<li><a href="?reason=%233052">Strype</a></li>
+		<li><a href="?reason=%239900">Ungulatr</a></li>
+		<li><a href="?reason=%2312531">Rokemi</a></li>
+		<li><a href="?reason=%2310692">Rukaisho</a></li>
+		<li><a href="?reason=%239483">Tom Fischbach</a></li>
+		<li><a href="?reason=%238555">Blitzdrachin</a></li>
+		<li><a href="?reason=%238459">Chalo</a></li>
+		<li><a href="?reason=%238185">Apis</a></li>
+</details>
+<div class="content">
+{{range .Tombstone}}
+	{{template "thumbnail-open" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+		<div>
+			<h4>{{.Removed}}</h4>
+			<p>{{.Reason}}</p>
+	{{template "thumbnail-close"}}
+{{end}}
+</div>
+<div class="nolink" id="pageinator">
+	{{range .Paginator.Paginate}}
+		{{if .Current}}
+		<span style="font-size: 2em;">{{.Val}}</span>
+		{{else}}
+		<span><a href="{{.Href}}">{{.Val}}</a></span>
+		{{end}}
+	{{end}}
+</div>
+{{template "baseEnd"}}

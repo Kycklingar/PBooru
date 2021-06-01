@@ -13,3 +13,22 @@
 	</div>
 {{end}}
 {{end}}
+
+{{define "thumbnail-open"}}
+{{with .Post}}
+<div postid="{{.ID}}" class="{{.Mime.Type}}">
+	<a href="/post/{{.ID}}/{{.Hash}}">
+		{{if .Thumbnails}}
+		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
+		{{else}}
+		<div class="mimetype">
+			<span>{{.Mime}}</span>
+		</div>
+		{{end}}
+	</a>
+{{end}}
+{{end}}
+
+{{define "thumbnail-close"}}
+</div>
+{{end}}

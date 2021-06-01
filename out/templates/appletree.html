@@ -9,9 +9,9 @@
 <h3>Ignore false positives</h3>
 	{{range .Trees}}
 	<div class="panel">
-		<form method="POST">
+		<form>
 			{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
-			<input type="hidden" name="apple" name="post-id" value="{{.Apple.ID}}">
+			<input type="hidden" name="apple" value="{{.Apple.ID}}">
 			<div class="comic-strip">
 			{{range .Pears}}
 				<span>
@@ -20,16 +20,9 @@
 				</span>
 			{{end}}
 			</div>
-			<input type="submit" value="Pluck">
-		</form>
-
-		<form target="_blank" action="/compare2/">
-			<input type="hidden" name="post-id" value="{{.Apple.ID}}">
-			{{range .Pears}}
-				<input type="hidden" name="post-id" value="{{.ID}}">
-			{{end}}
-			<input type="submit" value="Compare2.js">
-			<input type="submit" formaction="/compare/" value="Compare">
+			<input type="submit" formmethod="POST" value="Pluck">
+			<input type="submit" formaction="/compare2/" formtarget="_blank" value="Compare2.js">
+			<input type="submit" formaction="/compare/" formtarget="_blank" value="Compare">
 		</form>
 	</div>
 	{{end}}

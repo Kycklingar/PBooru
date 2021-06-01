@@ -32,7 +32,7 @@ func (t *timestamp) Scan(data interface{}) error {
 	case time.Time:
 		t.time = &v
 	default:
-		err = fmt.Errorf("timestamp incorrect type", data)
+		err = fmt.Errorf("timestamp incorrect type %v", data)
 	}
 
 	return err

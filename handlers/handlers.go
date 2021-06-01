@@ -224,8 +224,8 @@ func init() {
 	Templates.Funcs(
 		template.FuncMap{
 			"noescape":  func(x string) template.HTML { return template.HTML(x) },
-			"urlEncode": UrlEncode,
-			"urlDecode": UrlDecode,
+			"urlEncode": PathEscape,
+			"urlDecode": PathUnescape,
 			"wrap2":     wrap2,
 			"add":       add,
 			"mul":       mul,
@@ -324,6 +324,9 @@ func init() {
 	Handlers["/comic/page/delete/"] = makeStatHandler(comicDeletePageHandler)
 	Handlers["/links/"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) { renderTemplate(w, "links", nil) })
 	Handlers["/lookup/"] = makeStatHandler(imageLookupHandler)
+
+	Handlers["/tombstone/"] = makeStatHandler(tombstoneHandler)
+	Handlers["/tombstone/search/"] = makeStatHandler(tombstoneSearchHandler)
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {

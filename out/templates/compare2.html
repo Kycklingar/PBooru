@@ -86,7 +86,7 @@
 			{{.ClosestThumbnail 1024}},
 			{{.Dimension}},//{{with .Dimension}}{"width":{{.Width}},"height":{{.Height}}}{{else}}null{{end}},
 			{{.Size}},
-			{{.Mime}},
+			mimeObj({{.Mime}}),
 			{{.Removed}}
 		))
 	{{end}}

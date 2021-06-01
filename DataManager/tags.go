@@ -55,12 +55,15 @@ func (t *Tag) String() string {
 	return fmt.Sprint(t.Namespace.Namespace, ":", t.Tag)
 }
 
-func (t *Tag) EString() string {
+func (t *Tag) EditString() string {
 	if t.Namespace.Namespace == "none" && strings.HasPrefix(t.Tag, ":") {
 		return ":" + t.Tag
 	}
-
 	return t.String()
+}
+
+func (t *Tag) Escaped() string {
+	return strings.Replace(t.EditString(), ",", "\\,", -1)
 }
 
 func (t *Tag) QID(q querier) int {
@@ -173,10 +176,6 @@ func (t *Tag) Save(q querier) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if strings.ContainsAny(t.Tag, ",") {
-		return errors.New("Tag cannot contain ','")
 	}
 
 	err := q.QueryRow("INSERT INTO tags(tag, namespace_id) VALUES($1, $2) RETURNING id", t.Tag, t.Namespace.QID(q)).Scan(&t.ID)
@@ -413,8 +412,14 @@ type TagCollector struct {
 	Tags []*Tag
 }
 
-func (tc *TagCollector) Parse(tagStr string) error {
-	tags := strings.Split(strings.Replace(tagStr, "\n", ",", -1), ",")
+func (tc *TagCollector) Parse(tagStr, delim string, delims ...string) error {
+	for _, d := range delims {
+		tagStr = strings.Replace(tagStr, d, delim, -1)
+	}
+
+	tags := strings.Split(tagStr, delim)
+
+	//tags := strings.Split(strings.Replace(tagStr, "\n", ",", -1), ",")
 	for _, tag := range tags {
 		if strings.TrimSpace(tag) == "" {
 			continue
@@ -433,6 +438,57 @@ func (tc *TagCollector) Parse(tagStr string) error {
 		err = errors.New("error decoding any tags")
 	}
 	return err
+}
+
+func (tc *TagCollector) ParseEscape(tagstr string, delim rune) error {
+	tagSpitter := make(chan string)
+	go func(spitter chan string) {
+		const (
+			next = iota
+			unescape
+		)
+
+		var (
+			state = next
+			tag   string
+		)
+
+		for _, c := range tagstr {
+			switch state {
+			case next:
+				switch c {
+				case '\\':
+					state = unescape
+				case delim:
+					spitter <- strings.TrimSpace(tag)
+					tag = ""
+				default:
+					tag += string(c)
+				}
+			case unescape:
+				tag += string(c)
+				state = next
+			}
+		}
+
+		spitter <- tag
+		close(spitter)
+	}(tagSpitter)
+
+	for tag := range tagSpitter {
+		if tag == "" {
+			continue
+		}
+
+		t := NewTag()
+		if err := t.Parse(tag); err != nil {
+			continue
+		}
+
+		tc.Tags = append(tc.Tags, t)
+	}
+
+	return nil
 }
 
 func (tc *TagCollector) Get(limit, offset int) error {

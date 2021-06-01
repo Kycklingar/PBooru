@@ -264,6 +264,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFAlts,
 		DM.PFAltGroup,
 		DM.PFScore,
+		DM.PFTombstone,
 	); err != nil {
 		log.Println(err)
 	}
@@ -643,13 +644,13 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Form.Del("tags")
 
 	if tagString != "" {
-		red := fmt.Sprintf("/posts/%d/%s%s", page, UrlEncode(tagString), "?"+r.Form.Encode())
+		red := fmt.Sprintf("/posts/%d/%s%s", page, PathEscape(tagString), "?"+r.Form.Encode())
 		http.Redirect(w, r, red, http.StatusSeeOther)
 		return
 	}
 
 	if len(uri) > 2 {
-		tagString = UrlDecode(uri[2])
+		tagString = PathUnescape(uri[2])
 	}
 
 	// var totalPosts int
@@ -718,7 +719,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("After posts")
 
 	var tc DM.TagCollector
-	tc.Parse(tagString)
+	tc.Parse(tagString, ",")
 
 	for _, t := range tc.SuggestedTags(DM.DB).Tags {
 		t.QTag(DM.DB)

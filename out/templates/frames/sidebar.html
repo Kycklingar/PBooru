@@ -66,19 +66,11 @@
 	<table class="nolink" id="tags">
 	{{ range .Tags }}
 		<tr>
-		    {{ if eq .Namespace.Namespace "none" }}
-			<td class="tag namespace-{{ .Namespace.Namespace }}">
-			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+ </span>
-			    <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
-			</td>
-			<td class="counter">{{.Count}}</td>
-		    {{ else }}
-			<td class="tag namespace-{{ .Namespace.Namespace }}">
-			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+ </span>
-			    <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
-			</td>
-			<td class="counter">{{.Count}}</td>
-		    {{ end }}
+		    <td class="tag namespace-{{.Namespace}}">
+			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Escaped}}')">+ </span>
+			    <a href="/posts/?tags={{.Escaped}}"><span>{{.}}</span></a>
+		    </td>
+		    <td class="counter">{{.Count}}</td>
 		</tr>
 	{{ end }}
 	</table>
