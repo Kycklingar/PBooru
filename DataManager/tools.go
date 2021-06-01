@@ -313,28 +313,6 @@ func InitDir() {
 	wg.Wait()
 	done <- true
 
-	//filesDir := root.AddDir(ipfsdir.NewDir("files"))
-	//for k, v := range pmap {
-	//	d := filesDir.AddDir(ipfsdir.NewDir(k))
-	//	for c, cid := range v {
-	//		var percent = (float32(i)/float32(len(pmap)) + (float32(c)/float32(len(v)))/float32(len(pmap))) * 100
-
-	//		stat, err := ipfs.FilesStat(context.Background(), "/ipfs/"+cid)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-
-	//		fmt.Printf("[%f%%] Adding to %s %s %d\n", percent, k, cid, stat.Size)
-	//		err = d.AddLink(cid, cid, stat.Size)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//	}
-	//	i++
-
-	//	root.AddDir(d)
-	//}
-
 	in = make(chan file, 10)
 	out = make(chan file)
 
@@ -393,28 +371,6 @@ func InitDir() {
 
 	wg.Wait()
 	done <- true
-
-	//thumbDir := root.AddDir(ipfsdir.NewDir("thumbnails"))
-	//for size, m := range tmaps {
-	//	sizeDir := thumbDir.AddDir(ipfsdir.NewDir(strconv.Itoa(size)))
-	//	var i int
-	//	for dir, cids := range m {
-	//		d := sizeDir.AddDir(ipfsdir.NewDir(dir))
-
-	//		for c, cid := range cids {
-	//			var percent = (float32(i)/float32(len(m)) + (float32(c)/float32(len(cids)))/float32(len(m))) * 100
-
-	//			stat, err := ipfs.FilesStat(context.Background(), "/ipfs/"+cid[0])
-	//			if err != nil {
-	//				log.Fatal(err)
-	//			}
-
-	//			fmt.Printf("[%f%%] Adding to %d %s %s %s %d\n", percent, size, dir, cid[0], cid[1], stat.Size)
-	//			err = d.AddLink(cid[1], cid[0], stat.Size)
-	//		}
-	//	}
-	//	i++
-	//}
 
 	cid, _, err := root.Put(ipfs)
 	if err != nil {
