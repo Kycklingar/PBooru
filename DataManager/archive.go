@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log"
+	"math"
 	"path"
 	"strconv"
 	"strings"
@@ -123,6 +124,15 @@ func (arch *archive) start() {
 
 	var posts []archivePost
 
+	percentage := func(c, max int, state archiveState) float32 {
+		step := float32(1) / float32(3)
+
+		s := float32(int(state)) / float32(3)
+
+		p := ((float32(c)/float32(max))*step + s)
+		return p
+	}
+
 	arch.state = stateGather
 	for ; arch.offset < arch.pc.TotalPosts; arch.offset += 100 {
 		results, err := arch.pc.Search2(100, arch.offset)
@@ -144,9 +154,9 @@ func (arch *archive) start() {
 			}
 
 			var thumbPath string
-			//if thumb := res.Post.ClosestThumbnail(256); thumb != "" {
-			//	thumbPath = path.Join("thumbnails", cidDir(res.Post.Hash), res.Post.Hash)
-			//}
+			if thumb := res.Post.ClosestThumbnail(256); thumb != "" {
+				thumbPath = path.Join("thumbnails", cidDir(res.Post.Hash), res.Post.Hash)
+			}
 
 			var a = archivePost{
 				Post:          res.Post,
@@ -159,8 +169,8 @@ func (arch *archive) start() {
 			posts = append(posts, a)
 		}
 
-		arch.percent = (float32(arch.offset) / float32(arch.pc.TotalPosts)) * 0.50
-		time.Sleep(time.Millisecond * 500)
+		arch.percent = percentage(arch.offset, arch.pc.TotalPosts, arch.state)
+		time.Sleep(time.Millisecond * 200)
 	}
 
 	var (
@@ -212,20 +222,25 @@ func (arch *archive) start() {
 			cid:      cid,
 		})
 
-		arch.percent = (float32(i) / float32(len(posts)) * 0.40) + 0.50
+		arch.percent = percentage(i, len(posts), arch.state)
 	}
 
 	var ppp = 50
+
+	// Reverse posts
+	for i, j := 0, len(posts)-1; i < j; i, j = i+1, j-1 {
+		posts[i], posts[j] = posts[j], posts[i]
+	}
 
 	for i := 0; i < len(posts); i += ppp {
 		var p = struct {
 			Posts []archivePost
 			Pag   paginate.Paginator
 		}{
-			Posts: posts[i:max(len(posts)-1, i+ppp)],
+			Posts: posts[i:max(len(posts), i+ppp)],
 			Pag: paginate.Paginator{
 				Current: 1 + i/ppp,
-				Last:    len(posts) / ppp,
+				Last:    int(math.Ceil(float64(len(posts)) / float64(ppp))),
 				Plength: 20,
 				Format:  "./%d",
 			},
@@ -255,7 +270,13 @@ func (arch *archive) start() {
 	}
 
 	w.Reset()
-	err := archiveTemplates.ExecuteTemplate(&w, "index", struct{ Version string }{archiveVersion})
+	err := archiveTemplates.ExecuteTemplate(&w, "index", struct {
+		Version string
+		Ident   archiveIdentity
+	}{
+		Version: archiveVersion,
+		Ident:   arch.searchIdentity(),
+	})
 	if err != nil {
 		arch.error(err)
 		return
@@ -277,6 +298,22 @@ func (arch *archive) start() {
 		cid:      cid,
 	})
 
+	cid, err = ipfs.Add(
+		strings.NewReader(templateCSS),
+		shell.CidVersion(1),
+		shell.Pin(false),
+	)
+	if err != nil {
+		arch.error(err)
+		return
+	}
+
+	afiles = append(afiles, archiveFile{
+		dir:      []string{},
+		filename: "style.css",
+		cid:      cid,
+	})
+
 	arch.state = stateGenerate
 	var count int
 
@@ -284,7 +321,7 @@ func (arch *archive) start() {
 		idir.NewDir(""),
 		func(archiveFile) {
 			count++
-			arch.percent = (float32(count)/float32(len(afiles)))*0.10 + 0.90
+			arch.percent = percentage(count, len(afiles), arch.state)
 		},
 		afiles...,
 	)
@@ -304,6 +341,49 @@ func (arch *archive) start() {
 	arch.state = stateComplete
 
 	// Evacuate archive aip
+}
+
+type archiveIdentity struct {
+	And      []*Tag
+	Or       []*Tag
+	Filter   []*Tag
+	Unless   []*Tag
+	Mimes    []string
+	Altgroup int
+}
+
+func (a *archive) searchIdentity() archiveIdentity {
+	tags := func(ids []int) []*Tag {
+		tags := make([]*Tag, len(ids))
+		for i := 0; i < len(ids); i++ {
+			tags[i] = NewTag()
+			tags[i].ID = ids[i]
+			err := tags[i].QueryAll(DB)
+			if err != nil {
+				log.Println(err)
+				return nil
+			}
+		}
+		return tags
+	}
+
+	ai := archiveIdentity{
+		And:      tags(a.pc.id),
+		Or:       tags(a.pc.or),
+		Filter:   tags(a.pc.filter),
+		Unless:   tags(a.pc.unless),
+		Altgroup: a.pc.altGroup,
+	}
+
+	for _, m := range a.pc.mimeIDs {
+		for _, mime := range Mimes {
+			if mime.ID == m {
+				ai.Mimes = append(ai.Mimes, mime.String())
+			}
+		}
+	}
+
+	return ai
 }
 
 type archiveFile struct {
