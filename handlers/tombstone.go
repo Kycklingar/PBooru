@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
 func tombstoneSearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +22,7 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 		page  struct {
 			UserInfo  UserInfo
 			Tombstone []DM.Tombstone
-			Paginator paginator
+			Paginator paginate.Paginator
 			Total     int
 		}
 	)
@@ -66,11 +67,11 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 		q = "?" + q
 	}
 
-	page.Paginator = paginator{
-		current: currentPage,
-		last:    page.Total / limit,
-		plength: 30,
-		format:  fmt.Sprintf("/tombstone/%%d/%s", strings.ReplaceAll(q, "%", "%%")),
+	page.Paginator = paginate.Paginator{
+		Current: currentPage,
+		Last:    page.Total / limit,
+		Plength: 30,
+		Format:  fmt.Sprintf("/tombstone/%%d/%s", strings.ReplaceAll(q, "%", "%%")),
 	}
 
 	renderTemplate(w, "tombstone", page)

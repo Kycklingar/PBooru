@@ -36,6 +36,10 @@ func (d *Dir) AddLink(name, cid string, size uint64) error {
 }
 
 func (d *Dir) AddDirs(sub ...string) *Dir {
+	if len(sub) <= 0 {
+		return d
+	}
+
 	if len(sub) > 1 {
 		if sub[0] == "" {
 			return d.AddDirs(sub[1:]...)

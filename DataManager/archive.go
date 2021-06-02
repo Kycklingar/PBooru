@@ -9,17 +9,22 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
 	idir "github.com/kycklingar/PBooru/DataManager/ipfs-dirgen"
+	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
-const archiveVersion = 1
+const archiveVersion = "0.1"
 
 func (pc *PostCollector) ArchiveSearch() (*archive, error) {
+	archivesInProgress.l.Lock()
+	defer archivesInProgress.l.Unlock()
+
 	id := fmt.Sprintf("%x", sha256.Sum256([]byte(pc.countIDStr())))
 	// Check for inprogress
-	if arch, ok := archivesInProgress[id]; ok {
+	if arch, ok := archivesInProgress.m[id]; ok {
 		return arch, nil
 	}
 
@@ -32,16 +37,23 @@ func (pc *PostCollector) ArchiveSearch() (*archive, error) {
 	}
 
 	a := &archive{pc: pc, ID: id}
-	archivesInProgress[id] = a
+	archivesInProgress.m[id] = a
 	go a.start()
 	return a, nil
 }
 
 func Archive(id string) *archive {
-	return archivesInProgress[id]
+	archivesInProgress.l.Lock()
+	defer archivesInProgress.l.Unlock()
+	return archivesInProgress.m[id]
 }
 
-var archivesInProgress = make(map[string]*archive)
+var archivesInProgress = struct {
+	m map[string]*archive
+	l sync.Mutex
+}{
+	m: make(map[string]*archive),
+}
 
 type archiveState int
 
@@ -132,9 +144,9 @@ func (arch *archive) start() {
 			}
 
 			var thumbPath string
-			if thumb := res.Post.ClosestThumbnail(256); thumb != "" {
-				thumbPath = path.Join("thumbnails", cidDir(res.Post.Hash), res.Post.Hash)
-			}
+			//if thumb := res.Post.ClosestThumbnail(256); thumb != "" {
+			//	thumbPath = path.Join("thumbnails", cidDir(res.Post.Hash), res.Post.Hash)
+			//}
 
 			var a = archivePost{
 				Post:          res.Post,
@@ -148,9 +160,13 @@ func (arch *archive) start() {
 		}
 
 		arch.percent = (float32(arch.offset) / float32(arch.pc.TotalPosts)) * 0.50
+		time.Sleep(time.Millisecond * 500)
 	}
 
-	var afiles []archiveFile
+	var (
+		afiles []archiveFile
+		w      strings.Builder
+	)
 
 	arch.state = stateCreate
 	for i, p := range posts {
@@ -162,7 +178,7 @@ func (arch *archive) start() {
 			cid:      p.Post.Hash,
 		})
 
-		// Create the thumbnail file if exists
+		//Create the thumbnail file if exists
 		if thumb := p.Post.ClosestThumbnail(256); thumb != "" {
 			pdir, fname = path.Split(p.ThumbnailPath)
 			afiles = append(afiles, archiveFile{
@@ -173,7 +189,7 @@ func (arch *archive) start() {
 		}
 
 		// Create post html page
-		var w strings.Builder
+		w.Reset()
 		err := archiveTemplates.ExecuteTemplate(&w, "post", p)
 		if err != nil {
 			arch.error(err)
@@ -199,11 +215,24 @@ func (arch *archive) start() {
 		arch.percent = (float32(i) / float32(len(posts)) * 0.40) + 0.50
 	}
 
-	for i := 0; i < len(posts); i += 50 {
-		sl := posts[i:max(len(posts)-1, i+50)]
+	var ppp = 50
 
-		var w strings.Builder
-		err := archiveTemplates.ExecuteTemplate(&w, "list", sl)
+	for i := 0; i < len(posts); i += ppp {
+		var p = struct {
+			Posts []archivePost
+			Pag   paginate.Paginator
+		}{
+			Posts: posts[i:max(len(posts)-1, i+ppp)],
+			Pag: paginate.Paginator{
+				Current: 1 + i/ppp,
+				Last:    len(posts) / ppp,
+				Plength: 20,
+				Format:  "./%d",
+			},
+		}
+
+		w.Reset()
+		err := archiveTemplates.ExecuteTemplate(&w, "list", p)
 		if err != nil {
 			arch.error(err)
 			return
@@ -220,10 +249,33 @@ func (arch *archive) start() {
 		}
 		afiles = append(afiles, archiveFile{
 			dir:      []string{"list"},
-			filename: strconv.Itoa(1 + i/50),
+			filename: strconv.Itoa(1 + i/ppp),
 			cid:      cid,
 		})
 	}
+
+	w.Reset()
+	err := archiveTemplates.ExecuteTemplate(&w, "index", struct{ Version string }{archiveVersion})
+	if err != nil {
+		arch.error(err)
+		return
+	}
+
+	cid, err := ipfs.Add(
+		strings.NewReader(w.String()),
+		shell.CidVersion(1),
+		shell.Pin(false),
+	)
+	if err != nil {
+		arch.error(err)
+		return
+	}
+
+	afiles = append(afiles, archiveFile{
+		dir:      []string{},
+		filename: "index.html",
+		cid:      cid,
+	})
 
 	arch.state = stateGenerate
 	var count int
