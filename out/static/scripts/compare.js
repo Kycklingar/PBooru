@@ -214,6 +214,8 @@ function removePost(id)
 	{
 		// Render previous post unless at the top
 		currentPost == posts[0] ? renderNextPost(1) : renderNextPost(-1)
+	} else if (currentPost != null && currentPost.id != id) {
+		// Do nothing
 	} else {
 		blankCanvas()
 	}
