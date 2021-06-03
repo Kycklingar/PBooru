@@ -138,7 +138,7 @@ func (g group) sel(where *cond.Group) string {
 			"LEFT JOIN",
 			cond.N(
 				fmt.Sprintf(`
-				LEFT JOIN (
+				(
 					SELECT f.post_id
 					FROM post_tag_mappings f
 					%s
