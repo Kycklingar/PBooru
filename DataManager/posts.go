@@ -19,6 +19,7 @@ import (
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
+	"github.com/kycklingar/sqhell/cond"
 )
 
 func NewPost() *Post {
@@ -1370,11 +1371,12 @@ func NewPostCollector() *PostCollector {
 }
 
 type PostCollector struct {
-	posts  map[int][]*Post
-	id     []int
-	or     []int
-	filter []int
-	unless []int
+	posts     map[int][]*Post
+	id        []int
+	or        []int
+	filter    []int
+	unless    []int
+	tombstone bool
 
 	tags       []*Tag //Sidebar
 	TotalPosts int
@@ -1401,7 +1403,20 @@ func CachedPostCollector(pc *PostCollector) *PostCollector {
 	return pc
 }
 
-func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, order string, mimeIDs []int, altGroup int, collectAlts bool) error {
+type SearchOptions struct {
+	And    string
+	Or     string
+	Filter string
+	Unless string
+
+	MimeIDs    []int
+	Altgroup   int
+	AltCollect bool
+	Tombstone  bool
+	Order      string
+}
+
+func (pc *PostCollector) Get(opts SearchOptions) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
 			if i == j {
@@ -1410,10 +1425,10 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		}
 		return false
 	}
-	if len(tagString) >= 1 {
+	if len(opts.And) >= 1 {
 		var tc TagCollector
 
-		err := tc.ParseEscape(tagString, ',')
+		err := tc.ParseEscape(opts.And, ',')
 		if err != nil {
 			return err
 		}
@@ -1440,10 +1455,10 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		//fmt.Println(tagIDs)
 	}
 
-	if len(orString) >= 1 {
+	if len(opts.Or) >= 1 {
 		var tc TagCollector
 
-		err := tc.ParseEscape(orString, ',')
+		err := tc.ParseEscape(opts.Or, ',')
 		if err != nil {
 			return err
 		}
@@ -1470,10 +1485,10 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		//fmt.Println(tagIDs)
 	}
 
-	if len(filterString) >= 1 {
+	if len(opts.Filter) >= 1 {
 		var tc TagCollector
 
-		err := tc.ParseEscape(filterString, ',')
+		err := tc.ParseEscape(opts.Filter, ',')
 		if err != nil {
 			return err
 		}
@@ -1507,10 +1522,10 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 	//fmt.Println(tagIDs)
 	//pc.id = tagIDs //idStr
 
-	if len(unlessString) >= 1 {
+	if len(opts.Unless) >= 1 {
 		var tc TagCollector
 
-		err := tc.ParseEscape(unlessString, ',')
+		err := tc.ParseEscape(opts.Unless, ',')
 		if err != nil {
 			return err
 		}
@@ -1540,21 +1555,22 @@ func (pc *PostCollector) Get(tagString, orString, filterString, unlessString, or
 		sort.Ints(pc.unless)
 	}
 
-	switch strings.ToUpper(order) {
+	switch strings.ToUpper(opts.Order) {
 	case "ASC", "DESC", "SCORE":
-		pc.order = strings.ToUpper(order)
+		pc.order = strings.ToUpper(opts.Order)
 	case "RANDOM":
-		pc.order = strings.ToUpper(order) + "()"
+		pc.order = strings.ToUpper(opts.Order) + "()"
 	default:
 		pc.order = "DESC"
 	}
 
-	pc.collectAlts = collectAlts
-	pc.altGroup = altGroup
+	pc.collectAlts = opts.AltCollect
+	pc.altGroup = opts.Altgroup
+	pc.tombstone = opts.Tombstone
 
 	// Check if the mime id exist in the db
 	for _, mime := range Mimes {
-		if in(mime.ID, mimeIDs) {
+		if in(mime.ID, opts.MimeIDs) {
 			pc.mimeIDs = append(pc.mimeIDs, mime.ID)
 		}
 	}
@@ -1588,7 +1604,7 @@ func sepStr(sep string, values ...string) string {
 }
 
 func (pc *PostCollector) countIDStr() string {
-	if len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0 {
+	if !pc.tombstone && len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0 {
 		return "0"
 	}
 
@@ -1606,6 +1622,8 @@ func (pc *PostCollector) countIDStr() string {
 		pc.altGroup,
 		" - ",
 		pc.collectAlts,
+		" - ",
+		pc.tombstone,
 	)
 }
 
@@ -1641,6 +1659,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		pc.or,
 		pc.filter,
 		pc.unless,
+		pc.tombstone,
 	)
 
 	var (
@@ -1648,7 +1667,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		altGroup string
 		mimes    string
 
-		wgr []string = []string{"p.removed = false"}
+		//wgr []string = []string{"p.removed = false"}
+		wgr = cond.NewGroup().Add("WHERE", cond.N("p.removed = false"))
 	)
 
 	if len(pc.mimeIDs) > 0 {
@@ -1659,7 +1679,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			}
 		}
 		mimes = fmt.Sprintf("p.mime_id IN(%s) ", mimes)
-		wgr = append(wgr, mimes)
+		//wgr = append(wgr, mimes)
+		wgr.Add("AND", cond.N(mimes))
 	}
 
 	switch pc.order {
@@ -1679,7 +1700,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				WHERE id = %d
 			)
 			`, pc.altGroup)
-		wgr = append(wgr, altGroup)
+		//wgr = append(wgr, altGroup)
+		wgr.Add("AND", cond.N(altGroup))
 	}
 
 	// TODO: refactor
@@ -1702,7 +1724,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				query := fmt.Sprintf(
 					query,
 					//sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
-					sg.sel(sepStr(" AND ", wgr...)),
+					//sg.sel(sepStr(" AND ", wgr...)),
+					sg.sel(wgr),
 				)
 
 				//fmt.Println(query)
@@ -1772,14 +1795,11 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			order,
 		),
 		sg.sel(
-			//fmt.Sprintf(
-			//	"p.removed = false %s",
-			//	mimes,
+			//sepStr(
+			//	" AND ",
+			//	wgr...,
 			//),
-			sepStr(
-				" AND ",
-				wgr...,
-			),
+			wgr,
 		),
 		order,
 	)

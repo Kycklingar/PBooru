@@ -1,36 +1,46 @@
 package DataManager
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/kycklingar/sqhell/cond"
+)
 
 type group struct {
 	//nested []group
 
-	and    []int
-	or     []int
-	filter []int
-	unless []int
+	and       []int
+	or        []int
+	filter    []int
+	unless    []int
+	tombstone bool
 }
 
-func searchGroup(and, or, filter, unless []int) group {
+func searchGroup(and, or, filter, unless []int, tombstone bool) group {
 	return group{
 		and,
 		or,
 		filter,
 		unless,
+		tombstone,
 	}
 }
 
-func (g group) sel(wh string) string {
-	var q, where, trail string
+func (g group) sel(where *cond.Group) string {
+	//var q, where, trail string
 
-	where = fmt.Sprintf("WHERE %s\n", wh)
+	var (
+		joins = cond.NewGroup()
+	)
 
-	if wh != "" {
-		trail = "AND"
-	}
+	//where = fmt.Sprintf("WHERE %s\n", wh)
 
-	if !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
-		return where
+	//if wh != "" {
+	//	trail = "AND"
+	//}
+
+	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
+		return where.Eval(nil)
 	}
 
 	sep := func(s []int, seperator string) string {
@@ -46,15 +56,20 @@ func (g group) sel(wh string) string {
 	}
 
 	if len(g.or) > 0 {
-		q += fmt.Sprintf(`
-			JOIN (
-				SELECT DISTINCT post_id
-				FROM post_tag_mappings
-				WHERE tag_id IN(%s)
-			) o
-			ON p.id = o.post_id
-			`,
-			sep(g.or, ","),
+		joins.Add(
+			"JOIN",
+			cond.N(
+				fmt.Sprintf(`
+					(
+						SELECT DISTINCT post_id
+						FROM post_tag_mappings
+						WHERE tag_id IN(%s)
+					) o
+					ON p.id = o.post_id
+					`,
+					sep(g.or, ","),
+				),
+			),
 		)
 
 		//where += fmt.Sprintf("%s o.tag_id IN(%s)\n", trail, sep(g.or, ","))
@@ -75,24 +90,32 @@ func (g group) sel(wh string) string {
 			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and[i])
 		}
 
-		q += fmt.Sprintf(`
-			JOIN post_tag_mappings a1
-			ON p.id = a1.post_id
-			%s
-			`,
-			join,
+		joins.Add(
+			"JOIN",
+			cond.N(
+				fmt.Sprintf(`
+					post_tag_mappings a1
+					ON p.id = a1.post_id
+					%s
+					`,
+					join,
+				),
+			),
 		)
 
-		where += fmt.Sprintf(`
-			%s a1.tag_id = %d
-			%s
-			`,
-			trail,
-			g.and[0],
-			w,
-		)
+		where.Add(
+			"AND",
+			cond.N(
+				fmt.Sprintf(`
+				a1.tag_id = %d
+				%s
+				`,
+					g.and[0],
+					w,
+				),
+			))
 
-		trail = "AND"
+		//trail = "AND"
 	}
 
 	if len(g.filter) > 0 {
@@ -111,26 +134,40 @@ func (g group) sel(wh string) string {
 			unlessW = "AND u.post_id IS NULL"
 		}
 
-		q += fmt.Sprintf(`
-			LEFT JOIN (
-				SELECT f.post_id
-				FROM post_tag_mappings f
-				%s
-				WHERE
-				f.tag_id IN(%s)
-				%s
-			) f
-			ON p.id = f.post_id
-			`,
-			unlessJ,
-			sep(g.filter, ","),
-			unlessW,
+		joins.Add(
+			"LEFT JOIN",
+			cond.N(
+				fmt.Sprintf(`
+				LEFT JOIN (
+					SELECT f.post_id
+					FROM post_tag_mappings f
+					%s
+					WHERE
+					f.tag_id IN(%s)
+					%s
+				) f
+				ON p.id = f.post_id
+				`,
+					unlessJ,
+					sep(g.filter, ","),
+					unlessW,
+				),
+			),
 		)
 
-		where += fmt.Sprintf("%s f.post_id IS NULL \n", trail)
+		where.Add("AND", cond.N("f.post_id IS NULL"))
 	}
 
-	return q + where
+	if g.tombstone {
+		joins.Add(
+			"LEFT JOIN",
+			cond.N("tombstone ts ON p.id = ts.post_id"),
+		)
+
+		where.Add("AND", cond.N("ts.post_id IS NOT NULL"))
+	}
+
+	return joins.Eval(nil) + where.Eval(nil)
 }
 
 /* Failed grouping attempt

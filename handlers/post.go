@@ -587,6 +587,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Filter = r.FormValue("filter")
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
+	tombstone := r.FormValue("tombstone") == "on"
 
 	//p.Sidebar.Alts = r.FormValue("alts") == "on"
 
@@ -659,7 +660,19 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(tagString, p.Sidebar.Or, p.Sidebar.Filter, p.Sidebar.Unless, order, mimeIDs, p.Sidebar.AltGroup, p.Sidebar.Alts)
+	err = pc.Get(
+		DM.SearchOptions{
+			And:        tagString,
+			Or:         p.Sidebar.Or,
+			Filter:     p.Sidebar.Filter,
+			Unless:     p.Sidebar.Unless,
+			MimeIDs:    mimeIDs,
+			Altgroup:   p.Sidebar.AltGroup,
+			AltCollect: p.Sidebar.Alts,
+			Tombstone:  tombstone,
+			Order:      order,
+		},
+	)
 	if err != nil {
 		//log.Println(err)
 		// notFoundHandler(w, r)
