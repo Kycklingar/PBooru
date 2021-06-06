@@ -65,12 +65,15 @@ func createArchiveHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc := DM.NewPostCollector()
 	err := pc.Get(
-		tags, or,
-		filter, unless,
-		"ASC",
-		mimeIDs,
-		altgroup,
-		false,
+		DM.SearchOptions{
+			And:      tags,
+			Or:       or,
+			Filter:   filter,
+			Unless:   unless,
+			MimeIDs:  mimeIDs,
+			Altgroup: altgroup,
+			Order:    "ASC",
+		},
 	)
 	if err != nil {
 		log.Println(err)
