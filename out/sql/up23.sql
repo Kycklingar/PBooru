@@ -1,0 +1,1 @@
+ALTER TABLE duplicate_report_posts ADD COLUMN id SERIAL PRIMARY KEY;
