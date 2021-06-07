@@ -310,6 +310,7 @@ func updateDupeReports(tx querier, dupe Dupe) (err error) {
 			SET post_id = $1
 			WHERE post_id = $2
 			AND approved IS NULL
+			AND report_type = 1
 			`,
 			dupe.Post.ID,
 			p.ID,
