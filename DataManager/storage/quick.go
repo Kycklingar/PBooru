@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 
 	shell "github.com/ipfs/go-ipfs-api"
 )
@@ -13,6 +14,8 @@ import (
 type quickStore struct {
 	ipfs *shell.Shell
 	root string
+
+	l sync.Mutex
 }
 
 func readQuickRoot() string {
@@ -33,6 +36,9 @@ func NewQuickStore(shell *shell.Shell) *quickStore {
 }
 
 func (s *quickStore) Store(cid, destination string) error {
+	s.l.Lock()
+	defer s.l.Unlock()
+
 	var (
 		newRoot string
 		err     error
@@ -53,6 +59,20 @@ func (s *quickStore) Store(cid, destination string) error {
 }
 
 func (s *quickStore) Remove(src string) error {
+	var (
+		newRoot string
+		err     error
+	)
+	s.l.Lock()
+	defer s.l.Unlock()
+
+	newRoot, err = s.ipfs.Patch(s.root, "rm-link", target)
+	if err != nil {
+		return err
+	}
+
+	s.root = newRoot
+
 	return nil
 }
 
