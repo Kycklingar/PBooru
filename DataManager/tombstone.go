@@ -6,9 +6,6 @@ import (
 	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
-	c "github.com/kycklingar/PBooru/DataManager/cache"
-)
-
 type Tombstone struct {
 	Post    *Post
 	E6id    int
