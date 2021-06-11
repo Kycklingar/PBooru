@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	shell "github.com/ipfs/go-ipfs-api"
@@ -25,7 +26,7 @@ func readQuickRoot() string {
 		return ""
 	}
 
-	return string(root)
+	return strings.TrimSpace(string(root))
 }
 
 func NewQuickStore(shell *shell.Shell) *quickStore {
@@ -33,6 +34,10 @@ func NewQuickStore(shell *shell.Shell) *quickStore {
 		root: readQuickRoot(),
 		ipfs: shell,
 	}
+}
+
+func (s *quickStore) Root() string {
+	return s.root
 }
 
 func (s *quickStore) Store(cid, destination string) error {
@@ -58,7 +63,7 @@ func (s *quickStore) Store(cid, destination string) error {
 	return s.store()
 }
 
-func (s *quickStore) Remove(src string) error {
+func (s *quickStore) Remove(target string) error {
 	var (
 		newRoot string
 		err     error
