@@ -103,6 +103,7 @@ type postAndTags struct {
 type PostsPage struct {
 	Base base
 	//Result	      DM.SearchResult
+	ErrorMessage  string
 	Result        []postAndTags
 	Sidebar       Sidebar
 	SuggestedTags []*DM.Tag
@@ -674,6 +675,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		p.ErrorMessage = err.Error()
 		//log.Println(err)
 		// notFoundHandler(w, r)
 		// return

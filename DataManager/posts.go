@@ -1371,6 +1371,8 @@ func NewPostCollector() *PostCollector {
 }
 
 type PostCollector struct {
+	emptySet bool
+
 	posts     map[int][]*Post
 	id        []int
 	or        []int
@@ -1416,6 +1418,12 @@ type SearchOptions struct {
 	Order      string
 }
 
+type ErrorTag string
+
+func (e ErrorTag) Error() string {
+	return "tag does not exist: " + string(e)
+}
+
 func (pc *PostCollector) Get(opts SearchOptions) error {
 	in := func(i int, arr []int) bool {
 		for _, j := range arr {
@@ -1425,134 +1433,74 @@ func (pc *PostCollector) Get(opts SearchOptions) error {
 		}
 		return false
 	}
-	if len(opts.And) >= 1 {
-		var tc TagCollector
 
-		err := tc.ParseEscape(opts.And, ',')
-		if err != nil {
-			return err
-		}
+	type strat int
+	const (
+		stratContinue strat = iota
+		stratError
+	)
 
-		for _, tag := range tc.Tags {
-			if tag.QID(DB) == 0 {
-				// No posts will be available, return
-				pc.id = []int{-1}
-				return nil
-			}
-			alias := NewAlias()
-			alias.Tag = tag
-			to, err := alias.QTo(DB)
+	addto := func(arr *[]int, tstr string, tagNoExistStrat strat) error {
+		var isin = make(map[int]struct{})
+		if len(tstr) >= 1 {
+			var tc TagCollector
+			err := tc.ParseEscape(tstr, ',')
 			if err != nil {
 				return err
 			}
 
-			if to.QID(DB) != 0 {
-				tag = to
+			for _, tag := range tc.Tags {
+				if tag.QID(DB) == 0 {
+					switch tagNoExistStrat {
+					case stratError:
+						return ErrorTag(tag.String())
+					default:
+						continue
+					}
+
+				}
+
+				alias := NewAlias()
+				alias.Tag = tag
+				to, err := alias.QTo(DB)
+				if err != nil {
+					return err
+				}
+
+				if to.QID(DB) != 0 {
+					tag = to
+				}
+
+				if _, in := isin[tag.QID(DB)]; !in {
+					isin[tag.ID] = struct{}{}
+					*arr = append(*arr, tag.ID)
+				}
 			}
-			pc.id = append(pc.id, tag.QID(DB))
 		}
-		sort.Ints(pc.id)
-		//fmt.Println(tagIDs)
+
+		sort.Ints(*arr)
+
+		return nil
 	}
 
-	if len(opts.Or) >= 1 {
-		var tc TagCollector
-
-		err := tc.ParseEscape(opts.Or, ',')
-		if err != nil {
-			return err
-		}
-
-		for _, tag := range tc.Tags {
-			if tag.QID(DB) == 0 {
-				// No posts will be available, return
-				//pc.id = []int{-1}
-				break
-			}
-			alias := NewAlias()
-			alias.Tag = tag
-			to, err := alias.QTo(DB)
-			if err != nil {
-				return err
-			}
-
-			if to.QID(DB) != 0 {
-				tag = to
-			}
-			pc.or = append(pc.or, tag.QID(DB))
-		}
-		sort.Ints(pc.or)
-		//fmt.Println(tagIDs)
+	if err := addto(&pc.id, opts.And, stratError); err != nil {
+		pc.emptySet = true
+		return err
 	}
 
-	if len(opts.Filter) >= 1 {
-		var tc TagCollector
-
-		err := tc.ParseEscape(opts.Filter, ',')
-		if err != nil {
-			return err
-		}
-
-		for _, tag := range tc.Tags {
-			if tag.QID(DB) == 0 {
-				continue
-			}
-
-			alias := NewAlias()
-			alias.Tag = tag
-
-			to, err := alias.QTo(DB)
-			if err != nil {
-				return err
-			}
-
-			if to.QID(DB) != 0 {
-				tag = to
-			}
-
-			// Cant have your tag and filter it too
-			//if in(tag.QID(DB), pc.id) {
-			//	continue
-			//}
-
-			pc.filter = append(pc.filter, tag.QID(DB))
-		}
-		sort.Ints(pc.filter)
+	if err := addto(&pc.or, opts.Or, stratError); err != nil {
+		pc.emptySet = true
+		return err
 	}
-	//fmt.Println(tagIDs)
-	//pc.id = tagIDs //idStr
 
-	if len(opts.Unless) >= 1 {
-		var tc TagCollector
+	if err := addto(&pc.filter, opts.Filter, stratError); err != nil {
+		pc.emptySet = true
+		return err
+	}
 
-		err := tc.ParseEscape(opts.Unless, ',')
-		if err != nil {
-			return err
-		}
-
-		for _, tag := range tc.Tags {
-			if tag.QID(DB) == 0 {
-				continue
-			}
-
-			alias := NewAlias()
-			alias.Tag = tag
-			to, err := alias.QTo(DB)
-			if err != nil {
-				return err
-			}
-			if to.QID(DB) != 0 {
-				tag = to
-			}
-
-			//// Cant filter your tag and include it too
-			//if in(tag.QID(DB), pc.filter) || in(tag.QID(DB), pc.id) {
-			//	continue
-			//}
-
-			pc.unless = append(pc.unless, tag.QID(DB))
-		}
-		sort.Ints(pc.unless)
+	if err := addto(&pc.unless, opts.Unless, stratError); err != nil {
+		pc.emptySet = true
+		return err
 	}
 
 	switch strings.ToUpper(opts.Order) {
@@ -1604,6 +1552,10 @@ func sepStr(sep string, values ...string) string {
 }
 
 func (pc *PostCollector) countIDStr() string {
+	if pc.emptySet {
+		return "NIL"
+	}
+
 	if !pc.tombstone && len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0 {
 		return "0"
 	}
@@ -1628,6 +1580,10 @@ func (pc *PostCollector) countIDStr() string {
 }
 
 func (pc *PostCollector) idStr() string {
+	if pc.emptySet {
+		return "NIL"
+	}
+
 	return fmt.Sprint(
 		pc.countIDStr(),
 		" - ",
@@ -1653,6 +1609,11 @@ type resultSet struct {
 func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	//var result = SearchResult{Tags:make(map[int][]*Tag)}
 	var result SearchResult
+
+	if pc.emptySet {
+		pc.TotalPosts = 0
+		return result, nil
+	}
 
 	sg := searchGroup(
 		pc.id,

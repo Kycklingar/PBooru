@@ -117,7 +117,13 @@
                 	</a>
                 {{ end }}
             {{else}}
-                <h1>No posts available</h1>
+	    	{{if .ErrorMessage}}
+			<h1>Error: {{.ErrorMessage}}</h1>
+		{{else if random 10}}
+			<h1>Ingen här förutom oss kycklingar</h1>
+		{{else}}
+			<h1>No posts available</h1>
+		{{end}}
             {{end}}
         </div>
     </div>

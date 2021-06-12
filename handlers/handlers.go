@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -230,6 +231,7 @@ func init() {
 			"add":       add,
 			"mul":       mul,
 			"colorID":   colorID,
+			"random":    func(chance int) bool { return rand.Int()%chance == 0 },
 		},
 	)
 
