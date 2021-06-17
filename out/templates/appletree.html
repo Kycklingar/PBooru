@@ -6,7 +6,11 @@
 </form>
 <script type="text/javascript" src="/static/suggestions.js"></script>
 
-<h3>Ignore false positives</h3>
+{{with .Report}}
+<div>
+	<h4>Out of {{.Total}} processed reports, the average time to process is {{.Average}}.</h4>
+</div>
+{{end}}
 	{{range .Trees}}
 	<div class="panel">
 		<form>

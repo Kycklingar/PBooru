@@ -1,11 +1,59 @@
 package DataManager
 
 import (
+	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/Nr90/imgsim"
 )
+
+type duration time.Duration
+
+func (d duration) String() string {
+	//return time.Duration(d).String()
+
+	days := time.Duration(d).Hours() / 24
+
+	return fmt.Sprintf("%.1f days", days)
+}
+
+func (d duration) Value() (driver.Value, error) {
+	return driver.Value(int64(d)), nil
+}
+
+func (d *duration) Scan(raw interface{}) error {
+	switch v := raw.(type) {
+	case float64:
+		*d = duration(time.Duration(v) * time.Second)
+	case nil:
+		*d = duration(0)
+	default:
+		fmt.Println(reflect.TypeOf(v))
+		return fmt.Errorf("cannot scan duration from: %#v", v)
+	}
+
+	return nil
+}
+
+type DupeReportStats struct {
+	Average duration
+	Total   int
+}
+
+func GetDupeReportDelay() (report DupeReportStats, err error) {
+	err = DB.QueryRow(`
+		SELECT count(*), EXTRACT(EPOCH FROM AVG(approved - timestamp)) AS delay
+		FROM duplicate_report
+		WHERE approved IS NOT NULL
+		AND report_type = 0
+		`,
+	).Scan(&report.Total, &report.Average)
+
+	return
+}
 
 type AppleTree struct {
 	Apple *Post
