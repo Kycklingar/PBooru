@@ -18,6 +18,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 		UserInfo UserInfo
 		User     *DM.User
 		Trees    []DM.AppleTree
+		Report   DM.DupeReportStats
 		Query    string
 		Offset   int
 	}
@@ -38,6 +39,13 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	page.Query = r.FormValue("tags")
 	page.Trees, err = DM.GetAppleTrees(page.Query, limit, page.Offset)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	page.Report, err = DM.GetDupeReportDelay()
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -116,4 +124,3 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 	return
 }
-
