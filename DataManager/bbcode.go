@@ -60,6 +60,29 @@ func createCompiler(q querier, gateway string) bbcode.Compiler {
 		return a, true
 	})
 
+	cmp.SetTag("bg", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		out := bbcode.NewHTMLTag("")
+		out.Name = "span"
+
+		sanitize := func(r rune) rune {
+			if r == '#' || r == ',' || r == '.' || r == '(' || r == ')' || r == '%' {
+				return r
+			} else if r >= '0' && r <= '9' {
+				return r
+			} else if r >= 'a' && r <= 'z' {
+				return r
+			} else if r >= 'A' && r <= 'Z' {
+				return r
+			}
+			return -1
+		}
+
+		color := strings.Map(sanitize, node.GetOpeningTag().Value)
+		out.Attrs["style"] = "background-color: " + color + ";"
+
+		return out, true
+	})
+
 	cmp.SetTag("url", urlNode)
 
 	return cmp
