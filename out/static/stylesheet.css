@@ -1,91 +1,35 @@
-.comics
-{
-	display: flex;
-	flex-wrap: wrap;
-}
-
-.comic-search
-{
-	width:100%;
-}
-
-.comic-search form
-{
-	width: 50%;
-	max-width: 500px;
-	z-index:1;
-}
-
-.comic-search input
-{
-	width: 100%;
-	text-align: center;
-}
-
-.comic
-{
-	margin: 1em;
-	max-width: min-content;
-	min-width: 250px;
-}
-
-.comic .tag
-{
-	white-space: initial;
-}
-
-.comic a:visited, .comic a:link
-{
-	color:inherit;
-}
-
-.comic img
-{
-	max-width: 400px;
-	max-height: 400px;
-	position:relative;
-	margin-bottom: 0.6em;
-	left: 50%;
-	transform: translateX(-50%);
-	box-shadow: 3px 3px 6px #213;
-}
-
-.tagbox
-{
-	color: black;
-	/*text-shadow: 1px 1px 3px white;*/
-	font-family: monospace;
-}
-
-.tagbox span
-{
-	display: inline-block;
-	padding:0.1em; 
-}
-
-
-.tagbox .namespace-none
-{
-	background-color: grey;
-}
-
-
-.comic .title .chapters
-{
-	padding-left:2em;
-	max-height: 200px;
-	overflow: auto;
-}
-
 body
 {
     background-color:#35353F;
     margin-bottom: 2em;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: Arial, "Noto Sans Mono", Helvetica, sans-serif;
     color:#AAA;
 }
 
-form.block input 
+#header
+{
+    /* background-color:#400A5E; */
+    background-color:#400A5E;
+    padding-bottom:2em;
+    padding-top:1em;
+    margin-bottom: 1em;
+    box-shadow: 3px 3px #213;
+}
+
+#header a
+{
+    /* display:inline; */
+    /* padding-right:40px; */
+    margin:1em;
+    padding:1em;
+    color:#98A;
+    font-size:1em;
+    /* text-shadow: 1px 1px #213; */
+    border-bottom-style:solid;
+    /* border-radius: 2px; */
+}
+
+form.block input
 {
 	display:block;
 }
@@ -93,33 +37,6 @@ form.block input
 .greentext
 {
 	color:#c8c246;
-}
-
-#comic-container h1, #comic-container h2
-{
-    text-shadow: 3px 3px #213;
-}
-
-.comic-strip
-{
-	display: flex;
-	margin: 1em;
-	overflow: auto;
-}
-
-.comic-strip .thumbnail
-{
-	width:auto;
-	height:auto;
-	margin: 0.3em;
-}
-
-.comic-strip .thumbnail img
-{
-	position:relative;
-	top:auto;
-	left:auto;
-	transform:none;
 }
 
 #pageinator a:hover
@@ -158,66 +75,314 @@ li
     color: black;
 }
 
-/*.text-panel a:visited
+#advanced-search
 {
-    text-decoration: underline;
-    color: purple;
-}
-
-.text-panel a:link
-{
-    text-decoration: underline;
-    color: blue;
-}
-*/
-
-#header
-{
-    /* background-color:#400A5E; */
-    background-color:#400A5E;
-    padding-bottom:2em;
-    padding-top:1em;
-    margin-bottom: 1em;
+    background-color:#778;
+    color: #000;
+    font-size:14px;
     box-shadow: 3px 3px #213;
 }
 
-#header a
+#advanced-search input
 {
-    /* display:inline; */
-    /* padding-right:40px; */
+    width:auto;
+}
+
+/*---------- COMICS ---------*/
+
+.comics
+{
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.comic-search
+{
+	width:100%;
+}
+
+.comic-search form
+{
+	width: 50%;
+	max-width: 500px;
+	z-index:1;
+}
+
+.comic-search input
+{
+	width: 100%;
+	text-align: center;
+}
+
+.comic
+{
+	margin: 1em;
+	max-width: min-content;
+	min-width: 250px;
+}
+
+.comic .tag
+{
+	font-size: 14px;
+}
+
+.comic a:visited, .comic a:link
+{
+	color:inherit;
+}
+
+.comic img
+{
+	max-width: 400px;
+	max-height: 400px;
+	position:relative;
+	margin-bottom: 0.6em;
+	left: 50%;
+	transform: translateX(-50%);
+	box-shadow: 3px 3px 6px #213;
+}
+
+.comic .title .chapters
+{
+	padding-left:2em;
+	max-height: 200px;
+	overflow: auto;
+}
+
+#comic-container h1, #comic-container h2
+{
+    text-shadow: 3px 3px #213;
+}
+
+.comic-strip
+{
+	display: flex;
+	margin: 1em;
+	overflow: auto;
+}
+
+.comic-strip .thumbnail
+{
+	width:auto;
+	height:auto;
+	margin: 0.3em;
+}
+
+.comic-strip .thumbnail img
+{
+	position:relative;
+	top:auto;
+	left:auto;
+	transform:none;
+}
+
+.comics-container
+{
+    background-color:#667;
+    box-shadow: 3px 3px #213;
+    color:#000;
     margin:1em;
+}
+
+.cpage-container
+{
+    /* background-color: #556; */
+    display: flex;
+    margin:1em;
+    position:relative;
+    padding;1em;
+}
+
+.cpage-container img
+{
+	box-shadow:5px 3px 5px #213;
+	border: 1px solid black;
+}
+
+.comic-page
+{
+    background-color:#778;
     padding:1em;
-    color:#98A;
-    font-size:1em;
-    /* text-shadow: 1px 1px #213; */
-    border-bottom-style:solid;
-    /* border-radius: 2px; */
+    margin:1em;
+    color:#000;
 }
 
-#content img
+.comic-thumb
 {
+	padding:3px;
+	word-break: break-all;
+	position:relative;
+	left:128px;
+	margin-left: -128px;
+	transition:margin-left 0.07s;
 }
 
-.message
+.comic-thumb.cover
 {
-	border:solid;
-	background-color:grey;
-	color:black;
-	padding:2em;
+	background-image: linear-gradient(to right, rgba(0.2, 0.2, 0.2, 1.0), rgba(0.5, 0.5, 0.5, 0.7));
+	text-align: center;
+	color: white;
+	width: 150px;
+	height: 256px;
+	box-shadow: 3px 3px 6px #213;
 }
 
-.message-text
+.comic-thumb img
 {
-	border:dotted;
+	max-width:256px;
+	max-height:512;
+	min-width:150px;
+}
+
+.comic-thumb:hover:not(:first-child)
+{
+	margin-left:-1px;
+}
+
+
+/*-------------TAGS-----------*/
+
+.tagbox
+{
+	color: black;
+}
+
+.tagbox span
+{
+	display: inline-block;
+	padding:0.1em; 
+}
+
+
+.tagbox .namespace-none
+{
+	background-color: grey;
+}
+
+.tagbox.hint
+{
+	pointer-events: none;
+	z-index:500;
+	position:fixed;
+	left:0px;
+	bottom:0px;
+	display:none;
+	background-image: linear-gradient(rgba(0.2, 0.2, 0.2, 0.9), rgba(0.2, 0.2, 0.2, 0));
 	padding:1em;
-	white-space:pre-line;
+	padding-bottom:2em;
+	width: 20%;
+	font-family: "Liberation Sans", Arial;
+	font-size:14px;
 }
 
-#posts > a
+.tagbox.hint .score
 {
-	margin: 0.4em;
-	background-color: #0002;
+	color: #AAA;
 }
+
+#tags
+{
+    width: 100%;
+    background-color:#667;
+    border-spacing: 5px 0px;
+    box-shadow: 3px 3px #213;
+    color:#000;
+}
+
+#tags .tag
+{
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#tags .tag span
+{
+	white-space: pre;
+}
+
+#tags td
+{
+    padding-bottom:0px;
+    padding-top:0px;
+}
+
+#tags:hover .tag
+{
+    max-width: 100%;
+}
+
+#tags .counter
+{
+    float: right;
+}
+
+.tag :any-link
+{
+    color: inherit;
+    text-decoration: none;
+}
+
+.tag
+{
+    font-family: "Liberation Sans", Arial;
+    background-color:darkorange;
+}
+
+.namespace-none
+{
+    background-color: initial;
+}
+
+.namespace-series
+{
+    background-color: #A030A0;
+
+
+}
+
+.namespace-gender
+{
+    background-color: pink;
+}
+
+.namespace-species
+{
+	background-color: green;
+}
+
+.namespace-creator
+{
+	background-color: red;
+}
+.namespace-character
+{
+    background-color:yellow;
+}
+
+#suggestedtags
+{
+    background-color:#667;
+}
+
+#suggestedtags li
+{
+    display:inline;
+    margin:5px;
+}
+
+#stbox
+{
+    position: absolute;
+    background-color:white;
+    border:2px solid;
+    z-index: 10;
+    box-shadow: 4px 4px #213;
+    padding: 3px;
+}
+
+/*------------THUMBNAILS------------------*/
 
 .thumbnail
 {
@@ -303,28 +468,32 @@ li
 	display:inherit;
 }
 
-.tagbox.hint
-{
-	pointer-events: none;
-	z-index:500;
-	position:fixed;
-	left:0px;
-	bottom:0px;
-	display:none;
-	background-image: linear-gradient(rgba(0.2, 0.2, 0.2, 0.9), rgba(0.2, 0.2, 0.2, 0));
-	padding:1em;
-	padding-bottom:2em;
-	width: 20%;
-}
-
-.tagbox.hint .score
-{
-	color: #AAA;
-}
-
 .thumbnail:hover .hint
 {
 	display:inherit;
+}
+
+/*---------------------------*/
+
+.message
+{
+	border:solid;
+	background-color:grey;
+	color:black;
+	padding:2em;
+}
+
+.message-text
+{
+	border:dotted;
+	padding:1em;
+	white-space:pre-line;
+}
+
+#posts > a
+{
+	margin: 0.4em;
+	background-color: #0002;
 }
 
 .centered
@@ -428,105 +597,6 @@ li
 }
 
 
-#stbox
-{
-    position: absolute;
-    background-color:white;
-    border:2px solid;
-    z-index: 10;
-    box-shadow: 4px 4px #213;
-    padding: 3px;
-}
-
-#tags
-{
-    width: 100%;
-    background-color:#667;
-    border-spacing: 5px 0px;
-    box-shadow: 3px 3px #213;
-    color:#000;
-    
-}
-
-.tag
-{
-    white-space: nowrap;
-}
-
-#tags .tag
-{
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#tags .tag span
-{
-	white-space: pre;
-}
-
-#tags td
-{
-    padding-bottom:0px;
-    padding-top:0px;
-}
-
-#tags:hover .tag
-{
-    max-width: 100%;
-}
-
-#tags .counter
-{
-    float: right;
-}
-
-.tag
-{
-    background-color:darkorange;
-}
-
-.namespace-none
-{
-    background-color: initial;
-}
-
-.namespace-series
-{
-    background-color: #A030A0 !important;
-}
-
-.namespace-gender
-{
-    background-color: pink !important;
-}
-
-.namespace-species
-{
-    background-color: green !important;
-}
-
-.namespace-creator
-{
-    background-color: red !important;
-}
-.namespace-character
-{
-    background-color:yellow !important;
-}
-
-#suggestedtags
-{
-    background-color:#667;
-}
-
-#suggestedtags li
-{
-    display:inline;
-    margin:5px;
-}
-
 .attention
 {
 	background-color:#222;
@@ -617,68 +687,6 @@ li
     box-shadow: 0px 0px 5px 5px #DBD;
 }
 
-.comics-container
-{
-    background-color:#667;
-    box-shadow: 3px 3px #213;
-    color:#000;
-    margin:1em;
-}
-
-.cpage-container
-{
-    /* background-color: #556; */
-    display: flex;
-    margin:1em;
-    position:relative;
-    padding;1em;
-}
-
-.cpage-container img
-{
-	box-shadow:5px 3px 5px #213;
-	border: 1px solid black;
-}
-
-.comic-page
-{
-    background-color:#778;
-    padding:1em;
-    margin:1em;
-    color:#000;
-}
-
-.comic-thumb
-{
-	padding:3px;
-	word-break: break-all;
-	position:relative;
-	left:128px;
-	margin-left: -128px;
-	transition:margin-left 0.07s;
-}
-
-.comic-thumb.cover
-{
-	background-image: linear-gradient(to right, rgba(0.2, 0.2, 0.2, 1.0), rgba(0.5, 0.5, 0.5, 0.7));
-	text-align: center;
-	color: white;
-	width: 150px;
-	height: 256px;
-	box-shadow: 3px 3px 6px #213;
-}
-
-.comic-thumb img
-{
-	max-width:256px;
-	max-height:512;
-	min-width:150px;
-}
-
-.comic-thumb:hover:not(:first-child)
-{
-	margin-left:-1px;
-}
 
 .removed
 {
@@ -740,10 +748,6 @@ li
 	position:relative;
 }
 
-.dupe-reports .comic-strip img
-{
-}
-
 @keyframes struggle
 {
     0%
@@ -762,17 +766,4 @@ li
     {
         opacity: 0.9;
     };
-}
-
-#advanced-search
-{
-    background-color:#778;
-    color: #000;
-    font-size:14px;
-    box-shadow: 3px 3px #213;
-}
-
-#advanced-search input
-{
-    width:auto;
 }
