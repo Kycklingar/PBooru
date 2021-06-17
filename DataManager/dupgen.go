@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/Nr90/imgsim"
@@ -31,7 +30,6 @@ func (d *duration) Scan(raw interface{}) error {
 	case nil:
 		*d = duration(0)
 	default:
-		fmt.Println(reflect.TypeOf(v))
 		return fmt.Errorf("cannot scan duration from: %#v", v)
 	}
 
