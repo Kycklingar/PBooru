@@ -75,6 +75,21 @@ li
     color: black;
 }
 
+#sidebar
+{
+    /* background-color:yellowgreen; */
+    /* color:#AAA; */
+    font-size: 18px;
+    margin-right:0.5em;
+}
+
+#sidebar input
+{
+    box-shadow: 3px 3px #213;
+    width: 100%;
+}
+
+
 #advanced-search
 {
     background-color:#778;
@@ -85,7 +100,7 @@ li
 
 #advanced-search input
 {
-    width:auto;
+	width:auto;
 }
 
 /*---------- COMICS ---------*/
@@ -578,22 +593,6 @@ li
 {
 	color:#ff2d2d;
 	text-shadow:2px 2px 2px black;
-}
-
-#sidebar
-{
-    /* background-color:yellowgreen; */
-    /* color:#AAA; */
-    font-size: 18px;
-    margin-right:0.5em;
-    
-}
-
-#sidebar input
-{
-    width:100%;
-    box-shadow: 3px 3px #213;
-    
 }
 
 
