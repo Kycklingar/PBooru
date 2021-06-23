@@ -127,7 +127,6 @@ function suggestionBox(caller) {
 				let sp = document.createElement("div")
 				sp.style.fontSize = "16px"
 				sp.style.cursor = "pointer"
-				sp.style.color = "black"
 				sp.className = "tag namespace-" + tags[i].Namespace
 				if (tags[i].Namespace == "none") {
 					sp.innerText = tags[i].Tag

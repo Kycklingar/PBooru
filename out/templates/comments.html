@@ -7,7 +7,7 @@ function appendComment(e)
 </script>
 
 <div class="postcomment">
-    <div class="text-panel">
+    <div class="box">
         <h2>{{.Username}}</h2>
         <form method="POST">
             <textarea id="comment-input" maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
@@ -22,7 +22,7 @@ function appendComment(e)
             <input type="submit" value="Post Comment">    
         </form>
     </div>
-    <div class="text-panel" style="padding-right: 1em;">
+    <div class="box" style="padding-right: 1em;">
         <h4>Bbcodes:</h4>
         <p><b>[b]</b> text <b>[/b]</b> == <b>text</b></p>
         <p><b>[url]</b> https://ipfs.io <b>[/url]</b> == <a href="https://ipfs.io">https://ipfs.io</a></p>
@@ -40,7 +40,7 @@ function appendComment(e)
 <ul id="commentlist">
 {{ range .Comments }}
     <li>
-        <div id="c{{.ID}}" class="comment">
+        <div id="c{{.ID}}" class="comment box">
             <b>
             <span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
             <span class="comment-id" onclick="appendComment(this)">#{{.ID}}</span>

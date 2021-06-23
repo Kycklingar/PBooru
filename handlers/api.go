@@ -64,9 +64,13 @@ func (t *APIv1Tag) Parse(tag *DM.Tag) {
 }
 
 func jsonEncode(w http.ResponseWriter, v interface{}) error {
+	w.Header().Set("Content-Type", "application/json")
+
 	enc := json.NewEncoder(w)
+
 	enc.SetEscapeHTML(true)
 	enc.SetIndent("", " ")
+
 	err := enc.Encode(v)
 	if err != nil {
 		log.Print(err)

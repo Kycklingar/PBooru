@@ -45,7 +45,7 @@
 	{{$PostLimit = 2}}
 	{{end}}
 	{{range .Comic.Chapters}}
-	<div class="comics-container">
+	<div class="comics-container box">
 		<h3><a href="/comic/{{.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
 	    	<h4>Pages: {{.PageCount}}</h4>
 	    	<div class="cpage-container">

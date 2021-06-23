@@ -66,6 +66,10 @@
 	<script type="text/javascript" src="/static/suggestions.js"></script>
 {{end}}
 
+{{ define "tag-s"}}
+<span class="tag namespace-{{.Namespace.Namespace}}"><a href="/posts/?tags={{.Tag}}">{{.Tag}}</a></span>
+{{end}}
+
 {{ define "sidebar tags"}}
 	<table id="tags">
 	{{ range .Tags }}

@@ -7,13 +7,15 @@
 	}
 </style>
 
-<div class="text-panel">Check out <a href="/appletree/">/appletree/</a> for generated duplicate pairs!</div>
-<form>
-	<input type="hidden" name="id" value="{{.Id}}">
-	<input type="hidden" name="distance" value="{{.Distance}}">
-	<input type="hidden" name="removed" value="on">
-	<input type="submit" value="Removed posts">
-</form>
+<div class="box">
+	<p>Check out <a href="/appletree/">/appletree/</a> for generated duplicate pairs!</p>
+	<form>
+		<input type="hidden" name="id" value="{{.Id}}">
+		<input type="hidden" name="distance" value="{{.Distance}}">
+		<input type="hidden" name="removed" value="on">
+		<input type="submit" value="Removed posts">
+	</form>
+</div>
 <div id="content">
 	<form>
 	{{range .Posts}}

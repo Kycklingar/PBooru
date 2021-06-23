@@ -3,7 +3,7 @@
 {{if .User.Flag.Comics}}
 <details {{if .AddPostMode}}open{{end}}>
 <summary>Add a post</summary>
-	<div class="text-panel">
+	<div class="box">
 		<form method="post" action="/comic/page/add/">
 		    <input type="hidden" name="comicid" value="{{.Chapter.Comic.ID}}">
 		    <input placeholder="Post ID" type="number" name="post-id">
@@ -122,7 +122,7 @@
 	        </div>
 	    {{end}}
 	    {{with .Chapter.Comic.Chapters}}
-	    <div class="text-panel">
+	    <div class="box">
 	        <ul>
 	            {{range .}}
 	            <li>

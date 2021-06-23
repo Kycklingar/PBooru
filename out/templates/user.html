@@ -1,9 +1,9 @@
 {{template "base"}}
 
-<div class="text-panel">
+<div class="box">
 	{{if .Profile.ID}}
 		<div id="profile-id">
-			<h2>{{.Profile.Name}} <span style="font-size: .7em; color:grey; text-shadow:1px 1px 1px black;">{{.Profile.Title}}</span></h2>
+			<h2>{{.Profile.Name}} <span class="user-subtitle">{{.Profile.Title}}</span></h2>
 			<div class="privileges">
 				<h4>Privileges</h4>
 			{{if .Profile.Flag.Special}}
@@ -95,7 +95,7 @@
 		{{template "login-panel" .User}}
 	{{else}}
 		</div>
-		<div class="text-panel">
+		<div class="box">
 		{{template "login-panel" .User}}
 	{{end}}
 </div>

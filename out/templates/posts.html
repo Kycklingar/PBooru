@@ -14,10 +14,10 @@
     <div id="posts-container">
         {{if .SuggestedTags }}
         <span id="suggestedtags-button" style="cursor:pointer; display:none;" onclick="toggleVisibility(this)">[+]</span>
-        <div class="nolink" id="suggestedtags">
+        <div class="box" id="suggestedtags">
             <ul>
                 {{ range .SuggestedTags }}
-                    {{ template "sidebartag" .}}
+		<li>{{ template "tag-s" .}}</li>
                 {{ end }}
             </ul>
         </div>
@@ -30,7 +30,6 @@
 
             document.getElementById("suggestedtags").style.display = "none"
             document.getElementById("suggestedtags-button").style.display = "inherit"
-            
         </script>
         {{ end }}
 

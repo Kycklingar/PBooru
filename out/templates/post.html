@@ -155,7 +155,7 @@
 			</div>
 		</details>
     </div>
-    <div id="post">
+    <div class="box" id="post">
 	{{if eq .Post.Mime.Type "image"}}
         <div id="image">
             <script>
@@ -210,7 +210,7 @@
 	</div>
 	{{end}}
 	    {{with .Post.Description}}
-		<div class="panel">
+		<div class="box">
 	    		<h3>Description</h3>
 	    		<p>{{.}}</p>
 		</div>
@@ -275,7 +275,7 @@
 
 {{with .Dupe}}
 	{{if .Inferior}}
-	<div class="panel text-panel">
+	<div class="box">
 		<h4>Duplicates</h4>
 		<div class="comic-strip">
 		{{template "thumbnail" wrap2 "Post" "UserInfo" .Post $.UserInfo}}

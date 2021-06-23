@@ -6,35 +6,26 @@
     		<input value="Search" type="submit">
 	</form>
 </div>
-<div id="content" class="nolink">
-    <div class="panel" id="sidebar">
+
+<div id="content">
+    <div class="box">
         <ul>
         {{ range .Tags }}
-            <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
-                <li>
-                    {{template "tag" .}}
-                </li>
-            </a>
+		<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
         {{ end }}
         </ul>
     </div>
-    <div class="text-panel">
+    <div class="box">
         {{ if .Tag}}
         <h2>
-            <a href="/tags/{{.Paginator.Current}}/{{.Tag.ID}}{{$.Query}}">
-                {{template "tag" .Tag}}
-            </a>
+		<span class="tag namespace-{{.Tag.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a></span>
         </h2>
         <p>
             Aliased from: 
             {{ if .From }}
             <ul>
                 {{ range .From }}
-                <li>
-                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
-                        {{ template "tag" .}}
-                    </a>
-                </li>
+		<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
                 {{ end }}
             </ul>
             {{ end }}
@@ -42,9 +33,7 @@
         <p>
             Aliased to: 
             {{ if ne .To.ID 0}}
-                <a href="/tags/{{.Paginator.Current}}/{{.To.ID}}{{$.Query}}">
-                    {{ template "tag" .To}}
-                </a>
+		<li class="tag namespace-{{.To.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.To.ID}}{{$.Query}}">{{.To}}</a></li>
             {{ end }}
         </p>
 
@@ -53,11 +42,7 @@
             {{ if .Parents}}
             <ul>
                 {{ range .Parents}}
-                <li>
-                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
-                        {{ template "tag" .}}
-                    </a>
-                </li>
+		<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
                 {{ end }}
             </ul>
             {{ end }}
@@ -68,11 +53,7 @@
             {{ if .Children}}
             <ul>
                 {{ range .Children}}
-                <li>
-                    <a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">
-                        {{ template "tag" .}}
-                    </a>
-                </li>
+		<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
                 {{ end }}
             </ul>
             {{ end }}

@@ -1,31 +1,31 @@
 {{define "base"}}
 <html>
-    <head>
-        {{if .Title}}
-        <title>{{.Title}}</title>
-        {{else}}
-        <title>The Permanent Booru</title>        
-        {{end}}
-        <link rel="stylesheet" type="text/css" href="/static/stylesheet.css">
-    </head>
-    <body>
-        <div class="nolink" id="header">
-            <a href="/">Home</a>
-            <a href="/posts/">Posts</a>
-            <a href="/comics/">Comics</a>
-            <a href="/upload/">Upload</a>
-	    <a href="/user/">User</a>
-            <a href="/wall/">Wall</a>
-        </div>
+	<head>
+		{{with .Title}}
+		<title>{{.}}</title>
+		{{else}}
+		<title>The Permanent Booru</title>        
+		{{end}}
+		<link rel="stylesheet" type="text/css" href="/static/stylesheet.css">
+	</head>
+<body>
+	<nav id="header">
+		<ul>
+			<li><a href="/">Home</a></li>
+			<li><a href="/posts/">Posts</a></li>
+			<li><a href="/comics/">Comics</a></li>
+			<li><a href="/upload/">Upload</a></li>
+			<li><a href="/user/">User</a></li>
+			<li><a href="/wall/">Wall</a></li>
+		</ul>
+	</nav>
 {{end}}
 
-{{ define "baseEnd" }}
-
-    </body>
+{{ define "baseEnd" -}}
+</body>
 </html>
+{{- end}}
 
-{{end}}
-
-{{define "benchmark"}}
-    <p>Page generated in {{.}}s</p>
-{{end}}
+{{define "benchmark" -}}
+<p>Page generated in {{.}}s</p>
+{{- end}}

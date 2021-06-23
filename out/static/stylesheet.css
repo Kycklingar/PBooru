@@ -1,32 +1,88 @@
 body
 {
-    background-color:#35353F;
-    margin-bottom: 2em;
-    font-family: Arial, "Noto Sans Mono", Helvetica, sans-serif;
-    color:#AAA;
+	background-color: #33303F;
+	margin-bottom: 2em;
+	font-family: Arial, "Noto Sans Mono", Helvetica, sans-serif;
+	color:#AAA;
+}
+
+:root
+{
+	--box-background-color: #202028;
+	--box-shadow: 3px 3px 3px #213;
+	--box-color: #CCD;
 }
 
 #header
 {
-    /* background-color:#400A5E; */
-    background-color:#400A5E;
-    padding-bottom:2em;
-    padding-top:1em;
-    margin-bottom: 1em;
-    box-shadow: 3px 3px #213;
+	background-color:#400A5E;
+	padding-bottom: 1em;
+	margin-bottom: 1em;
+	box-shadow: var(--box-shadow);
+}
+
+#header ul
+{
+	margin:0;
+	padding:0;
+	overflow:hidden;
+}
+
+#header li
+{
+	float:left;
 }
 
 #header a
 {
-    /* display:inline; */
-    /* padding-right:40px; */
-    margin:1em;
-    padding:1em;
-    color:#98A;
-    font-size:1em;
-    /* text-shadow: 1px 1px #213; */
-    border-bottom-style:solid;
-    /* border-radius: 2px; */
+	display:block;
+	margin:0.1em 1em;
+	padding:1em;
+	color:#C6A9E3;
+	font-size:1em;
+	border-bottom-style:solid;
+}
+
+#header a:any-link
+{
+	text-decoration: none;
+}
+
+.box
+{
+	background-color: var(--box-background-color);
+	color: var(--box-color);
+	box-shadow: var(--box-shadow);
+	padding: 0.8em;
+	margin:0.6em 0.2em;
+}
+
+.box a:link {
+	color:#67E;
+}
+
+.box a:visited {
+	color: #A6E;
+}
+
+.box p
+{
+	margin: 0.3em 0;
+}
+
+.box table, .box td, .box th
+{
+	border: solid 1px grey;
+	padding: 0.5em;
+	color: var(--box-color);
+	border-collapse: collapse;
+}
+
+input, textarea
+{
+	background-color: #DADAEF;
+	color: black;
+	border: 2px inset #666;
 }
 
 form.block input
@@ -85,17 +141,17 @@ li
 
 #sidebar input
 {
-    box-shadow: 3px 3px #213;
-    width: 100%;
+	box-shadow: var(--box-shadow);
+	width: 100%;
 }
 
 
 #advanced-search
 {
-    background-color:#778;
-    color: #000;
+    background-color: var(--box-background-color);
+    color: var(--box-color);
     font-size:14px;
-    box-shadow: 3px 3px #213;
+    box-shadow: var(--box-shadow);
 }
 
 #advanced-search input
@@ -193,9 +249,9 @@ li
 
 .comics-container
 {
-    background-color:#667;
-    box-shadow: 3px 3px #213;
-    color:#000;
+    background-color: var(--box-background-color);
+    box-shadow: var(--box-shadow);
+    color: var(--box-color);
     margin:1em;
 }
 
@@ -216,10 +272,10 @@ li
 
 .comic-page
 {
-    background-color:#778;
+    background-color: var(--box-background-color);
     padding:1em;
     margin:1em;
-    color:#000;
+    color: var(--box-color);
 }
 
 .comic-thumb
@@ -268,10 +324,10 @@ li
 	padding:0.1em; 
 }
 
-
 .tagbox .namespace-none
 {
-	background-color: grey;
+	background-color: var(--box-background-color);
+	color: var(--box-color);
 }
 
 .tagbox.hint
@@ -298,10 +354,10 @@ li
 #tags
 {
     width: 100%;
-    background-color:#667;
+    background-color: var(--box-background-color);
+    color: var(--box-color);
     border-spacing: 5px 0px;
-    box-shadow: 3px 3px #213;
-    color:#000;
+    box-shadow: var(--box-shadow);
 }
 
 #tags .tag
@@ -319,8 +375,7 @@ li
 
 #tags td
 {
-    padding-bottom:0px;
-    padding-top:0px;
+	padding: 1 2;
 }
 
 #tags:hover .tag
@@ -333,53 +388,73 @@ li
     float: right;
 }
 
-.tag :any-link
+.tag a:any-link
 {
     color: inherit;
     text-decoration: none;
 }
 
+/* Undefined namespaces here */
 .tag
 {
-    font-family: "Liberation Sans", Arial;
-    background-color:darkorange;
+	font-family: "Liberation Sans", Arial;
+	background-color:#7d5900;;
+	color:#F0F0F0;
 }
 
 .namespace-none
 {
-    background-color: initial;
+	background-color: initial;
+	color:inherit;
+}
+
+.namespace-rating
+{
+	background-color: #1c66b5;
+	color:#EEE;
+}
+
+.namespace-meta
+{
+	background-color:#CCD;
+	color:#000;
+}
+
+.namespace-medium
+{
+	background-color:#403040;
+	color:#CCD;
 }
 
 .namespace-series
 {
-    background-color: #A030A0;
-
-
+	background-color: #79267c;
+	color:#EED;
 }
 
 .namespace-gender
 {
-    background-color: pink;
+	background-color: #c6717d;
+	color:#000;
 }
 
 .namespace-species
 {
-	background-color: green;
+	background-color: #144413;
+	color:#BDD;
 }
 
 .namespace-creator
 {
-	background-color: red;
+	background-color: #8a1422;
+	color:#FDD;
 }
 .namespace-character
 {
-    background-color:yellow;
+	background-color:#b7a544;
+	color:#000;
 }
 
-#suggestedtags
-{
-    background-color:#667;
-}
 
 #suggestedtags li
 {
@@ -395,6 +470,7 @@ li
     z-index: 10;
     box-shadow: 4px 4px #213;
     padding: 3px;
+    color: black;
 }
 
 /*------------THUMBNAILS------------------*/
@@ -508,7 +584,7 @@ li
 #posts > a
 {
 	margin: 0.4em;
-	background-color: #0002;
+	background-color: #0005;
 }
 
 .centered
@@ -555,13 +631,6 @@ li
     margin: 0px;
 }
 
-#post
-{
-    background-color:#667;
-    box-shadow: 3px 3px #213;
-    color:#000;
-}
-
 #post #fullsize
 {
 	max-width: 100%;
@@ -572,33 +641,33 @@ li
 	max-width: unset;
 }
 
-#posts-container
-{
-    /* background-color:green; */
-}
-
 #pageinator, #pageinator a:link, #pageinator a:visited
 {
     color:#AAA;
     font-size:18px;
 }
 
+.user-subtitle
+{
+	font-size: 0.7em;
+	color: grey;
+	text-shadow: 1px 1px 1px black;
+}
+
 .privileges p
 {
-	text-shadow:2px 2px 2px white;
+	text-shadow:2px 2px 2px black;
 	display:inline;
 }
 
 .privileges .p-special
 {
 	color:#ff2d2d;
-	text-shadow:2px 2px 2px black;
 }
-
 
 .attention
 {
-	background-color:#222;
+	background-color:#000;
 	color: #DDD;
 	padding:0.2em 1em;
 	max-width: 33em;
@@ -612,42 +681,6 @@ li
 	color: #A6E;
 }
 
-.text-panel
-{
-    background-color:#667;
-    padding:1em;
-    margin-top: 1em;
-    box-shadow: 3px 3px #213;
-    color:#000;
-    
-}
-
-.text-panel input
-{
-	margin:6px;
-}
-
-.text-panel table, .text-panel td, .text-panel th
-{
-    border: solid 1px grey;
-    padding: 0.5em;
-    color: #000;
-    border-collapse: collapse;
-}
-
-.text-panel p
-{
-	margin:0.1em;
-}
-
-
-.panel {
-    background-color: #667;
-    margin:1em;
-    box-shadow: 3px 3px #213;
-    
-}
-
 .postcomment
 {
     display: flex;
@@ -656,34 +689,38 @@ li
 .postcomment pre, .comment pre
 {
     border: solid 1px;
-    background-color:#888;
+    background-color:#778;
+    color: #000;
     overflow: auto;
 }
 
 .comment
 {
-    background-color:#667;
-    color:#000;
-    box-shadow: 3px 3px #213;
+    background-color: var(--box-background-color);
+    color: var(--box-color);
+    box-shadow: var(--box-shadow);
     word-wrap: break-word;
     padding-left: 3px;
     padding-right: 3px;
     padding-top: 3px;
+    padding-bottom: 0.2em;
+    margin: 0.7em 0;
 }
 
 .comment p
 {
     padding: 3px;
+    margin: 0.2em 0;
 }
 
 .comment-username a:visited, .comment-username a:link
 {
-    color: black;
+    color: var(--box-color);
 }
 
 .comment:target
 {
-    box-shadow: 0px 0px 5px 5px #DBD;
+    box-shadow: 0px 0px 5px 5px #7C43D0;
 }
 
 
@@ -725,7 +762,6 @@ li
 
 .dupe-reports
 {
-	color: black;
 	padding: 1em;
 	padding-top: 0.2em;
 	padding-bottom: 0.2em;
@@ -766,3 +802,7 @@ li
         opacity: 0.9;
     };
 }
+
+/*---------- TESTING ----------*/
+
+

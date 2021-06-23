@@ -1,18 +1,20 @@
 {{template "base"}}
-<form>
-	<input class="stinput" type="text" name="tags" value="{{.Query}}" placeholder="Tags">
-	<br>
-	<input type="submit" value="Search apple trees">
-</form>
-<script type="text/javascript" src="/static/suggestions.js"></script>
+<div class="box">
+	<form>
+		<input class="stinput" type="text" name="tags" value="{{.Query}}" placeholder="Tags">
+		<br>
+		<input type="submit" value="Search apple trees">
+	</form>
+	<script type="text/javascript" src="/static/suggestions.js"></script>
 
-{{with .Report}}
-<div>
-	<h4>Out of {{.Total}} processed reports, the average time to process is {{.Average}}.</h4>
+	{{with .Report}}
+	<div>
+		<h4>Out of {{.Total}} processed reports, the average time to process is {{.Average}}.</h4>
+	</div>
 </div>
 {{end}}
 	{{range .Trees}}
-	<div class="panel">
+	<div class="box">
 		<form>
 			{{template "thumbnail" wrap2 "UserInfo" "Post" $.UserInfo .Apple}}
 			<input type="hidden" name="apple" value="{{.Apple.ID}}">
