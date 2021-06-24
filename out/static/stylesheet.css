@@ -455,6 +455,10 @@ li
 	color:#000;
 }
 
+#suggestedtags ul
+{
+	margin: 0;
+}
 
 #suggestedtags li
 {

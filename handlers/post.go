@@ -735,6 +735,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var tc DM.TagCollector
 	tc.Parse(tagString, ",")
+	tc.Parse(p.Sidebar.Or, ",")
+	tc.Parse(p.Sidebar.Filter, ",")
+	tc.Parse(p.Sidebar.Unless, ",")
 
 	for _, t := range tc.SuggestedTags(DM.DB).Tags {
 		t.QTag(DM.DB)
