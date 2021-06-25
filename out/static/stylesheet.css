@@ -163,8 +163,7 @@ li
 
 .comics
 {
-	display: flex;
-	flex-wrap: wrap;
+	width:100%;
 }
 
 .comic-search
@@ -187,9 +186,11 @@ li
 
 .comic
 {
+	display: inline-block;
 	margin: 1em;
+	max-width: -moz-min-content;
 	max-width: min-content;
-	min-width: 250px;
+	min-width:200px;
 }
 
 .comic .tag
@@ -206,11 +207,7 @@ li
 {
 	max-width: 400px;
 	max-height: 400px;
-	position:relative;
 	margin-bottom: 0.6em;
-	left: 50%;
-	transform: translateX(-50%);
-	box-shadow: 3px 3px 6px #213;
 }
 
 .comic .title .chapters
@@ -270,12 +267,84 @@ li
 	border: 1px solid black;
 }
 
+#toggle-capwidth:checked ~ #comic-container .comic-page
+{
+	max-width: 100%;
+}
+
+#toggle-capheight:checked ~ #comic-container .comic-page img
+{
+	max-height: 95vh;
+}
+
+#toggle-center:checked ~ #comic-container .comic-page
+{
+	position: relative;
+	left:50%;
+	transform: translate(-50%);
+	width: max-content;
+	width: -moz-max-content;
+}
+
+#toggle-even:checked ~ #comic-container
+{
+	display: grid;
+}
+
+#toggle-even:checked ~ #comic-container .comic-page:nth-child(even)
+{
+	grid-column: 1/2;
+	padding-right:0;
+	margin-right:0;
+}
+#toggle-even:checked ~ #comic-container .comic-page:nth-child(even)>.container
+{
+	float:right;
+}
+
+#toggle-even:checked ~ #comic-container .comic-page:nth-child(odd)
+{
+	grid-column: 2/2;
+	padding-left:0;
+	margin-left:0;
+}
+
+#toggle-odds:checked ~ #comic-container
+{
+	display: grid;
+}
+
+#toggle-odds:checked ~ #comic-container .comic-page:nth-child(odd)
+{
+	grid-column: 1/2;
+	padding-right:0;
+	margin-right:0;
+}
+
+#toggle-odds:checked ~ #comic-container .comic-page:nth-child(odd)>.container
+{
+	float:right;
+}
+
+#toggle-odds:checked ~ #comic-container .comic-page:nth-child(even)
+{
+	grid-column: 2/2;
+	padding-left:0;
+	margin-left:0;
+}
+
 .comic-page
 {
-    background-color: var(--box-background-color);
+    position:relative;
     padding:1em;
     margin:1em;
+    background-color: var(--box-background-color);
     color: var(--box-color);
+}
+
+.comic-page img
+{
+	max-width: 100%;
 }
 
 .comic-thumb
@@ -591,6 +660,7 @@ li
 	background-color: #0005;
 }
 
+.dead-center,
 .centered
 {
     position: absolute;
@@ -599,6 +669,7 @@ li
     transform: translate(-50%, -50%);
 }
 
+.center,
 .centHorizont
 {
     position: relative;
