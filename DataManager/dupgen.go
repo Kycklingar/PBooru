@@ -58,19 +58,35 @@ type AppleTree struct {
 	Pears []*Post
 }
 
-func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
+func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTree, error) {
 	tags, err := parseTags(tagStr)
 	if err != nil {
 		return nil, err
 	}
 
-	var join string
-	var where string
+	var (
+		base     = "apple"
+		other    = "pear"
+		pair     = "apple, pear"
+		orderDir = "ASC"
+		join     string
+		where    string
+	)
+
+	if baseonPear {
+		base = "pear"
+		other = "apple"
+		pair = "pear, apple"
+		orderDir = "DESC"
+	}
+
 	if len(tags) > 0 {
-		join = `
+		join = fmt.Sprintf(`
 			JOIN post_tag_mappings ptm0
-			ON apple = ptm0.post_id
-			` + ptmJoinQuery(tags)
+			ON %s = ptm0.post_id
+			`+ptmJoinQuery(tags),
+			base,
+		)
 
 		where = " AND " + ptmWhereQuery(tags)
 	}
@@ -84,7 +100,7 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				WHERE approved IS NULL
 			)
 			
-			SELECT apple, pear
+			SELECT %s
 			FROM apple_tree
 			LEFT JOIN reports
 			ON (
@@ -94,10 +110,10 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 				apple = rl
 				AND pear = rr
 			)
-			WHERE apple IN(
-				SELECT apple
+			WHERE %s IN(
+				SELECT %s
 				FROM (
-					SELECT apple
+					SELECT %s
 					FROM apple_tree
 					%s
 					LEFT JOIN reports
@@ -111,23 +127,32 @@ func GetAppleTrees(tagStr string, limit, offset int) ([]AppleTree, error) {
 					WHERE processed IS NULL
 					AND rl IS NULL
 					%s
-					GROUP BY apple
-					ORDER BY apple
+					GROUP BY %s
+					ORDER BY %s %s
 				) l
 				LEFT JOIN reports
-				ON apple = reports.rr
+				ON %s = reports.rr
 				AND report_type = 0
 				WHERE rr IS NULL
-				ORDER BY apple
+				ORDER BY %s %s
 				LIMIT $1
 				OFFSET $2
 			)
 			AND rl IS NULL
 			AND processed IS NULL
-			ORDER BY apple, pear
+			ORDER BY %s %s, %s
 		`,
+		pair,
+		base,
+		base,
+		base,
 		join,
 		where,
+		base,
+		base, orderDir,
+		base,
+		base, orderDir,
+		base, orderDir, other,
 	)
 
 	rows, err := DB.Query(query, limit, offset)

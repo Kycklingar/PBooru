@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -19,8 +20,10 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 		User     *DM.User
 		Trees    []DM.AppleTree
 		Report   DM.DupeReportStats
+		Form     url.Values
 		Query    string
 		Offset   int
+		BasePear bool
 	}
 
 	page.User, page.UserInfo = getUser(w, r)
@@ -36,9 +39,14 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var limit = 25
 	page.Offset, _ = strconv.Atoi(r.FormValue("offset"))
+	page.BasePear = r.FormValue("base-pear") == "on"
+
+	// Drop offset key
+	r.Form.Del("offset")
+	page.Form = r.Form
 
 	page.Query = r.FormValue("tags")
-	page.Trees, err = DM.GetAppleTrees(page.Query, limit, page.Offset)
+	page.Trees, err = DM.GetAppleTrees(page.Query, page.BasePear, limit, page.Offset)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
