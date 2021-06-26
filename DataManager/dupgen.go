@@ -105,8 +105,13 @@ func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTr
 			LEFT JOIN reports
 			ON (
 				apple = rr
+				OR pear = rr
+			) AND report_type = 0
+			OR (
+				apple = rr
 				AND pear = rl
-			) OR (
+			)
+			OR (
 				apple = rl
 				AND pear = rr
 			)
@@ -118,11 +123,16 @@ func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTr
 					%s
 					LEFT JOIN reports
 					ON (
-						apple = rl
-						AND pear = rr
-					) OR (
+						apple = rr
+						OR pear = rr
+					) AND report_type = 0
+					OR (
 						apple = rr
 						AND pear = rl
+					)
+					OR (
+						apple = rl
+						AND pear = rr
 					)
 					WHERE processed IS NULL
 					AND rl IS NULL
