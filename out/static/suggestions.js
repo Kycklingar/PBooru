@@ -12,6 +12,13 @@ function removeSTBox() {
 	st = null
 }
 
+function boxTimestamp() {
+	var st = document.getElementById("stbox")
+	if (st == null)
+		return null
+	return st.timestamp
+}
+
 function firstIndex(start, delim, val)
 {
 	let state = 0
@@ -109,9 +116,15 @@ function suggestionBox(caller) {
 
 	caller.addEventListener("keydown", keyDown)
 
+	var requestTimestamp = Date()
+
 	var req = new XMLHttpRequest()
 	req.onreadystatechange = function () {
 		if (this.readyState == 4 && this.status == 200) {
+			// Check if the timestamp of this requets is new than the box
+			if (boxTimestamp() != null && boxTimestamp() > requestTimestamp)
+				return
+
 			var tags = JSON.parse(this.responseText)
 			removeSTBox()
 
@@ -121,6 +134,7 @@ function suggestionBox(caller) {
 
 			var stb = document.createElement("div")
 			stb.id = "stbox"
+			stb.timestamp = requestTimestamp
 			caller.parentElement.insertBefore(stb, caller.nextSibling)
 
 			for (var i = 0; i < tags.length && i < 5; i++) {

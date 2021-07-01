@@ -330,6 +330,8 @@ func init() {
 
 	Handlers["/tombstone/"] = makeStatHandler(tombstoneHandler)
 	Handlers["/tombstone/search/"] = makeStatHandler(tombstoneSearchHandler)
+	Handlers["/archive/create"] = createArchiveHandler
+	Handlers["/archive/"] = archiveHandler
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,6 @@
+{{template "base"}}
+<pre>{{.State.Message}}</pre>
+<progress value="{{.State.Percent}}" max="100">%{{.State.Percent}}</progress>
+<br>
+{{.Cid}}
+{{template "baseEnd"}}

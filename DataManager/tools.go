@@ -3,12 +3,12 @@ package DataManager
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -165,256 +165,106 @@ func CalculateChecksums() error {
 }
 
 func InitDir() {
-	var items, processed, top int
+	var (
+		items, processed, top int
+		afiles                []archiveFile
+	)
 
-	err := DB.QueryRow(`
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer tx.Commit()
+
+	err = tx.QueryRow(`
 		SELECT MAX(id)
 		FROM posts
 		`,
 	).Scan(&top)
-
-	rows, err := DB.Query(`
-		SELECT multihash
-		FROM posts
-		WHERE deleted IS FALSE
-		`,
-	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var pmap = make(map[string][]string)
-
-	for rows.Next() {
-		items++
-		var cid string
-		if err = rows.Scan(&cid); err != nil {
+	func() {
+		rows, err := tx.Query(`
+			SELECT multihash
+			FROM posts
+			WHERE deleted IS FALSE
+			`,
+		)
+		if err != nil {
 			log.Fatal(err)
 		}
+		defer rows.Close()
+		for rows.Next() {
+			items++
+			var cid string
+			if err = rows.Scan(&cid); err != nil {
+				log.Fatal(err)
+			}
 
-		cids := pmap[cidDir(cid)]
-		cids = append(cids, cid)
+			ppath, _ := path.Split(storeFileDest(cid))
+			afiles = append(afiles, archiveFile{
+				dir:      strings.Split(ppath, "/"),
+				filename: cid,
+				cid:      cid,
+			})
+		}
+	}()
 
-		pmap[cidDir(cid)] = cids
-	}
-	rows.Close()
-
-	rows, err = DB.Query(`
+	func() {
+		rows, err := tx.Query(`
 		SELECT dimension, t.multihash, p.multihash
 		FROM thumbnails t
 		JOIN posts p
 		ON t.post_id = p.id
 		`,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Map of sizes holding ciddir [thumb,post]
-	var tmaps = make(map[int]map[string][][]string)
-
-	for rows.Next() {
-		items++
-		var (
-			size int
-			tcid string
-			pcid string
 		)
-
-		err = rows.Scan(&size, &tcid, &pcid)
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer rows.Close()
 
-		tm, ok := tmaps[size]
-		if !ok {
-			tm = make(map[string][][]string)
-		}
+		for rows.Next() {
+			items++
+			var (
+				size int
+				tcid string
+				pcid string
+			)
 
-		cids := tm[cidDir(pcid)]
-		cids = append(cids, []string{tcid, pcid})
-
-		tm[cidDir(pcid)] = cids
-		tmaps[size] = tm
-	}
-	rows.Close()
-
-	type file struct {
-		name string
-		cid  string
-		size uint64
-		dim  int
-	}
-
-	statloop := func(wg *sync.WaitGroup, in, out chan file) {
-		defer wg.Done()
-		for f := range in {
-			stat, err := ipfs.FilesStat(context.Background(), "/ipfs/"+f.cid)
+			err = rows.Scan(&size, &tcid, &pcid)
 			if err != nil {
 				log.Fatal(err)
 			}
-			f.size = stat.Size
 
-			out <- f
+			tpath, _ := path.Split(storeThumbnailDest(pcid, size))
+
+			afiles = append(afiles, archiveFile{
+				dir:      strings.Split(tpath, "/"),
+				filename: pcid,
+				cid:      tcid,
+			})
+
 		}
-	}
-
-	var (
-		in   = make(chan file, 10)
-		out  = make(chan file)
-		root = ipfsdir.NewDir("")
-		wg   sync.WaitGroup
-	)
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go statloop(&wg, in, out)
-	}
-
-	go func() {
-		for _, v := range pmap {
-			for _, cid := range v {
-				in <- file{name: cid, cid: cid}
-			}
-		}
-		close(in)
 	}()
 
-	done := make(chan bool)
-
-	go func(done chan bool) {
-		filesDir := root.AddDir(ipfsdir.NewDir("files"))
-		fdirm := make(map[string]*ipfsdir.Dir)
-		for {
-			select {
-			case <-done:
-				return
-			case f := <-out:
-				{
-					dir := cidDir(f.cid)
-					d, ok := fdirm[dir]
-					if !ok {
-						d = filesDir.AddDir(ipfsdir.NewDir(dir))
-						fdirm[dir] = d
-					}
-
-					processed++
-					fmt.Printf("[%f%%] Adding to %s %s %d\n", float32(processed)/float32(items)*100, dir, f.cid, f.size)
-					err = d.AddLink(f.cid, f.cid, f.size)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}
-
-			}
-		}
-	}(done)
-
-	wg.Wait()
-	done <- true
-
-	//filesDir := root.AddDir(ipfsdir.NewDir("files"))
-	//for k, v := range pmap {
-	//	d := filesDir.AddDir(ipfsdir.NewDir(k))
-	//	for c, cid := range v {
-	//		var percent = (float32(i)/float32(len(pmap)) + (float32(c)/float32(len(v)))/float32(len(pmap))) * 100
-
-	//		stat, err := ipfs.FilesStat(context.Background(), "/ipfs/"+cid)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-
-	//		fmt.Printf("[%f%%] Adding to %s %s %d\n", percent, k, cid, stat.Size)
-	//		err = d.AddLink(cid, cid, stat.Size)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//	}
-	//	i++
-
-	//	root.AddDir(d)
-	//}
-
-	in = make(chan file, 10)
-	out = make(chan file)
-
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go statloop(&wg, in, out)
+	report := func(file archiveFile) {
+		processed++
+		fmt.Printf(
+			"[%f%%] %s/%s %s %d\n",
+			float32(processed)/float32(items)*100,
+			path.Join(file.dir...),
+			file.filename,
+			file.cid,
+			file.size,
+		)
 	}
 
-	go func() {
-		for dim, m := range tmaps {
-			for _, cids := range m {
-				for _, cid := range cids {
-					in <- file{name: cid[1], cid: cid[0], dim: dim}
-				}
-			}
-		}
-		close(in)
-	}()
-
-	go func(done chan bool) {
-		tdirs := root.AddDir(ipfsdir.NewDir("thumbnails"))
-		tdirm := make(map[int]map[string]*ipfsdir.Dir)
-		sdirm := make(map[int]*ipfsdir.Dir)
-		for {
-			select {
-			case <-done:
-				return
-			case f := <-out:
-				{
-					sizedir, ok := sdirm[f.dim]
-					if !ok {
-						sizedir = tdirs.AddDir(ipfsdir.NewDir(strconv.Itoa(f.dim)))
-						sdirm[f.dim] = sizedir
-						tdirm[f.dim] = make(map[string]*ipfsdir.Dir)
-					}
-
-					ciddir := cidDir(f.name)
-
-					tdir, ok := tdirm[f.dim][ciddir]
-					if !ok {
-						tdir = sizedir.AddDir(ipfsdir.NewDir(ciddir))
-						tdirm[f.dim][ciddir] = tdir
-					}
-
-					processed++
-					fmt.Printf("[%f%%] Adding to %d %s %s %s %d\n", float32(processed)/float32(items)*100, f.dim, ciddir, f.name, f.cid, f.size)
-					err = tdir.AddLink(f.name, f.cid, f.size)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}
-
-			}
-		}
-	}(done)
-
-	wg.Wait()
-	done <- true
-
-	//thumbDir := root.AddDir(ipfsdir.NewDir("thumbnails"))
-	//for size, m := range tmaps {
-	//	sizeDir := thumbDir.AddDir(ipfsdir.NewDir(strconv.Itoa(size)))
-	//	var i int
-	//	for dir, cids := range m {
-	//		d := sizeDir.AddDir(ipfsdir.NewDir(dir))
-
-	//		for c, cid := range cids {
-	//			var percent = (float32(i)/float32(len(m)) + (float32(c)/float32(len(cids)))/float32(len(m))) * 100
-
-	//			stat, err := ipfs.FilesStat(context.Background(), "/ipfs/"+cid[0])
-	//			if err != nil {
-	//				log.Fatal(err)
-	//			}
-
-	//			fmt.Printf("[%f%%] Adding to %d %s %s %s %d\n", percent, size, dir, cid[0], cid[1], stat.Size)
-	//			err = d.AddLink(cid[1], cid[0], stat.Size)
-	//		}
-	//	}
-	//	i++
-	//}
+	root, err := archiver(ipfsdir.NewDir(""), report, afiles...)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cid, _, err := root.Put(ipfs)
 	if err != nil {
@@ -437,7 +287,7 @@ func MigrateStore(start int) {
 	}
 
 	query := func(str string, start, offset int) ([]post, error) {
-		rows, err := DB.Query(str, start, offset*2000)
+		rows, err := DB.Query(str, start, offset*500)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -506,7 +356,7 @@ func MigrateStore(start int) {
 				WHERE id > $1
 				AND deleted IS FALSE
 				ORDER BY id ASC
-				LIMIT 2000
+				LIMIT 500
 				OFFSET $2
 			) AS p
 			ON p.id = t.post_id
@@ -517,6 +367,41 @@ func MigrateStore(start int) {
 		if err != nil || len(posts) <= 0 {
 			break
 		}
+
+		refs := func(c chan string, wg *sync.WaitGroup) {
+			for cid := range c {
+				fmt.Println("Prefetch -> ", cid)
+				r, err := ipfs.Refs(cid, true)
+				if err != nil {
+					log.Println(err)
+				}
+
+				for range r {
+				}
+			}
+
+			wg.Done()
+		}
+
+		var wg sync.WaitGroup
+		var c = make(chan string, 5)
+
+		wg.Add(5)
+		for i := 0; i < 5; i++ {
+			go refs(c, &wg)
+		}
+
+		go func() {
+			for _, p := range posts {
+				c <- p.cid
+
+				for _, t := range p.thumbs {
+					c <- t.cid
+				}
+			}
+
+			close(c)
+		}()
 
 		for _, p := range posts {
 			fmt.Printf("Working on file: [%d] %s\n", p.id, p.cid)
@@ -538,6 +423,8 @@ func MigrateStore(start int) {
 			}
 		}
 		offset++
+
+		wg.Wait()
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)

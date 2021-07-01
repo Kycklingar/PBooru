@@ -168,6 +168,12 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		return err
 	}
 
+	// Update reports
+	if err = updateDupeReports(tx, dupe); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Reset tag cache
 	tc := new(TagCollector)
 	tc.GetFromPost(tx, dupe.Post)
@@ -251,6 +257,104 @@ func updateAppleTrees(tx querier, dupe Dupe) error {
 	}
 
 	return nil
+}
+
+func updateDupeReports(tx querier, dupe Dupe) (err error) {
+	// Update pluck reports
+	// replace fruit == dupe with post
+	// A
+	// B, [C], D, E -> B, [E], D, E
+	for _, p := range dupe.Inferior {
+		_, err = tx.Exec(`
+			UPDATE duplicate_report_posts
+			SET post_id = $1
+			WHERE id IN (
+				SELECT drp.id
+				FROM duplicate_report_posts drp
+				JOIN duplicate_report dr
+				ON dr.id = drp.report_id
+				WHERE drp.post_id = $2
+				AND dr.approved IS NULL
+				AND dr.report_type = 1
+			)
+			`,
+			dupe.Post.ID,
+			p.ID,
+		)
+		if err != nil {
+			return
+		}
+	}
+
+	// Remove duplicate report fruits
+	// A
+	// B, [E], D, E
+	_, err = tx.Exec(`
+		DELETE FROM duplicate_report_posts a
+		USING duplicate_report_posts b
+		WHERE a.report_id = b.report_id
+		AND a.post_id = b.post_id
+		AND a.id < b.id
+		`,
+	)
+	if err != nil {
+		return
+	}
+
+	// Replace inferior with d.p
+	// [A] -> [E]
+	// B, C, D
+	for _, p := range dupe.Inferior {
+		_, err = tx.Exec(`
+			UPDATE duplicate_report
+			SET post_id = $1
+			WHERE post_id = $2
+			AND approved IS NULL
+			AND report_type = 1
+			`,
+			dupe.Post.ID,
+			p.ID,
+		)
+		if err != nil {
+			return
+		}
+	}
+
+	// remove pluck == fruit
+	// A
+	// [A], B, C
+	_, err = tx.Exec(`
+		DELETE FROM duplicate_report_posts
+		WHERE id IN (
+			SELECT drp.id
+			FROM duplicate_report_posts drp
+			JOIN duplicate_report dr
+			ON dr.id = drp.report_id
+			WHERE drp.post_id = dr.post_id
+		)
+		`,
+	)
+	if err != nil {
+		return
+	}
+
+	// Remove reports without fruit
+	// A
+	// -
+	_, err = tx.Exec(`
+		DELETE FROM duplicate_report
+		WHERE id IN (
+			SELECT dr.id
+			FROM duplicate_report dr
+			LEFT JOIN duplicate_report_posts drp
+			ON dr.id = drp.report_id
+			WHERE drp.id IS NULL
+			AND approved IS NULL
+		)
+		`,
+	)
+
+	return
 }
 
 func movePoolPosts(tx querier, dupe Dupe) (err error) {

@@ -3,10 +3,10 @@
 <div>
 	<script>
 		function openAll() {
-			let reports = document.getElementsByClassName("dupe-reports")
+			let reports = document.getElementsByClassName("compare-a")
 			for (let i = reports.length - 1; i >= 0; i--)
 				{
-					window.open(reports[i].lastElementChild.firstChild.href)
+					window.open(reports[i].href)
 				}
 		}
 	</script>
@@ -56,6 +56,13 @@
 		</div>
 	{{end}}
 	<span>
+	{{if .ReportType}}
+	<form method="POST" action="/duplicate/pluck/">
+		<input type="hidden" name="report-id" value="{{.ID}}">
+		<input type="submit" value="Pluck">
+	</form>
+	{{end}}
+	<h4><a class="compare-a" href="/duplicate/compare/?report-id={{.ID}}">Compare</a></h4>
 	{{template "thumbnail" wrap2 "Post" "UserInfo" .Dupe.Post $.UserInfo}}
 	</span>
 	<div class="comic-strip">
@@ -65,13 +72,6 @@
 		</span>
 	{{end}}
 	</div>
-	<h4><a href="/duplicate/compare/?report-id={{.ID}}">Compare</a></h4>
-	{{if .ReportType}}
-	<form method="POST" action="/duplicate/pluck/">
-		<input type="hidden" name="report-id" value="{{.ID}}">
-		<input type="submit" value="Pluck">
-	</form>
-	{{end}}
 </div>
 {{end}}
 

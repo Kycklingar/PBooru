@@ -1630,6 +1630,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 
 		//wgr []string = []string{"p.removed = false"}
 		wgr = cond.NewGroup().Add("WHERE", cond.N("p.removed = false"))
+
+		sel string
 	)
 
 	if len(pc.mimeIDs) > 0 {
@@ -1666,6 +1668,8 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		wgr.Add("AND", cond.N(altGroup))
 	}
 
+	sel = sg.sel(wgr)
+
 	// TODO: refactor
 	if pc.TotalPosts < 0 {
 		if pc.countIDStr() != "0" {
@@ -1685,9 +1689,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			if c < 0 {
 				query := fmt.Sprintf(
 					query,
-					//sg.sel(fmt.Sprintf("p.removed = false %s", mimes)),
-					//sg.sel(sepStr(" AND ", wgr...)),
-					sg.sel(wgr),
+					sel,
 				)
 
 				//fmt.Println(query)
@@ -1756,13 +1758,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			query,
 			order,
 		),
-		sg.sel(
-			//sepStr(
-			//	" AND ",
-			//	wgr...,
-			//),
-			wgr,
-		),
+		sel,
 		order,
 	)
 

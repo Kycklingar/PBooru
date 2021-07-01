@@ -98,6 +98,8 @@ func Setup(iApi string) {
 		}
 	case "mfs":
 		store = st.NewMfsStore(CFG.MFSRootDir, ipfs)
+	case "quick":
+		store = st.NewQuickStore(ipfs)
 	default:
 		store = new(st.NullStorage)
 	}
