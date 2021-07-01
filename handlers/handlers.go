@@ -357,6 +357,10 @@ func init() {
 	Handlers["/dns"] = dnsHandler
 	Handlers["/dns/"] = dnsCreatorHandler
 
+	Handlers["/dns/banner/new"] = dnsNewBanner
+	Handlers["/dns/url/new"] = dnsAddUrl
+	Handlers["/dns/url/remove"] = dnsRemoveUrl
+
 	Handlers["/similar/"] = makeStatHandler(findSimilarHandler)
 
 	Handlers["/api/"] = makeStatHandler(APIHandler)

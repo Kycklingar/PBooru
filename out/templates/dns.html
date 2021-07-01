@@ -1,32 +1,38 @@
 {{template "base"}}
-
-<style>
-table, td, th
-{
-	border: ridge 4px #666;
-	border-collapse: collapse;
-	background-color: #222;
-}
-</style>
-<div>
-	Pool funds: 40xmr
-</div>
-<table>
-	<tr>
-		<th>Name</th>
-		<th>Score</th>
-		<th>Tags</th>
-	</tr>
-	{{range .}}
-	<tr>
-		<td>{{.Name}}</td>
-		<td>{{.Score}}</td>
-		<td>
-		{{range .Tags}}
-		<span class="dns-tag dns-tag-{{.Id}}" title="{{.Score}} {{.Description}}">{{.Name}}</span>
+{{range .Creators}}
+<div class="dns-card box">
+	<div class="dns-banner">
+		{{with .Banners.banner}}
+		<div class="dns-banner-shader"></div>
+		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">
 		{{end}}
-		</td>
-	{{end}}
-</table>
+	</div>
+	<div class="dns-segments">
+		<div class="dns-profile">
+			{{with .Banners.profile}}<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">{{end}}
+			<div><a href="/dns/{{.Id}}">{{.Name}}</a></div>
+		</div>
+		<div>{{.Score}}</div>
+		<div>
+		{{if ge .Score 0}}
+			{{range $k, $v := .Domains}}
+				{{if eq $k "patreon.com"}}
+					{{range $v}}
+					<a class="dns-logo" href="{{.}}"><img src="/static/patreon.png" alt="PATREON"></a>
+					{{end}}
+				{{end}}
+			{{end}}
+		{{else}}
+			<h1>Do Not Support</h1>
+		{{end}}
+		</div>
+		<div class="dns-tags">
+			{{range .Tags -}}
+			{{template "dns-tag" .}}
+			{{- end}}
+		</div>
+	</div>
+</div>
+{{end}}
 
 {{template "baseEnd"}}

@@ -5,4 +5,4 @@ PBDB.db*
 *.test
 *.db
 out/*.cfg
-
+DataManager/image/test/
