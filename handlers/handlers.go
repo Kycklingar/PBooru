@@ -273,6 +273,7 @@ func init() {
 	Handlers["/reports/delete/"] = reportDeleteHandler
 
 	Handlers["/reports/duplicates/"] = dupReportsHandler
+	Handlers["/reports/duplicates/cleanup"] = dupReportCleanupHandler
 	Handlers["/duplicate/report/"] = dupReportHandler
 	Handlers["/duplicate/process/"] = processReportHandler
 	Handlers["/duplicate/compare/"] = compareReportHandler

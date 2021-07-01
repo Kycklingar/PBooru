@@ -250,3 +250,25 @@ func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	renderTemplate(w, "compare2", page)
 }
+
+func dupReportCleanupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Special() {
+		permErr(w, "Special")
+		return
+	}
+
+	aff, err := DM.DuplicateReportCleanup()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, aff, " reports affected")
+}

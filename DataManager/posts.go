@@ -1531,7 +1531,7 @@ func strSep(values []int, sep string) string {
 	var ret string
 	for i, v := range values {
 		ret += fmt.Sprint(v)
-		if i < len(values) {
+		if i < len(values)-1 {
 			ret += sep
 		}
 	}

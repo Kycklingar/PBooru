@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 )
@@ -150,6 +151,65 @@ func ReportDuplicates(dupe Dupe, reporter *User, note string, repT reportType) e
 
 	defer commitOrDie(tx, &err)
 
+	// Make sure they are part of the apple-tree
+	// Only if reportType = RNonDupe
+	if repT == RNonDupe {
+		dupe, err = func() (Dupe, error) {
+			var (
+				d      = Dupe{Post: NewPost()}
+				infids []int
+			)
+
+			for _, p := range dupe.Inferior {
+				infids = append(infids, p.ID)
+			}
+
+			rows, err := tx.Query(
+				fmt.Sprintf(`
+			SELECT apple, pear
+			FROM apple_tree
+			WHERE (
+				apple = $1
+				AND pear IN(%s)
+			) AND processed IS NULL
+			UNION ALL
+			SELECT pear, apple
+			FROM apple_tree
+			WHERE (
+				apple IN(%s)
+				AND pear = $1
+			) AND processed IS NULL
+			`,
+					strSep(infids, ","),
+					strSep(infids, ","),
+				),
+				dupe.Post.ID,
+			)
+			if err != nil {
+				return d, err
+			}
+			defer rows.Close()
+
+			for rows.Next() {
+				var p = NewPost()
+				if err = rows.Scan(&d.Post.ID, &p.ID); err != nil {
+					return d, err
+				}
+
+				d.Inferior = append(d.Inferior, p)
+			}
+
+			return d, nil
+		}()
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(dupe.Inferior) <= 0 {
+		return nil
+	}
+
 	var reportID int
 
 	if err = tx.QueryRow(`
@@ -222,4 +282,65 @@ func (r *DupReport) QInferior(q querier) error {
 	}
 
 	return rows.Err()
+}
+
+// Cleanup non apple-tree reports
+func DuplicateReportCleanup() (int64, error) {
+	tx, err := DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer commitOrDie(tx, &err)
+
+	var res sql.Result
+
+	_, err = tx.Exec(`
+		WITH reports AS (
+			SELECT dr.id, dr.post_id AS lr, drp.post_id AS rr, report_type
+			FROM duplicate_report dr
+			LEFT JOIN duplicate_report_posts drp
+			ON dr.id = drp.report_id
+			WHERE approved IS NULL
+		)
+
+		DELETE FROM duplicate_report_posts
+		WHERE report_id IN(
+			SELECT reports.id
+			FROM apple_tree
+			RIGHT JOIN reports
+			ON (
+				(
+					reports.lr = apple
+					AND reports.rr = pear
+				) OR (
+					reports.lr = pear
+					AND reports.rr = apple
+				)
+			)
+			WHERE reports.report_type = 1
+			AND apple IS NULL
+		)
+		`,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	res, err = tx.Exec(`
+		DELETE FROM duplicate_report
+		WHERE id IN(
+			SELECT dr.id
+			FROM duplicate_report dr
+			LEFT JOIN duplicate_report_posts drp
+			ON dr.id = drp.report_id
+			WHERE drp.post_id IS NULL
+		)
+		`,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected()
+
 }
