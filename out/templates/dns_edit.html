@@ -1,0 +1,46 @@
+{{template "base"}}
+-- Add creator
+<fieldset>
+	<legend>New Creator</legend>
+	<form>
+		<input type="text" name="name">
+		<input type="submit">
+	</form>
+</fieldset>
+
+-- Add tag
+
+<fieldset>
+	<legend>New Tag</legend>
+	<form>
+		<input type="text" name="id">
+		<input type="text" name="name">
+		<input type="text" name="description">
+		<input type="number" name="score">
+		<input type="submit">
+	</form>
+</fieldset>
+
+-- Add domain
+
+<fieldset>
+	<legend>New Domains</legend>
+	<form>
+		<input type="text" name="domain">
+		<input type="submit">
+	</form>
+</fieldset>
+
+-- Edit tag
+<fieldset>
+	<legend>Edit Tag</legend>
+	<form>
+		<input type="text" name="id">
+		<input type="text" name="name">
+		<input type="text" name="description">
+		<input type="number" name="score">
+		<input type="submit">
+	</form>
+</fieldset>
+
+{{template "base-end"}}

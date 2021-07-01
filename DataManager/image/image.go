@@ -5,147 +5,117 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/gabriel-vasile/mimetype"
 )
 
-func ThumbnailerInstalled() {
-	fmt.Println("Checking if Image Magick is installed.. ")
-	cmd := exec.Command("convert", "-version")
-	if err := cmd.Run(); err != nil {
-		fmt.Print("Not found in '$PATH'! Install instructions can be found https://www.imagemagick.org/\n")
-	} else {
-		fmt.Print("Found!\n")
-	}
-
-	fmt.Println("Checking if ffmpeg is installed.. ")
-	cmd = exec.Command("ffmpeg", "-version")
-	if err := cmd.Run(); err != nil {
-		fmt.Print("Not found in '$PATH'! Install ffmpeg from https://ffmpeg.org/\n")
-	} else {
-		fmt.Print("Found!\n")
-	}
-
-	fmt.Println("Checking if ffprobe is installed.. ")
-	cmd = exec.Command("ffprobe", "-version")
-	if err := cmd.Run(); err != nil {
-		fmt.Print("Not found in '$PATH'! Install ffprobe from https://ffmpeg.org/\n")
-	} else {
-		fmt.Print("Found!\n")
-	}
-
-	fmt.Println("Checking if mutool is installed..")
-	cmd = exec.Command("mutool", "-v")
-	if err := cmd.Run(); err != nil {
-		fmt.Print("Not found in '$PATH'! Install instruction can be found at https://mupdf.com/\n")
-	} else {
-		fmt.Print("Found!\n")
-	}
-
-	fmt.Println("Checking if gnome-mobi-thumbnailer is installed.. ")
-	cmd = exec.Command("gnome-mobi-thumbnailer", "-h")
-	if err := cmd.Run(); err != nil {
-		fmt.Print("Not found in '$PATH'! Source can be found at https://github.com/GNOME/gnome-epub-thumbnailer\n")
-	} else {
-		fmt.Print("Found!\n")
+func ImageMagickThumbnailer() ImageMagick {
+	return ImageMagick{
+		Accept: map[string]struct{}{
+			"image/png":  struct{}{},
+			"image/jpeg": struct{}{},
+			"image/gif":  struct{}{},
+			"image/webp": struct{}{},
+		},
 	}
 }
 
-func MakeThumbnail(file io.ReadSeeker, thumbnailFormat string, thumbnailSize, quality int) (*bytes.Buffer, error) {
-	var err error
-
-	mime, err := mimetype.DetectReader(file)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	mimeStr := mime.String()
-
-	file.Seek(0, 0)
-
-	var b *bytes.Buffer
-
-	switch mimeStr {
-	case "application/pdf", "application/epub+zip":
-		var m string
-		if strings.Contains(mimeStr, "pdf") {
-			m = "pdf"
-		} else if strings.Contains(mimeStr, "epub") {
-			m = "epub"
-		}
-		b, err = mupdf(file, m, thumbnailFormat, thumbnailSize, quality)
-	case "application/x-mobipocket-ebook":
-		b, err = gnomeMobi(file, thumbnailFormat, thumbnailSize, quality)
-	default:
-		if strings.Contains(mimeStr, "image") {
-			b, err = magickResize(file, thumbnailFormat, thumbnailSize, quality)
-		} else if strings.Contains(mimeStr, "video") {
-			b, err = ffmpeg(file, thumbnailFormat, thumbnailSize, quality)
-		} else {
-			return nil, errors.New("unsupported mime")
-		}
-	}
-
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	return b, nil
+type ImageMagick struct {
+	Accept map[string]struct{}
 }
 
-func magickResize(file io.Reader, format string, size, quality int) (*bytes.Buffer, error) {
-	tmpdir, err := ioutil.TempDir("", "pbooru-temp")
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	defer os.RemoveAll(tmpdir)
+func (i ImageMagick) Accepts(mime string) bool {
+	_, ok := i.Accept[mime]
+	return ok
+}
 
+func (i ImageMagick) Resize(input io.ReadSeeker, format Format) (io.ReadSeekCloser, error) {
+	return magickResize(input, format)
+}
+
+func magickResize(input io.Reader, format Format) (io.ReadSeekCloser, error) {
 	args := []string{
 		"-quiet",
 		"-[0]",
 		"-quality",
-		fmt.Sprintf("%d", quality),
+		fmt.Sprint(format.Quality),
 		"-strip",
-		"-resize",
-		fmt.Sprintf("%dx%d>", size, size),
-		fmt.Sprintf("%s:%s", format, filepath.Join(tmpdir, "out")),
 	}
-	command := exec.Command("convert", args...)
+	args = append(args, format.ResizeFunc(format.Width, format.Height)...)
+	args = append(args, fmt.Sprintf("%s:-", format.Mime))
 
-	command.Stdin = file
+	cmd := exec.Command("convert", args...)
 
-	var b, er bytes.Buffer
-	command.Stdout = &b
-	command.Stderr = &er
-
-	err = command.Run()
+	output, err := tempFile()
 	if err != nil {
-		log.Println(b.String(), er.String(), err)
 		return nil, err
 	}
 
-	f, err := os.Open(filepath.Join(tmpdir, "out"))
-	if err != nil {
-		log.Println(err)
+	var stderr bytes.Buffer
+
+	cmd.Stdin = input
+	cmd.Stdout = output
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		output.Close()
+		return nil, fmt.Errorf("Error magickResize: %v\n%s", err, stderr.Bytes())
+	}
+
+	if _, err = output.Seek(0, 0); err != nil {
+		output.Close()
 		return nil, err
 	}
-	defer f.Close()
 
-	var buf bytes.Buffer
-	buf.ReadFrom(f)
-
-	return &buf, nil
+	return output, nil
 }
+
+//func magickResize(file io.Reader, format string, size, quality int) (*bytes.Buffer, error) {
+//	tmpdir, err := ioutil.TempDir("", "pbooru-temp")
+//	if err != nil {
+//		log.Println(err)
+//		return nil, err
+//	}
+//	defer os.RemoveAll(tmpdir)
+//
+//	args := []string{
+//		"-quiet",
+//		"-[0]",
+//		"-quality",
+//		fmt.Sprintf("%d", quality),
+//		"-strip",
+//		"-resize",
+//		fmt.Sprintf("%dx%d>", size, size),
+//		fmt.Sprintf("%s:%s", format, filepath.Join(tmpdir, "out")),
+//	}
+//	command := exec.Command("convert", args...)
+//
+//	command.Stdin = file
+//
+//	var b, er bytes.Buffer
+//	command.Stdout = &b
+//	command.Stderr = &er
+//
+//	err = command.Run()
+//	if err != nil {
+//		log.Println(b.String(), er.String(), err)
+//		return nil, err
+//	}
+//
+//	f, err := os.Open(filepath.Join(tmpdir, "out"))
+//	if err != nil {
+//		log.Println(err)
+//		return nil, err
+//	}
+//	defer f.Close()
+//
+//	var buf bytes.Buffer
+//	buf.ReadFrom(f)
+//
+//	return &buf, nil
+//}
 
 func GetDimensions(file io.Reader) (int, int, error) {
 	args := []string{

@@ -879,6 +879,77 @@ li
     };
 }
 
-/*---------- TESTING ----------*/
 
+/*-------- DNS --------*/
 
+.dns-card
+{
+	position:relative;
+	width: 1024px;
+	min-height: 100px;
+	z-index:1;
+}
+
+.dns-segments>div
+{
+	background-color: #000A;
+	display: inline-block;
+	margin:0.5em;
+	padding:0.4em;
+}
+
+.dns-segments .dns-tags
+{
+	float:right;
+	width:150px;
+}
+
+.dns-profile
+{
+	display: block;
+	text-align: center;
+	font-size: x-large;
+}
+
+.dns-banner
+{
+	position: absolute;
+	width:100%;
+	height:100%;
+	margin: 0 !important;
+	top:0;
+	left:0;
+	z-index:-1;
+}
+
+.dns-banner-shader
+{
+	position:absolute;
+	background-color:#0007;
+	width:100%;
+	height:100%;
+}
+
+.dns-banner img
+{
+	width:100%;
+	height:100%;
+	object-fit:cover;
+}
+
+.dns-tag
+{
+	margin-right:0.2em;
+	display:inline-block;
+}
+
+.dns-logo
+{
+	margin: 0.2em;
+}
+
+.dns-logo img
+{
+	max-width: 64px;
+	max-height: 64px;
+}

@@ -24,11 +24,24 @@ CREATE TABLE IF NOT EXISTS dns_tag (
 );
 
 CREATE TABLE IF NOT EXISTS dns_tags (
-	creator_id INTEGER REFERENCES dns_creator(id),
-	tag_id VARCHAR(10) REFERENCES dns_tag(id) 
+	creator_id INTEGER REFERENCES dns_creator(id) ON DELETE CASCADE,
+	tag_id VARCHAR(10) REFERENCES dns_tag(id) ON DELETE CASCADE ON UPDATE CASCADE 
 );
 
 CREATE TABLE IF NOT EXISTS dns_votes (
 	creator_id INTEGER REFERENCES dns_creator(id),
 	timestmap TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS dns_banners (
+	creator_id INTEGER NOT NULL REFERENCES dns_creator(id),
+	cid TEXT NOT NULL,
+	banner_type TEXT NOT NULL
+);
+
+CREATE OR REPLACE VIEW dns_creator_scores AS
+	SELECT c.id, c.name, COALESCE(SUM(dt.score), 0) AS score
+	FROM dns_creator c
+	LEFT JOIN dns_tags dts ON c.id = dts.creator_id
+	LEFT JOIN dns_tag dt ON dts.tag_id = dt.id
+	GROUP BY c.id;
