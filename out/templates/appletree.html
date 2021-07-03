@@ -1,24 +1,27 @@
 {{template "base"}}
-<div class="box">
-	<fieldset>
-		<legend>Search</legend>
-	<form>
-		<input class="stinput" type="text" name="tags" value="{{.Query}}" placeholder="Tags">
-		<br>
-		<label>Base on pears
-			<input type="checkbox" name="base-pear" {{with .BasePear}}checked{{end}}>
-		</label>
-		<br>
-		<input type="submit" value="Search apple trees">
-	</form>
-	</fieldset>
-	<script type="text/javascript" src="/static/suggestions.js"></script>
+<details>
+	<summary>Search</summary>
+	<div class="box">
+		<fieldset>
+			<legend>Search</legend>
+			<form>
+				<input class="stinput" type="text" name="tags" value="{{.Query}}" placeholder="Tags">
+				<br>
+				<label>Base on pears
+					<input type="checkbox" name="base-pear" {{with .BasePear}}checked{{end}}>
+				</label>
+				<br>
+				<input type="submit" value="Search apple trees">
+			</form>
+		</fieldset>
+		<script type="text/javascript" src="/static/suggestions.js"></script>
 
-	{{with .Report}}
-	<div>
-		<h4>Out of {{.Total}} processed reports, the average time to process is {{.Average}}.</h4>
+		{{with .Report}}
+		<div>
+			<h4>Out of {{.Total}} processed reports, the average time to process is {{.Average}}.</h4>
+		</div>
 	</div>
-</div>
+</details>
 {{end}}
 	{{range .Trees}}
 	<div class="box">
