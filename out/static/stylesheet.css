@@ -282,8 +282,8 @@ li
 	position: relative;
 	left:50%;
 	transform: translate(-50%);
-	width: max-content;
-	width: -moz-max-content;
+	max-width: max-content;
+	max-width: -moz-max-content;
 }
 
 #toggle-even:checked ~ #comic-container
@@ -337,7 +337,7 @@ li
 {
     position:relative;
     padding:1em;
-    margin:1em;
+    margin-bottom:1em;
     background-color: var(--box-background-color);
     color: var(--box-color);
 }
