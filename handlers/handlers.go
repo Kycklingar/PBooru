@@ -359,6 +359,7 @@ func init() {
 
 	Handlers["/dns/edit"] = dnsEditHandler
 	Handlers["/dns/domain/new"] = specialMM(dnsNewDomain)
+	Handlers["/dns/domain/edit"] = specialMM(dnsEditDomain)
 
 	Handlers["/dns/banner/new"] = specialMM(dnsNewBanner)
 	Handlers["/dns/url/new"] = specialMM(dnsAddUrl)

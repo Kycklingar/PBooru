@@ -901,6 +901,7 @@ li
 	display: inline-block;
 	margin:0.2em;
 	padding:0.2em;
+	vertical-align:text-top;
 }
 
 .dns-segments .dns-tags
@@ -951,13 +952,20 @@ li
 
 .dns-logo
 {
+	position:relative;
+	width:32px;
+	height:32px;
+	display:block;
 	margin: 0.2em;
 }
 
 .dns-logo img
 {
-	max-width: 64px;
-	max-height: 64px;
+	position:absolute;
+	max-width: 32px;
+	max-height: 32px;
+	top:50%;
+	transform:translateY(-50%);
 }
 
 .dns-overlay-l

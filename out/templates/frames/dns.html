@@ -18,19 +18,11 @@
 		</div>
 		{{if ge .Score 0}}
 			{{range $k, $v := .Domains}}
-				{{if eq $k "patreon.com"}}
-					{{range $v}}
-					<div><a class="dns-logo" href="{{.}}"><img src="/static/patreon.png" alt="PATREON"></a></div>
-					{{end}}
-				{{else if eq $k "furaffinity.net"}}
-					{{range $v}}
-					<div><a class="dns-logo" href="{{.}}"><img src="/static/fa.ico" alt="FURAFFINITY"></a></div>
-					{{end}}
-				{{else if eq $k "inkbunny.net"}}
-					{{range $v}}
-					<div><a class="dns-logo" href="{{.}}"><img src="/static/inkbunny.png" alt="INKBUNNY"></a></div>
-					{{end}}
-				{{end}}
+			{{if $v.Domain.Icon}}
+			{{range $v.Urls}}
+				<div><a class="dns-logo" href="{{.}}"><img src="/static/webicons/{{$v.Domain.Icon}}" alt="{{.}}"></a></div>
+			{{end}}
+			{{end}}
 			{{end}}
 		{{else}}
 			<div><h1>Do Not Support</h1></div>

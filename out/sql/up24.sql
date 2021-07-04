@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS dns_creator (
 
 CREATE TABLE IF NOT EXISTS dns_domain (
 	id SERIAL PRIMARY KEY,
-	domain TEXT NOT NULL
+	domain TEXT NOT NULL,
+	icond TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS dns_creator_urls (

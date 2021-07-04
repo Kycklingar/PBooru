@@ -59,13 +59,39 @@
 </fieldset>
 
 <fieldset>
-	<legend>New Domain</legend>
-	<form action="/dns/domain/new" method="POST">
-		<label>Domain
-			<input type="text" name="domain">
-		</label>
-		<input type="submit">
-	</form>
+	<legend>Domains</legend>
+	<fieldset>
+		<legend>New</legend>
+		<form action="/dns/domain/new" method="POST">
+			<label>Domain
+				<input type="text" name="domain">
+			</label>
+			<br>
+			<label>Icon
+				<input type="text" name="icon">
+			</label>
+			<input type="submit">
+		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Edit</legend>
+		<form action="/dns/domain/edit" method="POST">
+			<select name="id">
+				{{range .Domains}}
+				<option value="{{.Id}}">{{.Domain}}</option>
+				{{end}}
+			</select>
+			<br>
+			<label>New Domain
+				<input type="text" name="domain">
+			</label>
+			<br>
+			<label>Icon
+				<input type="text" name="icon">
+			</label>
+			<input type="submit">
+		</form>
+	</fieldset>
 </fieldset>
 
 {{template "baseEnd"}}
