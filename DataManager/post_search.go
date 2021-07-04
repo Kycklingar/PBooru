@@ -40,7 +40,7 @@ func (g group) sel(where *cond.Group) string {
 	//}
 
 	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
-		return "WHERE " + where.Eval(nil)
+		return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
 	}
 
 	sep := func(s []int, seperator string) string {
@@ -167,7 +167,7 @@ func (g group) sel(where *cond.Group) string {
 		where.Add("\nAND", cond.N("ts.post_id IS NOT NULL"))
 	}
 
-	return joins.Eval(nil) + "WHERE " + where.Eval(nil)
+	return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
 }
 
 /* Failed grouping attempt
