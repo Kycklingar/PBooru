@@ -191,6 +191,7 @@ li
 	max-width: -moz-min-content;
 	max-width: min-content;
 	min-width:200px;
+	vertical-align: top;
 }
 
 .comic .tag
