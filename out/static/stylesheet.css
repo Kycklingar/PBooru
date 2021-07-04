@@ -957,6 +957,7 @@ li
 	height:32px;
 	display:block;
 	margin: 0.2em;
+	overflow:hidden;
 }
 
 .dns-logo img
