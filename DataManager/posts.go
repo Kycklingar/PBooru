@@ -1629,7 +1629,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		mimes    string
 
 		//wgr []string = []string{"p.removed = false"}
-		wgr = cond.NewGroup().Add("WHERE", cond.N("p.removed = false"))
+		wgr = cond.NewGroup().Add("", cond.N("p.removed = false"))
 
 		sel string
 	)
@@ -1643,7 +1643,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		}
 		mimes = fmt.Sprintf("p.mime_id IN(%s) ", mimes)
 		//wgr = append(wgr, mimes)
-		wgr.Add("AND", cond.N(mimes))
+		wgr.Add("\nAND", cond.N(mimes))
 	}
 
 	switch pc.order {
@@ -1665,7 +1665,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			)
 			`, pc.altGroup)
 		//wgr = append(wgr, altGroup)
-		wgr.Add("AND", cond.N(altGroup))
+		wgr.Add("\nAND", cond.N(altGroup))
 	}
 
 	sel = sg.sel(wgr)
@@ -1677,12 +1677,12 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 			if pc.collectAlts {
 				query = `
 					SELECT COUNT(DISTINCT p.alt_group)
-					FROM posts p %s 
+					FROM %s
 					`
 			} else {
 				query = `
 					SELECT count(p.id)
-					FROM posts p %s
+					FROM %s
 					`
 			}
 			c := pc.ccGet()
@@ -1718,8 +1718,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		query = `
 			SELECT id FROM (
 				SELECT DISTINCT ON (p.alt_group) p.*
-				FROM posts p
-				%s
+				FROM %s
 				ORDER BY p.alt_group, p.score DESC, p.id DESC
 			) AS p
 			ORDER BY %s
@@ -1729,8 +1728,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	} else {
 		query = `
 			SELECT p.id
-			FROM posts p
-			%s
+			FROM %s
 			ORDER BY %s
 			LIMIT $1
 			OFFSET $2

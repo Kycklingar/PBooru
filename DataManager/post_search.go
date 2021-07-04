@@ -30,7 +30,7 @@ func (g group) sel(where *cond.Group) string {
 	//var q, where, trail string
 
 	var (
-		joins = cond.NewGroup()
+		joins = cond.NewGroup().Add("", cond.N("posts p"))
 	)
 
 	//where = fmt.Sprintf("WHERE %s\n", wh)
@@ -40,7 +40,7 @@ func (g group) sel(where *cond.Group) string {
 	//}
 
 	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
-		return where.Eval(nil)
+		return "WHERE " + where.Eval(nil)
 	}
 
 	sep := func(s []int, seperator string) string {
@@ -57,7 +57,7 @@ func (g group) sel(where *cond.Group) string {
 
 	if len(g.or) > 0 {
 		joins.Add(
-			"JOIN",
+			"\nJOIN",
 			cond.N(
 				fmt.Sprintf(`
 					(
@@ -91,7 +91,7 @@ func (g group) sel(where *cond.Group) string {
 		}
 
 		joins.Add(
-			"JOIN",
+			"\nJOIN",
 			cond.N(
 				fmt.Sprintf(`
 					post_tag_mappings a1
@@ -104,7 +104,7 @@ func (g group) sel(where *cond.Group) string {
 		)
 
 		where.Add(
-			"AND",
+			"\nAND",
 			cond.N(
 				fmt.Sprintf(`
 				a1.tag_id = %d
@@ -135,7 +135,7 @@ func (g group) sel(where *cond.Group) string {
 		}
 
 		joins.Add(
-			"LEFT JOIN",
+			"\nLEFT JOIN",
 			cond.N(
 				fmt.Sprintf(`
 				(
@@ -155,19 +155,19 @@ func (g group) sel(where *cond.Group) string {
 			),
 		)
 
-		where.Add("AND", cond.N("f.post_id IS NULL"))
+		where.Add("\nAND", cond.N("f.post_id IS NULL"))
 	}
 
 	if g.tombstone {
 		joins.Add(
-			"LEFT JOIN",
+			"\nLEFT JOIN",
 			cond.N("tombstone ts ON p.id = ts.post_id"),
 		)
 
-		where.Add("AND", cond.N("ts.post_id IS NOT NULL"))
+		where.Add("\nAND", cond.N("ts.post_id IS NOT NULL"))
 	}
 
-	return joins.Eval(nil) + where.Eval(nil)
+	return joins.Eval(nil) + "WHERE " + where.Eval(nil)
 }
 
 /* Failed grouping attempt

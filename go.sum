@@ -67,6 +67,8 @@ github.com/kycklingar/sqhell v0.0.0-20210516044513-2e1300d87290 h1:YszlJ8IkQa4HX
 github.com/kycklingar/sqhell v0.0.0-20210516044513-2e1300d87290/go.mod h1:IpmJ63ja3flP0fNEOlJf1Io+RI/dOY/toFkXuEL+5Jg=
 github.com/kycklingar/sqhell v0.0.0-20210603215010-39e39f6234a4 h1:RmYUj5+Vrt4NYRAJsVwx2LzyoC8H8CKDDqCNFBvYTe8=
 github.com/kycklingar/sqhell v0.0.0-20210603215010-39e39f6234a4/go.mod h1:IpmJ63ja3flP0fNEOlJf1Io+RI/dOY/toFkXuEL+5Jg=
+github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795 h1:yCYp0RSyBYhgSXj3wWElalCoCKWfr09P6l6J3+ob1qo=
+github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795/go.mod h1:IpmJ63ja3flP0fNEOlJf1Io+RI/dOY/toFkXuEL+5Jg=
 github.com/lib/pq v1.10.1 h1:6VXZrLU0jHBYyAqrSPa+MgPfnSvTPuMgK+k0o5kVFWo=
 github.com/lib/pq v1.10.1/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/libp2p/go-buffer-pool v0.0.2 h1:QNK2iAFa8gjAe1SPz6mHSMuCcjs+X1wlHzeOSqcmlfs=
