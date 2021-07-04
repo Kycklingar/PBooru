@@ -75,22 +75,23 @@
 	</fieldset>
 	<fieldset>
 		<legend>Edit</legend>
-		<form action="/dns/domain/edit" method="POST">
-			<select name="id">
-				{{range .Domains}}
-				<option value="{{.Id}}">{{.Domain}}</option>
-				{{end}}
-			</select>
-			<br>
-			<label>New Domain
-				<input type="text" name="domain">
-			</label>
-			<br>
-			<label>Icon
-				<input type="text" name="icon">
-			</label>
-			<input type="submit">
-		</form>
+		{{range .Domains}}
+		<details>
+			<summary>{{.Domain}}</summary>
+			<form action="/dns/domain/edit" method="POST">
+				<input type="hidden" name="id" value="{{.Id}}">
+				<label>Domain
+					<input type="text" name="domain" value="{{.Domain}}">
+				</label>
+				<br>
+				<label>Icon
+					<input type="text" name="icon" value="{{.Icon}}">
+				</label>
+				<br>
+				<input type="submit">
+			</form>
+		</details>
+		{{end}}
 	</fieldset>
 </fieldset>
 
