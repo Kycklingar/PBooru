@@ -895,6 +895,11 @@ li
 	overflow:auto;
 }
 
+.box .dns-card
+{
+	background-color:#303038;
+}
+
 .dns-segments>div
 {
 	background-color: #000A;
@@ -915,7 +920,7 @@ li
 {
 	display: block;
 	text-align: center;
-	font-size: x-large;
+	font-size: larger;
 }
 
 .dns-banner
