@@ -23,7 +23,10 @@ type DnsTag struct {
 	Score       int
 }
 
-type DnsDomain []string
+type DnsDomain struct {
+	Domain dns.Domain
+	Urls   []dns.URL
+}
 
 func DnsNewBanner(file io.ReadSeeker, creatorID int, bannerType string) error {
 	return dns.NewBanner(
@@ -148,7 +151,7 @@ func dnsGetDomains(creatorID int) (map[string]DnsDomain, error) {
 	domains := make(map[string]DnsDomain)
 
 	rows, err := DB.Query(`
-			SELECT url, d.domain
+			SELECT url, icon, d.domain
 			FROM dns_creator_urls u
 			JOIN dns_domain d
 			ON u.domain = d.id
@@ -163,18 +166,20 @@ func dnsGetDomains(creatorID int) (map[string]DnsDomain, error) {
 
 	for rows.Next() {
 		var (
-			domain string
-			url    string
+			dom dns.Domain
+			url dns.URL
 		)
 
-		err = rows.Scan(&url, &domain)
+		err = rows.Scan(&url, &dom.Icon, &dom.Domain)
 		if err != nil {
 			return nil, err
 		}
 
-		dom := domains[domain]
-		dom = append(dom, url)
-		domains[domain] = dom
+		domain := domains[dom.Domain]
+		domain.Domain = dom
+
+		domain.Urls = append(domain.Urls, url)
+		domains[dom.Domain] = domain
 	}
 
 	return domains, nil
@@ -253,31 +258,6 @@ func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {
 	}
 
 	return GetDnsCreator(cid)
-}
-
-func DnsDomains() ([]string, error) {
-	rows, err := DB.Query(`
-		SELECT domain
-		FROM dns_domain
-		`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var domains []string
-	for rows.Next() {
-		var domain string
-		err = rows.Scan(&domain)
-		if err != nil {
-			return nil, err
-		}
-
-		domains = append(domains, domain)
-	}
-
-	return domains, nil
 }
 
 func DnsMapTag(creatorID int, tagstr string) error {

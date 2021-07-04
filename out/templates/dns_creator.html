@@ -19,7 +19,7 @@
 				<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
 				<select name="domain">
 					{{range .Domains}}
-					<option value="{{.}}">{{.}}</option>
+					<option value="{{.Domain}}">{{.Domain}}</option>
 					{{end}}
 				</select>
 				<input type="text" name="url">
@@ -32,7 +32,7 @@
 				<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
 				<select name="url">
 					{{range $_, $v := .Creator.Domains}}
-					{{range $v}}
+					{{range $v.Urls}}
 					<option value="{{.}}">{{.}}</option>
 					{{end}}
 					{{end}}
@@ -90,7 +90,7 @@
 		<li>
 			<h3>{{$k}}</h3>
 			<ul>
-				{{range $v}}
+				{{range $v.Urls}}
 				<li><a href="{{.}}">{{.}}</a></li>
 				{{end}}
 			</ul>

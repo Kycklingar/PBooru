@@ -48,7 +48,7 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 	var p struct {
 		UserInfo UserInfo
 		Creator  DM.DnsCreator
-		Domains  []string
+		Domains  []dns.Domain
 		Tags     []tag
 		CanEdit  bool
 	}
@@ -72,7 +72,7 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.Domains, err = DM.DnsDomains()
+	p.Domains, err = dns.Domains(DM.DB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -155,7 +155,8 @@ func dnsEditHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 		p   struct {
-			Tags []dns.Tag
+			Tags    []dns.Tag
+			Domains []dns.Domain
 		}
 	)
 
@@ -167,6 +168,12 @@ func dnsEditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Tags, err = dns.AllTags(DM.DB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	p.Domains, err = dns.Domains(DM.DB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -286,12 +293,33 @@ func dnsTagEdit(w http.ResponseWriter, r *http.Request) {
 
 func dnsNewDomain(w http.ResponseWriter, r *http.Request) {
 	domain := r.FormValue("domain")
+	icon := r.FormValue("icon")
 
-	err := dns.DomainNew(DM.DB, domain)
+	err := dns.DomainNew(DM.DB, domain, icon)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, "/dns/edit", http.StatusSeeOther)
+}
+
+func dnsEditDomain(w http.ResponseWriter, r *http.Request) {
+	domID, err := strconv.Atoi(r.FormValue("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	domain := r.FormValue("domain")
+	icon := r.FormValue("icon")
+
+	err = dns.DomainEdit(DM.DB, domID, domain, icon)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/dns/edit", http.StatusSeeOther)
+
 }
