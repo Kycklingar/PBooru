@@ -239,6 +239,22 @@ func GetDnsCreator(id int) (c DnsCreator, err error) {
 	return
 }
 
+func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {
+	var cid int
+	err := DB.QueryRow(`
+		SELECT creator_id
+		FROM dns_tag_mapping
+		WHERE tag_id = $1
+		`,
+		tagId,
+	).Scan(&cid)
+	if err != nil {
+		return DnsCreator{}, err
+	}
+
+	return GetDnsCreator(cid)
+}
+
 func DnsDomains() ([]string, error) {
 	rows, err := DB.Query(`
 		SELECT domain
@@ -262,4 +278,16 @@ func DnsDomains() ([]string, error) {
 	}
 
 	return domains, nil
+}
+
+func DnsMapTag(creatorID int, tagstr string) error {
+	tag := NewTag()
+	err := tag.Parse(tagstr)
+	if err != nil {
+		return err
+	}
+
+	tag.QID(DB)
+
+	return dns.MapTag(DB, creatorID, tag.ID)
 }

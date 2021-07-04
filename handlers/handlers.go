@@ -357,9 +357,21 @@ func init() {
 	Handlers["/dns"] = dnsHandler
 	Handlers["/dns/"] = dnsCreatorHandler
 
-	Handlers["/dns/banner/new"] = dnsNewBanner
-	Handlers["/dns/url/new"] = dnsAddUrl
-	Handlers["/dns/url/remove"] = dnsRemoveUrl
+	Handlers["/dns/edit"] = dnsEditHandler
+	Handlers["/dns/domain/new"] = specialMM(dnsNewDomain)
+
+	Handlers["/dns/banner/new"] = specialMM(dnsNewBanner)
+	Handlers["/dns/url/new"] = specialMM(dnsAddUrl)
+	Handlers["/dns/url/remove"] = specialMM(dnsRemoveUrl)
+
+	Handlers["/dns/creator/new"] = specialMM(dnsNewCreator)
+	Handlers["/dns/creator/name/edit"] = specialMM(dnsEditCreatorName)
+	Handlers["/dns/creator/tag/edit"] = specialMM(dnsEditCreatorTags)
+	Handlers["/dns/creator/tagmap/add"] = specialMM(dnsMapTag)
+
+	Handlers["/dns/tag/new"] = specialMM(dnsTagCreate)
+	Handlers["/dns/tag/edit"] = specialMM(dnsTagEdit)
+	//Handlers["/dns/tag/remove"] = dnsTagRemove
 
 	Handlers["/similar/"] = makeStatHandler(findSimilarHandler)
 

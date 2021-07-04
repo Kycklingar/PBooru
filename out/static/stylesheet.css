@@ -889,23 +889,25 @@ li
 .dns-card
 {
 	position:relative;
-	width: 1024px;
+	max-width: 1024px;
 	min-height: 100px;
 	z-index:1;
+	overflow:auto;
 }
 
 .dns-segments>div
 {
 	background-color: #000A;
 	display: inline-block;
-	margin:0.5em;
-	padding:0.4em;
+	margin:0.2em;
+	padding:0.2em;
 }
 
 .dns-segments .dns-tags
 {
 	float:right;
-	width:150px;
+	min-width:150px;
+	max-width:30%;
 }
 
 .dns-profile
@@ -956,4 +958,40 @@ li
 {
 	max-width: 64px;
 	max-height: 64px;
+}
+
+.dns-overlay-l
+{
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top:0;
+	left:0;
+	z-index: -1;
+}
+
+.dns-overlay-l img
+{
+	position:absolute;
+	width:50%;
+	height:100%;
+	object-fit:cover;
+}
+
+.dns-overlay
+{
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top:0;
+	left:0;
+	z-index: -1;
+}
+
+.dns-overlay img
+{
+	position:absolute;
+	height:100%;
+	right:0;
+	object-fit:contain;
 }

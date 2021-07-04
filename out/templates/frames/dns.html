@@ -1,3 +1,46 @@
 {{define "dns-tag" -}}
 <div class="dns-tag dns-tag-{{.Id}}" title="{{.Score}} {{.Description}}">{{.Name}}</div>
 {{- end}}
+
+{{define "dns-card"}}
+{{with .Dns}}
+<div class="dns-card box">
+	<div class="dns-banner">
+		{{with .Banners.banner}}
+		<div class="dns-banner-shader"></div>
+		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">
+		{{end}}
+	</div>
+	<div class="dns-segments">
+		<div class="dns-profile">
+			{{if .Banners.profile}}<a href="/dns/{{.Id}}"><img src="{{$.UserInfo.Gateway}}/ipfs/{{.Banners.profile}}"></a>{{end}}
+			<div><a href="/dns/{{.Id}}">{{.Name}}</a></div>
+		</div>
+		{{if ge .Score 0}}
+			{{range $k, $v := .Domains}}
+				{{if eq $k "patreon.com"}}
+					{{range $v}}
+					<div><a class="dns-logo" href="{{.}}"><img src="/static/patreon.png" alt="PATREON"></a></div>
+					{{end}}
+				{{else if eq $k "furaffinity.net"}}
+					{{range $v}}
+					<div><a class="dns-logo" href="{{.}}"><img src="/static/fa.ico" alt="FURAFFINITY"></a></div>
+					{{end}}
+				{{else if eq $k "inkbunny.net"}}
+					{{range $v}}
+					<div><a class="dns-logo" href="{{.}}"><img src="/static/inkbunny.png" alt="INKBUNNY"></a></div>
+					{{end}}
+				{{end}}
+			{{end}}
+		{{else}}
+			<div><h1>Do Not Support</h1></div>
+		{{end}}
+		<div class="dns-tags">
+			{{range .Tags -}}
+			{{template "dns-tag" .}}
+			{{- end}}
+		</div>
+	</div>
+</div>
+{{end}}
+{{end}}

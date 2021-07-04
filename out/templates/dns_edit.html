@@ -1,46 +1,71 @@
 {{template "base"}}
--- Add creator
 <fieldset>
 	<legend>New Creator</legend>
-	<form>
-		<input type="text" name="name">
+	<form action="/dns/creator/new" method="POST">
+		<label>Name
+			<input type="text" name="name">
+		</label>
+		<br>
 		<input type="submit">
 	</form>
 </fieldset>
-
--- Add tag
 
 <fieldset>
 	<legend>New Tag</legend>
-	<form>
-		<input type="text" name="id">
-		<input type="text" name="name">
-		<input type="text" name="description">
-		<input type="number" name="score">
+	<form action="/dns/tag/new" method="POST">
+		<label>Id
+			<input type="text" name="id">
+		</label>
+		<br>
+		<label>Name
+			<input type="text" name="name">
+		</label>
+		<br>
+		<label>Description
+			<input type="text" name="description">
+		</label>
+		<br>
+		<label>Score
+			<input type="number" name="score">
+		</label>
+		<br>
 		<input type="submit">
 	</form>
 </fieldset>
 
--- Add domain
-
-<fieldset>
-	<legend>New Domains</legend>
-	<form>
-		<input type="text" name="domain">
-		<input type="submit">
-	</form>
-</fieldset>
-
--- Edit tag
 <fieldset>
 	<legend>Edit Tag</legend>
-	<form>
-		<input type="text" name="id">
-		<input type="text" name="name">
-		<input type="text" name="description">
-		<input type="number" name="score">
+	{{range .Tags}}
+	<details>
+		<summary>{{.Id}}</summary>
+		<form action="/dns/tag/edit" method="POST">
+			<input type="hidden" name="id" value="{{.Id}}">
+			<label>Name
+				<input type="text" name="name" value="{{.Name}}">
+			</label>
+			<br>
+			<label>Description
+				<input type="text" name="description" value="{{.Description}}">
+			</label>
+			<br>
+			<label>Score
+				<input type="number" name="score" value="{{.Score}}">
+			</label>
+			<br>
+			<input type="submit">
+		</form>
+	</details>
+	{{end}}
+</fieldset>
+
+<fieldset>
+	<legend>New Domain</legend>
+	<form action="/dns/domain/new" method="POST">
+		<label>Domain
+			<input type="text" name="domain">
+		</label>
 		<input type="submit">
 	</form>
 </fieldset>
 
-{{template "base-end"}}
+{{template "baseEnd"}}

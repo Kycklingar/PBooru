@@ -1,10 +1,12 @@
 {{template "base"}}
+{{if .CanEdit}}
 <details>
 	<summary>Edit</summary>
 	<fieldset>
-		<form>
+		<form action="/dns/creator/name/edit" method="POST">
 			<legend>Change Name</legend>
-			<input type="text" name="new-name" value="{{.Creator.Name}}">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			<input type="text" name="name" value="{{.Creator.Name}}">
 			<br>
 			<input type="submit">
 		</form>
@@ -41,21 +43,24 @@
 	</fieldset>
 	<fieldset>
 		<legend>Tags</legend>
-		<form>
-			<fieldset>
-				<legend>Add</legend>
-				<input type="text" name="tags">
-			</fieldset>
-			<fieldset>
-				<legend>Remove</legend>
-				{{range .Creator.Tags}}
-				<label>{{template "dns-tag" .}}
-					<input type="checkbox" name="remove-tag" value="{{.Id}}">
-				</label>
-				{{end}}
-			</fieldset>
+		<form action="/dns/creator/tag/edit" method="POST">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			{{range .Tags}}
+			<label>{{template "dns-tag" .Tag}}
+				<input type="checkbox" name="tags" value="{{.Tag.Id}}" {{if .Enabled}}checked{{end}}><br>
+			</label>
+			{{end}}
 			<input type="submit">
 		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Tag Mapping</legend>
+		<form action="/dns/creator/tagmap/add" method="POST">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			<input type="text" name="tag" class="stinput">
+			<input type="submit">
+		</form>
+		<script type="text/javascript" src="/static/suggestions.js"></script>
 	</fieldset>
 	<fieldset>
 		<legend>Add Banner</legend>
@@ -72,6 +77,7 @@
 		</form>
 	</fieldset>
 </details>
+{{end}}
 
 <div class="box">
 	{{with .Creator.Banners.profile}}<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">{{end}}
