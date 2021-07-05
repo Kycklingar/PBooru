@@ -947,8 +947,12 @@ li
 
 .dns-tag
 {
-	margin-right:0.2em;
-	display:inline-block;
+	display: inline;
+}
+
+.dns-card .dns-tag
+{
+	float:right;
 }
 
 .dns-logo
