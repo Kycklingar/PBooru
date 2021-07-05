@@ -27,11 +27,9 @@
 		{{else}}
 			<div><h1>Do Not Support</h1></div>
 		{{end}}
-		<div class="dns-tags">
-			{{range .Tags -}}
-			{{template "dns-tag" .}}
-			{{- end}}
-		</div>
+		{{range .Tags -}}
+		{{template "dns-tag" .}}
+		{{- end}}
 	</div>
 </div>
 {{end}}
