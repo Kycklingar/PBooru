@@ -23,7 +23,9 @@ func specialMM(handle func(http.ResponseWriter, *http.Request)) func(http.Respon
 func dnsHandler(w http.ResponseWriter, r *http.Request) {
 	_, ui := getUser(w, r)
 
-	dc, err := DM.ListDnsCreators()
+	offset, _ := strconv.Atoi(r.FormValue("offset"))
+
+	dc, err := DM.ListDnsCreators(10, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
