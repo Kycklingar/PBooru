@@ -39,7 +39,7 @@ func DnsNewBanner(file io.ReadSeeker, creatorID int, bannerType string) error {
 	)
 }
 
-func ListDnsCreators() ([]DnsCreator, error) {
+func ListDnsCreators(limit, offset int) ([]DnsCreator, error) {
 	rows, err := DB.Query(`
 		SELECT c.id, c.name, c.score,
 			dt.id, dt.name, dt.description, dt.score
@@ -47,7 +47,8 @@ func ListDnsCreators() ([]DnsCreator, error) {
 			SELECT id, name, score
 			FROM dns_creator_scores
 			ORDER BY score DESC
-			LIMIT 10
+			LIMIT $1
+			OFFSET $2
 		) c
 		LEFT JOIN dns_tags dts
 		ON c.id = dts.creator_id
@@ -55,6 +56,8 @@ func ListDnsCreators() ([]DnsCreator, error) {
 		ON dts.tag_id = dt.id
 		ORDER BY c.score DESC
 		`,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, err

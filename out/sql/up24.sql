@@ -33,11 +33,6 @@ CREATE TABLE IF NOT EXISTS dns_tag_mapping (
 	creator_id INTEGER NOT NULL REFERENCES dns_creator(id) ON DELETE CASCADE
 );
 
---CREATE TABLE IF NOT EXISTS dns_votes (
---	creator_id INTEGER REFERENCES dns_creator(id) ON DELETE CASCADE,
---	timestmap TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
---);
-
 CREATE TABLE IF NOT EXISTS dns_banners (
 	creator_id INTEGER NOT NULL REFERENCES dns_creator(id),
 	cid TEXT NOT NULL,
