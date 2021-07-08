@@ -2,4 +2,8 @@
 {{range .Creators}}
 	{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
 {{end}}
+{{if ge .PrevOffset 0}}
+<a class="box" href="/dns?offset={{.PrevOffset}}">Prev</a>
+{{end}}
+<a class="box" href="/dns?offset={{.NextOffset}}">Next</a>
 {{template "baseEnd"}}

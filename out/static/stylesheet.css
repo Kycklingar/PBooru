@@ -957,6 +957,7 @@ li
 .dns-card .dns-tag
 {
 	float:right;
+	margin-bottom:1.5em;
 }
 
 .dns-logo
@@ -1012,4 +1013,16 @@ li
 	height:100%;
 	right:0;
 	object-fit:contain;
+}
+
+.dns-sl
+{
+	position:absolute;
+	bottom:0;
+	right:0;
+}
+
+.dns-sl span
+{
+	margin:0.2em;
 }

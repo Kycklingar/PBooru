@@ -23,20 +23,25 @@ func specialMM(handle func(http.ResponseWriter, *http.Request)) func(http.Respon
 func dnsHandler(w http.ResponseWriter, r *http.Request) {
 	_, ui := getUser(w, r)
 
+	const limit = 10
 	offset, _ := strconv.Atoi(r.FormValue("offset"))
 
-	dc, err := DM.ListDnsCreators(10, offset)
+	dc, err := DM.ListDnsCreators(limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var p = struct {
-		UserInfo UserInfo
-		Creators []DM.DnsCreator
+		UserInfo   UserInfo
+		Creators   []DM.DnsCreator
+		NextOffset int
+		PrevOffset int
 	}{
-		UserInfo: ui,
-		Creators: dc,
+		UserInfo:   ui,
+		Creators:   dc,
+		NextOffset: offset + limit,
+		PrevOffset: offset - limit,
 	}
 
 	renderTemplate(w, "dns", p)

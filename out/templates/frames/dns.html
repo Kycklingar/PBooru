@@ -18,14 +18,21 @@
 		</div>
 		{{if ge .Score 0}}
 			{{range $k, $v := .Domains}}
-			{{if $v.Domain.Icon}}
-			{{range $v.Urls}}
-				<div><a class="dns-logo" href="{{.}}"><img src="/static/webicons/{{$v.Domain.Icon}}" alt="{{.}}"></a></div>
-			{{end}}
-			{{end}}
+				{{if $v.Domain.Icon}}
+					{{range $v.Urls}}
+						<div><a class="dns-logo" href="{{.}}"><img src="/static/webicons/{{$v.Domain.Icon}}" alt="{{.}}"></a></div>
+					{{end}}
+				{{end}}
 			{{end}}
 		{{else}}
 			<div><h1>Do Not Support</h1></div>
+		{{end}}
+		{{with .LocalTags}}
+		<div class="dns-sl">
+			{{range .}}
+			<span><a href="/posts/1/{{.}}">{{.}}</a></span>
+			{{end}}
+		</div>
 		{{end}}
 		{{range .Tags -}}
 		{{template "dns-tag" .}}
