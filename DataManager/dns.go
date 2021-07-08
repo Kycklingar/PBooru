@@ -57,7 +57,7 @@ func ListDnsCreators(limit, offset int) ([]DnsCreator, error) {
 		ON c.id = dts.creator_id
 		LEFT JOIN dns_tag dt
 		ON dts.tag_id = dt.id
-		ORDER BY c.score DESC
+		ORDER BY c.score DESC, c.id DESC
 		`,
 		limit,
 		offset,
