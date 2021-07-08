@@ -8,12 +8,13 @@ import (
 )
 
 type DnsCreator struct {
-	Id      int
-	Name    string
-	Score   int
-	Tags    []DnsTag
-	Domains map[string]DnsDomain
-	Banners map[string]string
+	Id        int
+	Name      string
+	Score     int
+	Tags      []DnsTag
+	LocalTags []*Tag
+	Domains   map[string]DnsDomain
+	Banners   map[string]string
 }
 
 type DnsTag struct {
@@ -89,6 +90,16 @@ func ListDnsCreators(limit, offset int) ([]DnsCreator, error) {
 		}
 
 		if len(creators) <= 0 || creators[len(creators)-1].Id != creator.Id {
+			if err = creator.getBanners(); err != nil {
+				return nil, err
+			}
+			if err = creator.getDomains(); err != nil {
+				return nil, err
+			}
+			if err = creator.getLocalTags(); err != nil {
+				return nil, err
+			}
+
 			creators = append(creators, *creator)
 		}
 		creator = &creators[len(creators)-1]
@@ -103,35 +114,54 @@ func ListDnsCreators(limit, offset int) ([]DnsCreator, error) {
 
 			creator.Tags = append(creator.Tags, tag)
 		}
-
-		if creator.Banners == nil {
-			if creator.Banners, err = getBanners(creator.Id); err != nil {
-				return nil, err
-			}
-		}
-
-		if creator.Domains == nil {
-			if creator.Domains, err = dnsGetDomains(creator.Id); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	return creators, nil
 }
 
-func getBanners(creatorID int) (map[string]string, error) {
-	banners := make(map[string]string)
+func (c *DnsCreator) getLocalTags() error {
+	rows, err := DB.Query(`
+		SELECT t.id, t.tag, n.nspace
+		FROM dns_tag_mapping
+		JOIN tags t
+		on tag_id = t.id
+		JOIN namespaces n
+		ON namespace_id = n.id
+		WHERE creator_id = $1
+		`,
+		c.Id,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t = NewTag()
+
+		err = rows.Scan(&t.ID, &t.Tag, &t.Namespace.Namespace)
+		if err != nil {
+			return err
+		}
+
+		c.LocalTags = append(c.LocalTags, t)
+	}
+
+	return nil
+}
+
+func (c *DnsCreator) getBanners() error {
+	c.Banners = make(map[string]string)
 
 	rows, err := DB.Query(`
 		SELECT cid, banner_type
 		FROM dns_banners
 		WHERE creator_id = $1
 		`,
-		creatorID,
+		c.Id,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 
@@ -141,17 +171,17 @@ func getBanners(creatorID int) (map[string]string, error) {
 			t   string
 		)
 		if err = rows.Scan(&cid, &t); err != nil {
-			return nil, err
+			return err
 		}
 
-		banners[t] = cid
+		c.Banners[t] = cid
 	}
 
-	return banners, nil
+	return nil
 }
 
-func dnsGetDomains(creatorID int) (map[string]DnsDomain, error) {
-	domains := make(map[string]DnsDomain)
+func (c *DnsCreator) getDomains() error {
+	c.Domains = make(map[string]DnsDomain)
 
 	rows, err := DB.Query(`
 			SELECT url, icon, d.domain
@@ -160,10 +190,10 @@ func dnsGetDomains(creatorID int) (map[string]DnsDomain, error) {
 			ON u.domain = d.id
 			WHERE u.id = $1
 			`,
-		creatorID,
+		c.Id,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 
@@ -175,17 +205,17 @@ func dnsGetDomains(creatorID int) (map[string]DnsDomain, error) {
 
 		err = rows.Scan(&url, &dom.Icon, &dom.Domain)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		domain := domains[dom.Domain]
+		domain := c.Domains[dom.Domain]
 		domain.Domain = dom
 
 		domain.Urls = append(domain.Urls, url)
-		domains[dom.Domain] = domain
+		c.Domains[dom.Domain] = domain
 	}
 
-	return domains, nil
+	return nil
 }
 
 func GetDnsCreator(id int) (c DnsCreator, err error) {
@@ -200,7 +230,7 @@ func GetDnsCreator(id int) (c DnsCreator, err error) {
 		return
 	}
 
-	if c.Domains, err = dnsGetDomains(c.Id); err != nil {
+	if err = c.getDomains(); err != nil {
 		return
 	}
 
@@ -242,7 +272,11 @@ func GetDnsCreator(id int) (c DnsCreator, err error) {
 		return
 	}
 
-	c.Banners, err = getBanners(c.Id)
+	if err = c.getBanners(); err != nil {
+		return
+	}
+
+	err = c.getLocalTags()
 
 	return
 }
