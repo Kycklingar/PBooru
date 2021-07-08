@@ -529,6 +529,10 @@ func (s *Session) create(user *User) error {
 
 func (s *Session) Get(q querier, key string) {
 	// s.userID = sessions[key]
+	if key == "" {
+		return
+	}
+
 	s.userID = sessionRead(key)
 	if s.userID == 0 {
 		err := q.QueryRow("SELECT user_id FROM sessions WHERE sesskey=$1", key).Scan(&s.userID)

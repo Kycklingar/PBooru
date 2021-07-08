@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"io"
+	"sync"
+	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/dns"
 )
@@ -279,6 +281,53 @@ func GetDnsCreator(id int) (c DnsCreator, err error) {
 	err = c.getLocalTags()
 
 	return
+}
+
+var dnsSpotlight struct {
+	creator  *DnsCreator
+	previous int
+	l        sync.Mutex
+}
+
+func DnsSpotlight() (*DnsCreator, error) {
+	dnsSpotlight.l.Lock()
+	defer dnsSpotlight.l.Unlock()
+
+	if dnsSpotlight.creator != nil {
+		return dnsSpotlight.creator, nil
+	}
+
+	var id int
+
+	err := DB.QueryRow(`
+		SELECT id
+		FROM dns_creator_scores
+		WHERE score > -50
+		AND id != $1
+		ORDER BY RANDOM()
+		`,
+		dnsSpotlight.previous,
+	).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	dnsSpotlight.previous = id
+
+	c, err := GetDnsCreator(id)
+	if err != nil {
+		return nil, err
+	}
+
+	dnsSpotlight.creator = &c
+
+	time.AfterFunc(time.Hour*36, func() {
+		dnsSpotlight.l.Lock()
+		defer dnsSpotlight.l.Unlock()
+		dnsSpotlight.creator = nil
+	})
+
+	return &c, nil
 }
 
 func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {

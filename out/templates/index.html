@@ -27,6 +27,12 @@
 	<br>
     <h3>Hits: {{.Hits}}</h3>
     <h3>Total Posts: {{.TotalPosts}}</h3>
+    {{if .Spotlight.Dns}}
+    <div>
+	    <h4>Artist Spotlight</h4>
+	    {{template "dns-card" .Spotlight}}
+    </div>
+    {{end}}
 </div>
 <div class="box">
     <h3>FAQ</h3>
