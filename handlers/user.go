@@ -340,10 +340,10 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 			user.Limit = min(max(user.Limit, 250), 1)
 		case "thumbnail_size":
 			user.ThumbnailSize, _ = strconv.Atoi(cookie.Value)
-			user.ThumbnailSize = min(max(user.ThumbnailSize, largestThumbnailSize()), 16)
+			user.ThumbnailSize = min(max(user.ThumbnailSize, int(largestThumbnailSize())), 16)
 		case "real_thumbnail_size":
 			user.RealThumbnailSize, _ = strconv.Atoi(cookie.Value)
-			user.RealThumbnailSize = min(max(user.RealThumbnailSize, largestThumbnailSize()), 0)
+			user.RealThumbnailSize = min(max(user.RealThumbnailSize, int(largestThumbnailSize())), 0)
 		case "thumb_hover":
 			user.ThumbHover = cookie.Value == "on"
 		case "thumb_hover_full":

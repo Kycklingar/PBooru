@@ -209,6 +209,9 @@
 		<br>
 	</div>
 	{{end}}
+	{{range .Dns}}
+		{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
+	{{end}}
 	    {{with .Post.Description}}
 		<div class="box">
 	    		<h3>Description</h3>

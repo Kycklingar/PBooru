@@ -1,7 +1,6 @@
 package DataManager
 
 import (
-	"bytes"
 	"errors"
 	"image/png"
 	"io"
@@ -12,15 +11,23 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 )
 
-func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
-	b, err := image.MakeThumbnail(file, CFG.ThumbnailFormat, size, quality)
+func makeThumbnail(file io.ReadSeeker, size uint, quality int) (string, error) {
+	img, err := image.Resize(
+		file,
+		image.Format{
+			Width:   size,
+			Height:  size,
+			Mime:    CFG.ThumbnailFormat,
+			Quality: quality,
+		})
 	if err != nil {
 		log.Println(err)
 		return "", err
 	}
+	defer img.Close()
 
 	cid, err := ipfs.Add(
-		io.NopCloser(b),
+		io.NopCloser(img),
 		shell.Pin(false),
 		shell.CidVersion(1),
 	)
@@ -38,31 +45,37 @@ func makeThumbnail(file io.ReadSeeker, size, quality int) (string, error) {
 }
 
 func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
-	var largestThumbnailSize int
+	var largestThumbnailSize uint
 	for _, size := range CFG.ThumbnailSizes {
 		if largestThumbnailSize < size {
 			largestThumbnailSize = size
 		}
 	}
 
-	b, err := image.MakeThumbnail(file, "PNG", largestThumbnailSize, CFG.ThumbnailQuality)
+	img, err := image.Resize(
+		file,
+		image.Format{
+			Width:   largestThumbnailSize,
+			Height:  largestThumbnailSize,
+			Mime:    "PNG",
+			Quality: CFG.ThumbnailQuality,
+		})
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-
-	var f = bytes.NewReader(b.Bytes())
+	defer img.Close()
 
 	var thumbs []Thumb
 
 	for _, size := range CFG.ThumbnailSizes {
-		f.Seek(0, 0)
-		thumbHash, err := makeThumbnail(f, size, CFG.ThumbnailQuality)
+		img.Seek(0, 0)
+		thumbHash, err := makeThumbnail(img, size, CFG.ThumbnailQuality)
 		if err != nil {
 			return nil, err
 		}
 
-		thumbs = append(thumbs, Thumb{Hash: thumbHash, Size: size})
+		thumbs = append(thumbs, Thumb{Hash: thumbHash, Size: int(size)})
 	}
 
 	return thumbs, nil
@@ -109,13 +122,22 @@ func ImageLookup(file io.ReadSeeker, distance int) ([]*Post, error) {
 }
 
 func dHash(file io.ReadSeeker) (imgsim.Hash, error) {
-	b, err := image.MakeThumbnail(file, "png", 1024, 75)
+	imgf, err := image.Resize(
+		file,
+		image.Format{
+			Width:   1024,
+			Height:  1024,
+			Mime:    "PNG",
+			Quality: 75,
+		},
+	)
 	if err != nil {
 		log.Println(err)
 		return 0, err
 	}
+	defer imgf.Close()
 
-	img, err := png.Decode(b)
+	img, err := png.Decode(imgf)
 	if err != nil {
 		log.Println(err)
 		return 0, err
