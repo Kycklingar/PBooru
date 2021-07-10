@@ -93,7 +93,10 @@ func (ffm FFmpeg) Resize(input io.ReadSeeker, format Format) (io.ReadSeekCloser,
 	cmd.Stderr = &stderr
 
 	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("Error ffmpeg: %v\n%s\n", err, stderr.Bytes())
+		// Try thumbnailing if no error bytes
+		if len(stderr.Bytes()) > 0 {
+			return nil, fmt.Errorf("Error ffmpeg: %v\n%s\n", err, stderr.Bytes())
+		}
 	}
 
 	if _, err = output.Seek(0, 0); err != nil {
