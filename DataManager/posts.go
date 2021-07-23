@@ -1976,6 +1976,21 @@ func ccPurge(q querier, tagID int) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	_, err = q.Exec(`
+		DELETE FROM search_count_cache
+		WHERE id IN(
+			SELECT id
+			FROM search_count_cache
+			LEFT JOIN search_count_cache_tag_mapping
+			ON id = cache_id
+			WHERE cache_id IS NULL
+		)
+		`,
+	)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (pc *PostCollector) ccGet() (c int) {
