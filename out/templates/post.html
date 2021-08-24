@@ -37,7 +37,7 @@
         			{{if .User.Flag.Tagging}}
         		    		<form method="POST">
         		    		    <p>Edit tags</p>
-        		    		    <textarea class="stinput" id="addtagsinput" name="tags">
+        		    		    <textarea onfocus="setInput(this)" class="stinput" id="addtagsinput" name="tags">
 					    {{- template "printTags" .Sidebar.Tags -}}
 					    </textarea>
         		    		    <input type="submit" value="Edit">

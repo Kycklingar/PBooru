@@ -7,48 +7,57 @@ function setInput(el)
 
 function appendQuery(caller, tag)
 {
-    if(currentTagInput == null)
-    {
-    	return
-    }
-
-    let inp = currentTagInput.value.split(",")
-    let ret = []
-    let n = true
-
-    for(let i = 0; i < inp.length; i++)
-    {
-	if(inp[i].trim() != tag)
+	if(currentTagInput == null)
 	{
-	    if(inp[i].trim().length >= 1)
-	    {
-		ret.push(inp[i].trim())
-	    }
+		return
+	}
+
+	let sep = ","
+	let padding = " "
+
+	if(currentTagInput.type == "textarea")
+	{
+		sep = "\n"
+		padding = ""
+	}
+
+	let inp = currentTagInput.value.split(sep)
+	let ret = []
+	let n = true
+
+	for(let i = 0; i < inp.length; i++)
+	{
+		if(inp[i].trim() != tag)
+		{
+			if(inp[i].trim().length >= 1)
+			{
+				ret.push(inp[i].trim())
+			}
+		}
+		else
+		{
+			n = false
+		}
+	}
+	if(n)
+	{
+		ret.push(tag)
+		caller.innerHTML = "-"
 	}
 	else
 	{
-	    n = false
+		caller.innerHTML = "+"
 	}
-    }
-    if(n)
-    {
-	ret.push(tag)
-	caller.innerHTML = "-"
-    }
-    else
-    {
-	caller.innerHTML = "+"
-    }
-    currentTagInput.value = ""
-    for(let i = 0; i < ret.length; i++)
-    {
-	if(i == ret.length - 1)
+	currentTagInput.value = ""
+	for(let i = 0; i < ret.length; i++)
 	{
-	    currentTagInput.value += ret[i]
+		if(i == ret.length - 1)
+		{
+			currentTagInput.value += ret[i]
+		}
+		else
+		{
+			currentTagInput.value += ret[i] + sep + padding
+		}
 	}
-	else
-	{
-	    currentTagInput.value += ret[i] + ", "
-	}
-    }
 }
