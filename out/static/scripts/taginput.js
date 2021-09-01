@@ -40,14 +40,11 @@ function appendQuery(caller, tag)
 		}
 	}
 	if(n)
-	{
 		ret.push(tag)
-		caller.innerHTML = "-"
-	}
-	else
-	{
-		caller.innerHTML = "+"
-	}
+
+	// Flip the marker
+	caller.innerText = caller.innerText == "-" ? "+" : "-"
+
 	currentTagInput.value = ""
 	for(let i = 0; i < ret.length; i++)
 	{

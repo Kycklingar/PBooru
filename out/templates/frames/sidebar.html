@@ -75,7 +75,7 @@
 	{{ range .Tags }}
 		<tr>
 		    <td class="tag namespace-{{.Namespace}}">
-			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Escaped}}')">+ </span>
+			    <span style="cursor: pointer" onclick="appendQuery(this, '{{.Escaped}}')">+</span>
 			    <a href="/posts/?tags={{.Escaped}}"><span>{{.}}</span></a>
 		    </td>
 		    <td class="counter">{{.Count}}</td>
