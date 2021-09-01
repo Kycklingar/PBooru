@@ -59,7 +59,7 @@
 		</div>
 	{{end}}
 	<span>
-	{{if and .ReportType (not .Approved)}}
+	{{if and .ReportType (not .Approved.Time)}}
 	<form method="POST" action="/duplicate/pluck/">
 		<input type="hidden" name="report-id" value="{{.ID}}">
 		<input type="submit" value="Pluck">
