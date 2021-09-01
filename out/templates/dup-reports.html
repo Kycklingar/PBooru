@@ -26,6 +26,9 @@
 	<label>Plucked:
 		<input type="checkbox" name="plucked" {{with .Form.plucked}}checked{{end}}>
 	</label>
+	<label>Approved:
+		<input type="checkbox" name="approved" {{with .Form.approved}}checked{{end}}>
+	</label>
 	<br>
 	<input type="submit">
 </form>
@@ -56,7 +59,7 @@
 		</div>
 	{{end}}
 	<span>
-	{{if .ReportType}}
+	{{if and .ReportType (not .Approved)}}
 	<form method="POST" action="/duplicate/pluck/">
 		<input type="hidden" name="report-id" value="{{.ID}}">
 		<input type="submit" value="Pluck">

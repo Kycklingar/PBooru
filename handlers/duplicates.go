@@ -33,7 +33,9 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 
 	order := r.FormValue("order") == "asc"
 
-	page.Reports, err = DM.FetchDupReports(limit, offset, order, plucked)
+	approved := r.FormValue("approved") == "on"
+
+	page.Reports, err = DM.FetchDupReports(limit, offset, order, approved, plucked)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
