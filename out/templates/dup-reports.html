@@ -16,15 +16,15 @@
 <form>
 	<label>
 		Order ascending
-		<input type="checkbox" name="order" value="asc">
+		<input type="checkbox" name="order" value="asc" {{with .Form.order}}checked{{end}}>
 	</label>
 	<br>
-	<input type="number" name="limit" placeholder="Limit">
+	<input type="number" name="limit" placeholder="Limit" {{with .Form.limit}}value="{{index . 0}}"{{end}}>
 	<br>
-	<input type="number" name="offset" placeholder="Offset">
+	<input type="number" name="offset" placeholder="Offset" {{with .Form.offset}}value="{{index . 0}}"{{end}}>
 	<br>
 	<label>Plucked:
-	<input type="checkbox" name="plucked">
+		<input type="checkbox" name="plucked" {{with .Form.plucked}}checked{{end}}>
 	</label>
 	<br>
 	<input type="submit">

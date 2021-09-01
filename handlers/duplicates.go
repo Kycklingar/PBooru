@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -14,6 +15,7 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 		UserInfo UserInfo
 		User     *DM.User
 		Reports  []*DM.DupReport
+		Form     url.Values
 	}{}
 
 	page.User, page.UserInfo = getUser(w, r)
@@ -24,6 +26,8 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		limit = 10
 	}
+
+	page.Form = r.Form
 
 	plucked := r.FormValue("plucked") == "on"
 
