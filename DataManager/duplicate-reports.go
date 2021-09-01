@@ -22,6 +22,7 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 		order   = "DESC"
 		pluck   = "AND report_type = 0"
 		apprvd  = "NULL"
+		ocolumn = "timestamp"
 	)
 
 	if asc {
@@ -34,6 +35,7 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 
 	if approved {
 		apprvd = "NOT NULL"
+		ocolumn = "approved"
 	}
 
 	err := func() error {
@@ -43,13 +45,13 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 				FROM duplicate_report
 				WHERE approved IS %s
 				%s
-				ORDER BY timestamp %s
+				ORDER BY %s %s
 				LIMIT $1
 				OFFSET $2
 				`,
 				apprvd,
 				pluck,
-				order,
+				ocolumn, order,
 			),
 			limit,
 			offset,
