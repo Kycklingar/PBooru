@@ -69,7 +69,7 @@ function submitReport()
 		return
 	}
 
-	if (posts.length <= 1)
+	if (!reportNoneDupes.checked && posts.length <= 1)
 	{
 		alert("Need more than 1 post")
 		return
@@ -81,7 +81,9 @@ function submitReport()
 		fd.append("post-ids", posts[i].id)
 	}
 
-	fd.append("non-dupes", reportNoneDupes.value)
+	if (reportNoneDupes.checked)
+		fd.append("non-dupes", "on")
+
 	for (let i = 0; i < removed.length; i++)
 	{
 		fd.append("removed-ids", removed[i].id)
