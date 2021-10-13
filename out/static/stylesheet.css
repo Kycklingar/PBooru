@@ -562,7 +562,7 @@ li
 .thumbnail .overlay-bl:hover
 {
 	z-index: 10000;
-	background-color: #0003;
+	background-color: #000A;
 	outline: solid white 1px;
 }
 
@@ -573,7 +573,11 @@ li
 	left: 0px;
 	color: white;
 	text-shadow: 1px 1px 2px black;
-
+	font-size: 18px;
+	background-color: #6666;
+	margin: 0.1em;
+	padding: 0.1em;
+	border-radius:4px;
 }
 
 .thumbnail form
