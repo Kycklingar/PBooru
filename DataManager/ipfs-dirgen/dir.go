@@ -5,19 +5,31 @@ import (
 
 	gocid "github.com/ipfs/go-cid"
 	shell "github.com/ipfs/go-ipfs-api"
-	format "github.com/ipfs/go-ipld-format"
 )
 
 type Dir struct {
-	Data  string        `json:"data"`
-	Links []format.Link `json:"links"`
+	Data struct {
+		Root struct {
+			Bytes string `json:"bytes"`
+		} `json:"/"`
+	} `json:"Data"`
+
+	Links []link `json:"Links"`
 
 	name    string
 	subdirs []*Dir
 }
 
+type link struct {
+	Hash  gocid.Cid
+	Name  string
+	Tsize uint64
+}
+
 func NewDir(name string) *Dir {
-	return &Dir{Data: "CAE=", name: name}
+	var d = Dir{name: name}
+	d.Data.Root.Bytes = "CAE"
+	return &d
 }
 
 func (d *Dir) AddLink(name, cid string, size uint64) error {
@@ -26,10 +38,10 @@ func (d *Dir) AddLink(name, cid string, size uint64) error {
 		return err
 	}
 
-	d.Links = append(d.Links, format.Link{
-		Name: name,
-		Cid:  c,
-		Size: size,
+	d.Links = append(d.Links, link{
+		Name:  name,
+		Hash:  c,
+		Tsize: size,
 	})
 
 	return nil
@@ -86,7 +98,7 @@ func (d *Dir) Put(ipfs *shell.Shell) (string, uint64, error) {
 	}
 
 	for _, l := range d.Links {
-		total += l.Size
+		total += l.Tsize
 	}
 
 	b, err := json.Marshal(d)
@@ -94,6 +106,6 @@ func (d *Dir) Put(ipfs *shell.Shell) (string, uint64, error) {
 		return "", total, err
 	}
 
-	cid, err := ipfs.DagPut(b, "json", "dag-pb")
+	cid, err := ipfs.DagPut(b, "dag-json", "dag-pb")
 	return cid, total, err
 }

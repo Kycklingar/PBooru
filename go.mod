@@ -8,10 +8,11 @@ require (
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/gabriel-vasile/mimetype v1.2.0
 	github.com/ipfs/go-cid v0.0.7 // indirect
-	github.com/ipfs/go-ipfs-api v0.2.0
+	github.com/ipfs/go-ipfs-api v0.2.1-0.20211014191653-0379ac88b0ec
 	github.com/ipfs/go-ipld-format v0.2.0 // indirect
 	github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795 // indirect
 	github.com/lib/pq v1.10.1
+	github.com/multiformats/go-multiaddr-net v0.2.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 )
