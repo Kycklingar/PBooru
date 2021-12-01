@@ -19,7 +19,7 @@ type ComicCollector struct {
 }
 
 func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) error {
-	tags, err := parseTags(tagQuery)
+	tags, err := parseTagsComics(tagQuery)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (cc *ComicCollector) Search(title, tagQuery string, limit, offset int) erro
 	return err
 }
 
-func parseTags(tagQuery string) ([]*Tag, error) {
+func parseTagsComics(tagQuery string) ([]*Tag, error) {
 	if len(tagQuery) <= 0 {
 		return nil, nil
 	}

@@ -46,6 +46,15 @@ type indexPage struct {
 	}
 }
 
+func redirectToReferer(w http.ResponseWriter, r *http.Request, backup string) {
+	s := r.Referer()
+	if len(s) <= 0 {
+		s = backup
+	}
+
+	http.Redirect(w, r, s, http.StatusSeeOther)
+}
+
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" {
 		notFoundHandler(w)

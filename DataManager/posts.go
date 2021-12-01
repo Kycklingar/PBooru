@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Nr90/imgsim"
 	"github.com/frustra/bbcode"
@@ -81,6 +82,13 @@ func CachedPost(p *Post) *Post {
 	return p
 }
 
+type metadata struct {
+	namespace string
+	data      string
+}
+
+type metaDataMap map[string][]string
+
 type Post struct {
 	ID         int
 	Hash       string
@@ -96,10 +104,11 @@ type Post struct {
 
 	AltGroup int
 	Alts     []*Post
+	MetaData metaDataMap
 
 	Tombstone Tombstone
 
-	description *string
+	Description string
 
 	editCount int
 }
@@ -135,6 +144,7 @@ const (
 	PFAltGroup
 	PFDescription
 	PFTombstone
+	PFMetaData
 )
 
 type checksums struct {
@@ -151,6 +161,20 @@ type Thumb struct {
 	Hash string
 	Size int
 }
+
+//type bindContext struct {
+//	p     *Post
+//	pinfo bool
+//}
+//
+//func (b *bindContext) joinPostInfo() string {
+//	if !b.pinfo {
+//		b.pinfo = true
+//		return "LEFT JOIN post_info ON p.id = post_info.post_id"
+//	}
+//
+//	return ""
+//}
 
 func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
@@ -180,7 +204,8 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	case PFChecksums:
 		sel.Bind(&p.Checksums.Sha256, "sha256", "LEFT JOIN hashes ON p.id = hashes.post_id")
 		sel.Bind(&p.Checksums.Md5, "md5", "")
-		//case PFDescription:
+	case PFDescription:
+		sel.Bind(&p.Description, "p.description", "")
 	}
 }
 
@@ -208,11 +233,15 @@ func (p *Post) QMul(q querier, fields ...sqlbinder.Field) error {
 	}()
 
 	go func() {
+		c <- p.qMetaData(q, fields...)
+	}()
+
+	go func() {
 		c <- q.QueryRow(query, p.ID).Scan(selector.Values()...)
 	}()
 
 	var err error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		er := <-c
 		if er != nil {
 			log.Println(er)
@@ -242,15 +271,7 @@ func (t thumbnails) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 }
 
 func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
-	var ok bool
-	for _, field := range fields {
-		if field == PFAlts {
-			ok = true
-			break
-		}
-	}
-
-	if !ok {
+	if !p.field(PFAlts, fields...) {
 		return nil
 	}
 
@@ -304,13 +325,7 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 }
 
 func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
-	var ok bool
-	for _, field := range fields {
-		if field == PFThumbnails {
-			ok = true
-		}
-	}
-	if !ok {
+	if !p.field(PFThumbnails, fields...) {
 		return nil
 	}
 
@@ -347,29 +362,75 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	return nil
 }
 
-//func (p *Post) QID(q querier) int {
-//	if p.ID != 0 {
-//		return p.ID
-//	}
-//
-//	if p.Hash != "" {
-//		err := q.QueryRow("SELECT id FROM posts WHERE multihash=$1", p.Hash).Scan(&p.ID)
-//		if err != nil && err != sql.ErrNoRows {
-//			log.Print(err)
-//			return 0
-//		}
-//	}
-//
-//	//C.Cache.Set("PST", strconv.Itoa(p.QID()), p)
-//
-//	return p.ID
-//}
+func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
+	if !p.field(PFMetaData, fields...) {
+		return nil
+	}
+	var metaMap = make(metaDataMap)
+
+	rows, err := q.Query(`
+		SELECT namespace, metadata
+		FROM post_metadata
+		WHERE post_id = $1
+		`,
+		p.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	rows2, err := q.Query(`
+		SELECT created
+		FROM post_creation_dates
+		WHERE post_id = $1
+		`,
+		p.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows2.Close()
+
+	for rows.Next() {
+		var m metadata
+		err = rows.Scan(&m.namespace, &m.data)
+		if err != nil {
+			return err
+		}
+
+		metaMap[m.namespace] = append(metaMap[m.namespace], m.data)
+	}
+
+	for rows2.Next() {
+		var t time.Time
+		if err = rows2.Scan(&t); err != nil {
+			return err
+		}
+
+		metaMap["date"] = append(metaMap["date"], t.Format("2006-01-02"))
+
+	}
+
+	p.MetaData = metaMap
+
+	return nil
+}
+
+func (p *Post) field(field sqlbinder.Field, fields ...sqlbinder.Field) bool {
+	for _, f := range fields {
+		if f == field {
+			return true
+		}
+	}
+	return false
+}
 
 func (p *Post) SetID(q querier, id int) error {
 	return q.QueryRow("SELECT id FROM posts WHERE id=$1", id).Scan(&p.ID)
 }
 
-func (p *Post) Thumbnails() []Thumb {
+func (p Post) Thumbnails() []Thumb {
 	var thumbs []Thumb
 	for _, t := range p.thumbnails {
 		if t.Size > 0 {
@@ -483,32 +544,6 @@ func (p *Post) SizePretty() string {
 	}
 
 	return fmt.Sprintf("%.2f%cB", float64(p.Size)/float64(div), "KMGTPE"[exp])
-}
-
-func (p *Post) Description() string {
-	if p.description != nil {
-		return *p.description
-	}
-
-	return ""
-}
-
-func (p *Post) QDescription(q querier) string {
-	if p.description != nil {
-		return *p.description
-	}
-
-	var tmp string
-
-	err := q.QueryRow("SELECT text FROM post_description WHERE post_id = $1 ORDER BY itteration DESC LIMIT 1", p.ID).Scan(&tmp)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Println(err)
-		}
-	}
-	p.description = &tmp
-
-	return tmp
 }
 
 func cidDir(cid string) string {

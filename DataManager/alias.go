@@ -6,6 +6,29 @@ import (
 	"log"
 )
 
+// Returns the aliased tag or input if none
+func aliasedTo(q querier, tag *Tag) (*Tag, error) {
+	var to = NewTag()
+
+	err := q.QueryRow(`
+		SELECT alias_to
+		FROM alias
+		WHERE alias_from = $1
+		`,
+		tag.ID,
+	).Scan(&to.ID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return tag, nil
+		}
+
+		return nil, err
+	}
+
+	return to, nil
+}
+
 func NewAlias() *Alias {
 	var a Alias
 	a.Tag = NewTag()

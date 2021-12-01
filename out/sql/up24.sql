@@ -45,3 +45,74 @@ CREATE OR REPLACE VIEW dns_creator_scores AS
 	LEFT JOIN dns_tags dts ON c.id = dts.creator_id
 	LEFT JOIN dns_tag dt ON dts.tag_id = dt.id
 	GROUP BY c.id;
+
+-- FILENAMES, SOURCES, VERSION, ETC
+CREATE TABLE IF NOT EXISTS post_metadata (
+	id BIGSERIAL PRIMARY KEY,
+	post_id INTEGER NOT NULL REFERENCES posts(id),
+	namespace TEXT NOT NULL,
+	metadata TEXT NOT NULL,
+	UNIQUE(post_id, namespace, metadata)
+);
+
+DROP TABLE post_description;
+
+ALTER TABLE posts ADD COLUMN creation_date DATE DEFAULT NULL;
+ALTER TABLE posts ADD COLUMN description TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE post_creation_dates (
+	id SERIAL PRIMARY KEY,
+	post_id INTEGER NOT NULL REFERENCES posts(id),
+	created DATE NOT NULL
+);
+
+CREATE TYPE log_action AS ENUM ('create', 'modify', 'delete');
+
+CREATE TABLE logs (
+	log_id BIGSERIAL PRIMARY KEY,
+	user_id INTEGER NOT NULL REFERENCES users(id),
+	--tables_affected TEXT NOT NULL,
+	timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE logs_affected (
+	log_id BIGSERIAL REFERENCES logs(logs_id),
+	log_table TEXT NOT NULL,
+
+	UNIQUE(log_id, log_table)
+);
+
+CREATE TABLE log_post_description (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	post_id INTEGER NOT NULL,
+	description TEXT NOT NULL
+);
+
+CREATE TABLE log_post_metadata (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+
+	post_id INTEGER NOT NULL,
+	namespace TEXT NOT NULL,
+	metadata TEXT NOT NULL
+);
+
+CREATE TABLE log_post_creation_dates (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+
+	post_id INTEGER NOT NULL,
+	created DATE NOT NULL
+);
+
+CREATE TABLE log_post_tags (
+	id BIGSERIAL PRIMARY KEY,
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+	post_id INTEGER NOT NULL,
+);
+
+CREATE TABLE log_post_tags_map (
+	ptid BIGINT REFERENCES log_post_tags(id) ON DELETE CASCADE,
+	tag_id INTEGER NOT NULL
+);

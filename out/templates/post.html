@@ -62,6 +62,7 @@
 						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">
 						<input type="submit">
 					</form>
+					{{template "form-post-data" .Post}}
 				{{end}}
         			{{if .User.Flag.Delete}}
 					<form method="POST" action="/post/edit/thumbnails/generate/">
@@ -190,6 +191,14 @@
 	    <h3>
             	<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
 	    </h3>
+	    {{with .Post.MetaData.filename}}
+	    <details>
+		    <summary>Filenames</summary>
+		    {{range .}}
+		    <a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.}}" download>{{.}}</a>
+		    {{end}}
+	    </details>
+	    {{end}}
 	{{with .Alts}}
 	<div class="cpage-container nolink">
 		{{$zindex := 1000}}

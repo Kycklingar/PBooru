@@ -1,0 +1,93 @@
+{{template "base"}}
+<style>
+.row {
+	display: flex;
+}
+
+.column {
+	flex: 50%;
+}
+
+.expander {
+	margin:1em;
+	max-width:100%;
+}
+.expander img {
+	background-color: black;
+	max-width:100%;
+}
+
+.resizable {
+	resize:both;
+	overflow:scroll;
+	min-width:400px;
+}
+
+.overflow {
+	overflow:auto;
+	white-space:nowrap;
+}
+
+textarea{
+	width:100%;
+	height:100%;
+	resize:none;
+}
+
+label{
+	display:block;
+}
+</style>
+
+<div class="row">
+	<form action="/post/edit/description/" method="POST">
+		<input type="hidden" name="post-id" value="{{.Post.ID}}">
+		<div class="box row resizable">
+			<div class="column overflow">
+				{{range .Tags}}
+				<div><span class="tag namespace-{{.Namespace}}">{{.}}</span></div>
+				{{end}}
+			</div>
+			<input type="hidden" name="post-tags-diff" value="{{template "printTags" .Tags}}">
+			<div class="column">
+				<textarea name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
+			</div>
+		</div>
+		<div class="box">
+			<fieldset class="row">
+				<legend>Metadata</legend>
+				<fieldset class="column">
+					<legend>Add</legend>
+					<textarea name="post-metadata" wrap="off"></textarea>
+				</fieldset>
+				<fieldset class="column">
+					<legend>Remove</legend>
+					{{ range $k, $v := .Post.MetaData}}
+					<fieldset>
+						<legend>{{$k}}</legend>
+						{{range $v}}
+						<label>
+							<input type="checkbox" name="post-metadata-remove" value="{{$k}}:{{.}}">
+							{{.}}
+						</label>
+						{{end}}
+					</fieldset>
+					{{end}}
+				</fieldset>
+			</fieldset>
+			<fieldset>
+				<legend>Description</legend>
+				<input type="hidden" name="post-description-diff" value="{{.Post.Description}}">
+				<textarea name="post-description" style="resize:vertical">{{.Post.Description}}</textarea>
+			</fieldset>
+		</div>
+		<div class="box">
+			<input type="submit" value="GoGoGo" class="center">
+		</div>
+	</form>
+	<div class="expander">
+		<img src="http://localhost:8080/ipfs/{{.Post.Hash}}">
+	</div>
+</div>
+
+{{template "baseEnd"}}

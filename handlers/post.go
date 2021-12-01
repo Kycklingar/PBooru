@@ -13,6 +13,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
+	postform "github.com/kycklingar/PBooru/handlers/forms/post"
 )
 
 var errNoID = errors.New("No post identification provided")
@@ -242,6 +243,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFMime,
 		DM.PFDimension,
 		DM.PFThumbnails,
+		DM.PFDescription,
+		DM.PFMetaData,
 	); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1077,4 +1080,61 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	p.Time = bm.EndStr(performBenchmarks)
 
 	renderTemplate(w, "similar", p)
+}
+
+func postModifyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+
+	ua := DM.UserAction(user)
+
+	r.ParseForm()
+
+	if err := postform.ProcessFormData(ua, r.Form); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := ua.Exec(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	redirectToReferer(w, r, fmt.Sprint("/post/", r.Form.Get("post-id")))
+}
+
+func PostEditHandler(w http.ResponseWriter, r *http.Request) {
+	uri := uriSplitter(r)
+
+	id, err := uri.getIntAtIndex(2)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var post = DM.NewPost()
+	post.ID = id
+	post.QMul(
+		DM.DB,
+		DM.PFHash,
+		DM.PFDescription,
+		DM.PFMetaData,
+	)
+
+	var tc DM.TagCollector
+	tc.FromPostMul(DM.DB, post, DM.FTag, DM.FCount, DM.FNamespace)
+
+	var p = struct {
+		Post *DM.Post
+		Tags []*DM.Tag
+	}{
+		Post: post,
+		Tags: tc.Tags,
+	}
+
+	renderTemplate(w, "post-edit", p)
 }

@@ -1,0 +1,88 @@
+{{template "base"}}
+{{range .Logs}}
+<style>
+table {
+	display: inline-block;
+}
+td {
+	max-width: 20em;
+}
+.log-action-create {
+	background-color: green;
+}
+
+.log-action-delete {
+	background-color: red;
+}
+</style>
+<div class="box">
+	<div>{{.User.ID}}</div>
+	<div>{{.Timestamp}}</div>
+	<ul>
+	{{range .Posts}}
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+		<li>
+		{{with .Tags}}
+			<table>
+			{{range .Added}}
+				<tr class="log-action-create">
+					<td>+</td>
+					<td>{{.}}</td>
+				</tr>
+			{{end}}
+			{{range .Removed}}
+				<tr class="log-action-delete">
+					<td>-</td>
+					<td>{{.}}</td>
+				</tr>
+			{{end}}
+			</table>
+		{{end}}
+		{{if .Description.Description}}
+		{{with .Description}}
+			<table>
+				<th>New</th>
+				<th>Old</th>
+				<th>Diff</th>
+				<tr>
+					<td>{{.Description}}</td>
+					<td>{{.Description}}</td>
+					<td>{{.Description}}</td>
+				</tr>
+			</table>
+		{{end}}
+		{{end}}
+		{{with .MetaData}}
+			<table>
+				<caption>MetaData</caption>
+				<th>Action</th>
+				<th>Namespace</th>
+				<th>Data</th>
+			{{range .}}
+				<tr class="log-action-{{.Action}}">
+					<td>{{.Action}}</td>
+					<td>{{.Namespace}}</td>
+					<td>{{.MetaData}}</td>
+				</tr>
+			{{end}}
+			</table>
+		{{end}}
+		{{with .CreationDates}}
+			<table>
+				<caption>Release Dates</caption>
+				<th>Action</th>
+				<th>Date</th>
+			{{range .}}
+				<tr class="log-action-{{.Action}}">
+					<td>{{.Action}}</td>
+					<td>{{.Date}}</td>
+				</tr>
+			{{end}}
+			</table>
+		{{end}}
+		</li>
+	{{end}}
+	</ul>
+</div>
+{{end}}
+{{template "baseEnd"}}

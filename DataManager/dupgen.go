@@ -69,7 +69,7 @@ type AppleTree struct {
 }
 
 func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTree, error) {
-	tags, err := parseTags(tagStr)
+	tags, err := parseTagsComics(tagStr)
 	if err != nil {
 		return nil, err
 	}

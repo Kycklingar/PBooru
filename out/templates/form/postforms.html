@@ -1,0 +1,17 @@
+{{define "form-post-data"}}
+<form action="/post/edit/description/" method="POST">
+	<input type="hidden" name="post-id" value="{{.ID}}">
+
+	<input type="hidden" name="post-description-diff" value="{{.Description}}">
+	<label>Description
+		<br>
+		<textarea name="post-description">{{.Description}}</textarea>
+	</label>
+	<br>
+	<label>MetaData
+		<br>
+		<textarea name="post-metadata"></textarea>
+	</label>
+	<input type="submit">
+</form>
+{{end}}

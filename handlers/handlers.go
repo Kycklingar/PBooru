@@ -248,8 +248,11 @@ func init() {
 
 	Handlers["/stats/"] = makeStatHandler(statisticsHandler)
 
+	Handlers["/spine/"] = makeStatHandler(logsHandler)
+
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)
+	Handlers["/post/edit/"] = makeStatHandler(PostEditHandler)
 	Handlers["/post/edit/remove/"] = makeStatHandler(RemovePostHandler)
 	Handlers["/post/edit/thumbnails/generate/"] = makeStatHandler(generateThumbnailsHandler)
 	Handlers["/post/edit/tags/add/"] = makeStatHandler(postAddTagsHandler)
@@ -260,6 +263,8 @@ func init() {
 
 	Handlers["/post/edit/assignalts/"] = assignAltsHandler
 	Handlers["/post/edit/removealt/"] = unassignAltHandler
+
+	Handlers["/post/edit/description/"] = postModifyHandler
 
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)

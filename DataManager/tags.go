@@ -341,6 +341,52 @@ func (t *Tag) allParents(q querier) []*Tag {
 	return parents
 }
 
+// Get all parents and grand parents of this tag
+func (t *Tag) parents(q querier) (tagSet, error) {
+	var set tagSet
+
+	rows, err := q.Query(`
+		WITH RECURSIVE parents AS (
+			SELECT parent_id, child_id
+			FROM parent_tags
+			WHERE child_id = $1
+			UNION
+				SELECT p.parent_id, p.child_id
+				FROM parent_tags p
+				JOIN parents t ON t.parent_id = p.child_id
+		)
+		SELECT t.id, t.tag, n.id, n.nspace
+		FROM parents
+		LEFT JOIN tags t
+		ON t.id = parent_id
+		JOIN namespaces n
+		ON t.namespace_id = n.id
+		`,
+		t.ID,
+	)
+	if err != nil {
+		return set, noRows(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tag = NewTag()
+		err = rows.Scan(
+			&tag.ID,
+			&tag.Tag,
+			&tag.Namespace.Namespace,
+			&tag.Namespace.ID,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		set = append(set, tag)
+	}
+
+	return set, nil
+}
+
 func (t *Tag) Parents(q querier) []*Tag {
 	if t.QID(q) <= 0 {
 		return nil
