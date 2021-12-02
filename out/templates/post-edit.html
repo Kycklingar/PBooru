@@ -10,7 +10,8 @@
 
 .expander {
 	margin:1em;
-	max-width:100%;
+	width:100%;
+	min-width:20em;
 }
 .expander img {
 	background-color: black;
@@ -58,7 +59,7 @@ label{
 				<legend>Metadata</legend>
 				<fieldset class="column">
 					<legend>Add</legend>
-					<textarea name="post-metadata" wrap="off"></textarea>
+					<textarea name="post-metadata" wrap="off" placeholder="filename, source, date"></textarea>
 				</fieldset>
 				<fieldset class="column">
 					<legend>Remove</legend>
@@ -86,7 +87,15 @@ label{
 		</div>
 	</form>
 	<div class="expander">
-		<img src="http://localhost:8080/ipfs/{{.Post.Hash}}">
+		{{if eq .Post.Mime.Type "image"}}
+		<img src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+		{{else if eq .Post.Mime.Type "video"}}
+		<video loop controls>
+			<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+		</video>
+		{{else}}
+		<span>No preview for {{.Post.Mime.Type}}</span>
+		{{end}}
 	</div>
 </div>
 

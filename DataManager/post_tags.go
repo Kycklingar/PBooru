@@ -36,70 +36,68 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		}
 
 		var (
-			add    = tagSetDiff(tags, diff)
-			remove = tagSetDiff(diff, tags)
+			add    = tags.diff(diff)
+			remove = diff.diff(tags)
 		)
 
 		// Reduce to only add new tags
-		add = tagSetDiff(add, in)
+		add = add.diff(in)
 
 		// Reduce to only remove existing tags
-		remove = tagSetDiff(in, tagSetDiff(in, remove))
+		remove = in.diff(in.diff(remove))
 
 		// Nothing to do, return nil
 		if len(add)+len(remove) <= 0 {
 			return nil, nil
 		}
 
-		prepped := func(query string, set tagSet) error {
-			if len(set) <= 0 {
-				return nil
-			}
-			stmt, err := tx.Prepare(query)
-			if err != nil {
-				return err
-			}
-			defer stmt.Close()
-
-			for _, tag := range set {
-				_, err = stmt.Exec(postID, tag.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		}
-
-		err = prepped(`
-			DELETE FROM post_tag_mappings
-			WHERE post_id = $1
-			AND tag_id = $2
-			`,
-			remove,
-		)
+		err = prepPTExec(tx, queryDeletePTM, postID, remove)
 		if err != nil {
 			return nil, err
 		}
 
-		err = prepped(`
-			INSERT INTO post_tag_mappings (
-				post_id,
-				tag_id
-			)
-			VALUES($1, $2)
-			`,
-			add,
-		)
+		err = prepPTExec(tx, queryInsertPTM, postID, add)
 		if err != nil {
 			return nil, err
 		}
 
 		return logPostTags{
-			postID:  postID,
+			PostID:  postID,
 			Added:   add,
 			Removed: remove,
 		}, nil
 
 	}
+}
+
+const (
+	queryInsertPTM = `INSERT INTO post_tag_mappings (
+				post_id,
+				tag_id
+			)
+			VALUES($1, $2)`
+
+	queryDeletePTM = `DELETE FROM post_tag_mappings
+			WHERE post_id = $1
+			AND tag_id = $2`
+)
+
+func prepPTExec(tx querier, query string, postID int, set tagSet) error {
+	if len(set) <= 0 {
+		return nil
+	}
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, tag := range set {
+		_, err = stmt.Exec(postID, tag.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

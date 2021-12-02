@@ -39,6 +39,22 @@ func (l *Log) initPostHistory(postID int) postHistory {
 	return p
 }
 
+func initPostLog(tx *sql.Tx, logID, postID int) error {
+	_, err := tx.Exec(`
+		INSERT INTO log_post(
+			log_id,
+			post_id
+		)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+		`,
+		logID,
+		postID,
+	)
+
+	return err
+}
+
 func getLogPostTags(log *Log, q querier) error {
 	rows, err := q.Query(`
 		SELECT post_id, action, t.id, t.tag, n.id, n.nspace
@@ -84,6 +100,7 @@ func getLogPostTags(log *Log, q querier) error {
 		case aDelete:
 			ph.Tags.Removed = append(ph.Tags.Removed, tag)
 		}
+		ph.Tags.PostID = pid
 
 		log.Posts[pid] = ph
 
@@ -93,7 +110,7 @@ func getLogPostTags(log *Log, q querier) error {
 }
 
 type logPostTags struct {
-	postID  int
+	PostID  int
 	Added   tagSet
 	Removed tagSet
 }
@@ -120,7 +137,7 @@ func (l logPostTags) log(logid int, tx *sql.Tx) error {
 			`,
 			logid,
 			action,
-			l.postID,
+			l.PostID,
 		).Scan(&id)
 		if err != nil {
 			return err
@@ -149,6 +166,10 @@ func (l logPostTags) log(logid int, tx *sql.Tx) error {
 		return nil
 	}
 
+	if err := initPostLog(tx, logid, l.PostID); err != nil {
+		return err
+	}
+
 	if err := createAction(aCreate, l.Added); err != nil {
 		return err
 	}
@@ -157,9 +178,18 @@ func (l logPostTags) log(logid int, tx *sql.Tx) error {
 
 func getLogPostDescriptions(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT post_id, description
-		FROM log_post_description
-		WHERE log_id = $1
+		SELECT d.post_id, d.description, COALESCE((
+			SELECT description
+			FROM log_post_description
+			WHERE log_id = (
+				SELECT max(log_id)
+				FROM log_post_description
+				WHERE post_id = d.post_id
+				AND log_id < d.log_id
+			)
+		), '') diff
+		FROM log_post_description d
+		WHERE d.log_id = $1
 		`,
 		log.ID,
 	)
@@ -170,10 +200,12 @@ func getLogPostDescriptions(log *Log, q querier) error {
 
 	for rows.Next() {
 		var l logPostDescription
-		err = rows.Scan(&l.PostID, &l.Description)
+		err = rows.Scan(&l.PostID, &l.Description, &l.Old)
 		if err != nil {
 			return err
 		}
+
+		l.Diff = diffHtml(l.Old, l.Description)
 
 		ph := log.initPostHistory(l.PostID)
 		ph.Description = l
@@ -186,12 +218,14 @@ func getLogPostDescriptions(log *Log, q querier) error {
 type logPostDescription struct {
 	PostID      int
 	Description string
+	Old         string
+	Diff        string
 }
 
 func (l logPostDescription) table() logtable { return lPostDescription }
 
-func (l logPostDescription) log(logid int, tx *sql.Tx) (err error) {
-	_, err = tx.Exec(`
+func (l logPostDescription) log(logid int, tx *sql.Tx) error {
+	_, err := tx.Exec(`
 		INSERT INTO log_post_description (
 			log_id,
 			post_id,
@@ -203,8 +237,11 @@ func (l logPostDescription) log(logid int, tx *sql.Tx) (err error) {
 		l.PostID,
 		l.Description,
 	)
+	if err != nil {
+		return err
+	}
 
-	return
+	return initPostLog(tx, logid, l.PostID)
 }
 
 func getLogPostMetaData(log *Log, q querier) error {
@@ -244,8 +281,8 @@ type logPostMetaData struct {
 
 func (l logPostMetaData) table() logtable { return lPostMetaData }
 
-func (l logPostMetaData) log(logid int, tx *sql.Tx) (err error) {
-	_, err = tx.Exec(`
+func (l logPostMetaData) log(logid int, tx *sql.Tx) error {
+	_, err := tx.Exec(`
 		INSERT INTO log_post_metadata (
 			log_id,
 			action,
@@ -261,8 +298,11 @@ func (l logPostMetaData) log(logid int, tx *sql.Tx) (err error) {
 		l.Namespace,
 		l.MetaData,
 	)
+	if err != nil {
+		return err
+	}
 
-	return
+	return initPostLog(tx, logid, l.PostID)
 }
 
 func getLogPostCreationDates(log *Log, q querier) error {
@@ -301,8 +341,8 @@ type logPostCreationDates struct {
 
 func (l logPostCreationDates) table() logtable { return lPostCreationDates }
 
-func (l logPostCreationDates) log(logid int, tx *sql.Tx) (err error) {
-	_, err = tx.Exec(`
+func (l logPostCreationDates) log(logid int, tx *sql.Tx) error {
+	_, err := tx.Exec(`
 		INSERT INTO log_post_creation_dates (
 			log_id,
 			action,
@@ -316,6 +356,9 @@ func (l logPostCreationDates) log(logid int, tx *sql.Tx) (err error) {
 		l.postID,
 		l.Date,
 	)
+	if err != nil {
+		return err
+	}
 
-	return
+	return initPostLog(tx, logid, l.postID)
 }

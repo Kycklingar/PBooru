@@ -726,6 +726,11 @@ li
 	max-width: unset;
 }
 
+#post .description p
+{
+	white-space: pre-wrap;
+}
+
 #pageinator, #pageinator a:link, #pageinator a:visited
 {
     color:#AAA;

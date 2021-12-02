@@ -67,6 +67,8 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		}
 	}()
 
+	ua := UserAction(user)
+
 	// Update alternatives
 	// must happen before dupe updates
 	if err = updateAlts(tx, dupe); err != nil {
@@ -115,7 +117,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	}
 
 	// For each inferior post, move tags to superior
-	if err = moveTags(tx, dupe); err != nil {
+	if err = moveTags(tx, dupe, ua); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -171,6 +173,11 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	// Update reports
 	if err = updateDupeReports(tx, dupe); err != nil {
 		log.Println(err)
+		return err
+	}
+
+	err = ua.exec(tx)
+	if err != nil {
 		return err
 	}
 
@@ -485,35 +492,87 @@ func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
 	return tids, nil
 }
 
-func moveTags(tx querier, dupe Dupe) (err error) {
-	for _, p := range dupe.Inferior {
-		_, err = tx.Exec(`
-			INSERT INTO post_tag_mappings (post_id, tag_id)
-				SELECT $1, tag_id FROM post_tag_mappings
-				WHERE post_id = $2
-			ON CONFLICT DO NOTHING
-			`,
-			dupe.Post.ID,
-			p.ID,
-		)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+//func moveTags(tx querier, dupe Dupe, ua *UserActions) (err error) {
+//	for _, p := range dupe.Inferior {
+//		_, err = tx.Exec(`
+//			INSERT INTO post_tag_mappings (post_id, tag_id)
+//				SELECT $1, tag_id FROM post_tag_mappings
+//				WHERE post_id = $2
+//			ON CONFLICT DO NOTHING
+//			`,
+//			dupe.Post.ID,
+//			p.ID,
+//		)
+//		if err != nil {
+//			log.Println(err)
+//			return
+//		}
+//
+//		_, err = tx.Exec(`
+//			DELETE FROM post_tag_mappings
+//			WHERE post_id = $1
+//			`,
+//			p.ID,
+//		)
+//		if err != nil {
+//			log.Println(err)
+//			return
+//		}
+//	}
+//
+//	return
+//}
 
-		_, err = tx.Exec(`
-			DELETE FROM post_tag_mappings
-			WHERE post_id = $1
-			`,
-			p.ID,
-		)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
+	set, err := postTags(tx, dupe.Post.ID)
+	if err != nil {
+		return err
 	}
 
-	return
+	var newSet tagSet
+
+	stmt, err := tx.Prepare(`
+		DELETE FROM post_tag_mappings
+		WHERE post_id = $1
+		`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, inf := range dupe.Inferior {
+		infset, err := postTags(tx, inf.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = stmt.Exec(inf.ID)
+		if err != nil {
+			return err
+		}
+
+		ua.Add(nullUA(logPostTags{
+			PostID:  inf.ID,
+			Removed: infset,
+		}))
+
+		newSet = append(newSet, infset.diff(newSet)...)
+	}
+
+	newSet = newSet.diff(set)
+
+	err = prepPTExec(tx, queryInsertPTM, dupe.Post.ID, newSet)
+	if err != nil {
+		return err
+	}
+
+	ua.Add(nullUA(logPostTags{
+		PostID: dupe.Post.ID,
+		Added:  newSet,
+	}))
+
+	return nil
 }
 
 func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {

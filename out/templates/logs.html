@@ -1,12 +1,25 @@
 {{template "base"}}
-{{range .Logs}}
 <style>
 table {
 	display: inline-block;
 }
+
 td {
 	max-width: 20em;
 }
+
+table.description td {
+	white-space: pre-wrap;
+}
+
+.new{
+	color:green;
+}
+
+.del{
+	color:red;
+}
+
 .log-action-create {
 	background-color: green;
 }
@@ -15,39 +28,46 @@ td {
 	background-color: red;
 }
 </style>
+
+{{with .Logs}}
+{{range .}}
 <div class="box">
-	<div>{{.User.ID}}</div>
+	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
 	<ul>
 	{{range .Posts}}
-		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 		<li>
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 		{{with .Tags}}
+		{{if .PostID}}
 			<table>
+				<caption>Tags</caption>
 			{{range .Added}}
-				<tr class="log-action-create">
-					<td>+</td>
-					<td>{{.}}</td>
+				<tr>
+					<td class="log-action-create">+</td>
+					<td class="namespace-{{.Namespace}}">{{.}}</td>
 				</tr>
 			{{end}}
 			{{range .Removed}}
-				<tr class="log-action-delete">
-					<td>-</td>
-					<td>{{.}}</td>
+				<tr>
+					<td class="log-action-delete">-</td>
+					<td class="namespace-{{.Namespace}}">{{.}}</td>
 				</tr>
 			{{end}}
 			</table>
 		{{end}}
-		{{if .Description.Description}}
+		{{end}}
+		{{if .Description.PostID}}
 		{{with .Description}}
-			<table>
+			<table class="description">
+				<caption>Description</caption>
 				<th>New</th>
 				<th>Old</th>
 				<th>Diff</th>
 				<tr>
 					<td>{{.Description}}</td>
-					<td>{{.Description}}</td>
-					<td>{{.Description}}</td>
+					<td>{{.Old}}</td>
+					<td>{{noescape .Diff}}</td>
 				</tr>
 			</table>
 		{{end}}
@@ -84,5 +104,8 @@ td {
 	{{end}}
 	</ul>
 </div>
+{{end}}
+{{else}}
+SORRY NOTHING
 {{end}}
 {{template "baseEnd"}}

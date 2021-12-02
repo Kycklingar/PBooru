@@ -7,15 +7,33 @@ import (
 )
 
 func logsHandler(w http.ResponseWriter, r *http.Request) {
-	_, ui := getUser(w, r)
-
 	logs, err := DM.RecentLogs(DM.DB)
+	renderSpine(w, r, logs, err)
+}
+
+func postLogsHandler(w http.ResponseWriter, r *http.Request) {
+	uri := uriSplitter(r)
+	postID, err := uri.getIntAtIndex(2)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	logs, err := DM.PostLogs(DM.DB, postID)
+	renderSpine(w, r, logs, err)
+}
+
+func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err error) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	for _, log := range logs {
+	_, ui := getUser(w, r)
+
+	for i, log := range logs {
+		logs[i].User = DM.CachedUser(log.User)
+		logs[i].User.QName(DM.DB)
 		for _, ph := range log.Posts {
 			err := ph.Post.QMul(
 				DM.DB,
@@ -38,4 +56,5 @@ func logsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderTemplate(w, "logs", p)
+
 }

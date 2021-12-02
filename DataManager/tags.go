@@ -374,8 +374,8 @@ func (t *Tag) parents(q querier) (tagSet, error) {
 		err = rows.Scan(
 			&tag.ID,
 			&tag.Tag,
-			&tag.Namespace.Namespace,
 			&tag.Namespace.ID,
+			&tag.Namespace.Namespace,
 		)
 		if err != nil {
 			return nil, err

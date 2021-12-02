@@ -5,7 +5,7 @@ import "strings"
 type tagSet []*Tag
 
 // returns the tags in a that are not in b
-func tagSetDiff(a, b tagSet) tagSet {
+func (a tagSet) diff(b tagSet) tagSet {
 	var (
 		diff = make(map[string]struct{})
 		ret  []*Tag
@@ -135,10 +135,10 @@ func (set tagSet) upgrade(q querier) (tagSet, error) {
 			return set, err
 		}
 
-		parents = append(parents, tagSetDiff(par, parents)...)
+		parents = append(parents, par.diff(parents)...)
 	}
 
-	return append(set, tagSetDiff(parents, set)...), nil
+	return append(set, parents.diff(set)...), nil
 }
 
 func (set tagSet) save(q querier) error {

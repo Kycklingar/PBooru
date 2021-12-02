@@ -32,23 +32,11 @@
 	{{if .User.ID}}
 		<details>
 		<summary>Edit Post</summary>
-			<br><a style="color:#AAA" href="/post/taghistory/{{.Post.ID}}/">Tag History</a>
+			<br><a style="color:#AAA" href="/spine/post/{{.Post.ID}}/">Post History</a>
         		<div id="editPostForm">
-        			{{if .User.Flag.Tagging}}
-        		    		<form method="POST">
-        		    		    <p>Edit tags</p>
-        		    		    <textarea onfocus="setInput(this)" class="stinput" id="addtagsinput" name="tags">
-					    {{- template "printTags" .Sidebar.Tags -}}
-					    </textarea>
-        		    		    <input type="submit" value="Edit">
-        		    		</form>
-					<form method="POST" action="/post/edit/tags/add/">
-						<input type="hidden" name="post-id" value="{{.Post.ID}}">
-						<textarea class="stinput" name="tags"></textarea>
-						<input type="submit" value="Add">
-					</form>
-        		    		<script type="text/javascript" src="/static/suggestions.js"></script>
-			    	{{end}}
+				{{if .User.Flag.Tagging}}
+				<a style="color:#AAA" href="/post/edit/{{.Post.ID}}/">Edit</a>
+				{{end}}
 				{{if .User.Flag.Upload}}
 					<form method="POST" action="/post/edit/assignalts/">
 						<h3>Assign alt</h3>
@@ -62,7 +50,6 @@
 						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">
 						<input type="submit">
 					</form>
-					{{template "form-post-data" .Post}}
 				{{end}}
         			{{if .User.Flag.Delete}}
 					<form method="POST" action="/post/edit/thumbnails/generate/">
@@ -188,11 +175,11 @@
 	</div>
         {{end}}
         <div style="padding-left: 4px;">
-	    <h3>
+	    <span>
             	<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
-	    </h3>
+	    </span>
 	    {{with .Post.MetaData.filename}}
-	    <details>
+	    <details style="display:inline;">
 		    <summary>Filenames</summary>
 		    {{range .}}
 		    <a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.}}" download>{{.}}</a>
@@ -222,7 +209,7 @@
 		{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
 	{{end}}
 	    {{with .Post.Description}}
-		<div class="box">
+		<div class="box description">
 	    		<h3>Description</h3>
 	    		<p>{{.}}</p>
 		</div>

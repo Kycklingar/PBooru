@@ -43,6 +43,12 @@ func UserAction(user *User) *UserActions {
 	}
 }
 
+func nullUA(l Logger) loggingAction {
+	return func(*sql.Tx) (Logger, error) {
+		return l, nil
+	}
+}
+
 func (a *UserActions) Add(l loggingAction) {
 	a.actions = append(a.actions, l)
 }
@@ -52,10 +58,17 @@ func (a UserActions) Exec() error {
 	if err != nil {
 		return err
 	}
-
 	defer commitOrDie(tx, &err)
 
-	var logs []Logger
+	err = a.exec(tx)
+	return err
+}
+
+func (a UserActions) exec(tx *sql.Tx) error {
+	var (
+		err  error
+		logs []Logger
+	)
 
 	for _, act := range a.actions {
 		var l Logger

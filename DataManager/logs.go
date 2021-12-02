@@ -1,9 +1,5 @@
 package DataManager
 
-import (
-	"time"
-)
-
 var logTableGetFuncs = make(map[logtable]logTableGetFunc)
 
 type logTableGetFunc func(*Log, querier) error
@@ -11,27 +7,45 @@ type logTableGetFunc func(*Log, querier) error
 type Log struct {
 	ID        int
 	User      *User
-	Timestamp time.Time
+	Timestamp timestamp
 
 	// Post logs
 	Posts postHistoryMap
+}
 
-	//PostDescription   []logPostDescription
-	//PostMetaData      []logPostMetaData
-	//PostCreationDates []logPostCreationDates
+func PostLogs(q querier, postid int) ([]Log, error) {
+	return logs(
+		q,
+		`
+		SELECT l.log_id, l.user_id, l.timestamp
+		FROM logs l
+		JOIN log_post p
+		ON l.log_id = p.log_id
+		WHERE p.post_id = $1
+		ORDER BY l.log_id DESC
+		LIMIT 50
+		`,
+		postid,
+	)
 }
 
 func RecentLogs(q querier) ([]Log, error) {
+	return logs(
+		q,
+		`
+		SELECT log_id, user_id, timestamp
+		FROM logs
+		ORDER BY log_id DESC
+		LIMIT 50
+		`,
+	)
+}
+
+func logs(q querier, query string, values ...interface{}) ([]Log, error) {
 	var logs []Log
 
 	err := func() error {
-		rows, err := q.Query(`
-			SELECT log_id, user_id, timestamp
-			FROM logs
-			ORDER BY log_id DESC
-			LIMIT 10
-			`,
-		)
+		rows, err := q.Query(query, values...)
 		if err != nil {
 			return err
 		}

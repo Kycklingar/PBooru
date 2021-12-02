@@ -1104,11 +1104,13 @@ func postModifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprint("/post/", r.Form.Get("post-id")))
+	redirectToReferer(w, r, fmt.Sprint("/post/edit/", r.Form.Get("post-id")))
 }
 
 func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 	uri := uriSplitter(r)
+
+	_, ui := getUser(w, r)
 
 	id, err := uri.getIntAtIndex(2)
 	if err != nil {
@@ -1123,17 +1125,20 @@ func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFHash,
 		DM.PFDescription,
 		DM.PFMetaData,
+		DM.PFMime,
 	)
 
 	var tc DM.TagCollector
 	tc.FromPostMul(DM.DB, post, DM.FTag, DM.FCount, DM.FNamespace)
 
 	var p = struct {
-		Post *DM.Post
-		Tags []*DM.Tag
+		Post     *DM.Post
+		Tags     []*DM.Tag
+		UserInfo UserInfo
 	}{
-		Post: post,
-		Tags: tc.Tags,
+		Post:     post,
+		Tags:     tc.Tags,
+		UserInfo: ui,
 	}
 
 	renderTemplate(w, "post-edit", p)

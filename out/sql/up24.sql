@@ -82,6 +82,12 @@ CREATE TABLE logs_affected (
 	UNIQUE(log_id, log_table)
 );
 
+CREATE TABLE log_post(
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	post_id INTEGER NOT NULL,
+	UNIQUE(log_id, post_id)
+);
+
 CREATE TABLE log_post_description (
 	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
 	post_id INTEGER NOT NULL,
