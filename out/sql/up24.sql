@@ -71,7 +71,6 @@ CREATE TYPE log_action AS ENUM ('create', 'modify', 'delete');
 CREATE TABLE logs (
 	log_id BIGSERIAL PRIMARY KEY,
 	user_id INTEGER NOT NULL REFERENCES users(id),
-	--tables_affected TEXT NOT NULL,
 	timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

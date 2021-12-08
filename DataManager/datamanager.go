@@ -10,6 +10,7 @@ import (
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	migrate "github.com/kycklingar/PBooru/DataManager/migration"
 	st "github.com/kycklingar/PBooru/DataManager/storage"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -211,6 +212,13 @@ func updateCode(ver int, tx *sql.Tx) error {
 			u.passwordHash = string(hash)
 
 			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.Flag())
+			if err != nil {
+				return err
+			}
+		}
+	case 24:
+		{
+			err := migrate.TagHistoryToUserActions(tx)
 			if err != nil {
 				return err
 			}

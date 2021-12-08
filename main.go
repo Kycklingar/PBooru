@@ -64,6 +64,7 @@ func main() {
 	genPhash := flag.Bool("gen-phash", false, "Generate phashes")
 	tombstoneFile := flag.String("read-tombstone", "", "Read tombstones from a tombstone file")
 	verifyFiles := flag.Int("verify-files", -1, "Verify the integrity of the files in ipfs")
+	migrateTH := flag.Bool("migrate-th", false, "Migrate old tag histories to new user actions")
 
 	updateUserFlags := flag.Bool("update-user-flags", false, "Update user flags <old> <new>")
 
@@ -87,6 +88,11 @@ func main() {
 	DM.Setup(gConf.IPFSAPI)
 
 	go catchSignals()
+
+	if *migrateTH {
+		log.Println(DM.MigrateTH())
+		return
+	}
 
 	if *verifyFiles >= 0 {
 		log.Println(DM.VerifyFileIntegrity(*verifyFiles))

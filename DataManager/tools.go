@@ -17,6 +17,7 @@ import (
 
 	"github.com/kycklingar/PBooru/DataManager/image"
 	ipfsdir "github.com/kycklingar/PBooru/DataManager/ipfs-dirgen"
+	migrate "github.com/kycklingar/PBooru/DataManager/migration"
 )
 
 func GenerateFileSizes() error {
@@ -897,4 +898,19 @@ func VerifyFileIntegrity(start int) error {
 	}
 
 	return nil
+}
+
+func MigrateTH() error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	err = migrate.TagHistoryToUserActions(tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }

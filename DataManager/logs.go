@@ -22,7 +22,7 @@ func PostLogs(q querier, postid int) ([]Log, error) {
 		JOIN log_post p
 		ON l.log_id = p.log_id
 		WHERE p.post_id = $1
-		ORDER BY l.log_id DESC
+		ORDER BY l.timestamp DESC
 		LIMIT 50
 		`,
 		postid,
@@ -35,7 +35,7 @@ func RecentLogs(q querier) ([]Log, error) {
 		`
 		SELECT log_id, user_id, timestamp
 		FROM logs
-		ORDER BY log_id DESC
+		ORDER BY timestamp DESC
 		LIMIT 50
 		`,
 	)
