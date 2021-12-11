@@ -8,31 +8,31 @@ import (
 // performing related parent/alias lookups
 // and producing a log
 func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
+	return func(tx *sql.Tx) (l logger, err error) {
 		tags, err := parseTags(tagstr, '\n')
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		err = tags.save(tx)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		diff, err := parseTags(tagdiff, '\n')
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		tags, err = tags.upgrade(tx)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		// Get tags in db
 		in, err := postTags(tx, postID)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		var (
@@ -48,24 +48,26 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 		// Nothing to do, return nil
 		if len(add)+len(remove) <= 0 {
-			return nil, nil
+			return
 		}
 
 		err = prepPTExec(tx, queryDeletePTM, postID, remove)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		err = prepPTExec(tx, queryInsertPTM, postID, add)
 		if err != nil {
-			return nil, err
+			return
 		}
 
-		return logPostTags{
+		l.table = lPostTags
+		l.fn = logPostTags{
 			PostID:  postID,
 			Added:   add,
 			Removed: remove,
-		}, nil
+		}.log
+		return
 
 	}
 }

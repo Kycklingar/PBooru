@@ -6,19 +6,24 @@ import (
 	"time"
 )
 
-type loggingAction func(tx *sql.Tx) (Logger, error)
-type logtable string
-type lAction string
-
 const (
 	aCreate lAction = "create"
 	aModify lAction = "modify"
 	aDelete lAction = "delete"
 )
 
-type Logger interface {
-	log(int, *sql.Tx) error
-	table() logtable
+type loggingAction func(tx *sql.Tx) (logger, error)
+type logFunc func(logid int, tx *sql.Tx) error
+type logtable string
+type lAction string
+
+type logger struct {
+	table logtable
+	fn    logFunc
+}
+
+func (l logger) valid() bool {
+	return !(l.table == "" || l.fn == nil)
 }
 
 type spine struct {
@@ -43,8 +48,8 @@ func UserAction(user *User) *UserActions {
 	}
 }
 
-func nullUA(l Logger) loggingAction {
-	return func(*sql.Tx) (Logger, error) {
+func nullUA(l logger) loggingAction {
+	return func(*sql.Tx) (logger, error) {
 		return l, nil
 	}
 }
@@ -67,17 +72,17 @@ func (a UserActions) Exec() error {
 func (a UserActions) exec(tx *sql.Tx) error {
 	var (
 		err  error
-		logs []Logger
+		logs []logger
 	)
 
 	for _, act := range a.actions {
-		var l Logger
+		var l logger
 		l, err = act(tx)
 		if err != nil {
 			return err
 		}
 
-		if l != nil {
+		if l.valid() {
 			logs = append(logs, l)
 		}
 	}
@@ -95,7 +100,7 @@ func (a UserActions) exec(tx *sql.Tx) error {
 	return nil
 }
 
-func (l spine) insert(tx *sql.Tx, logs []Logger) error {
+func (l spine) insert(tx *sql.Tx, logs []logger) error {
 	var logID int
 
 	err := tx.QueryRow(`
@@ -123,7 +128,7 @@ func (l spine) insert(tx *sql.Tx, logs []Logger) error {
 	}
 
 	for _, log := range logs {
-		if err = log.log(logID, tx); err != nil {
+		if err = log.fn(logID, tx); err != nil {
 			return err
 		}
 	}
@@ -131,17 +136,17 @@ func (l spine) insert(tx *sql.Tx, logs []Logger) error {
 	return err
 }
 
-func (l spine) affected(logs []Logger) []logtable {
+func (l spine) affected(logs []logger) []logtable {
 	var tablem = make(map[logtable]struct{})
 	var tables []logtable
 
 	for _, log := range logs {
-		if _, ok := tablem[log.table()]; ok {
+		if _, ok := tablem[log.table]; ok {
 			continue
 		}
 
-		tablem[log.table()] = struct{}{}
-		tables = append(tables, log.table())
+		tablem[log.table] = struct{}{}
+		tables = append(tables, log.table)
 	}
 
 	return tables

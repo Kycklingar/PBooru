@@ -45,6 +45,18 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
+
+		for _, p := range log.Alts.Posts {
+			err := p.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFThumbnails,
+			)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}
 	}
 
 	p := struct {

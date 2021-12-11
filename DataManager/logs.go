@@ -11,6 +11,9 @@ type Log struct {
 
 	// Post logs
 	Posts postHistoryMap
+
+	// Alts
+	Alts logAlts
 }
 
 func PostLogs(q querier, postid int) ([]Log, error) {

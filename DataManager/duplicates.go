@@ -195,15 +195,16 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 }
 
 func updateAlts(tx querier, dupe Dupe) error {
-	for _, p := range dupe.Inferior {
-		if err := p.setAlt(tx, dupe.Post.ID); err != nil {
-			return err
-		}
-		// Reset the inferior altgroup
-		if err := p.removeAlt(tx); err != nil {
-			return err
-		}
-	}
+	// TODO: fix
+	//for _, p := range dupe.Inferior {
+	//	if err := p.setAlt(tx, dupe.Post.ID); err != nil {
+	//		return err
+	//	}
+	//	// Reset the inferior altgroup
+	//	if err := p.removeAlt(tx); err != nil {
+	//		return err
+	//	}
+	//}
 
 	return nil
 }
@@ -552,9 +553,12 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 			return err
 		}
 
-		ua.Add(nullUA(logPostTags{
-			PostID:  inf.ID,
-			Removed: infset,
+		ua.Add(nullUA(logger{
+			table: lPostTags,
+			fn: logPostTags{
+				PostID:  inf.ID,
+				Removed: infset,
+			}.log,
 		}))
 
 		newSet = append(newSet, infset.diff(newSet)...)
@@ -567,9 +571,12 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 		return err
 	}
 
-	ua.Add(nullUA(logPostTags{
-		PostID: dupe.Post.ID,
-		Added:  newSet,
+	ua.Add(nullUA(logger{
+		table: lPostTags,
+		fn: logPostTags{
+			PostID: dupe.Post.ID,
+			Added:  newSet,
+		}.log,
 	}))
 
 	return nil

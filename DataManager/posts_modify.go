@@ -6,8 +6,8 @@ import (
 )
 
 func PostAddCreationDate(postID int, date time.Time) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
-		_, err := tx.Exec(`
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tx.Exec(`
 			INSERT INTO post_creation_dates (
 				post_id,
 				created
@@ -18,22 +18,25 @@ func PostAddCreationDate(postID int, date time.Time) loggingAction {
 			date,
 		)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		err = updatePostCreationDate(postID, tx)
 
-		return logPostCreationDates{
+		l.table = lPostCreationDates
+		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aCreate,
 			Date:   date,
-		}, err
+		}.log
+
+		return
 	}
 }
 
 func PostRemoveCreationDate(postID int, date time.Time) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
-		_, err := tx.Exec(`
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tx.Exec(`
 			DELETE FROM post_creation_dates
 			WHERE post_id = $1
 			AND created = $2
@@ -42,16 +45,19 @@ func PostRemoveCreationDate(postID int, date time.Time) loggingAction {
 			date,
 		)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		err = updatePostCreationDate(postID, tx)
 
-		return logPostCreationDates{
+		l.table = lPostCreationDates
+		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aDelete,
 			Date:   date,
-		}, err
+		}.log
+
+		return
 	}
 }
 
@@ -71,8 +77,8 @@ func updatePostCreationDate(postID int, tx *sql.Tx) error {
 }
 
 func PostAddMetaData(postID int, namespace, data string) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
-		_, err := tx.Exec(`
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tx.Exec(`
 			INSERT INTO post_metadata (
 				post_id,
 				namespace,
@@ -85,18 +91,20 @@ func PostAddMetaData(postID int, namespace, data string) loggingAction {
 			data,
 		)
 
-		return logPostMetaData{
+		l.table = lPostMetaData
+		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aCreate,
 			Namespace: namespace,
 			MetaData:  data,
-		}, err
+		}.log
+		return
 	}
 }
 
 func PostRemoveMetaData(postID int, namespace, data string) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
-		_, err := tx.Exec(`
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tx.Exec(`
 			DELETE FROM post_metadata
 			WHERE post_id = $1
 			AND namespace = $2
@@ -107,18 +115,20 @@ func PostRemoveMetaData(postID int, namespace, data string) loggingAction {
 			data,
 		)
 
-		return logPostMetaData{
+		l.table = lPostMetaData
+		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aDelete,
 			Namespace: namespace,
 			MetaData:  data,
-		}, err
+		}.log
+		return
 	}
 }
 
 func PostChangeDescription(postID int, newDescr string) loggingAction {
-	return func(tx *sql.Tx) (Logger, error) {
-		_, err := tx.Exec(`
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tx.Exec(`
 			UPDATE posts
 			SET description = $1
 			WHERE id = $2
@@ -127,9 +137,11 @@ func PostChangeDescription(postID int, newDescr string) loggingAction {
 			postID,
 		)
 
-		return logPostDescription{
+		l.table = lPostDescription
+		l.fn = logPostDescription{
 			PostID:      postID,
 			Description: newDescr,
-		}, err
+		}.log
+		return
 	}
 }

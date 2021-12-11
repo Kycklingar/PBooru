@@ -115,10 +115,6 @@ type logPostTags struct {
 	Removed tagSet
 }
 
-func (l logPostTags) table() logtable {
-	return lPostTags
-}
-
 func (l logPostTags) log(logid int, tx *sql.Tx) error {
 	createAction := func(action lAction, set tagSet) error {
 		if len(set) <= 0 {
@@ -222,8 +218,6 @@ type logPostDescription struct {
 	Diff        string
 }
 
-func (l logPostDescription) table() logtable { return lPostDescription }
-
 func (l logPostDescription) log(logid int, tx *sql.Tx) error {
 	_, err := tx.Exec(`
 		INSERT INTO log_post_description (
@@ -278,8 +272,6 @@ type logPostMetaData struct {
 	Namespace string
 	MetaData  string
 }
-
-func (l logPostMetaData) table() logtable { return lPostMetaData }
 
 func (l logPostMetaData) log(logid int, tx *sql.Tx) error {
 	_, err := tx.Exec(`
@@ -338,8 +330,6 @@ type logPostCreationDates struct {
 	Action lAction
 	Date   time.Time
 }
-
-func (l logPostCreationDates) table() logtable { return lPostCreationDates }
 
 func (l logPostCreationDates) log(logid int, tx *sql.Tx) error {
 	_, err := tx.Exec(`

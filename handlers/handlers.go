@@ -263,7 +263,7 @@ func init() {
 	Handlers["/post/vote/"] = PostVoteHandler
 
 	Handlers["/post/edit/assignalts/"] = assignAltsHandler
-	Handlers["/post/edit/removealt/"] = unassignAltHandler
+	//Handlers["/post/edit/removealt/"] = unassignAltHandler
 
 	Handlers["/post/edit/description/"] = postModifyHandler
 

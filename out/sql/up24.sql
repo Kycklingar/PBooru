@@ -121,3 +121,15 @@ CREATE TABLE log_post_tags_map (
 	ptid BIGINT REFERENCES log_post_tags(id) ON DELETE CASCADE,
 	tag_id INTEGER NOT NULL
 );
+
+CREATE TABLE log_post_alts (
+	al_id SERIAL PRIMARY KEY,
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	new_alt INTEGER NOT NULL REFERENCES posts(id)
+);
+
+CREATE TABLE log_post_alt_posts(
+	al_id INTEGER NOT NULL REFERENCES log_post_alts(al_id) ON DELETE CASCADE,
+	post_id INTEGER NOT NULL REFERENCES posts(id)
+);
+

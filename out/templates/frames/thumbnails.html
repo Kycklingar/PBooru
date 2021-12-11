@@ -21,3 +21,18 @@
 {{define "thumbnail-close"}}
 </div>
 {{end}}
+
+
+{{define "thumbnail-cards"}}
+<div class="cpage-container">
+	{{$zindex := 1000}}
+	{{range .Posts}}
+	<div style="z-index:{{$zindex}};" class="comic-thumb">
+		{{$zindex = add $zindex -1}}
+		<a href="/post/{{.ID}}/{{.Hash}}">
+			<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
+		</a>
+	</div>
+	{{end}}
+</div>
+{{end}}
