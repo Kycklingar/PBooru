@@ -216,7 +216,7 @@ func updateCode(ver int, tx *sql.Tx) error {
 				return err
 			}
 		}
-	case 24:
+	case 25:
 		{
 			err := migrate.TagHistoryToUserActions(tx)
 			if err != nil {
