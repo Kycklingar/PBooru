@@ -6,8 +6,8 @@
 		</h2>
 	</div>
 	<h1>The Permanent Booru</h1>
-	<h5 style="margin:0.2em;">
-            kycklingar.i2p
+	<h5 class="nolink" style="margin:0.2em;">
+		<a href="http://kycklingar.i2p/">kycklingar.i2p</a>
             <span style="font-size:12px;font-weight:normal;">
                 <a href="http://kycklingar.i2p?i2paddresshelper=PKCCiiEU7vT5Q8vWm7sI5-B~mWbsBTCIo06y-WVqIE4uDsz9w1kLVRKYa0Y9XwuhZ95AsgT81nXE2ugCN9fjeG0-IiMbPgQaUdmh2TXbxAvuwkHfA6Fcc7SIs9qAo1wxC43pWdPpRJLV0h1-Z2RmeYYpOr~9ra47a-z8zT-BSuQWbb~R0tcGddlG~dIUKQAA-gW8aX8xOQSltsZxPAveb1QiydCjA8pE7z3SLOeo3PU7YAUIkP7Ehunmej~Sqf0-vB15k9c9T3IE7-ngkwUEVaYsXnfiYFHceu2hIQOorU6cfXB~a1FfwdgCmFBh0ITG13x5OWvtKExVkeGop5pRoapJRV-wEYJeuCbz7SbFNVkTtUMR~KRz9x-evG48B--ENKBTdka0dO5F3iuNCzSznBfeIKv4OTbdWu1xQ5OthPdl0DAOG3TuVdfEJA3yq8w62Hd3KArMfRQ8UJ9CGYFchqice9TPLj3RYFbWdwCUlc8XsE-IE2YyRVH7BbR3VP7dBQAEAAcAAA==">
                     [a]
@@ -17,18 +17,10 @@
                 </a>
             </span>
 	</h5>
-	<h5 style="margin:0.2em;">owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion</h5>
+	<h5 class="nolink" style="margin:0.2em;"><a href="http://owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion/">owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion</a></h5>
+	<h5 class="nolink" style="margin:0.2em;"><a href="http://r936h3ipzim741p7huxkabro1kma943et41k3owtwbw894rbhcko.loki/">r936h3ipzim741p7huxkabro1kma943et41k3owtwbw894rbhcko.loki</a></h5>
     <h3>Here there be furry content</h3>
     <br>
-	<div class="attention">
-		<h2>Update your bookmarks</h2>
-		<p>Tor is facing out v2 onion addresses in favour of the newer safer v3.</p>
-		<p>You should update your bookmarks replacing the <a href="http://vsdfdtkr5mh6y33p.onion">v2</a> address with the <a href="http://owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion">v3</a>!</p>
-		<p><a href="https://blog.torproject.org/v2-deprecation-timeline">https://blog.torproject.org/v2-deprecation-timeline</a></p>
-	</div>
-	<br>
-    <h3>Hits: {{.Hits}}</h3>
-    <h3>Total Posts: {{.TotalPosts}}</h3>
     {{if .Spotlight.Dns}}
     <div class="box">
 	    <h3>Artist Spotlight</h3>
@@ -36,6 +28,9 @@
 	    {{template "dns-card" .Spotlight}}
     </div>
     {{end}}
+    <br>
+    <h3>Hits: {{.Hits}}</h3>
+    <h3>Total Posts: {{.TotalPosts}}</h3>
 </div>
 <div class="box">
     <h3>FAQ</h3>
