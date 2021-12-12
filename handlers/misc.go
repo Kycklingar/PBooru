@@ -41,6 +41,10 @@ type base struct {
 type indexPage struct {
 	Hits       int
 	TotalPosts int
+	Spotlight  struct {
+		Dns      *DM.DnsCreator
+		UserInfo UserInfo
+	}
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +58,14 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	var p indexPage
 	p.Hits = DM.Counter()
 	p.TotalPosts = DM.GetTotalPosts()
+
+	var err error
+	p.Spotlight.Dns, err = DM.DnsSpotlight()
+	if err != nil {
+		//log.Println(err)
+	}
+
+	_, p.Spotlight.UserInfo = getUser(w, r)
 
 	renderTemplate(w, "index", p)
 }
@@ -75,10 +87,10 @@ const (
 )
 
 var (
-	lts = 0
+	lts uint
 )
 
-func largestThumbnailSize() int {
+func largestThumbnailSize() uint {
 	if lts <= 0 {
 		for _, s := range DM.CFG.ThumbnailSizes {
 			if s > lts {

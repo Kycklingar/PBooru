@@ -753,7 +753,7 @@ func (p *Post) Remove(q querier) error {
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
-	return nil
+	return clearEmptySearchCountCache(q)
 }
 
 func (p *Post) Reinstate(q querier) error {
@@ -777,7 +777,7 @@ func (p *Post) Reinstate(q querier) error {
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
-	return nil
+	return clearEmptySearchCountCache(q)
 }
 
 // No going back
@@ -978,7 +978,7 @@ func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
-	return nil
+	return clearEmptySearchCountCache(tx)
 }
 
 func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
@@ -1030,7 +1030,7 @@ func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
-	return nil
+	return clearEmptySearchCountCache(tx)
 }
 
 func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
@@ -1103,7 +1103,7 @@ func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
 
 	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
 
-	return err
+	return clearEmptySearchCountCache(q)
 }
 
 func (p *Post) logTagEdit(tx querier, user *User, newTags, removedTags []*Tag) error {
@@ -1962,6 +1962,22 @@ func GetTotalPosts() int {
 		return totalPosts
 	}
 	return totalPosts
+}
+
+func clearEmptySearchCountCache(q querier) error {
+	_, err := q.Exec(`
+		DELETE FROM search_count_cache
+		WHERE id IN(
+			SELECT id
+			FROM search_count_cache
+			LEFT JOIN search_count_cache_tag_mapping
+			ON id = cache_id
+			WHERE cache_id IS NULL
+		)
+		`,
+	)
+
+	return err
 }
 
 func resetCacheTag(q querier, tagID int) {

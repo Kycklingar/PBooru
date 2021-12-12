@@ -92,9 +92,7 @@ func (a *Alias) Save() error {
 		return err
 	}
 
-	if err != nil {
-		log.Println(err)
-		log.Println(a.To, a.Tag)
+	if err = updateDns(tx, a.To.ID, a.Tag.ID); err != nil {
 		return err
 	}
 
@@ -182,6 +180,19 @@ func updatePtm(q querier, to, from *Tag) error {
 	}
 
 	return nil
+}
+
+func updateDns(q querier, to, from int) error {
+	_, err := q.Exec(`
+		UPDATE dns_tag_mapping
+		SET tag_id = $1
+		WHERE tag_id = $2
+		`,
+		to,
+		from,
+	)
+
+	return err
 }
 
 func updateAliases(q querier, to, from *Tag) error {

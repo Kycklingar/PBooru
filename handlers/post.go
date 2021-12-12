@@ -71,10 +71,10 @@ type Postpage struct {
 	Base     base
 	Post     *DM.Post
 	Voted    bool
+	Dns      []DM.DnsCreator
 	Comments []*DM.PostComment
 	Dupe     DM.Dupe
 	Alts     []*DM.Post
-	//Comics   []*DM.Comic
 	Chapters []*DM.Chapter
 	Sidebar  Sidebar
 	User     *DM.User
@@ -290,9 +290,20 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var tc DM.TagCollector
 
 	bm.Split("Queriying tags")
-	err = tc.FromPostMul(DM.DB, pp.Dupe.Post, DM.FTag, DM.FCount, DM.FNamespace)
+	err = tc.FromPostMul(DM.DB, pp.Dupe.Post, DM.FID, DM.FTag, DM.FCount, DM.FNamespace)
 	if err != nil {
 		log.Print(err)
+	}
+
+	for _, tag := range tc.Tags {
+		if tag.Namespace.Namespace == "creator" {
+			dns, err := DM.DnsGetCreatorFromTag(tag.ID)
+			if err != nil {
+				continue
+			}
+
+			pp.Dns = append(pp.Dns, dns)
+		}
 	}
 
 	//for _, tag := range tc.Tags {

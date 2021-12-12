@@ -1,0 +1,108 @@
+{{template "base"}}
+{{if .CanEdit}}
+<details>
+	<summary>Edit</summary>
+	<fieldset>
+		<form action="/dns/creator/name/edit" method="POST">
+			<legend>Change Name</legend>
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			<input type="text" name="name" value="{{.Creator.Name}}">
+			<br>
+			<input type="submit">
+		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Domains</legend>
+		<fieldset>
+			<legend>Add</legend>
+			<form action="/dns/url/new" method="POST">
+				<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+				<select name="domain">
+					{{range .Domains}}
+					<option value="{{.Domain}}">{{.Domain}}</option>
+					{{end}}
+				</select>
+				<input type="text" name="url">
+				<input type="submit">
+			</form>
+		</fieldset>
+		<fieldset>
+			<legend>Remove</legend>
+			<form action="/dns/url/remove" method="POST">
+				<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+				<select name="url">
+					{{range $_, $v := .Creator.Domains}}
+					{{range $v.Urls}}
+					<option value="{{.}}">{{.}}</option>
+					{{end}}
+					{{end}}
+				</select>
+				<input type="submit">
+			</form>
+		</fieldset>
+	</fieldset>
+	<fieldset>
+		<legend>Tags</legend>
+		<form action="/dns/creator/tag/edit" method="POST">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			{{range .Tags}}
+			<label>{{template "dns-tag" .Tag}}
+				<input type="checkbox" name="tags" value="{{.Tag.Id}}" {{if .Enabled}}checked{{end}}><br>
+			</label>
+			{{end}}
+			<input type="submit">
+		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Tag Mapping</legend>
+		<form action="/dns/creator/tagmap/add" method="POST">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			<input type="text" name="tag" class="stinput">
+			<input type="submit">
+		</form>
+		<script type="text/javascript" src="/static/suggestions.js"></script>
+	</fieldset>
+	<fieldset>
+		<legend>Add Banner</legend>
+		<form action="/dns/banner/new" method="POST" enctype="multipart/form-data">
+			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
+			<select name="banner-type">
+				<option value="profile">Profile</option>
+				<option value="banner">Banner</option>
+			</select>
+			<br>
+			<input type="file" name="file">
+			<br>
+			<input type="submit">
+		</form>
+	</fieldset>
+</details>
+{{end}}
+
+<div class="box">
+	{{with .Creator.Banners.profile}}<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">{{end}}
+	{{with .Creator.Banners.banner}}<img src="{{$.UserInfo.Gateway}}/ipfs/{{.}}">{{end}}
+	{{with .Creator}}
+	<h2>{{.Name}}</h2>
+	<hr>
+	<ul>
+		{{range $k, $v := .Domains}}
+		<li>
+			<h3>{{$k}}</h3>
+			<ul>
+				{{range $v.Urls}}
+				<li><a href="{{.}}">{{.}}</a></li>
+				{{end}}
+			</ul>
+		</li>
+		{{end}}
+	</ul>
+	<hr>
+	<ul>
+	{{range .Tags}}
+		<li>{{template "dns-tag" .}}</li>
+	{{end}}
+	</ul>
+	{{end}}
+</div>
+{{template "baseEnd"}}

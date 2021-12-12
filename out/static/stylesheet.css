@@ -57,6 +57,11 @@ body
 	margin:0.6em 0.2em;
 }
 
+.box .box
+{
+	box-shadow: none;
+}
+
 .box a:link {
 	color:#67E;
 }
@@ -128,7 +133,7 @@ li
 .nolink a:visited, .nolink a:link
 {
     text-decoration: none;
-    color: black;
+    color: inherit;
 }
 
 #sidebar
@@ -883,6 +888,146 @@ li
     };
 }
 
-/*---------- TESTING ----------*/
 
+/*-------- DNS --------*/
 
+.dns-card
+{
+	position:relative;
+	max-width: 1024px;
+	min-height: 100px;
+	z-index:1;
+	overflow:auto;
+}
+
+.box .dns-card
+{
+	background-color:#303038;
+}
+
+.dns-segments>div
+{
+	background-color: #000A;
+	display: inline-block;
+	margin:0.2em;
+	padding:0.2em;
+	vertical-align:text-top;
+}
+
+.dns-segments .dns-tags
+{
+	float:right;
+	min-width:150px;
+	max-width:30%;
+}
+
+.dns-profile
+{
+	display: block;
+	text-align: center;
+	font-size: larger;
+}
+
+.dns-banner
+{
+	position: absolute;
+	width:100%;
+	height:100%;
+	margin: 0 !important;
+	top:0;
+	left:0;
+	z-index:-1;
+}
+
+.dns-banner-shader
+{
+	position:absolute;
+	background-color:#0007;
+	width:100%;
+	height:100%;
+}
+
+.dns-banner img
+{
+	width:100%;
+	height:100%;
+	object-fit:cover;
+}
+
+.dns-tag
+{
+	display: inline;
+}
+
+.dns-card .dns-tag
+{
+	float:right;
+	margin-bottom:1.5em;
+}
+
+.dns-logo
+{
+	position:relative;
+	width:32px;
+	height:32px;
+	display:block;
+	margin: 0.2em;
+	overflow:hidden;
+}
+
+.dns-logo img
+{
+	position:absolute;
+	max-width: 32px;
+	max-height: 32px;
+	top:50%;
+	transform:translateY(-50%);
+}
+
+.dns-overlay-l
+{
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top:0;
+	left:0;
+	z-index: -1;
+}
+
+.dns-overlay-l img
+{
+	position:absolute;
+	width:50%;
+	height:100%;
+	object-fit:cover;
+}
+
+.dns-overlay
+{
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top:0;
+	left:0;
+	z-index: -1;
+}
+
+.dns-overlay img
+{
+	position:absolute;
+	height:100%;
+	right:0;
+	object-fit:contain;
+}
+
+.dns-sl
+{
+	position:absolute;
+	bottom:0;
+	right:0;
+}
+
+.dns-sl span
+{
+	margin:0.2em;
+}

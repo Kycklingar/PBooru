@@ -1,0 +1,98 @@
+{{template "base"}}
+<fieldset>
+	<legend>New Creator</legend>
+	<form action="/dns/creator/new" method="POST">
+		<label>Name
+			<input type="text" name="name">
+		</label>
+		<br>
+		<input type="submit">
+	</form>
+</fieldset>
+
+<fieldset>
+	<legend>New Tag</legend>
+	<form action="/dns/tag/new" method="POST">
+		<label>Id
+			<input type="text" name="id">
+		</label>
+		<br>
+		<label>Name
+			<input type="text" name="name">
+		</label>
+		<br>
+		<label>Description
+			<input type="text" name="description">
+		</label>
+		<br>
+		<label>Score
+			<input type="number" name="score">
+		</label>
+		<br>
+		<input type="submit">
+	</form>
+</fieldset>
+
+<fieldset>
+	<legend>Edit Tag</legend>
+	{{range .Tags}}
+	<details>
+		<summary>{{.Id}}</summary>
+		<form action="/dns/tag/edit" method="POST">
+			<input type="hidden" name="id" value="{{.Id}}">
+			<label>Name
+				<input type="text" name="name" value="{{.Name}}">
+			</label>
+			<br>
+			<label>Description
+				<input type="text" name="description" value="{{.Description}}">
+			</label>
+			<br>
+			<label>Score
+				<input type="number" name="score" value="{{.Score}}">
+			</label>
+			<br>
+			<input type="submit">
+		</form>
+	</details>
+	{{end}}
+</fieldset>
+
+<fieldset>
+	<legend>Domains</legend>
+	<fieldset>
+		<legend>New</legend>
+		<form action="/dns/domain/new" method="POST">
+			<label>Domain
+				<input type="text" name="domain">
+			</label>
+			<br>
+			<label>Icon
+				<input type="text" name="icon">
+			</label>
+			<input type="submit">
+		</form>
+	</fieldset>
+	<fieldset>
+		<legend>Edit</legend>
+		{{range .Domains}}
+		<details>
+			<summary>{{.Domain}}</summary>
+			<form action="/dns/domain/edit" method="POST">
+				<input type="hidden" name="id" value="{{.Id}}">
+				<label>Domain
+					<input type="text" name="domain" value="{{.Domain}}">
+				</label>
+				<br>
+				<label>Icon
+					<input type="text" name="icon" value="{{.Icon}}">
+				</label>
+				<br>
+				<input type="submit">
+			</form>
+		</details>
+		{{end}}
+	</fieldset>
+</fieldset>
+
+{{template "baseEnd"}}
