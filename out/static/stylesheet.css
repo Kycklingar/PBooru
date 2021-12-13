@@ -83,6 +83,18 @@ body
 	border-collapse: collapse;
 }
 
+.box form label,
+.box form textarea
+{
+	display: block;
+	margin:0.5em;
+}
+
+.box form input
+{
+	margin:0.2em;
+}
+
 input, textarea
 {
 	background-color: #DADAEF;

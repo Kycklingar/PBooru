@@ -8,7 +8,7 @@ type tagSet []*Tag
 func (a tagSet) diff(b tagSet) tagSet {
 	var (
 		diff = make(map[string]struct{})
-		ret  []*Tag
+		ret  tagSet
 	)
 
 	for _, tag := range b {

@@ -2,22 +2,58 @@ package DataManager
 
 import (
 	"database/sql"
-	"time"
 )
 
-func PostAddCreationDate(postID int, date time.Time) loggingAction {
+func PostAddMetaData(postID int, metaStr string) []loggingAction {
+	var acts []loggingAction
+
+	for _, md := range parseMetaDataString(metaStr) {
+		if md.Namespace() == "date" {
+			acts = append(acts, postAddCreationDate(postID, md))
+		} else {
+			acts = append(acts, postAddMetaData(postID, md))
+		}
+	}
+
+	return acts
+}
+
+func PostRemoveMetaData(postID int, metaDataStrings []string) []loggingAction {
+	var acts []loggingAction
+
+	for _, mds := range metaDataStrings {
+		if md := parseMetaData(mds); md != nil {
+			if md.Namespace() == "date" {
+				acts = append(acts, postRemoveCreationDate(postID, md))
+			} else {
+				acts = append(acts, postRemoveMetaData(postID, md))
+			}
+		}
+	}
+
+	return acts
+
+}
+
+func postAddCreationDate(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		_, err = tx.Exec(`
+		res, err := tx.Exec(`
 			INSERT INTO post_creation_dates (
 				post_id,
 				created
 			)
 			VALUES($1, $2)
+			ON CONFLICT DO NOTHING
 			`,
 			postID,
-			date,
+			md.value(),
 		)
 		if err != nil {
+			return
+		}
+
+		ra, err := res.RowsAffected()
+		if err != nil || ra <= 0 {
 			return
 		}
 
@@ -27,14 +63,14 @@ func PostAddCreationDate(postID int, date time.Time) loggingAction {
 		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aCreate,
-			Date:   date,
+			Date:   md.(metaDate),
 		}.log
 
 		return
 	}
 }
 
-func PostRemoveCreationDate(postID int, date time.Time) loggingAction {
+func postRemoveCreationDate(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		_, err = tx.Exec(`
 			DELETE FROM post_creation_dates
@@ -42,7 +78,7 @@ func PostRemoveCreationDate(postID int, date time.Time) loggingAction {
 			AND created = $2
 			`,
 			postID,
-			date,
+			md.value(),
 		)
 		if err != nil {
 			return
@@ -54,7 +90,7 @@ func PostRemoveCreationDate(postID int, date time.Time) loggingAction {
 		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aDelete,
-			Date:   date,
+			Date:   md.(metaDate),
 		}.log
 
 		return
@@ -76,33 +112,42 @@ func updatePostCreationDate(postID int, tx *sql.Tx) error {
 	return err
 }
 
-func PostAddMetaData(postID int, namespace, data string) loggingAction {
+func postAddMetaData(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		_, err = tx.Exec(`
+		res, err := tx.Exec(`
 			INSERT INTO post_metadata (
 				post_id,
 				namespace,
 				metadata
 			)
 			VALUES ($1, $2, $3)
+			ON CONFLICT DO NOTHING
 			`,
 			postID,
-			namespace,
-			data,
+			md.Namespace(),
+			md.value(),
 		)
+		if err != nil {
+			return
+		}
+
+		ra, err := res.RowsAffected()
+		if err != nil || ra <= 0 {
+			return
+		}
 
 		l.table = lPostMetaData
 		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aCreate,
-			Namespace: namespace,
-			MetaData:  data,
+			Namespace: md.Namespace(),
+			MetaData:  md.Data(),
 		}.log
 		return
 	}
 }
 
-func PostRemoveMetaData(postID int, namespace, data string) loggingAction {
+func postRemoveMetaData(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		_, err = tx.Exec(`
 			DELETE FROM post_metadata
@@ -111,16 +156,16 @@ func PostRemoveMetaData(postID int, namespace, data string) loggingAction {
 			AND metadata = $3
 			`,
 			postID,
-			namespace,
-			data,
+			md.Namespace(),
+			md.value(),
 		)
 
 		l.table = lPostMetaData
 		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aDelete,
-			Namespace: namespace,
-			MetaData:  data,
+			Namespace: md.Namespace(),
+			MetaData:  md.Data(),
 		}.log
 		return
 	}

@@ -82,11 +82,6 @@ func CachedPost(p *Post) *Post {
 	return p
 }
 
-type metadata struct {
-	namespace string
-	data      string
-}
-
 type metaDataMap map[string][]string
 
 type Post struct {
@@ -561,7 +556,15 @@ func storeThumbnailDest(cid string, size int) string {
 
 var uploadQueue sync.Mutex
 
-func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *User) (*Post, error) {
+type UploadData struct {
+	FileSize    int64
+	TagStr      string
+	Mime        string
+	MetaData    string
+	Description string
+}
+
+func CreatePost(file io.ReadSeeker, user *User, ud UploadData) (*Post, error) {
 	uploadQueue.Lock()
 	defer uploadQueue.Unlock()
 	// Hash file
@@ -616,7 +619,7 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 			log.Println(err)
 		}
 
-		if p.ID, err = insertNewPost(file, fsize, cid, mime, user); err != nil {
+		if p.ID, err = insertNewPost(file, ud.FileSize, cid, ud.Mime, user); err != nil {
 			return nil, err
 		}
 
@@ -648,10 +651,26 @@ func CreatePost(file io.ReadSeeker, fsize int64, tagString, mime string, user *U
 	}
 	defer commitOrDie(tx, &err)
 
-	err = p.editTagsAdd(tx, user, tagString)
+	var d Dupe
+	d, err = getDupeFromPost(tx, p)
 	if err != nil {
 		return nil, err
 	}
+
+	ua := UserAction(user)
+	ua.Add(AlterPostTags(d.Post.ID, ud.TagStr, ""))
+	ua.Add(PostAddMetaData(d.Post.ID, ud.MetaData)...)
+
+	if ud.Description != "" {
+		// Add description only if none exists already
+		d.Post.QMul(tx, PFDescription)
+		if d.Post.Description != "" {
+			return p, errors.New("Failed to set description. An existing description is already set.")
+		}
+		ua.Add(PostChangeDescription(d.Post.ID, ud.Description))
+	}
+
+	err = ua.exec(tx)
 
 	return p, err
 }

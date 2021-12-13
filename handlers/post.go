@@ -851,6 +851,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
+		var ud DM.UploadData
+		ud.FileSize = fh.Size
+
 		mime, err := mimetype.DetectReader(file)
 		if err != nil {
 			log.Println(err)
@@ -858,23 +861,30 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		contentType := mime.String()
+		ud.Mime = mime.String()
 
-		if !allowedContentType(contentType) {
-			http.Error(w, "Filetype not allowed: "+contentType, http.StatusBadRequest)
+		if !allowedContentType(ud.Mime) {
+			http.Error(w, "Filetype not allowed: "+ud.Mime, http.StatusBadRequest)
 			return
 		}
 
-		tagString := r.FormValue("tags")
+		ud.TagStr = r.FormValue("tags")
 
 		if _, err = file.Seek(0, 0); err != nil {
 			log.Println(err)
 			return
 		}
 
-		post, err := DM.CreatePost(file, fh.Size, tagString, contentType, user)
+		ud.MetaData = r.FormValue("metadata")
+		ud.Description = r.FormValue("description")
+
+		if r.FormValue("store-filename") == "on" {
+			ud.MetaData = fmt.Sprintf("filename:%s\n%s", fh.Filename, ud.MetaData)
+		}
+
+		post, err := DM.CreatePost(file, user, ud)
 		if err != nil {
-			http.Error(w, "Oops, Something went wrong.", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
 			return
 		}

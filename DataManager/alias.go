@@ -11,12 +11,18 @@ func aliasedTo(q querier, tag *Tag) (*Tag, error) {
 	var to = NewTag()
 
 	err := q.QueryRow(`
-		SELECT alias_to
-		FROM alias
-		WHERE alias_from = $1
+		SELECT t.id, t.tag, n.nspace
+		FROM tags t
+		JOIN namespaces n
+		ON t.namespace_id = n.id
+		WHERE t.id = (
+			SELECT COALESCE(alias_to, $1)
+			FROM alias
+			WHERE alias_from = $1
+		)
 		`,
 		tag.ID,
-	).Scan(&to.ID)
+	).Scan(&to.ID, &to.Tag, &to.Namespace.Namespace)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

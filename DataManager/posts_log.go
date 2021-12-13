@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"time"
 )
 
 const (
@@ -328,7 +327,7 @@ func getLogPostCreationDates(log *Log, q querier) error {
 type logPostCreationDates struct {
 	postID int
 	Action lAction
-	Date   time.Time
+	Date   metaDate
 }
 
 func (l logPostCreationDates) log(logid int, tx *sql.Tx) error {

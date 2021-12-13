@@ -1,35 +1,49 @@
+{{define "metadata-placeholder" -}}
+filename:PepperCat_04.png
+source:https://amogus.tv/i/400
+version:0.0.1-alpha
+created:2021-12-12
+{{- end}}
+{{define "description-placeholder" -}}
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et... 
+{{- end}}
 {{ template "base" }}
 <div class="box">
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
     {{else if .Flag.Upload}}
-    <form style="display:flex" enctype="multipart/form-data" method="POST">
-	<div>
-		<label for="file">File</label>
-		<br>
-		<input id="file" type="file" name="file">
-		<br>
-		<br>
-		<label for="tagsform">Tags</label>
-		<br>
-		<textarea class="stinput" id="tagsform" name="tags"></textarea>
-		<input type="submit" value="Submit">
-	</div>
-	{{if .Flag.Comics}}
-	<details>
-	<summary>Add to comic</summary>
-	<div style="border-left: 1px solid grey;padding-left:1em;">
-		<label>Chapter ID</label>
-		<br>
-		<input type="number" name="chapter-id">
-		<br>
-		<br>
-		<label>Page</label>
-		<br>
-		<input type="number" name="order">
-	</div>
-	</details>
-	{{end}}
+    <form enctype="multipart/form-data" method="POST">
+	    <div>
+		    <label>File
+			    <input id="file" type="file" name="file">
+			    <label>Save filename:
+				    <input type="checkbox" name="store-filename" checked>
+			    </label>
+		    </label>
+		    <label>Tags
+			    <textarea class="stinput" id="tagsform" name="tags" rows="10" cols="40"></textarea>
+		    </label>
+		    <label>Metadata
+			    <textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
+		    </label>
+		    <label>Description
+			    <textarea name="description" rows="10" cols="40" placeholder="{{template "description-placeholder"}}"></textarea>
+		    </label>
+	    </div>
+	    {{if .Flag.Comics}}
+	    <details>
+		    <summary>Add to comic</summary>
+		    <div style="border-left: 1px solid grey;padding-left:1em;">
+			    <label>Chapter ID
+				    <input type="number" name="chapter-id">
+			    </label>
+			    <label>Page
+				    <input type="number" name="order">
+			    </label>
+		    </div>
+	    </details>
+	    {{end}}
+	    <input type="submit" value="Submit">
     </form>
     <script type="text/javascript" src="/static/suggestions.js"></script>
         <h3>Tagging Guide</h3>

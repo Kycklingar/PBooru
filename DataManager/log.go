@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"errors"
 	"time"
 )
 
@@ -54,8 +53,8 @@ func nullUA(l logger) loggingAction {
 	}
 }
 
-func (a *UserActions) Add(l loggingAction) {
-	a.actions = append(a.actions, l)
+func (a *UserActions) Add(l ...loggingAction) {
+	a.actions = append(a.actions, l...)
 }
 
 func (a UserActions) Exec() error {
@@ -88,8 +87,9 @@ func (a UserActions) exec(tx *sql.Tx) error {
 	}
 
 	if len(logs) <= 0 {
-		err = errors.New("nothing to log")
-		return err
+		//err = errors.New("nothing to log")
+		//return err
+		return nil
 	}
 
 	err = a.log.insert(tx, logs)

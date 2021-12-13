@@ -15,7 +15,8 @@ ALTER TABLE posts ADD COLUMN description TEXT NOT NULL DEFAULT '';
 CREATE TABLE post_creation_dates (
 	id SERIAL PRIMARY KEY,
 	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-	created DATE NOT NULL
+	created DATE NOT NULL,
+	UNIQUE(post_id, created)
 );
 
 CREATE TYPE log_action AS ENUM ('create', 'modify', 'delete');
