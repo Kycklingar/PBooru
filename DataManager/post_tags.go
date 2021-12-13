@@ -41,10 +41,10 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		)
 
 		// Reduce to only add new tags
-		add = add.diff(in)
+		add = add.diff(in).unique()
 
 		// Reduce to only remove existing tags
-		remove = in.diff(in.diff(remove))
+		remove = in.diff(in.diff(remove)).unique()
 
 		// Nothing to do, return nil
 		if len(add)+len(remove) <= 0 {
@@ -59,6 +59,20 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		err = prepPTExec(tx, queryInsertPTM, postID, add)
 		if err != nil {
 			return
+		}
+
+		qErr := []func(q querier) error{
+			add.recount,
+			remove.recount,
+			add.purgeCountCache,
+			remove.purgeCountCache,
+			clearEmptySearchCountCache,
+		}
+
+		for _, f := range qErr {
+			if err = f(tx); err != nil {
+				return
+			}
 		}
 
 		l.table = lPostTags

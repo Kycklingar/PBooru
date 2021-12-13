@@ -1,8 +1,18 @@
 package DataManager
 
-import "strings"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+)
 
 type tagSet []*Tag
+
+func (set tagSet) strindex(i int) string {
+	return strconv.Itoa(set[i].ID)
+}
 
 // returns the tags in a that are not in b
 func (a tagSet) diff(b tagSet) tagSet {
@@ -22,6 +32,26 @@ func (a tagSet) diff(b tagSet) tagSet {
 	}
 
 	return ret
+}
+
+func (a tagSet) unique() tagSet {
+	m := make(map[string]*Tag)
+
+	for _, t := range a {
+		m[t.String()] = t
+	}
+
+	var (
+		retu = make(tagSet, len(m))
+		i    int
+	)
+
+	for _, t := range m {
+		retu[i] = t
+		i++
+	}
+
+	return retu
 }
 
 func parseTags(tagstr string, delim rune) (tagSet, error) {
@@ -139,6 +169,58 @@ func (set tagSet) upgrade(q querier) (tagSet, error) {
 	}
 
 	return append(set, parents.diff(set)...), nil
+}
+
+func (set tagSet) recount(q querier) error {
+	if len(set) <= 0 {
+		return nil
+	}
+
+	_, err := q.Exec(
+		fmt.Sprintf(`
+			WITH tag_counts AS (
+				SELECT tag_id, count(*)
+				FROM post_tag_mappings
+				WHERE tag_id IN(%s)
+				GROUP BY tag_id
+			)
+			UPDATE tags
+			SET count = c.count
+			FROM tag_counts c
+			WHERE c.tag_id = id
+			`,
+			sep(",", len(set), set.strindex),
+		),
+	)
+
+	return err
+}
+
+func (set tagSet) purgeCountCache(q querier) error {
+	if len(set) <= 0 {
+		return nil
+	}
+
+	_, err := q.Exec(
+		fmt.Sprintf(`
+			DELETE FROM search_count_cache
+			WHERE id IN(
+				SELECT cache_id
+				FROM search_count_cache_tag_mapping
+				WHERE tag_id IN(%s)
+			)
+			`,
+			sep(",", len(set), set.strindex),
+		),
+	)
+
+	// Legacy
+	for _, t := range set {
+		C.Cache.Purge("PC", strconv.Itoa(t.ID))
+	}
+	C.Cache.Purge("PC", "0")
+
+	return err
 }
 
 func (set tagSet) save(q querier) error {

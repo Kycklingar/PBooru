@@ -95,6 +95,19 @@ body
 	margin:0.2em;
 }
 
+.box.compact
+{
+	font-size: 0.8em;
+	margin: 0.1em;
+	padding:0.2em;
+}
+
+.box.compact ul
+{
+	padding-left: 0.2em;
+}
+
+
 input, textarea
 {
 	background-color: #DADAEF;
@@ -137,9 +150,14 @@ li
 .links a:link
 {
 	color: #AAA;
-	text-shadow: 1px 1px black;
+	text-shadow: 1px 1px #213; 
 	display:block;
 	font-size:14px;
+}
+
+.links a:visited
+{
+	color: #A7A;
 }
 
 .nolink a:visited, .nolink a:link
@@ -174,6 +192,37 @@ li
 #advanced-search input
 {
 	width:auto;
+}
+
+/*---------- LOGS -----------*/
+
+.log table {
+	display: inline-block;
+}
+
+.log td {
+	max-width: 20em;
+	word-break: break-word;
+}
+
+.log table.description td {
+	white-space: pre-wrap;
+}
+
+.log .diff-new{
+	background-color:green;
+}
+
+.log .diff-del{
+	background-color:red;
+}
+
+.log .action-create {
+	background-color: green;
+}
+
+.log .action-delete {
+	background-color: red;
 }
 
 /*---------- COMICS ---------*/

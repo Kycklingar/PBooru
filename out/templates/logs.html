@@ -1,37 +1,7 @@
 {{template "base"}}
-<style>
-table {
-	display: inline-block;
-}
-
-td {
-	max-width: 20em;
-}
-
-table.description td {
-	white-space: pre-wrap;
-}
-
-.diff-new{
-	background-color:green;
-}
-
-.diff-del{
-	background-color:red;
-}
-
-.log-action-create {
-	background-color: green;
-}
-
-.log-action-delete {
-	background-color: red;
-}
-</style>
-
 {{with .Logs}}
 {{range .}}
-<div class="box">
+<div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
 	<ul>
@@ -44,13 +14,13 @@ table.description td {
 				<caption>Tags</caption>
 			{{range .Added}}
 				<tr>
-					<td class="log-action-create">+</td>
+					<td class="action-create">+</td>
 					<td class="namespace-{{.Namespace}}">{{.}}</td>
 				</tr>
 			{{end}}
 			{{range .Removed}}
 				<tr>
-					<td class="log-action-delete">-</td>
+					<td class="action-delete">-</td>
 					<td class="namespace-{{.Namespace}}">{{.}}</td>
 				</tr>
 			{{end}}
@@ -79,7 +49,7 @@ table.description td {
 				<th>Namespace</th>
 				<th>Data</th>
 			{{range .}}
-				<tr class="log-action-{{.Action}}">
+				<tr class="action-{{.Action}}">
 					<td>{{.Action}}</td>
 					<td>{{.Namespace}}</td>
 					<td>{{.MetaData}}</td>
@@ -93,7 +63,7 @@ table.description td {
 				<th>Action</th>
 				<th>Date</th>
 			{{range .}}
-				<tr class="log-action-{{.Action}}">
+				<tr class="action-{{.Action}}">
 					<td>{{.Action}}</td>
 					<td>{{.Date}}</td>
 				</tr>
