@@ -78,6 +78,95 @@ func SetAlts(posts []int) loggingAction {
 	}
 }
 
+// Split the altgroup into two separate groups
+// one with the supplied post ids
+// the other with the remaining alts
+func SplitAlts(posts []int) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		rows, err := tx.Query(
+			fmt.Sprintf(`
+				SELECT id
+				FROM posts
+				WHERE alt_group = (
+					SELECT alt_group
+					FROM posts
+					WHERE id = $1
+				)
+				AND id NOT IN(%s)
+				`,
+				strSep(posts, ","),
+			),
+			posts[0],
+		)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		var (
+			aMax int
+			bMax int
+			a    []int
+		)
+
+		for rows.Next() {
+			var p int
+			err = rows.Scan(&p)
+			if err != nil {
+				return
+			}
+
+			if aMax < p {
+				aMax = p
+			}
+
+			a = append(a, p)
+		}
+
+		for _, p := range posts {
+			if p > bMax {
+				bMax = p
+			}
+		}
+
+		update := func(newAltGroup int, pids []int) error {
+			_, err := tx.Exec(
+				fmt.Sprintf(`
+					UPDATE posts
+					SET alt_group = $1
+					WHERE id IN(%s)
+					`,
+					strSep(pids, ","),
+				),
+				newAltGroup,
+			)
+			return err
+		}
+
+		if err = update(aMax, a); err != nil {
+			return
+		}
+
+		if err = update(bMax, posts); err != nil {
+			return
+		}
+
+		l.table = lPostAlts
+		l.fn = logAltsSplit{
+			a: logAlts{
+				AltGroup: aMax,
+				pids:     a,
+			},
+			b: logAlts{
+				AltGroup: bMax,
+				pids:     posts,
+			},
+		}.log
+
+		return
+	}
+}
+
 //func (p *Post) SetAlt(q querier, altof int, user *User) error {
 //	err := p.setAlt(q, altof)
 //	if err != nil {

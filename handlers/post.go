@@ -404,6 +404,44 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 	redirectToReferer(w, r, fmt.Sprint("/post/%d/", pids[0]))
 }
 
+func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Upload() {
+		permErr(w, "Upload")
+		return
+	}
+
+	ua := DM.UserAction(user)
+
+	var pids []int
+
+	r.ParseForm()
+	for _, v := range r.Form["post-id"] {
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		pids = append(pids, id)
+	}
+
+	ua.Add(DM.SplitAlts(pids))
+
+	if err := ua.Exec(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	redirectToReferer(w, r, fmt.Sprint("/post/%d/", pids[0]))
+
+}
+
 //func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 //	if r.Method != http.MethodPost {
 //		notFoundHandler(w)

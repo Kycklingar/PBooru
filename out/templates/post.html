@@ -38,13 +38,13 @@
 				<a style="color:#AAA" href="/post/edit/{{.Post.ID}}/">Edit</a>
 				{{end}}
 				{{if .User.Flag.Upload}}
-					<form method="POST" action="/post/edit/assignalts/">
+					<form method="POST" action="/post/edit/alts/assign/">
 						<h3>Assign alt</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="number" name="post-id">
 						<input type="submit">
 					</form>
-					<form method="POST" action="/post/edit/removealt/">
+					<form method="POST" action="/post/edit/alts/split/">
 						<h3>Remove alt</h3>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
 						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">

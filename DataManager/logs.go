@@ -13,7 +13,7 @@ type Log struct {
 	Posts postHistoryMap
 
 	// Alts
-	Alts logAlts
+	Alts []logAlts
 }
 
 func PostLogs(q querier, postid int) ([]Log, error) {

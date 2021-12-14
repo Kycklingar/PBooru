@@ -73,11 +73,9 @@
 		</li>
 	{{end}}
 	</ul>
-	{{with .Alts}}
-	{{if .AltGroup}}
+	{{range .Alts}}
 		<span>Assigned alts</span>
 		{{template "thumbnail-cards" wrap2 "Posts" "UserInfo" .Posts $.UserInfo}}
-	{{end}}
 	{{end}}
 </div>
 {{end}}

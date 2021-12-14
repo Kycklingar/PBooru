@@ -16,6 +16,19 @@ type logAlts struct {
 	pids     []int
 }
 
+type logAltsSplit struct {
+	a, b logAlts
+}
+
+func (l logAltsSplit) log(logID int, tx *sql.Tx) error {
+	err := l.a.log(logID, tx)
+	if err != nil {
+		return err
+	}
+
+	return l.b.log(logID, tx)
+}
+
 func (l logAlts) log(logID int, tx *sql.Tx) error {
 	var alID int
 
@@ -62,7 +75,7 @@ func (l logAlts) log(logID int, tx *sql.Tx) error {
 
 func getLogAlts(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT new_alt, post_id
+		SELECT al.al_id, new_alt, post_id
 		FROM log_post_alts al
 		LEFT JOIN log_post_alt_posts p
 		ON al.al_id = p.al_id
@@ -75,14 +88,31 @@ func getLogAlts(log *Log, q querier) error {
 	}
 	defer rows.Close()
 
+	var lam = make(map[int]logAlts)
 	for rows.Next() {
-		var p = NewPost()
-		err = rows.Scan(&log.Alts.AltGroup, &p.ID)
+		var (
+			alID     int
+			altGroup int
+			p        = NewPost()
+		)
+		err = rows.Scan(
+			&alID,
+			&altGroup,
+			&p.ID,
+		)
 		if err != nil {
 			return err
 		}
 
-		log.Alts.Posts = append(log.Alts.Posts, p)
+		la := lam[alID]
+		la.AltGroup = altGroup
+		la.Posts = append(la.Posts, p)
+
+		lam[alID] = la
+	}
+
+	for _, la := range lam {
+		log.Alts = append(log.Alts, la)
 	}
 
 	return nil
