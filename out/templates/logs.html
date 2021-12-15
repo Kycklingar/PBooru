@@ -4,6 +4,25 @@
 <div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
+	{{with .Alias}}
+	{{if .From}}
+		<div>
+			<span>Aliased</span>
+			<div>
+				<table>
+					<th>From</th>
+					{{range .From}}
+					<tr><td class="namespace-{{.Namespace}}">{{.}}</td></tr>
+					{{end}}
+				</table>
+				<table>
+					<th>To</th>
+					<tr><td>{{.To}}</td></tr>
+				</table>
+			</div>
+		</div>
+	{{end}}
+	{{end}}
 	<ul>
 	{{range .Posts}}
 		<li>

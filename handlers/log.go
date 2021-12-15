@@ -43,6 +43,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 			)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 
@@ -56,7 +57,24 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 				)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
+			}
+		}
+
+		for _, t := range log.Alias.From {
+			err := t.QueryAll(DM.DB)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if log.Alias.To != nil {
+			err = log.Alias.To.QueryAll(DM.DB)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 	}

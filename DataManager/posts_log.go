@@ -54,6 +54,30 @@ func initPostLog(tx *sql.Tx, logID, postID int) error {
 	return err
 }
 
+func initPostsLog(logID int, tx *sql.Tx, pids []int) error {
+	stmt, err := tx.Prepare(`
+		INSERT INTO log_post(
+			log_id,
+			post_id
+		)
+		VALUES($1, $2)
+		ON CONFLICT DO NOTHING
+		`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, p := range pids {
+		if _, err = stmt.Exec(logID, p); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func getLogPostTags(log *Log, q querier) error {
 	rows, err := q.Query(`
 		SELECT post_id, action, t.id, t.tag, n.id, n.nspace

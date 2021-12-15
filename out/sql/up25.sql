@@ -86,3 +86,32 @@ CREATE TABLE log_post_alt_posts(
 	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
 );
 
+CREATE TABLE log_tag_alias (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	alias_from INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+	alias_to INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE TABLE log_tag_parent (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	parent INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+	child INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE TABLE log_multi_post_tags (
+	id SERIAL PRIMARY KEY,
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	invoker TEXT NOT NULL
+);
+
+CREATE TABLE log_multi_post_tags_map (
+	id INTEGER REFERENCES log_multi_post_tags(id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+	tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE TABLE log_multi_posts_affected (
+	id INTEGER NOT NULL REFERENCES log_multi_post_tags(id) ON DELETE CASCADE,
+	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+	UNIQUE(id, post_id)
+);

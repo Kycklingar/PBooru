@@ -132,22 +132,9 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		from := r.FormValue("from")
 		to := r.FormValue("to")
 
-		alias := DM.NewAlias()
-
-		tc := DM.TagCollector{}
-		if err := tc.Parse(from, ","); err != nil {
-			http.Error(w, "Bad request", http.StatusBadRequest)
-			return
-		}
-		alias.Tag = tc.Tags[0]
-		tc = DM.TagCollector{}
-		if err := tc.Parse(to, ","); err != nil {
-			http.Error(w, "Bad request", http.StatusBadRequest)
-			return
-		}
-		alias.To = tc.Tags[0]
-
-		err := alias.Save()
+		ua := DM.UserAction(user)
+		ua.Add(DM.AliasTags(from, to))
+		err := ua.Exec()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
