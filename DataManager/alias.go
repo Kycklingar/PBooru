@@ -90,8 +90,80 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		l.fn = logAlias{
 			From:      from,
 			To:        to[0],
+			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
+
+		return
+	}
+}
+
+type logAliasMap map[int]logAlias
+
+func (l logAliasMap) log(logID int, tx *sql.Tx) error {
+	for _, log := range l {
+		err := log.log(logID, tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UnaliasTags(fromStr string) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		from, err := parseTagsWithID(tx, fromStr, ',')
+		if err != nil {
+			return
+		}
+
+		// just to make sure the aliases are valid
+		stmt, err := tx.Prepare(`
+			SELECT alias_to
+			FROM alias
+			WHERE alias_from = $1
+			`,
+		)
+		if err != nil {
+			return
+		}
+		defer stmt.Close()
+
+		delStmt, err := tx.Prepare(`
+			DELETE FROM alias
+			WHERE alias_from = $1
+			AND alias_to = $2
+			`,
+		)
+		if err != nil {
+			return
+		}
+		defer delStmt.Close()
+
+		var lun = make(logAliasMap)
+
+		for _, f := range from.unique() {
+			var to = NewTag()
+			err = stmt.QueryRow(f.ID).Scan(&to.ID)
+			if err != nil {
+				return
+			}
+
+			_, err = delStmt.Exec(f.ID, to.ID)
+			if err != nil {
+				return
+			}
+
+			l := lun[to.ID]
+			l.Action = aDelete
+			l.To = to
+			l.From = append(l.From, f)
+			lun[to.ID] = l
+		}
+
+		l.table = lAlias
+		l.fn = lun.log
 
 		return
 	}
@@ -127,15 +199,16 @@ func aliasedTo(q querier, tag *Tag) (*Tag, error) {
 }
 
 type logAlias struct {
-	From tagSet
-	To   *Tag
+	From   tagSet
+	To     *Tag
+	Action lAction
 
 	multiLogs []logMultiTags
 }
 
 func getLogAlias(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT alias_from, alias_to
+		SELECT action, alias_from, alias_to
 		FROM log_tag_alias
 		WHERE log_id = $1
 		`,
@@ -145,29 +218,41 @@ func getLogAlias(log *Log, q querier) error {
 		return err
 	}
 
-	log.Alias.To = NewTag()
-	for rows.Next() {
-		var from = NewTag()
+	var la = make(logAliasMap)
 
-		err = rows.Scan(&from.ID, &log.Alias.To.ID)
+	for rows.Next() {
+		var (
+			action lAction
+			to     = NewTag()
+			from   = NewTag()
+		)
+
+		err = rows.Scan(&action, &from.ID, &to.ID)
 		if err != nil {
 			return err
 		}
 
-		log.Alias.From = append(log.Alias.From, from)
+		l := la[to.ID]
+		l.To = to
+		l.Action = action
+		l.From = append(l.From, from)
+		la[to.ID] = l
 	}
 
-	return nil
+	log.Aliases = la
+
+	return getMultiLogs(log, q)
 }
 
 func (l logAlias) log(logID int, tx *sql.Tx) error {
 	stmt, err := tx.Prepare(`
 		INSERT INTO log_tag_alias (
 			log_id,
+			action,
 			alias_from,
 			alias_to
 		)
-		VALUES($1, $2, $3)
+		VALUES($1, $2, $3, $4)
 		`,
 	)
 	if err != nil {
@@ -176,7 +261,7 @@ func (l logAlias) log(logID int, tx *sql.Tx) error {
 	defer stmt.Close()
 
 	for _, t := range l.From {
-		_, err = stmt.Exec(logID, t.ID, l.To.ID)
+		_, err = stmt.Exec(logID, l.Action, t.ID, l.To.ID)
 		if err != nil {
 			return err
 		}
@@ -254,58 +339,14 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 		return nil, err
 	}
 
-	var (
-		multiLogs []logMultiTags
+	var multiLogs []logMultiTags
 
-		// Queries post ids and creates and appends a multilog
-		apmulf = func(query string, action lAction, set tagSet) error {
-			stmt, err := tx.Prepare(query)
-			if err != nil {
-				return err
-			}
-			defer stmt.Close()
-
-			for _, t := range set {
-				var ml = logMultiTags{
-					Tags: make(map[lAction]tagSet),
-				}
-				ml.Tags[action] = tagSet{t}
-
-				err = func() error {
-					rows, err := stmt.Query(t.ID)
-					if err != nil {
-						return err
-					}
-					defer rows.Close()
-
-					for rows.Next() {
-						var p int
-						err = rows.Scan(&p)
-						if err != nil {
-							return err
-						}
-
-						ml.pids = append(ml.pids, p)
-					}
-
-					return nil
-				}()
-				if err != nil {
-					return err
-				}
-
-				multiLogs = append(multiLogs, ml)
-
-			}
-			return nil
-		}
-	)
-
-	err = apmulf(`
+	ml, err := multiLogStmtFromSet(`
 		SELECT post_id
 		FROM post_tag_mappings
 		WHERE tag_id = $1
 		`,
+		tx,
 		aDelete,
 		from,
 	)
@@ -313,7 +354,9 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 		return nil, err
 	}
 
-	err = apmulf(
+	multiLogs = append(multiLogs, ml...)
+
+	ml, err = multiLogStmtFromSet(
 		fmt.Sprintf(`
 			SELECT DISTINCT hf.post_id
 			FROM post_tag_mappings hf
@@ -325,12 +368,15 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 			`,
 			sep(",", len(from), from.strindex),
 		),
+		tx,
 		aCreate,
 		tos,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	multiLogs = append(multiLogs, ml...)
 
 	// Inserts all parents plus the alias
 	_, err = tx.Exec(

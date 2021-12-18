@@ -264,8 +264,9 @@ func init() {
 
 	Handlers["/post/edit/alts/assign/"] = assignAltsHandler
 	Handlers["/post/edit/alts/split/"] = splitAltsHandler
-
 	Handlers["/post/edit/description/"] = postModifyHandler
+
+	Handlers["/edit/many/post/tags/"] = multiTagsHandler
 
 	Handlers["/posts"] = makeStatHandler(PostsHandler)
 	Handlers["/posts/"] = makeStatHandler(PostsHandler)

@@ -16,7 +16,10 @@ type Log struct {
 	Alts []logAlts
 
 	// Alias
-	Alias logAlias
+	Aliases logAliasMap
+
+	// Multi tags
+	MultiTags map[lAction][]logMultiTags
 }
 
 func PostLogs(q querier, postid int) ([]Log, error) {

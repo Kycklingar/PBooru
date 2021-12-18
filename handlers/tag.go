@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -128,45 +129,29 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("action") == "alias" {
-		from := r.FormValue("from")
-		to := r.FormValue("to")
+	ua := DM.UserAction(user)
 
-		ua := DM.UserAction(user)
+	from := r.FormValue("from")
+	to := r.FormValue("to")
+
+	children := r.FormValue("child")
+	parents := r.FormValue("parent")
+
+	switch r.FormValue("action") {
+	case "alias":
 		ua.Add(DM.AliasTags(from, to))
-		err := ua.Exec()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-	} else if r.FormValue("action") == "parent" {
-		child := r.FormValue("child")
-		parent := r.FormValue("parent")
-
-		c := DM.NewTag()
-		c.Parse(child)
-
-		p := DM.NewTag()
-		p.Parse(parent)
-		tx, err := DM.DB.Begin()
-		if err != nil {
-			log.Println(err)
-			http.Error(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-		if err = c.AddParent(tx, p); err != nil {
-			log.Println(err)
-			http.Error(w, ErrInternal, http.StatusInternalServerError)
-			tx.Rollback()
-			return
-		}
-		if err = tx.Commit(); err != nil {
-			log.Println(err)
-			http.Error(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
+	case "unalias":
+		ua.Add(DM.UnaliasTags(from))
+	case "parent":
+		ua.Add(DM.ParentTags(children, parents))
 	}
+
+	err := ua.Exec()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
@@ -239,4 +224,45 @@ func preloadTagHistory(histories []*DM.TagHistory) {
 		h.User.QID(DM.DB)
 		h.User.QFlag(DM.DB)
 	}
+}
+
+func multiTagsHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUser(w, r)
+
+	if !user.QFlag(DM.DB).Special() {
+		permErr(w, "Special")
+		return
+	}
+
+	err := r.ParseMultipartForm(50000000)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		addStr = r.Form.Get("tags-add")
+		remStr = r.Form.Get("tags-remove")
+		pids   []int
+	)
+
+	for _, pidstr := range r.Form["pid"] {
+		pid, err := strconv.Atoi(pidstr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		pids = append(pids, pid)
+	}
+
+	ua := DM.UserAction(user)
+	ua.Add(DM.AlterManyPostTags(pids, addStr, remStr, '\n'))
+	err = ua.Exec()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, "OK")
 }

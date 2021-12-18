@@ -62,21 +62,26 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 			}
 		}
 
-		for _, t := range log.Alias.From {
-			err := t.QueryAll(DM.DB)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+		for _, a := range log.Aliases {
+			for _, t := range append(a.From, a.To) {
+				err := t.QueryAll(DM.DB)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 		}
 
-		if log.Alias.To != nil {
-			err = log.Alias.To.QueryAll(DM.DB)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+		for _, mls := range log.MultiTags {
+			for _, ml := range mls {
+				err := ml.Tag.QueryAll(DM.DB)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 		}
+
 	}
 
 	p := struct {

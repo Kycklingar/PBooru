@@ -77,10 +77,14 @@ body
 
 .box table, .box td, .box th
 {
-	border: solid 1px grey;
 	padding: 0.5em;
 	color: var(--box-color);
 	border-collapse: collapse;
+}
+
+.box td, .box th
+{
+	border: solid 1px grey;
 }
 
 .box form label,

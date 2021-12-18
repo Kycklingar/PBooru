@@ -54,6 +54,15 @@ func (a tagSet) unique() tagSet {
 	return retu
 }
 
+func parseTagsWithID(q querier, tagstr string, delim rune) (tagSet, error) {
+	set, err := parseTags(tagstr, delim)
+	if err != nil {
+		return nil, err
+	}
+
+	return set.qids(q)
+}
+
 func parseTags(tagstr string, delim rune) (tagSet, error) {
 	var (
 		tagSpitter = make(chan string)
@@ -109,6 +118,31 @@ func parseTags(tagstr string, delim rune) (tagSet, error) {
 	return set, nil
 }
 
+func (set tagSet) qids(q querier) (tagSet, error) {
+	stmt, err := q.Prepare(`
+		SELECT t.id
+		FROM tags t
+		JOIN namespaces n
+		ON t.namespace_id = n.id
+		WHERE t.tag = $1
+		AND n.nspace = $2
+		`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	for _, t := range set {
+		err = stmt.QueryRow(t.Tag, t.Namespace.Namespace).Scan(&t.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return set, nil
+}
+
 func postTags(q querier, postID int) (tagSet, error) {
 	var set tagSet
 
@@ -154,13 +188,13 @@ func (set tagSet) upgrade(q querier) (tagSet, error) {
 		parents tagSet
 	)
 
-	for i := range set {
-		set[i], err = aliasedTo(q, set[i])
-		if err != nil {
-			return set, err
-		}
+	set, err = set.aliases(q)
+	if err != nil {
+		return nil, err
+	}
 
-		par, err := set[i].parents(q)
+	for _, t := range set {
+		par, err := t.parents(q)
 		if err != nil {
 			return set, err
 		}
@@ -169,6 +203,18 @@ func (set tagSet) upgrade(q querier) (tagSet, error) {
 	}
 
 	return append(set, parents.diff(set)...), nil
+}
+
+func (set tagSet) aliases(q querier) (tagSet, error) {
+	var err error
+	for i := range set {
+		set[i], err = aliasedTo(q, set[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return set, nil
 }
 
 func (set tagSet) recount(q querier) error {

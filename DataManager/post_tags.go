@@ -2,6 +2,8 @@ package DataManager
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 )
 
 // Add and remove tags from a post
@@ -83,6 +85,133 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		}.log
 		return
 
+	}
+}
+
+func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		parseSave := func(tagStr string) (tagSet, error) {
+			tags, err := parseTags(tagStr, delim)
+			if err != nil {
+				return nil, err
+			}
+
+			return tags, tags.save(tx)
+		}
+
+		add, err := parseSave(addStr)
+		if err != nil {
+			return
+		}
+
+		remove, err := parseSave(remStr)
+		if err != nil {
+			return
+		}
+
+		remove = remove.diff(add)
+
+		if len(pids) <= 0 || (len(add) <= 0 && len(remove) <= 0) {
+			err = errors.New("nothing to do")
+			return
+		}
+
+		var (
+			multilogs logMultipleTags
+			mls       logMultipleTags
+		)
+
+		if len(add) > 0 {
+			mls, err = multiLogStmtFromSet(
+				fmt.Sprintf(`
+				SELECT DISTINCT p1.post_id
+				FROM post_tag_mappings p1
+				LEFT JOIN post_tag_mappings p2
+				ON p1.post_id = p2.post_id
+				AND p2.tag_id = $1
+				WHERE p1.post_id IN(%s)
+				AND p2.post_id IS NULL
+				`,
+					strSep(pids, ","),
+				),
+				tx,
+				aCreate,
+				add.unique(),
+			)
+			if err != nil {
+				return
+			}
+
+			multilogs = append(multilogs, mls...)
+
+			_, err = tx.Exec(
+				fmt.Sprintf(`
+				INSERT INTO post_tag_mappings (
+					post_id,
+					tag_id
+				)
+				SELECT DISTINCT (post_id), UNNEST(ARRAY[%s])
+				FROM post_tag_mappings
+				WHERE post_id IN(%s)
+				ON CONFLICT DO NOTHING
+				`,
+					sep(",", len(add), add.strindex),
+					strSep(pids, ","),
+				),
+			)
+			if err != nil {
+				return
+			}
+
+		}
+
+		if len(remove) > 0 {
+			mls, err = multiLogStmtFromSet(
+				fmt.Sprintf(`
+				SELECT post_id
+				FROM post_tag_mappings
+				WHERE tag_id = $1
+				AND post_id IN(%s)
+				`,
+					strSep(pids, ","),
+				),
+				tx,
+				aDelete,
+				remove.unique(),
+			)
+			if err != nil {
+				return
+			}
+
+			multilogs = append(multilogs, mls...)
+
+			_, err = tx.Exec(
+				fmt.Sprintf(`
+				DELETE FROM
+				post_tag_mappings ptm
+				USING (
+					SELECT post_id, UNNEST(ARRAY[%s]) AS tag_id
+					FROM post_tag_mappings
+					WHERE post_id IN(%s)
+				) AS del
+				WHERE ptm.post_id = del.post_id
+				AND ptm.tag_id = del.tag_id
+				`,
+					sep(",", len(remove), remove.strindex),
+					strSep(pids, ","),
+				),
+			)
+			if err != nil {
+				return
+			}
+		}
+
+		if len(multilogs) > 0 {
+			l.table = lMultiTags
+			l.fn = multilogs.log
+		}
+
+		return
 	}
 }
 

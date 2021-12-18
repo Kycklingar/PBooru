@@ -86,7 +86,18 @@
         	        <p>Parent</p>
         	        <input type="text" class="stinput" name="parent">
         	        <input type="submit">
-        	    </form>
+		</form>
+		<form method="POST">
+			<p>Unalias</p>
+			<input type="hidden" name="action" value="unalias">
+			{{with .Tag}}
+			<input type="hidden" name="from" value="{{.}}">
+			{{else}}
+			<input type="text" name="from">
+			{{end}}
+			<input type="submit">
+		</form>
+
         	<script type="text/javascript" src="/static/suggestions.js"></script>
 	</div>
     </div>

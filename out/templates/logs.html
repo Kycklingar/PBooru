@@ -4,27 +4,61 @@
 <div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
-	{{with .Alias}}
-	{{if .From}}
-		<div>
-			<span>Aliased</span>
-			<div>
-				<table>
+	{{range .Aliases}}
+		<table>
+			<caption>{{if eq .Action "create"}}Alias{{else}}Unalias{{end}}</caption>
+			<thead>
+				<tr>
 					<th>From</th>
-					{{range .From}}
-					<tr><td class="namespace-{{.Namespace}}">{{.}}</td></tr>
-					{{end}}
-				</table>
-				<table>
 					<th>To</th>
-					<tr><td>{{.To}}</td></tr>
-				</table>
-			</div>
-		</div>
+				</tr>
+			</thead>
+			<tbody>
+				{{$to  := .To}}
+				{{$l := len .From}}
+				{{range .From}}
+				<tr>
+					<td class="namespace-{{.Namespace}}">{{.}}</td>
+					{{with $to}}
+					<td rowspan="{{$l}}" class="namespace-{{$to.Namespace}}">{{$to}}</td>
+					{{$to = 0}}
+					{{end}}
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
 	{{end}}
+	{{with .MultiTags}}
+	<table>
+		<caption>Mass tag edits</caption>
+		<thead>
+			<tr>
+				<th>Action</th>
+				<th>Tag</th>
+				<th>Posts affected</th>
+			</tr>
+		</thead>
+		<tbody>
+
+		{{range $action, $ml := .}}
+			{{$actlen := len $ml}}
+			{{range $ml}}
+			<tr>
+				{{with $actlen}}
+				<td rowspan="{{$actlen}}">{{$action}}</td>
+				{{$actlen = 0}}
+				{{end}}
+				<td class="namespace-{{.Tag.Namespace}}">{{.Tag}}</td>
+				<td>{{.PostsAffected}}</td>
+			</tr>
+			{{end}}
+		{{end}}
+		</tbody>
+	</table>
 	{{end}}
+	{{with .Posts}}
 	<ul>
-	{{range .Posts}}
+	{{range .}}
 		<li>
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 		{{with .Tags}}
@@ -92,6 +126,7 @@
 		</li>
 	{{end}}
 	</ul>
+	{{end}}
 	{{range .Alts}}
 		<span>Assigned alts</span>
 		{{template "thumbnail-cards" wrap2 "Posts" "UserInfo" .Posts $.UserInfo}}
