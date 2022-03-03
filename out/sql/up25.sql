@@ -113,3 +113,33 @@ CREATE TABLE log_multi_posts_affected (
 	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
 	UNIQUE(id, post_id)
 );
+
+-- NEW
+CREATE TABLE log_comics (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	id INTEGER NOT NULL,
+	action log_action NOT NULL,
+	title TEXT NOT NULL
+);
+
+CREATE TABLE log_chapters (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	chapter_id INTEGER NOT NULL,
+	action log_action NOT NULL,
+	c_order INEGER NOT NULL,
+	title TEXT NOT NULL
+);
+
+ALTER TABLE comic_mappings RENAME TO comic_page;
+ALTER TABLE comic_mappings RENAME COLUMN post_order TO page;
+ALTER TABLE log_comic_page RENAME TO log_comic_page_old;
+
+CREATE TABLE log_comic_page (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+	comic_page_id INTEGER NOT NULL,
+	chapter_id INTEGER NOT NULL,
+	post_id INTEGER NOT NULL,
+	page INTEGER NOT NULL
+);
+

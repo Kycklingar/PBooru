@@ -55,15 +55,12 @@ func (a tagSet) unique() tagSet {
 }
 
 func parseTagsWithID(q querier, tagstr string, delim rune) (tagSet, error) {
-	set, err := parseTags(tagstr, delim)
-	if err != nil {
-		return nil, err
-	}
+	set := parseTags(tagstr, delim)
 
 	return set.qids(q)
 }
 
-func parseTags(tagstr string, delim rune) (tagSet, error) {
+func parseTags(tagstr string, delim rune) tagSet {
 	var (
 		tagSpitter = make(chan string)
 		set        tagSet
@@ -103,19 +100,30 @@ func parseTags(tagstr string, delim rune) (tagSet, error) {
 	}(tagSpitter)
 
 	for tag := range tagSpitter {
-		if tag == "" {
-			continue
+		var t = NewTag()
+
+		split := strings.SplitN(tag, ":", 2)
+
+		switch len(split) {
+		case 1:
+			t.Tag = strings.TrimSpace(split[0])
+		case 2:
+			t.Namespace.Namespace = strings.TrimSpace(split[0])
+			t.Tag = strings.TrimSpace(split[1])
 		}
 
-		t := NewTag()
-		if err := t.Parse(tag); err != nil {
-			return nil, err
+		// Discard empty tags
+		if t.Tag == "" {
+			continue
+		}
+		if t.Namespace.Namespace == "" {
+			t.Namespace.Namespace = "none"
 		}
 
 		set = append(set, t)
 	}
 
-	return set, nil
+	return set
 }
 
 func (set tagSet) qids(q querier) (tagSet, error) {
@@ -269,12 +277,12 @@ func (set tagSet) purgeCountCache(q querier) error {
 	return err
 }
 
-func (set tagSet) save(q querier) error {
+func (set tagSet) save(q querier) (tagSet, error) {
 	for _, tag := range set {
 		if err := tag.Save(q); err != nil {
-			return err
+			return set, err
 		}
 	}
 
-	return nil
+	return set, nil
 }

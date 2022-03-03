@@ -582,54 +582,55 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 	return nil
 }
 
+// FIXME
 func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
-	exec := func(inferior *Post) ([]*ComicPost, error) {
-		rows, err := tx.Query(`
-			UPDATE comic_mappings
-			SET post_id = $1
-			WHERE post_id = $2
-			RETURNING id, chapter_id, post_order
-			`,
-			dupe.Post.ID,
-			inferior.ID,
-		)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
+	//exec := func(inferior *Post) ([]*ComicPost, error) {
+	//	rows, err := tx.Query(`
+	//		UPDATE comic_mappings
+	//		SET post_id = $1
+	//		WHERE post_id = $2
+	//		RETURNING id, chapter_id, post_order
+	//		`,
+	//		dupe.Post.ID,
+	//		inferior.ID,
+	//	)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	defer rows.Close()
 
-		var cps []*ComicPost
+	//	var cps []*ComicPost
 
-		for rows.Next() {
-			var cp = newComicPost()
-			cp.Post = dupe.Post
+	//	for rows.Next() {
+	//		var cp = newComicPost()
+	//		cp.Post = dupe.Post
 
-			err = rows.Scan(&cp.ID, &cp.Chapter.ID, &cp.Order)
-			if err != nil {
-				return nil, err
-			}
+	//		err = rows.Scan(&cp.ID, &cp.Chapter.ID, &cp.Order)
+	//		if err != nil {
+	//			return nil, err
+	//		}
 
-			cps = append(cps, cp)
-		}
+	//		cps = append(cps, cp)
+	//	}
 
-		return cps, nil
-	}
+	//	return cps, nil
+	//}
 
-	for _, p := range dupe.Inferior {
-		var cps []*ComicPost
-		cps, err = exec(p)
-		if err != nil {
-			return err
-		}
+	//for _, p := range dupe.Inferior {
+	//	var cps []*ComicPost
+	//	cps, err = exec(p)
+	//	if err != nil {
+	//		return err
+	//	}
 
-		// Log changes
-		for _, cp := range cps {
-			err = cp.log(tx, lUpdate, user)
-			if err != nil {
-				return
-			}
-		}
-	}
+	//	// Log changes
+	//	for _, cp := range cps {
+	//		err = cp.log(tx, lUpdate, user)
+	//		if err != nil {
+	//			return
+	//		}
+	//	}
+	//}
 
 	return
 }

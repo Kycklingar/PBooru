@@ -1,0 +1,17 @@
+{{define "log-description"}}
+	{{if .Description.PostID}}
+	{{with .Description}}
+	<table class="description">
+		<caption>Description</caption>
+		<th>New</th>
+		<th>Old</th>
+		<th>Diff</th>
+		<tr>
+			<td>{{.Description}}</td>
+			<td>{{.Old}}</td>
+			<td>{{noescape .Diff}}</td>
+		</tr>
+	</table>
+	{{end}}
+	{{end}}
+{{end}}

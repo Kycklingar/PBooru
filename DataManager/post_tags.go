@@ -11,17 +11,7 @@ import (
 // and producing a log
 func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		tags, err := parseTags(tagstr, '\n')
-		if err != nil {
-			return
-		}
-
-		err = tags.save(tx)
-		if err != nil {
-			return
-		}
-
-		diff, err := parseTags(tagdiff, '\n')
+		tags, err := parseTags(tagstr, '\n').save(tx)
 		if err != nil {
 			return
 		}
@@ -30,6 +20,8 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		if err != nil {
 			return
 		}
+
+		diff := parseTags(tagdiff, '\n')
 
 		// Get tags in db
 		in, err := postTags(tx, postID)
@@ -90,21 +82,12 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		parseSave := func(tagStr string) (tagSet, error) {
-			tags, err := parseTags(tagStr, delim)
-			if err != nil {
-				return nil, err
-			}
-
-			return tags, tags.save(tx)
-		}
-
-		add, err := parseSave(addStr)
+		add, err := parseTags(addStr, '\n').save(tx)
 		if err != nil {
 			return
 		}
 
-		remove, err := parseSave(remStr)
+		remove, err := parseTags(remStr, '\n').save(tx)
 		if err != nil {
 			return
 		}

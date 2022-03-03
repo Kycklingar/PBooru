@@ -20,6 +20,11 @@ type Log struct {
 
 	// Multi tags
 	MultiTags map[lAction][]logMultiTags
+
+	// Comics
+	Comic      logComic
+	Chapters   []logChapter
+	ComicPages []logComicPage
 }
 
 func PostLogs(q querier, postid int) ([]Log, error) {

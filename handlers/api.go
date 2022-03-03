@@ -345,16 +345,16 @@ func APIError(w http.ResponseWriter, err string, code int) {
 	return
 }
 
-func APIv1ComicsHandler(w http.ResponseWriter, r *http.Request) {
-	cc := DM.ComicCollector{}
-	if err := cc.Search(r.FormValue("title"), r.FormValue("tags"), 10, 0); err != nil {
-		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
-	}
-
-	// cm := tComics(5, cc.Comics)
-	// cm[0].Chapters
-}
+//func APIv1ComicsHandler(w http.ResponseWriter, r *http.Request) {
+//	cc := DM.ComicCollector{}
+//	if err := cc.Search(r.FormValue("title"), r.FormValue("tags"), 10, 0); err != nil {
+//		log.Println(err)
+//		http.Error(w, ErrInternal, http.StatusInternalServerError)
+//	}
+//
+//	// cm := tComics(5, cc.Comics)
+//	// cm[0].Chapters
+//}
 
 func APIv1SuggestTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")

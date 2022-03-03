@@ -12,12 +12,7 @@ const (
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		parseUpgrade := func(str string) (tagSet, error) {
-			set, err := parseTags(str, ',')
-			if err != nil {
-				return nil, err
-			}
-
-			err = set.save(tx)
+			set, err := parseTags(str, ',').save(tx)
 			if err != nil {
 				return nil, err
 			}

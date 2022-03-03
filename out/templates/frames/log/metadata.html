@@ -1,0 +1,30 @@
+{{define "log-metadata"}}
+{{with .MetaData}}
+	<table>
+		<caption>MetaData</caption>
+		<th>Action</th>
+		<th>Namespace</th>
+		<th>Data</th>
+	{{range .}}
+		<tr class="action-{{.Action}}">
+			<td>{{.Action}}</td>
+			<td>{{.Namespace}}</td>
+			<td>{{.MetaData}}</td>
+		</tr>
+	{{end}}
+	</table>
+{{end}}
+{{with .CreationDates}}
+	<table>
+		<caption>Release Dates</caption>
+		<th>Action</th>
+		<th>Date</th>
+	{{range .}}
+		<tr class="action-{{.Action}}">
+			<td>{{.Action}}</td>
+			<td>{{.Date}}</td>
+		</tr>
+	{{end}}
+	</table>
+{{end}}
+{{end}}

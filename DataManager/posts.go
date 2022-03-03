@@ -1323,7 +1323,7 @@ func (p *Post) Chapters(q querier) []*Chapter {
 	}
 
 	for rows.Next() {
-		var c = NewChapter()
+		var c = new(Chapter)
 		if err := rows.Scan(&c.ID); err != nil {
 			log.Println(err)
 			return nil

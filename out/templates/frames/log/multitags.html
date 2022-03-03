@@ -1,0 +1,34 @@
+{{define "log-multitags"}}
+{{with .MultiTags}}
+<table>
+	<caption>Mass tag edits</caption>
+	<thead>
+		<tr>
+			<th></th>
+			<th>Tag</th>
+			<th>Posts affected</th>
+		</tr>
+	</thead>
+	<tbody>
+
+	{{range $action, $ml := .}}
+		{{$actlen := len $ml}}
+		{{$a := "+"}}
+		{{if eq $action "delete"}}
+			{{$a = "-"}}
+		{{end}}
+		{{range $ml}}
+		<tr>
+			{{with $actlen}}
+			<td align="center" rowspan="{{$actlen}}" class="action-{{$action}}">{{$a}}</td>
+			{{$actlen = 0}}
+			{{end}}
+			<td align="center" class="namespace-{{.Tag.Namespace}}">{{.Tag}}</td>
+			<td align="center">{{.PostsAffected}}</td>
+		</tr>
+		{{end}}
+	{{end}}
+	</tbody>
+</table>
+{{end}}
+{{end}}

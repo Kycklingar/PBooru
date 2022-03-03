@@ -1,0 +1,23 @@
+{{define "log-comic-page"}}
+{{range .ComicPages}}
+<table>
+	<caption>ComicPage</caption>
+	<thead>
+		<tr>
+			<th>Action</th>
+			<th>Chapter ID</th>
+			<th>Post ID</th>
+			<th>Page</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>{{.Action}}</td>
+			<td>{{.ChapterID}}</td>
+			<td>{{.PostID}}</td>
+			<td>{{.Page}}</td>
+		</tr>
+	</tbody>
+</table>
+{{end}}
+{{end}}

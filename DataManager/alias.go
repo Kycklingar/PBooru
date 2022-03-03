@@ -17,15 +17,8 @@ func init() {
 
 func AliasTags(fromStr, toStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		from, err := parseTags(fromStr, ',')
-		if err != nil {
-			return
-		}
-
-		to, err := parseTags(toStr, ',')
-		if err != nil {
-			return
-		}
+		from := parseTags(fromStr, ',')
+		to := parseTags(toStr, ',')
 
 		if len(to) != 1 {
 			err = fmt.Errorf("cannot create an alias to multiple tags: %s", toStr)
@@ -37,11 +30,11 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			return
 		}
 
-		err = from.save(tx)
+		_, err = from.save(tx)
 		if err != nil {
 			return
 		}
-		err = to.save(tx)
+		_, err = to.save(tx)
 		if err != nil {
 			return
 		}

@@ -1,0 +1,26 @@
+{{define "log-alias"}}
+{{range .Aliases}}
+	<table>
+		<caption>{{if eq .Action "create"}}Alias{{else}}Unalias{{end}}</caption>
+		<thead>
+			<tr>
+				<th>From</th>
+				<th>To</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{$to  := .To}}
+			{{$l := len .From}}
+			{{range .From}}
+			<tr>
+				<td class="namespace-{{.Namespace}}">{{.}}</td>
+				{{with $to}}
+				<td rowspan="{{$l}}" class="namespace-{{$to.Namespace}}">{{$to}}</td>
+				{{$to = 0}}
+				{{end}}
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+{{end}}
+{{end}}

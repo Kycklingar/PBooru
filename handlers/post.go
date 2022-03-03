@@ -328,26 +328,28 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
-	for _, c := range pp.Chapters {
-		c.QComic(DM.DB)
-		c.Comic.QTitle(DM.DB)
-		c.Comic.QPageCount(DM.DB)
-		c.QTitle(DM.DB)
-		c.QOrder(DM.DB)
-		for i, p := range c.QPosts(DM.DB) {
-			if i > 5 {
-				break
-			}
-			p.QOrder(DM.DB)
-			p.QPost(DM.DB)
-			p.Post.QMul(
-				DM.DB,
-				DM.PFHash,
-				DM.PFThumbnails,
-			)
-		}
-	}
+	pp.Chapters = GetPostChapters(pp.Dupe.Post.ID)
+
+	//pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
+	//for _, c := range pp.Chapters {
+	//	c.QComic(DM.DB)
+	//	c.Comic.QTitle(DM.DB)
+	//	c.Comic.QPageCount(DM.DB)
+	//	c.QTitle(DM.DB)
+	//	c.QOrder(DM.DB)
+	//	for i, p := range c.QPosts(DM.DB) {
+	//		if i > 5 {
+	//			break
+	//		}
+	//		p.QOrder(DM.DB)
+	//		p.QPost(DM.DB)
+	//		p.Post.QMul(
+	//			DM.DB,
+	//			DM.PFHash,
+	//			DM.PFThumbnails,
+	//		)
+	//	}
+	//}
 
 	pp.Base.Title = strconv.Itoa(pp.Post.ID)
 
@@ -927,12 +929,13 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if len(r.FormValue("chapter-id")) > 0 {
-			r.Form.Add("post-id", strconv.Itoa(post.ID))
-			r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
-			comicAddPageHandler(w, r)
-			return
-		}
+		// FIXME
+		//if len(r.FormValue("chapter-id")) > 0 {
+		//	r.Form.Add("post-id", strconv.Itoa(post.ID))
+		//	r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
+		//	comicAddPageHandler(w, r)
+		//	return
+		//}
 
 		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusSeeOther)
 
