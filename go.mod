@@ -4,15 +4,28 @@ go 1.16
 
 require (
 	github.com/Nr90/imgsim v0.0.0-20180202144352-5caa057144b0
+	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/dchest/captcha v0.0.0-20200903113550-03f5f0333e1f
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
-	github.com/gabriel-vasile/mimetype v1.2.0
-	github.com/ipfs/go-cid v0.0.7 // indirect
-	github.com/ipfs/go-ipfs-api v0.2.1-0.20211014191653-0379ac88b0ec
+	github.com/gabriel-vasile/mimetype v1.4.0
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/ipfs/go-cid v0.1.0
+	github.com/ipfs/go-ipfs-api v0.3.0
+	github.com/ipfs/go-ipfs-files v0.1.1 // indirect
 	github.com/ipfs/go-ipld-format v0.2.0 // indirect
-	github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795 // indirect
-	github.com/lib/pq v1.10.1
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
+	github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795
+	github.com/lib/pq v1.10.4
+	github.com/libp2p/go-libp2p-core v0.14.0 // indirect
+	github.com/multiformats/go-base32 v0.0.4 // indirect
+	github.com/multiformats/go-multiaddr v0.5.0 // indirect
 	github.com/multiformats/go-multiaddr-net v0.2.0 // indirect
+	github.com/multiformats/go-multihash v0.1.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
-	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
+	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
+	go.opencensus.io v0.23.0 // indirect
+	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
+	golang.org/x/net v0.0.0-20220325170049-de3da57026de // indirect
+	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f // indirect
+	lukechampine.com/blake3 v1.1.7 // indirect
 )
