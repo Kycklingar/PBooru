@@ -126,12 +126,12 @@ CREATE TABLE log_chapters (
 	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
 	chapter_id INTEGER NOT NULL,
 	action log_action NOT NULL,
-	c_order INEGER NOT NULL,
+	c_order INTEGER NOT NULL,
 	title TEXT NOT NULL
 );
 
 ALTER TABLE comic_mappings RENAME TO comic_page;
-ALTER TABLE comic_mappings RENAME COLUMN post_order TO page;
+ALTER TABLE comic_page RENAME COLUMN post_order TO page;
 ALTER TABLE log_comic_page RENAME TO log_comic_page_old;
 
 CREATE TABLE log_comic_page (

@@ -9,6 +9,10 @@ const (
 	lParent logtable = "tag_parent"
 )
 
+func init() {
+	logTableGetFuncs[lParent] = getLogParents
+}
+
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		parseUpgrade := func(str string) (tagSet, error) {
@@ -84,6 +88,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 		l.fn = logParent{
 			Children:  children,
 			Parents:   parents,
+			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
 
@@ -91,9 +96,41 @@ func ParentTags(childStr, parentStr string) loggingAction {
 	}
 }
 
+func getLogParents(log *Log, q querier) error {
+	rows, err := q.Query(`
+		SELECT action, parent, child
+		FROM log_tag_parent
+		WHERE log_id = $1
+		`,
+		log.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			parent = NewTag()
+			child  = NewTag()
+		)
+
+		err := rows.Scan(&log.Parents.Action, &parent.ID, &child.ID)
+		if err != nil {
+			return err
+		}
+
+		log.Parents.Parents = append(log.Parents.Parents, parent)
+		log.Parents.Children = append(log.Parents.Children, child)
+	}
+
+	return getMultiLogs(log, q)
+}
+
 type logParent struct {
 	Children tagSet
 	Parents  tagSet
+	Action   lAction
 
 	multiLogs []logMultiTags
 }
@@ -102,10 +139,11 @@ func (l logParent) log(logID int, tx *sql.Tx) error {
 	stmt, err := tx.Prepare(`
 		INSERT INTO log_tag_parent (
 			log_id,
+			action,
 			parent,
 			child
 		)
-		VALUES($1, $2, $3)
+		VALUES($1, $2, $3, $4)
 		`,
 	)
 	if err != nil {
@@ -115,7 +153,7 @@ func (l logParent) log(logID int, tx *sql.Tx) error {
 
 	for _, c := range l.Children {
 		for _, p := range l.Parents {
-			_, err = stmt.Exec(logID, c.ID, p.ID)
+			_, err = stmt.Exec(logID, l.Action, p.ID, c.ID)
 			if err != nil {
 				return err
 			}

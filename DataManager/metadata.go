@@ -67,4 +67,4 @@ type metaDate time.Time
 func (m metaDate) Namespace() string  { return "date" }
 func (m metaDate) Data() string       { return time.Time(m).Format(iso8601) }
 func (m metaDate) String() string     { return "date" + ":" + m.Data() }
-func (m metaDate) value() interface{} { return m }
+func (m metaDate) value() interface{} { return time.Time(m) }

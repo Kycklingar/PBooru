@@ -367,7 +367,7 @@ func (l logPostCreationDates) log(logid int, tx *sql.Tx) error {
 		logid,
 		l.Action,
 		l.postID,
-		l.Date,
+		l.Date.value(),
 	)
 	if err != nil {
 		return err

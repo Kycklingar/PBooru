@@ -403,7 +403,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 			return err
 		}
 
-		metaMap["date"] = append(metaMap["date"], t.Format("2006-01-02"))
+		metaMap["date"] = append(metaMap["date"], t.Format(iso8601))
 
 	}
 

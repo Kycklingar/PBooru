@@ -145,6 +145,35 @@ li
     list-style-type:none;
 }
 
+.row {
+	display: flex;
+}
+
+.column {
+	flex: 50%;
+}
+
+.expander {
+	margin:1em;
+	width:100%;
+	min-width:20em;
+}
+.expander img {
+	background-color: black;
+	max-width:100%;
+}
+
+.resizable {
+	resize:both;
+	overflow:scroll;
+	min-width:400px;
+}
+
+.overflow {
+	overflow:auto;
+	white-space:nowrap;
+}
+
 .separator
 {
     padding: 1em;

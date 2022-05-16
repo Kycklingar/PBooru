@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"log"
 )
 
 func PostAddMetaData(postID int, metaStr string) []loggingAction {
@@ -49,6 +50,7 @@ func postAddCreationDate(postID int, md MetaData) loggingAction {
 			md.value(),
 		)
 		if err != nil {
+			log.Println(err)
 			return
 		}
 
@@ -81,6 +83,7 @@ func postRemoveCreationDate(postID int, md MetaData) loggingAction {
 			md.value(),
 		)
 		if err != nil {
+			log.Println(err)
 			return
 		}
 

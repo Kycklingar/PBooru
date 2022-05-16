@@ -59,7 +59,7 @@ func (c *Chapter) getPages(q querier) error {
 	return nil
 }
 
-func GetPostChapters() {
+func GetPostChapters(postID int) {
 
 }
 

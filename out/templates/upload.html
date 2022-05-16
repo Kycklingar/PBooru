@@ -1,76 +1,90 @@
+{{define "ts-example" -}}
+gender:female
+creator:nightfaux
+species:renamon
+ass
+my super tag
+pussy
+{{- end}}
+
 {{define "metadata-placeholder" -}}
 filename:PepperCat_04.png
 source:https://amogus.tv/i/400
 version:0.0.1-alpha
 created:2021-12-12
 {{- end}}
+
 {{define "description-placeholder" -}}
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et... 
 {{- end}}
+
 {{ template "base" }}
 <div class="box">
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
     {{else if .Flag.Upload}}
-    <form enctype="multipart/form-data" method="POST">
-	    <div>
-		    <label>File
-			    <input id="file" type="file" name="file">
-			    <label>Save filename:
-				    <input type="checkbox" name="store-filename" checked>
-			    </label>
-		    </label>
-		    <label>Tags
-			    <textarea class="stinput" id="tagsform" name="tags" rows="10" cols="40"></textarea>
-		    </label>
-		    <label>Metadata
-			    <textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
-		    </label>
-		    <label>Description
-			    <textarea name="description" rows="10" cols="40" placeholder="{{template "description-placeholder"}}"></textarea>
-		    </label>
-	    </div>
-	    {{if .Flag.Comics}}
-	    <details>
-		    <summary>Add to comic</summary>
-		    <div style="border-left: 1px solid grey;padding-left:1em;">
-			    <label>Chapter ID
-				    <input type="number" name="chapter-id">
-			    </label>
-			    <label>Page
-				    <input type="number" name="order">
-			    </label>
+    <script src="/static/scripts/input-preview.js"></script>
+    <div class="row">
+	    <div class="column">
+		    <form enctype="multipart/form-data" method="POST">
+			    <div>
+				    <label>File
+					    <input id="file" type="file" name="file" onInput="renderInput(event)">
+					    <label>Save filename:
+						    <input type="checkbox" name="store-filename" checked>
+					    </label>
+				    </label>
+				    <label>Tags
+					    <textarea class="stinput" id="tagsform" name="tags" rows="10" cols="40"></textarea>
+				    </label>
+				    <label>Metadata
+					    <textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
+				    </label>
+				    <label>Description
+					    <textarea name="description" rows="10" cols="40" placeholder="{{template "description-placeholder"}}"></textarea>
+				    </label>
+			    </div>
+			    {{if .Flag.Comics}}
+			    <details>
+				    <summary>Add to comic</summary>
+				    <div style="border-left: 1px solid grey;padding-left:1em;">
+					    <label>Chapter ID
+						    <input type="number" name="chapter-id">
+					    </label>
+					    <label>Page
+						    <input type="number" name="order">
+					    </label>
+				    </div>
+			    </details>
+			    {{end}}
+			    <input type="submit" value="Submit">
+		    </form>
+		    <div>
+			    <script type="text/javascript" src="/static/suggestions.js"></script>
+			    <h3>Tagging Guide</h3>
+			    <p>Tag what you know.</p>
+			    <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>furball"</span>.</p>
+			    <p>The default supported namespaces are:
+			    <ul style="width:100px;">
+				    <li class="namespace-creator">creator</li>
+				    <li class="namespace-character">character</li>
+				    <li class="namespace-species">species</li>
+				    <li class="namespace-series">series</li>
+				    <li class="namespace-gender">gender</li>
+				    <li class="namespace-medium">medium</li>
+				    <li class="namespace-meta">meta</li>
+				    <li class="namespace-rating">rating</li>
+			    </ul>
+			    </p>
+			    <p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
+			    <p>Use newlines as delimiter</p>
+			    <p>Tags may have spaces</p>
+			    <p>Example tag string:<pre>{{template "ts-example"}}</pre></p>
 		    </div>
-	    </details>
-	    {{end}}
-	    <input type="submit" value="Submit">
-    </form>
-    <script type="text/javascript" src="/static/suggestions.js"></script>
-        <h3>Tagging Guide</h3>
-	<p>Tag what you know.</p>
-        <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>furball"</span>.</p>
-        <p>The default supported namespaces are:
-            <ul style="width:100px;">
-                <li class="namespace-creator">creator</li>
-                <li class="namespace-character">character</li>
-                <li class="namespace-species">species</li>
-                <li class="namespace-series">series</li>
-                <li class="namespace-gender">gender</li>
-                <li class="namespace-medium">medium</li>
-                <li class="namespace-meta">meta</li>
-                <li class="namespace-rating">rating</li>
-            </ul>
-        </p>
-        <p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
-        <p>Use newlines as delimiter</p>
-        <p>Tags may have spaces</p>
-	<p>Example tag string:<pre>
-gender:female
-creator:nightfaux
-species:renamon
-ass
-my super tag
-pussy</pre></p>
+	    </div>
+	    <div class="column expander" id="preview-box">
+	    </div>
+    </div>
     {{else}}
     <h3>Insufficient priviliges. Want "Upload"<h3>
     <p>Ask <a href="/user/2/">kycklingar</a> for upload permissions.</p>

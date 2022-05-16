@@ -18,6 +18,9 @@ type Log struct {
 	// Alias
 	Aliases logAliasMap
 
+	// Parents
+	Parents logParent
+
 	// Multi tags
 	MultiTags map[lAction][]logMultiTags
 

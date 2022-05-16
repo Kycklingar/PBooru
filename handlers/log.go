@@ -72,6 +72,14 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 			}
 		}
 
+		for _, t := range append(log.Parents.Parents, log.Parents.Children...) {
+			err := t.QueryAll(DM.DB)
+			if err != nil {
+				internalError(w, err)
+				return
+			}
+		}
+
 		for _, mls := range log.MultiTags {
 			for _, ml := range mls {
 				err := ml.Tag.QueryAll(DM.DB)
