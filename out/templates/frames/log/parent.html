@@ -1,0 +1,29 @@
+{{define "log-parent"}}
+{{with .Parents}}
+	{{if .Parents}}
+	<table>
+		<caption>{{if eq .Action "create"}}Parent{{else}}Unparent{{end}}</caption>
+		<thead>
+			<tr>
+				<th>Parent</th>
+				<th>Child</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>
+				{{range .Parents}}
+					<div class="namespace-{{.Namespace}}">{{.}}</div>
+				{{end}}
+				</td>
+				<td>
+				{{range .Children}}
+					<div class="namespace-{{.Namespace}}">{{.}}</div>
+				{{end}}
+				</td>
+			</tr>
+		</tbody>
+	</table>
+	{{end}}
+{{end}}
+{{end}}
