@@ -2,13 +2,18 @@ package DataManager
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/frustra/bbcode"
+)
+
+var (
+	regRefc  = regexp.MustCompile("#c[0-9]+$")
+	regRef   = regexp.MustCompile("#([0-9]+)\\b(\\s|$)")
+	regGreen = regexp.MustCompile("(?m)^>.*")
 )
 
 func createCompiler(q querier, gateway string) bbcode.Compiler {
@@ -45,6 +50,11 @@ func createCompiler(q querier, gateway string) bbcode.Compiler {
 	})
 	cmp.SetTag("ref", func(node *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
 		ref := node.GetOpeningTag().Value
+
+		// Make sure it's a valid reference
+		if !regRefc.MatchString(ref) {
+			return nil, false
+		}
 
 		a := bbcode.NewHTMLTag("")
 		a.Name = "a"
@@ -90,23 +100,8 @@ func createCompiler(q querier, gateway string) bbcode.Compiler {
 
 func compileBBCode(q querier, text, gateway string) string {
 	cmp := createCompiler(q, gateway)
-
-	// Comment reference
-	reg, err := regexp.Compile("#([0-9]+)\\b(\\s|$)")
-	if err != nil {
-		log.Println(err)
-		return text
-	}
-
-	// Greentext
-	gt, err := regexp.Compile("(?m)^>.*")
-	if err != nil {
-		log.Println(err)
-		return text
-	}
-
-	out := reg.ReplaceAllString(text, "[ref=#c$1]#$1[/ref] ")
-	out = gt.ReplaceAllString(out, "[greentext]$0[/greentext]")
+	out := regRef.ReplaceAllString(text, "[ref=#c$1]#$1[/ref]$2")
+	out = regGreen.ReplaceAllString(out, "[greentext]$0[/greentext]")
 	return cmp.Compile(out)
 }
 
