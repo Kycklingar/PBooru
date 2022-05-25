@@ -825,6 +825,11 @@ li
 	white-space: pre-wrap;
 }
 
+#pageinator .current-page
+{
+	font-size: 2em;
+}
+
 #pageinator, #pageinator a:link, #pageinator a:visited
 {
     color:#AAA;

@@ -107,37 +107,12 @@
 </div>
 
 <div class="nolink" id="pageinator">
-
-	{{ if ne 0 .Paginator.Prev}}
-	<a href="/tags/{{.Paginator.First}}">
-		First
-	</a>
-
-	<a href="/tags/{{.Paginator.Prev}}" id="prev">
-		Previous
-	</a>
-	{{ end }}
-	{{ range .Paginator.Pages }}
-	<span>
-		{{ if eq $.Paginator.Current . }}
-		<span style="font-size:25px;">
-			{{.}}
-		</span>
-		{{ else }}
-		<a href="/tags/{{.}}">
-			{{.}}
-		</a>
-		{{ end }}
-	</span>
-	{{ end }}
-	{{ if ne 0 .Paginator.Next}}
-	<a href="/tags/{{.Paginator.Next}}">
-		Next
-	</a>
-	<a href="/tags/{{.Paginator.Last}}">
-		Last
-	</a>
-	{{ end }}
+	{{range .Paginator.Paginate}}
+		{{if .Current}}
+		<span class="current-page">{{.Val}}</span>
+		{{else}}
+		<span><a href="{{.Href}}">{{.Val}}</a></span>
+		{{end}}
+	{{end}}
 </div>
-
 {{ template "baseEnd" }}

@@ -6,10 +6,13 @@ import (
 )
 
 type Paginator struct {
+	// Current page
 	Current int
-	Last    int
+	// Last page
+	Last int
+	// Max page buttons
 	Plength int
-
+	// Linkformat
 	Format string
 }
 

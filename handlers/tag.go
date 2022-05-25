@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
+	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
 type Sidebar struct {
@@ -25,21 +27,21 @@ type Sidebar struct {
 	Mimes map[string][]*DM.Mime
 }
 
-const tagLimit = 200
+const tagLimit = 100
 
 func TagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		type P struct {
-			Query     string
-			Tags      []*DM.Tag
-			Tag       *DM.Tag
-			To        *DM.Tag
-			From      []*DM.Tag
-			Parents   []*DM.Tag
-			Children  []*DM.Tag
-			Paginator Pageination
+		var p struct {
+			Query    string
+			Tags     []*DM.Tag
+			Tag      *DM.Tag
+			To       *DM.Tag
+			From     []*DM.Tag
+			Parents  []*DM.Tag
+			Children []*DM.Tag
+			//Paginator Pageination
+			Paginator paginate.Paginator
 		}
-		var p P
 
 		tagStr := r.FormValue("tag")
 		currPage := 1
@@ -76,7 +78,10 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 		p.Tags = tc.Tags
 
+		var ctag string
+
 		if len(f) >= 3 && f[2] != "" {
+			ctag = f[2]
 			tagID, err := strconv.Atoi(f[2])
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -116,7 +121,12 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			bm.End(performBenchmarks)
 		}
 
-		p.Paginator = pageinate(tc.Total(), tagLimit, currPage, 30)
+		p.Paginator = paginate.Paginator{
+			Current: currPage,
+			Last:    tc.Total() / tagLimit,
+			Plength: 30,
+			Format:  fmt.Sprintf("/tags/%%d/%s%s", ctag, strings.ReplaceAll(p.Query, "%", "%%")),
+		}
 
 		renderTemplate(w, "tags", p)
 		return
