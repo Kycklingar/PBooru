@@ -525,7 +525,7 @@ func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
 //}
 
 func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
-	set, err := postTags(tx, dupe.Post.ID)
+	set, err := postTags(tx, dupe.Post.ID).unwrap()
 	if err != nil {
 		return err
 	}
@@ -543,7 +543,7 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 	defer stmt.Close()
 
 	for _, inf := range dupe.Inferior {
-		infset, err := postTags(tx, inf.ID)
+		infset, err := postTags(tx, inf.ID).unwrap()
 		if err != nil {
 			return err
 		}

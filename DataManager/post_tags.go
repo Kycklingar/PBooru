@@ -11,12 +11,12 @@ import (
 // and producing a log
 func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		tags, err := parseTags(tagstr, '\n').save(tx)
+		tags, err := parseTags(tagstr, '\n').chain().save(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		tags, err = tags.upgrade(tx)
+		tags, err = tags.chain().upgrade(tx).unwrap()
 		if err != nil {
 			return
 		}
@@ -24,7 +24,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		diff := parseTags(tagdiff, '\n')
 
 		// Get tags in db
-		in, err := postTags(tx, postID)
+		in, err := postTags(tx, postID).unwrap()
 		if err != nil {
 			return
 		}
@@ -55,18 +55,22 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 			return
 		}
 
-		qErr := []func(q querier) error{
-			add.recount,
-			remove.recount,
-			add.purgeCountCache,
-			remove.purgeCountCache,
-			clearEmptySearchCountCache,
+		qErr := []func(q querier) tagSetChain{
+			add.chain().recount,
+			remove.chain().recount,
+			add.chain().purgeCountCache,
+			remove.chain().purgeCountCache,
 		}
 
 		for _, f := range qErr {
-			if err = f(tx); err != nil {
+			if err = f(tx).err; err != nil {
 				return
 			}
+		}
+
+		err = clearEmptySearchCountCache(tx)
+		if err != nil {
+			return
 		}
 
 		l.table = lPostTags
@@ -82,12 +86,12 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		add, err := parseTags(addStr, '\n').save(tx)
+		add, err := parseTags(addStr, '\n').chain().save(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		remove, err := parseTags(remStr, '\n').save(tx)
+		remove, err := parseTags(remStr, '\n').chain().save(tx).unwrap()
 		if err != nil {
 			return
 		}

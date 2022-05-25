@@ -15,21 +15,26 @@ func init() {
 
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		parseUpgrade := func(str string) (tagSet, error) {
-			set, err := parseTags(str, ',').save(tx)
-			if err != nil {
-				return nil, err
-			}
+		children, err := parseTags(childStr, ',').
+			chain().
+			save(tx).
+			aliases(tx).
+			unwrap()
 
-			return set.aliases(tx)
-		}
-
-		children, err := parseUpgrade(childStr)
 		if err != nil {
 			return
 		}
 
-		parents, err := parseUpgrade(parentStr)
+		parents, err := parseTags(parentStr, ',').
+			chain().
+			save(tx).
+			aliases(tx).
+			unwrap()
+		if err != nil {
+			return
+		}
+
+		grandParents, err := parents.chain().upgrade(tx).unwrap()
 		if err != nil {
 			return
 		}
@@ -51,17 +56,19 @@ func ParentTags(childStr, parentStr string) loggingAction {
 				ON hc.post_id = hp.post_id
 				AND hp.tag_id = $1
 				WHERE hc.tag_id IN(%s)
+				AND hp.post_id IS NULL
 				`,
 				sep(",", len(children), children.strindex),
 			),
 			tx,
 			aCreate,
-			parents,
+			grandParents,
 		)
 		if err != nil {
 			return
 		}
 
+		// Create the parent->child relationship
 		stmt, err := tx.Prepare(`
 			INSERT INTO parent_tags (
 				parent_id,
@@ -81,6 +88,29 @@ func ParentTags(childStr, parentStr string) loggingAction {
 				if err != nil {
 					return
 				}
+			}
+		}
+
+		// Insert parents and grand parents into child posts
+		ins, err := tx.Prepare(
+			fmt.Sprintf(`
+				INSERT INTO post_tag_mappings (post_id, tag_id)
+				SELECT post_id, $1
+				FROM post_tag_mappings
+				WHERE tag_id IN(%s)
+				ON CONFLICT DO NOTHING
+				`,
+				sep(",", len(children), children.strindex),
+			),
+		)
+		if err != nil {
+			return
+		}
+		defer ins.Close()
+
+		for _, parent := range grandParents {
+			if _, err = ins.Exec(parent.ID); err != nil {
+				return
 			}
 		}
 
@@ -109,6 +139,8 @@ func getLogParents(log *Log, q querier) error {
 	}
 	defer rows.Close()
 
+	var parents, children tagSet
+
 	for rows.Next() {
 		var (
 			parent = NewTag()
@@ -120,9 +152,12 @@ func getLogParents(log *Log, q querier) error {
 			return err
 		}
 
-		log.Parents.Parents = append(log.Parents.Parents, parent)
-		log.Parents.Children = append(log.Parents.Children, child)
+		parents = append(parents, parent)
+		children = append(children, child)
 	}
+
+	log.Parents.Parents = parents.uniqueID()
+	log.Parents.Children = children.uniqueID()
 
 	return getMultiLogs(log, q)
 }

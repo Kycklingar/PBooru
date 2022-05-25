@@ -30,11 +30,11 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			return
 		}
 
-		_, err = from.save(tx)
+		err = from.chain().save(tx).err
 		if err != nil {
 			return
 		}
-		_, err = to.save(tx)
+		err = to.chain().save(tx).err
 		if err != nil {
 			return
 		}
@@ -327,7 +327,7 @@ func (a *Alias) QTo(q querier) (*Tag, error) {
 }
 
 func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
-	tos, err := tagSet{to}.upgrade(tx)
+	tos, err := tagSet{to}.chain().upgrade(tx).unwrap()
 	if err != nil {
 		return nil, err
 	}
@@ -405,8 +405,8 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 		return nil, err
 	}
 
-	for _, f := range []func(querier) error{tos.recount, from.recount} {
-		if err = f(tx); err != nil {
+	for _, f := range []func(querier) tagSetChain{tos.chain().recount, from.chain().recount} {
+		if err = f(tx).err; err != nil {
 			return nil, err
 		}
 	}

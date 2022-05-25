@@ -1,11 +1,8 @@
 package DataManager
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
-
-	C "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type tagSet []*Tag
@@ -14,7 +11,27 @@ func (set tagSet) strindex(i int) string {
 	return strconv.Itoa(set[i].ID)
 }
 
-// returns the tags in a that are not in b
+// Return the tag ids in a that are not in b
+func (a tagSet) diffID(b tagSet) tagSet {
+	var (
+		diff = make(map[int]struct{})
+		ret  tagSet
+	)
+
+	for _, tag := range b {
+		diff[tag.ID] = struct{}{}
+	}
+
+	for _, tag := range a {
+		if _, ok := diff[tag.ID]; !ok {
+			ret = append(ret, tag)
+		}
+	}
+
+	return ret
+}
+
+// Return the tags in a that are not in b
 func (a tagSet) diff(b tagSet) tagSet {
 	var (
 		diff = make(map[string]struct{})
@@ -34,6 +51,28 @@ func (a tagSet) diff(b tagSet) tagSet {
 	return ret
 }
 
+// Return a tagSet with unique ids
+func (a tagSet) uniqueID() tagSet {
+	m := make(map[int]*Tag)
+
+	for _, t := range a {
+		m[t.ID] = t
+	}
+
+	var (
+		retu = make(tagSet, len(m))
+		i    int
+	)
+
+	for _, t := range m {
+		retu[i] = t
+		i++
+	}
+
+	return retu
+}
+
+// Return a tagSet with unique tags
 func (a tagSet) unique() tagSet {
 	m := make(map[string]*Tag)
 
@@ -57,7 +96,7 @@ func (a tagSet) unique() tagSet {
 func parseTagsWithID(q querier, tagstr string, delim rune) (tagSet, error) {
 	set := parseTags(tagstr, delim)
 
-	return set.qids(q)
+	return set.chain().qids(q).unwrap()
 }
 
 func parseTags(tagstr string, delim rune) tagSet {
@@ -124,165 +163,4 @@ func parseTags(tagstr string, delim rune) tagSet {
 	}
 
 	return set
-}
-
-func (set tagSet) qids(q querier) (tagSet, error) {
-	stmt, err := q.Prepare(`
-		SELECT t.id
-		FROM tags t
-		JOIN namespaces n
-		ON t.namespace_id = n.id
-		WHERE t.tag = $1
-		AND n.nspace = $2
-		`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	for _, t := range set {
-		err = stmt.QueryRow(t.Tag, t.Namespace.Namespace).Scan(&t.ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return set, nil
-}
-
-func postTags(q querier, postID int) (tagSet, error) {
-	var set tagSet
-
-	rows, err := q.Query(`
-		SELECT t.id, t.tag, n.id, n.nspace
-		FROM post_tag_mappings
-		JOIN tags t
-		ON tag_id = t.id
-		JOIN namespaces n
-		ON t.namespace_id = n.id
-		WHERE post_id = $1
-		`,
-		postID,
-	)
-	if err != nil {
-		return set, noRows(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var t = NewTag()
-
-		err = rows.Scan(
-			&t.ID,
-			&t.Tag,
-			&t.Namespace.ID,
-			&t.Namespace.Namespace,
-		)
-		if err != nil {
-			return set, err
-		}
-
-		set = append(set, t)
-	}
-
-	return set, nil
-}
-
-// upgrade will replace aliases and add parent tags to the set
-func (set tagSet) upgrade(q querier) (tagSet, error) {
-	var (
-		err     error
-		parents tagSet
-	)
-
-	set, err = set.aliases(q)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, t := range set {
-		par, err := t.parents(q)
-		if err != nil {
-			return set, err
-		}
-
-		parents = append(parents, par.diff(parents)...)
-	}
-
-	return append(set, parents.diff(set)...), nil
-}
-
-func (set tagSet) aliases(q querier) (tagSet, error) {
-	var err error
-	for i := range set {
-		set[i], err = aliasedTo(q, set[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return set, nil
-}
-
-func (set tagSet) recount(q querier) error {
-	if len(set) <= 0 {
-		return nil
-	}
-
-	_, err := q.Exec(
-		fmt.Sprintf(`
-			WITH tag_counts AS (
-				SELECT tag_id, count(*)
-				FROM post_tag_mappings
-				WHERE tag_id IN(%s)
-				GROUP BY tag_id
-			)
-			UPDATE tags
-			SET count = c.count
-			FROM tag_counts c
-			WHERE c.tag_id = id
-			`,
-			sep(",", len(set), set.strindex),
-		),
-	)
-
-	return err
-}
-
-func (set tagSet) purgeCountCache(q querier) error {
-	if len(set) <= 0 {
-		return nil
-	}
-
-	_, err := q.Exec(
-		fmt.Sprintf(`
-			DELETE FROM search_count_cache
-			WHERE id IN(
-				SELECT cache_id
-				FROM search_count_cache_tag_mapping
-				WHERE tag_id IN(%s)
-			)
-			`,
-			sep(",", len(set), set.strindex),
-		),
-	)
-
-	// Legacy
-	for _, t := range set {
-		C.Cache.Purge("PC", strconv.Itoa(t.ID))
-	}
-	C.Cache.Purge("PC", "0")
-
-	return err
-}
-
-func (set tagSet) save(q querier) (tagSet, error) {
-	for _, tag := range set {
-		if err := tag.Save(q); err != nil {
-			return set, err
-		}
-	}
-
-	return set, nil
 }
