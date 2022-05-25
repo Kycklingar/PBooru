@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	BM "github.com/kycklingar/PBooru/benchmark"
 )
@@ -309,7 +310,7 @@ func APIv1PostsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		limit = 50
 	} else {
-		limit = DM.Larg(10, DM.Smal(100, limit))
+		limit = mm.Max(10, mm.Min(100, limit))
 	}
 
 	var AP APIv1Posts

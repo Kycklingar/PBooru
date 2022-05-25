@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
 
 	"github.com/dchest/captcha"
@@ -96,7 +97,7 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	var page = 1
 	if len(paths) >= 4 {
 		page, _ = strconv.Atoi(paths[3])
-		page = DM.Larg(1, page)
+		page = mm.Max(1, page)
 	}
 
 	var p TagHistoryPage
@@ -337,13 +338,13 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 			user.Gateway = cookie.Value
 		case "limit":
 			user.Limit, _ = strconv.Atoi(cookie.Value)
-			user.Limit = min(max(user.Limit, 250), 1)
+			user.Limit = mm.Max(mm.Min(user.Limit, 250), 1)
 		case "thumbnail_size":
 			user.ThumbnailSize, _ = strconv.Atoi(cookie.Value)
-			user.ThumbnailSize = min(max(user.ThumbnailSize, int(largestThumbnailSize())), 16)
+			user.ThumbnailSize = mm.Max(mm.Min(user.ThumbnailSize, int(largestThumbnailSize())), 16)
 		case "real_thumbnail_size":
 			user.RealThumbnailSize, _ = strconv.Atoi(cookie.Value)
-			user.RealThumbnailSize = min(max(user.RealThumbnailSize, int(largestThumbnailSize())), 0)
+			user.RealThumbnailSize = mm.Max(mm.Min(user.RealThumbnailSize, int(largestThumbnailSize())), 0)
 		case "thumb_hover":
 			user.ThumbHover = cookie.Value == "on"
 		case "thumb_hover_full":

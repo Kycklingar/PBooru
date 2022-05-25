@@ -13,6 +13,7 @@ import (
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	mm "github.com/kycklingar/MinMax"
 	idir "github.com/kycklingar/PBooru/DataManager/ipfs-dirgen"
 	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
@@ -237,7 +238,7 @@ func (arch *archive) start() {
 			Posts []archivePost
 			Pag   paginate.Paginator
 		}{
-			Posts: posts[i:max(len(posts), i+ppp)],
+			Posts: posts[i:mm.Min(len(posts), i+ppp)],
 			Pag: paginate.Paginator{
 				Current: 1 + i/ppp,
 				Last:    int(math.Ceil(float64(len(posts)) / float64(ppp))),

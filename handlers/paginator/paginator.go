@@ -3,6 +3,8 @@ package paginate
 import (
 	"fmt"
 	"strconv"
+
+	mm "github.com/kycklingar/MinMax"
 )
 
 type Paginator struct {
@@ -35,11 +37,11 @@ func (p Paginator) Paginate() []page {
 	var lendiv = p.Plength / 2
 
 	if p.Current < lendiv { // Beginning
-		start, end = 1, Max(p.Plength, p.Last)
+		start, end = 1, mm.Min(p.Plength, p.Last)
 	} else if p.Last-p.Current < lendiv { // End
-		start, end = Min(1, p.Last-p.Plength+1), p.Last
+		start, end = mm.Max(1, p.Last-p.Plength+1), p.Last
 	} else { // Middle
-		start, end = Min(1, p.Current-lendiv+1), p.Current+lendiv
+		start, end = mm.Max(1, p.Current-lendiv+1), p.Current+lendiv
 	}
 
 	for current := start; current <= end; current++ {
@@ -52,18 +54,4 @@ func (p Paginator) Paginate() []page {
 	}
 
 	return pages
-}
-
-func Min(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func Max(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

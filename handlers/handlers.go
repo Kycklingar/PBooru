@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
@@ -192,7 +193,7 @@ func statisticsHandler(w http.ResponseWriter, r *http.Request) {
 		Stats []*statElement
 	}{
 		stat.Total(),
-		stat.prev[:max(3, len(stat.prev))],
+		stat.prev[:mm.Min(3, len(stat.prev))],
 	}
 
 	renderTemplate(w, "statistics", p)

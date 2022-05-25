@@ -294,33 +294,3 @@ func PathUnescape(uri string) string {
 	res = strings.Replace(res, "%-D", ".", -1)
 	return res
 }
-
-func Max(x, y int) int {
-	if x > y {
-		return x
-	}
-
-	return y
-}
-
-func Min(x, y int) int {
-	if x < y {
-		return x
-	}
-
-	return y
-}
-
-func max(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func min(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}

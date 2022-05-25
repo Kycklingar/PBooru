@@ -3,6 +3,8 @@ package DataManager
 import (
 	"errors"
 	"log"
+
+	mm "github.com/kycklingar/MinMax"
 )
 
 type Pool struct {
@@ -106,7 +108,7 @@ func (p *Pool) QPosts(q querier) error {
 }
 
 func (p *Pool) PostsLimit(limit int) []PoolMapping {
-	return p.Posts[:Smal(limit, len(p.Posts))]
+	return p.Posts[:mm.Min(limit, len(p.Posts))]
 }
 
 func (p *Pool) Save(q querier) error {

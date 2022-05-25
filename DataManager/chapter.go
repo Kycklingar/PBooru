@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"errors"
+
+	mm "github.com/kycklingar/MinMax"
 )
 
 type Chapter struct {
@@ -17,7 +19,7 @@ func (c *Chapter) PageCount() int {
 }
 
 func (c *Chapter) NPages(n int) []ComicPage {
-	return c.Pages[:max(n, len(c.Pages))]
+	return c.Pages[:mm.Min(n, len(c.Pages))]
 }
 
 func (c *Chapter) getPages(q querier) error {

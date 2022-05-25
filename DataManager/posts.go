@@ -17,6 +17,7 @@ import (
 	"github.com/frustra/bbcode"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	mm "github.com/kycklingar/MinMax"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
@@ -1982,7 +1983,7 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	//if len(countMap) < arrLimit {
 	//	arrLimit = len(countMap)
 	//}
-	arrLimit := max(maxTags, len(countMap))
+	arrLimit := mm.Min(maxTags, len(countMap))
 	for i := 0; i < arrLimit; i++ {
 		//tag := CachedTag(countMap[i].tag)
 		pc.tags = append(pc.tags, countMap[i].tag)
@@ -2110,40 +2111,6 @@ func (pc *PostCollector) ccSet(c int) {
 	tx.Commit()
 
 	return
-}
-
-// Returns whichever is smaller
-func Smal(x, y int) int {
-	return max(x, y)
-}
-
-// Returns whichever is larger
-func Larg(x, y int) int {
-	return min(x, y)
-}
-
-// Return the smallest of the 2
-func Max(x, y int) int {
-	return max(x, y)
-}
-
-// Return the largest of the 2
-func Min(x, y int) int {
-	return min(x, y)
-}
-
-func max(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func min(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
 }
 
 func (p *PostCollector) set(offset int, posts []*Post) {

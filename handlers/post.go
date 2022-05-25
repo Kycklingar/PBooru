@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
+	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/benchmark"
 	postform "github.com/kycklingar/PBooru/handlers/forms/post"
@@ -1113,7 +1114,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 		dist = 5
 	}
 
-	dist = DM.Smal(10, DM.Larg(1, dist))
+	dist = mm.Min(10, mm.Max(1, dist))
 
 	post := DM.NewPost()
 	if err = post.SetID(DM.DB, id); err != nil {
