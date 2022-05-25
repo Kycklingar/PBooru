@@ -611,17 +611,7 @@ func (t tagSort) Swap(i, j int) {
 }
 
 func (t tagSort) Less(i, j int) bool {
-	tag1 := t[i].Namespace.Namespace + ":" + t[i].Tag
-	tag2 := t[j].Namespace.Namespace + ":" + t[j].Tag
-
-	if t[i].Namespace.Namespace == "none" {
-		tag1 = t[i].Tag
-	}
-	if t[j].Namespace.Namespace == "none" {
-		tag2 = t[j].Tag
-	}
-
-	return strings.Compare(tag1, tag2) != 1
+	return strings.Compare(t[i].String(), t[j].String()) != 1
 }
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -1182,13 +1172,11 @@ func postModifyHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
-	if err := postform.ProcessFormData(ua, r.Form); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, postform.ProcessFormData(ua, r.Form)) {
 		return
 	}
 
-	if err := ua.Exec(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
@@ -1201,8 +1189,7 @@ func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 	_, ui := getUser(w, r)
 
 	id, err := uri.getIntAtIndex(2)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if internalError(w, err) {
 		return
 	}
 
@@ -1217,7 +1204,11 @@ func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	var tc DM.TagCollector
-	tc.FromPostMul(DM.DB, post, DM.FTag, DM.FCount, DM.FNamespace)
+
+	if internalError(w, tc.FromPostMul(DM.DB, post, DM.FTag, DM.FCount, DM.FNamespace)) {
+		return
+	}
+	sort.Sort(tagSort(tc.Tags))
 
 	var p = struct {
 		Post     *DM.Post
