@@ -32,7 +32,7 @@
 <div class="nolink" id="pageinator">
 	{{range .Paginator.Paginate}}
 		{{if .Current}}
-		<span style="font-size: 2em;">{{.Val}}</span>
+		<span class="current-page">{{.Val}}</span>
 		{{else}}
 		<span><a href="{{.Href}}">{{.Val}}</a></span>
 		{{end}}
