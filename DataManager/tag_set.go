@@ -7,6 +7,16 @@ import (
 
 type tagSet []*Tag
 
+// sort.Interface implementation
+func (set tagSet) Len() int      { return len(set) }
+func (set tagSet) Swap(i, j int) { set[i], set[j] = set[j], set[i] }
+func (set tagSet) Less(i, j int) bool {
+	return strings.Compare(
+		set[i].String(),
+		set[j].String(),
+	) != 1
+}
+
 func (set tagSet) strindex(i int) string {
 	return strconv.Itoa(set[i].ID)
 }
