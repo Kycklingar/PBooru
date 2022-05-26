@@ -32,7 +32,7 @@ func CreateComicPage(chapterID, postID, page int) loggingAction {
 		l.table = lComicPage
 		l.fn = logComicPage{
 			Action:    aCreate,
-			id:        id,
+			ID:        id,
 			ChapterID: chapterID,
 			PostID:    postID,
 			Page:      page,
@@ -69,7 +69,7 @@ func EditComicPage(pageID, chapterID, postID, page int) loggingAction {
 		_, err = tx.Exec(`
 			UPDATE comic_page
 			SET chapter_id = $1,
-			post_id = $2
+			post_id = $2,
 			page = $3
 			WHERE id = $4
 			`,
@@ -85,7 +85,7 @@ func EditComicPage(pageID, chapterID, postID, page int) loggingAction {
 		l.table = lComicPage
 		l.fn = logComicPage{
 			Action:    aModify,
-			id:        pageID,
+			ID:        pageID,
 			ChapterID: chapterID,
 			PostID:    postID,
 			Page:      page,
@@ -99,7 +99,7 @@ func DeleteComicPage(pageID int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		var lcp = logComicPage{
 			Action: aDelete,
-			id:     pageID,
+			ID:     pageID,
 		}
 
 		err = tx.QueryRow(`

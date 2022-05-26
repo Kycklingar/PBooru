@@ -88,10 +88,11 @@ func CreateChapter(comicID, order int, title string) loggingAction {
 
 		l.table = lChapter
 		l.fn = logChapter{
-			Action: aCreate,
-			ID:     id,
-			Order:  order,
-			Title:  title,
+			Action:  aCreate,
+			ComicID: comicID,
+			ID:      id,
+			Order:   order,
+			Title:   title,
 		}.log
 
 		return
@@ -101,17 +102,18 @@ func CreateChapter(comicID, order int, title string) loggingAction {
 func EditChapter(chapterID, order int, title string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		var (
-			pOrder int
-			pTitle string
+			comicID int
+			pOrder  int
+			pTitle  string
 		)
 
 		err = tx.QueryRow(`
-			SELECT c_order, title
+			SELECT comic_id, c_order, title
 			FROM comic_chapter
 			WHERE id = $1
 			`,
 			chapterID,
-		).Scan(&pOrder, &pTitle)
+		).Scan(&comicID, &pOrder, &pTitle)
 		if err != nil {
 			return
 		}
@@ -137,10 +139,11 @@ func EditChapter(chapterID, order int, title string) loggingAction {
 
 		l.table = lChapter
 		l.fn = logChapter{
-			Action: aModify,
-			ID:     chapterID,
-			Order:  order,
-			Title:  title,
+			Action:  aModify,
+			ComicID: comicID,
+			ID:      chapterID,
+			Order:   order,
+			Title:   title,
 		}.log
 
 		return

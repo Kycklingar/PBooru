@@ -9,15 +9,16 @@ func init() {
 }
 
 type logChapter struct {
-	Action lAction
-	ID     int
-	Order  int
-	Title  string
+	Action  lAction
+	ComicID int
+	ID      int
+	Order   int
+	Title   string
 }
 
 func getLogChapter(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT action, chapter_id, c_order, title
+		SELECT action, comic_id, chapter_id, c_order, title
 		FROM log_chapters
 		WHERE log_id = $1
 		`,
@@ -32,6 +33,7 @@ func getLogChapter(log *Log, q querier) error {
 		var lc logChapter
 		err = rows.Scan(
 			&lc.Action,
+			&lc.ComicID,
 			&lc.ID,
 			&lc.Order,
 			&lc.Title,
@@ -50,14 +52,16 @@ func (l logChapter) log(logID int, tx *sql.Tx) error {
 	_, err := tx.Exec(`
 		INSERT INTO log_chapters (
 			log_id,
+			comic_id,
 			chapter_id,
 			action,
 			c_order,
 			title
 		)
-		VALUES($1, $2, $3, $4, $5)
+		VALUES($1, $2, $3, $4, $5, $6)
 		`,
 		logID,
+		l.ComicID,
 		l.ID,
 		l.Action,
 		l.Order,

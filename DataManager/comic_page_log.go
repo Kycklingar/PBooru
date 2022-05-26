@@ -10,7 +10,7 @@ func init() {
 
 type logComicPage struct {
 	Action    lAction
-	id        int
+	ID        int
 	ChapterID int
 	PostID    int
 	Page      int
@@ -30,7 +30,7 @@ func (l logComicPage) log(logID int, tx *sql.Tx) error {
 		`,
 		logID,
 		l.Action,
-		l.id,
+		l.ID,
 		l.ChapterID,
 		l.PostID,
 		l.Page,
@@ -56,7 +56,7 @@ func getLogComicPage(log *Log, q querier) error {
 		var lcp logComicPage
 		err = rows.Scan(
 			&lcp.Action,
-			&lcp.id,
+			&lcp.ID,
 			&lcp.ChapterID,
 			&lcp.PostID,
 			&lcp.Page,

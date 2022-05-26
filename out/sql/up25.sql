@@ -124,8 +124,9 @@ CREATE TABLE log_comics (
 
 CREATE TABLE log_chapters (
 	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
-	chapter_id INTEGER NOT NULL,
 	action log_action NOT NULL,
+	comic_id INTEGER NOT NULL,
+	chapter_id INTEGER NOT NULL,
 	c_order INTEGER NOT NULL,
 	title TEXT NOT NULL
 );
