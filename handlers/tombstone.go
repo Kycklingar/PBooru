@@ -44,20 +44,19 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page.Total, page.Tombstone, err = DM.GetTombstonedPosts(query, limit, (currentPage-1)*limit)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	for _, p := range page.Tombstone {
-		if err = p.Post.QMul(
+		err := p.Post.QMul(
 			DM.DB,
 			DM.PFHash,
 			DM.PFThumbnails,
 			DM.PFMime,
 			DM.PFRemoved,
-		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		)
+		if internalError(w, err) {
 			return
 		}
 	}

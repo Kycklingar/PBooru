@@ -45,9 +45,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 	var commMod DM.CommentCollector
 	err := commMod.Get(DM.DB, 100, uinfo.Gateway)
-	if err != nil {
-		http.Error(w, "Oops, something went wrong.", http.StatusInternalServerError)
-		log.Println(err)
+	if internalError(w, err) {
 		return
 	}
 
@@ -109,16 +107,13 @@ func editCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comment, err := DM.CommentByID(m[cID])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	if canEditComment(commentEditTimeoutMinutes, user, comment) {
 		err = comment.Edit(r.FormValue("text"))
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 	} else {
@@ -155,8 +150,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = DM.DeleteComment(commentID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

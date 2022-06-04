@@ -24,9 +24,7 @@ func reportsHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	p.Reports, err = DM.GetReports(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -57,9 +55,7 @@ func reportDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	rep.ID = rid
 
 	err = rep.Delete(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -94,10 +90,7 @@ func reportPostHandler(w http.ResponseWriter, r *http.Request) {
 	report.Post.ID = postID
 	report.Reporter = u
 
-	if err = report.Submit(); err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	internalError(w, report.Submit())
 
 	fmt.Fprint(w, "Thank you for the report, an admin will soon review the post")
 }

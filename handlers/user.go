@@ -251,9 +251,7 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 	user.ID = id
 	user = DM.CachedUser(user)
 
-	if err = user.SetFlag(DM.DB, newFlag); err != nil {
-		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, user.SetFlag(DM.DB, newFlag)) {
 		return
 	}
 
@@ -292,8 +290,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		var user = DM.NewUser()
 
 		err := user.Register(username, password)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 

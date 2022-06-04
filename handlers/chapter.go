@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -59,17 +58,14 @@ func editChapterHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	m, err := verifyInteger(r, chapterIDKey, orderKey)
-	if err != nil {
-		badRequest(w, err)
+	if badRequest(w, err) {
 		return
 	}
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.EditChapter(m[chapterIDKey], m[orderKey], r.FormValue(titleKey)))
 	err = ua.Exec()
-	if err != nil {
-		log.Println(err)
-		internalError(w, err)
+	if internalError(w, err) {
 		return
 	}
 
@@ -85,17 +81,14 @@ func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chapterID, err := strconv.Atoi(r.FormValue("chapter-id"))
-	if err != nil {
-		badRequest(w, err)
+	if badRequest(w, err) {
 		return
 	}
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.DeleteChapter(chapterID))
 	err = ua.Exec()
-	if err != nil {
-		log.Println(err)
-		internalError(w, err)
+	if internalError(w, err) {
 		return
 	}
 
@@ -118,17 +111,14 @@ func addComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	m, err := verifyInteger(r, chapterIDKey, postIDKey, pageKey)
-	if err != nil {
-		badRequest(w, err)
+	if badRequest(w, err) {
 		return
 	}
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.CreateComicPage(m[chapterIDKey], m[postIDKey], m[pageKey]))
 	err = ua.Exec()
-	if err != nil {
-		log.Println(err)
-		internalError(w, err)
+	if internalError(w, err) {
 		return
 	}
 
@@ -152,17 +142,14 @@ func editComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	m, err := verifyInteger(r, pageIDKey, chapterIDKey, postIDKey, pageKey)
-	if err != nil {
-		badRequest(w, err)
+	if badRequest(w, err) {
 		return
 	}
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.EditComicPage(m[pageIDKey], m[chapterIDKey], m[postIDKey], m[pageKey]))
 	err = ua.Exec()
-	if err != nil {
-		log.Println(err)
-		internalError(w, err)
+	if internalError(w, err) {
 		return
 	}
 
@@ -179,16 +166,14 @@ func deleteComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pageID, err := strconv.Atoi(r.FormValue("page-id"))
-	if err != nil {
-		badRequest(w, err)
+	if badRequest(w, err) {
 		return
 	}
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.DeleteComicPage(pageID))
 	err = ua.Exec()
-	if err != nil {
-		internalError(w, err)
+	if internalError(w, err) {
 		return
 	}
 

@@ -27,8 +27,7 @@ func dnsHandler(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.FormValue("offset"))
 
 	dc, err := DM.ListDnsCreators(limit, offset)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -74,20 +73,17 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Creator, err = DM.GetDnsCreator(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	p.Domains, err = dns.Domains(DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	tags, err := dns.AllTags(DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -110,8 +106,7 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 func dnsNewCreator(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	cid, err := dns.NewCreator(DM.DB, name)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -128,8 +123,7 @@ func dnsEditCreatorName(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 
 	err = dns.CreatorEditName(DM.DB, creatorID, name)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -145,13 +139,11 @@ func dnsNewBanner(w http.ResponseWriter, r *http.Request) {
 
 	bannerType := r.FormValue("banner-type")
 	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
-	if err = DM.DnsNewBanner(file, creatorID, bannerType); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, DM.DnsNewBanner(file, creatorID, bannerType)) {
 		return
 	}
 
@@ -175,14 +167,12 @@ func dnsEditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Tags, err = dns.AllTags(DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	p.Domains, err = dns.Domains(DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -199,8 +189,7 @@ func dnsAddUrl(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 	domain := r.FormValue("domain")
 
-	if err = dns.AddUrl(DM.DB, creatorID, url, domain); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, dns.AddUrl(DM.DB, creatorID, url, domain)) {
 		return
 	}
 
@@ -217,8 +206,7 @@ func dnsRemoveUrl(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 
 	err = dns.RemoveUrl(DM.DB, creatorID, url)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -235,8 +223,7 @@ func dnsEditCreatorTags(w http.ResponseWriter, r *http.Request) {
 	enabledTags := r.Form["tags"]
 
 	err = dns.EditTags(DM.DB, creatorID, enabledTags)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -252,8 +239,7 @@ func dnsMapTag(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = DM.DnsMapTag(creatorID, tagstr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -271,8 +257,7 @@ func dnsTagCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = dns.CreateTag(DM.DB, id, name, descr, score)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -290,8 +275,7 @@ func dnsTagEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = dns.UpdateTag(DM.DB, id, name, descr, score)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -303,8 +287,7 @@ func dnsNewDomain(w http.ResponseWriter, r *http.Request) {
 	icon := r.FormValue("icon")
 
 	err := dns.DomainNew(DM.DB, domain, icon)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -322,8 +305,7 @@ func dnsEditDomain(w http.ResponseWriter, r *http.Request) {
 	icon := r.FormValue("icon")
 
 	err = dns.DomainEdit(DM.DB, domID, domain, icon)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

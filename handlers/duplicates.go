@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,8 +35,7 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	approved := r.FormValue("approved") == "on"
 
 	page.Reports, err = DM.FetchDupReports(limit, offset, order, approved, plucked)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -127,16 +125,12 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	// Assign duplicates if having sufficient privileges
 	// otherwise submit a report
 	if user.QFlag(DM.DB).Delete() {
-		if err = DM.AssignDuplicates(dupes, user); err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, DM.AssignDuplicates(dupes, user)) {
 			return
 		}
 
 		if reportNonDupes && len(removed.Inferior) >= 1 {
-			if err = DM.PluckApple(removed); err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, DM.PluckApple(removed)) {
 				return
 			}
 		}
@@ -146,16 +140,12 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		if err = DM.ReportDuplicates(dupes, user, note, DM.RDupe); err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, DM.ReportDuplicates(dupes, user, note, DM.RDupe)) {
 			return
 		}
 
 		if reportNonDupes && len(removed.Inferior) >= 1 {
-			if err = DM.ReportDuplicates(removed, user, note, DM.RNonDupe); err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, DM.ReportDuplicates(removed, user, note, DM.RNonDupe)) {
 				return
 			}
 		}
@@ -179,8 +169,7 @@ func processReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = DM.ProcessDupReport(reportID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -202,20 +191,17 @@ func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rep, err := DM.FetchDupReport(reportID, DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	err = DM.PluckApple(rep.Dupe)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	err = DM.ProcessDupReport(reportID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -271,8 +257,7 @@ func dupReportCleanupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	aff, err := DM.DuplicateReportCleanup()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

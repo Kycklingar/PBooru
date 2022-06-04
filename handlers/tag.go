@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -49,8 +48,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		f := splitURI(r.URL.Path)
 		if len(f) >= 2 && f[1] != "" {
 			currPage, err = strconv.Atoi(f[1])
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, err) {
 				return
 			}
 		}
@@ -64,9 +62,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			p.Query = "?tag=" + tagStr
 		} else {
 			err = tc.Get(tagLimit, (currPage-1)*tagLimit)
-			if err != nil {
-				http.Error(w, "Oops", http.StatusInternalServerError)
-				log.Print(err)
+			if internalError(w, err) {
 				return
 			}
 		}
@@ -83,8 +79,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		if len(f) >= 3 && f[2] != "" {
 			ctag = f[2]
 			tagID, err := strconv.Atoi(f[2])
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, err) {
 				return
 			}
 
@@ -105,9 +100,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			preload(p.From...)
 
 			p.To, err = a.QTo(DM.DB)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, err) {
 				return
 			}
 			preload(p.To)
@@ -157,8 +150,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := ua.Exec()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -193,9 +185,7 @@ func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = th.Reverse()
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 	}
@@ -269,8 +259,7 @@ func multiTagsHandler(w http.ResponseWriter, r *http.Request) {
 	ua := DM.UserAction(user)
 	ua.Add(DM.AlterManyPostTags(pids, addStr, remStr, '\n'))
 	err = ua.Exec()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

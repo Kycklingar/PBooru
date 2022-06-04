@@ -131,9 +131,7 @@ func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			err = pool.RemovePost(postID)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, err) {
 				return
 			}
 		}

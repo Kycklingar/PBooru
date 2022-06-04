@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -84,9 +83,7 @@ func createComicHandler(w http.ResponseWriter, r *http.Request) {
 	ua := DM.UserAction(user)
 	ua.Add(DM.CreateComic(title, &id))
 	err := ua.Exec()
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Oops", http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -107,8 +104,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	page.User, page.UserInfo = getUser(w, r)
 
 	res, err := DM.SearchComics(title, tags, comicsPerPage, offset)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -234,8 +230,7 @@ func comicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comic, err := DM.GetComic(comicID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

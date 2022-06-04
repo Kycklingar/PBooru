@@ -155,10 +155,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			pc.User = user
 			pc.Text = r.FormValue("text")
 
-			if err := pc.Save(DM.DB); err != nil {
-				log.Println(err)
-				http.Error(w, "Oops", http.StatusInternalServerError)
-			}
+			internalError(w, pc.Save(DM.DB))
+
 			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}
@@ -173,9 +171,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		tags := r.FormValue("tags")
 
 		err := post.EditTags(user, tags)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 		// http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID(DM.DB), post.Hash(DM.DB)), http.StatusSeeOther)
@@ -234,7 +230,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = p.QMul(
+	err = p.QMul(
 		DM.DB,
 		DM.PFHash,
 		DM.PFChecksums,
@@ -246,18 +242,15 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFThumbnails,
 		DM.PFDescription,
 		DM.PFMetaData,
-	); err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	)
+	if internalError(w, err) {
 		return
 	}
 
 	pp.Post = p
 
 	pp.Dupe, err = p.Duplicates(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -399,12 +392,11 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 
 	ua.Add(DM.SetAlts(pids))
 
-	if err := ua.Exec(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprint("/post/%d/", pids[0]))
+	redirectToReferer(w, r, fmt.Sprintf("/post/%d/", pids[0]))
 }
 
 func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
@@ -436,12 +428,11 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 
 	ua.Add(DM.SplitAlts(pids))
 
-	if err := ua.Exec(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprint("/post/%d/", pids[0]))
+	redirectToReferer(w, r, fmt.Sprintf("/post/%d/", pids[0]))
 
 }
 
@@ -539,8 +530,7 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = DM.GenerateThumbnail(post.ID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -566,8 +556,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = post.AddTags(user, r.FormValue("tags")); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, post.AddTags(user, r.FormValue("tags"))) {
 		return
 	}
 
@@ -593,8 +582,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = post.RemoveTags(user, r.FormValue("tags")); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, post.RemoveTags(user, r.FormValue("tags"))) {
 		return
 	}
 
@@ -631,8 +619,7 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	post.QMul(DM.DB, DM.PFHash)
 
-	if err = post.Vote(DM.DB, u); err != nil {
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, post.Vote(DM.DB, u)) {
 		return
 	}
 
@@ -875,9 +862,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, CFG.MaxFileSize+1000000)
 
 		file, fh, err := r.FormFile("file")
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "Failed retrieving file.", http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 		defer file.Close()
@@ -886,9 +871,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		ud.FileSize = fh.Size
 
 		mime, err := mimetype.DetectReader(file)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "Read error", http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 
@@ -914,9 +897,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		post, err := DM.CreatePost(file, user, ud)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
+		if internalError(w, err) {
 			return
 		}
 
@@ -952,8 +933,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = post.QMul(DM.DB, DM.PFRemoved)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 
@@ -1000,16 +980,12 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	post = DM.CachedPost(post)
 
 	totalEdits, err := post.QTagHistoryCount(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	ths, err := post.TagHistory(DM.DB, limit, page*limit)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -1104,8 +1080,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	bm := benchmark.Begin()
 
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -1117,9 +1092,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 	dist = mm.Min(10, mm.Max(1, dist))
 
 	post := DM.NewPost()
-	if err = post.SetID(DM.DB, id); err != nil {
-		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, post.SetID(DM.DB, id)) {
 		return
 	}
 

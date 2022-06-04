@@ -14,16 +14,12 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
 	err := u.QAllMessages(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	err = u.QSentMessages(DM.DB)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -101,9 +97,7 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
 	err := loadAllMessages(u)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -125,9 +119,7 @@ func allMessagesHandler(w http.ResponseWriter, r *http.Request) {
 func newMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	if err := loadAllMessages(u); err != nil {
-		log.Println(err)
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
+	if internalError(w, loadAllMessages(u)) {
 		return
 	}
 
@@ -150,9 +142,7 @@ func sentMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
 	err := loadAllMessages(u)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -213,10 +203,9 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil && err == msgInvalidReply {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		} else if err != nil {
-			log.Println(err)
-			http.Error(w, ErrInternal, http.StatusInternalServerError)
+		} else if internalError(w, err) {
 			return
+
 		}
 
 		p.Prefill = fmt.Sprintf("\n\n%s Said:\n%s", msg.Sender.Name, msg.Text)

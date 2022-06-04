@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"runtime"
 )
 
 func permError(w http.ResponseWriter, perm string) {
@@ -19,6 +21,8 @@ func badRequest(w http.ResponseWriter, err error) bool {
 
 func internalError(w http.ResponseWriter, err error) bool {
 	if err != nil {
+		_, fn, line, _ := runtime.Caller(1)
+		log.Printf("\n\t%s:%d:\n\t\t%v\n", fn, line, err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return true
 	}

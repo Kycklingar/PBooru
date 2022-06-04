@@ -34,9 +34,7 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		posts, err := DM.ImageLookup(file, dist)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 

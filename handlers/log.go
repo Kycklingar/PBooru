@@ -24,8 +24,7 @@ func postLogsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err error) {
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -41,8 +40,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 				DM.PFMime,
 				DM.PFThumbnails,
 			)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			if internalError(w, err) {
 				return
 			}
 		}
@@ -55,8 +53,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 					DM.PFMime,
 					DM.PFThumbnails,
 				)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+				if internalError(w, err) {
 					return
 				}
 			}
@@ -65,8 +62,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 		for _, a := range log.Aliases {
 			for _, t := range append(a.From, a.To) {
 				err := t.QueryAll(DM.DB)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+				if internalError(w, err) {
 					return
 				}
 			}
@@ -83,8 +79,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, logs []DM.Log, err erro
 		for _, mls := range log.MultiTags {
 			for _, ml := range mls {
 				err := ml.Tag.QueryAll(DM.DB)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+				if internalError(w, err) {
 					return
 				}
 			}

@@ -75,16 +75,12 @@ func createArchiveHandler(w http.ResponseWriter, r *http.Request) {
 			Order:    "ASC",
 		},
 	)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	a, err := pc.ArchiveSearch()
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 

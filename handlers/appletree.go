@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -47,16 +46,12 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	page.Query = r.FormValue("tags")
 	page.Trees, err = DM.GetAppleTrees(page.Query, page.BasePear, limit, page.Offset)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
 	page.Report, err = DM.GetDupeReportDelay()
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if internalError(w, err) {
 		return
 	}
 
@@ -117,14 +112,12 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 
 	if user.QFlag(DM.DB).Delete() {
 		err = DM.PluckApple(dupes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 	} else {
 		err = DM.ReportDuplicates(dupes, user, "", DM.RNonDupe)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if internalError(w, err) {
 			return
 		}
 	}
