@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -30,8 +29,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	paths := splitURI(r.URL.Path)
 	if len(paths) >= 2 {
 		uid, err := strconv.Atoi(paths[1])
-		if err != nil {
-			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -88,9 +86,7 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, err := strconv.Atoi(paths[2])
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -234,16 +230,12 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := strconv.Atoi(r.FormValue("user-id"))
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Invalid user ID. Not an integer", http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
 	newFlag, err := strconv.Atoi(r.FormValue("flag"))
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Invalid flag. Not an integer", http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

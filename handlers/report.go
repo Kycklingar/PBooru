@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -45,9 +44,7 @@ func reportDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rid, err := strconv.Atoi(r.FormValue("report-id"))
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -71,18 +68,14 @@ func reportPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	postID, err := strconv.Atoi(r.FormValue("post-id"))
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
 	var report = DM.NewReport()
 
 	report.Reason, err = strconv.Atoi(r.FormValue("reason"))
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

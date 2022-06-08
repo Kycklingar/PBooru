@@ -11,8 +11,7 @@ import (
 func archiveHandler(w http.ResponseWriter, r *http.Request) {
 	u := uriSplitter(r)
 	id, err := u.getAtIndex(1)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

@@ -179,8 +179,7 @@ func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		)
 
 		th.ID, err = strconv.Atoi(r.FormValue("taghistory-id"))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -235,8 +234,7 @@ func multiTagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := r.ParseMultipartForm(50000000)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -248,8 +246,7 @@ func multiTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, pidstr := range r.Form["pid"] {
 		pid, err := strconv.Atoi(pidstr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 

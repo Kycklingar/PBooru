@@ -67,8 +67,7 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 
 	uri := uriSplitter(r)
 	id, err := uri.getIntAtIndex(1)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -115,8 +114,7 @@ func dnsNewCreator(w http.ResponseWriter, r *http.Request) {
 
 func dnsEditCreatorName(w http.ResponseWriter, r *http.Request) {
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -132,8 +130,7 @@ func dnsEditCreatorName(w http.ResponseWriter, r *http.Request) {
 
 func dnsNewBanner(w http.ResponseWriter, r *http.Request) {
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -181,8 +178,7 @@ func dnsEditHandler(w http.ResponseWriter, r *http.Request) {
 
 func dnsAddUrl(w http.ResponseWriter, r *http.Request) {
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -198,8 +194,7 @@ func dnsAddUrl(w http.ResponseWriter, r *http.Request) {
 
 func dnsRemoveUrl(w http.ResponseWriter, r *http.Request) {
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -215,8 +210,7 @@ func dnsRemoveUrl(w http.ResponseWriter, r *http.Request) {
 
 func dnsEditCreatorTags(w http.ResponseWriter, r *http.Request) {
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -233,8 +227,7 @@ func dnsEditCreatorTags(w http.ResponseWriter, r *http.Request) {
 func dnsMapTag(w http.ResponseWriter, r *http.Request) {
 	tagstr := r.FormValue("tag")
 	creatorID, err := strconv.Atoi(r.FormValue("creator-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -251,8 +244,7 @@ func dnsTagCreate(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	descr := r.FormValue("description")
 	score, err := strconv.Atoi(r.FormValue("score"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -269,8 +261,7 @@ func dnsTagEdit(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	descr := r.FormValue("description")
 	score, err := strconv.Atoi(r.FormValue("score"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -296,8 +287,7 @@ func dnsNewDomain(w http.ResponseWriter, r *http.Request) {
 
 func dnsEditDomain(w http.ResponseWriter, r *http.Request) {
 	domID, err := strconv.Atoi(r.FormValue("id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

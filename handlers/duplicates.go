@@ -78,8 +78,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	m, err := verifyInteger(r, bestPostIDKey)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -92,8 +91,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		p := DM.NewPost()
 
 		p.ID, err = strconv.Atoi(idstr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -109,8 +107,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 		p := DM.NewPost()
 
 		p.ID, err = strconv.Atoi(idstr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -156,8 +153,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 
 func processReportHandler(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -178,8 +174,7 @@ func processReportHandler(w http.ResponseWriter, r *http.Request) {
 
 func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -210,14 +205,12 @@ func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
 
 func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(r.FormValue("report-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
 	report, err := DM.FetchDupReport(reportID, DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

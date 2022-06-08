@@ -30,8 +30,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msgID, err := strconv.Atoi(uri[2])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -172,8 +171,7 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 		var err error
 		m.Recipient.ID, err = strconv.Atoi(r.FormValue("recipient"))
-		if err != nil {
-			http.Error(w, "Recipient id invalid", http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -220,8 +218,8 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		p.Recipient = msg.Sender
 	} else {
 		recipient := DM.NewUser()
-		if id, err = strconv.Atoi(r.FormValue("recipient")); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		id, err = strconv.Atoi(r.FormValue("recipient"))
+		if badRequest(w, err) {
 			return
 		}
 

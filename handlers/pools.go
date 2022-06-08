@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -16,8 +15,7 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 	paths := splitURI(r.URL.Path)
 	if len(paths) >= 3 {
 		uid, err := strconv.Atoi(paths[2])
-		if err != nil {
-			http.Error(w, "Not a valid user id. Numerical value expected", http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -59,8 +57,7 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	poolID, err := strconv.Atoi(paths[2])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -106,9 +103,7 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		poolID, err := strconv.Atoi(r.FormValue("pool-id"))
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -125,9 +120,7 @@ func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 
 		for _, idStr := range rem {
 			postID, err := strconv.Atoi(idStr)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusBadRequest)
+			if badRequest(w, err) {
 				return
 			}
 			err = pool.RemovePost(postID)
@@ -161,8 +154,7 @@ func UserPoolAddHandler(w http.ResponseWriter, r *http.Request) {
 
 	pool.User = u
 	err := pool.Save(DM.DB)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if internalError(w, err) {
 		return
 	}
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
@@ -175,14 +167,15 @@ func UserPoolAppendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	postID, err := strconv.Atoi(r.FormValue("post-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
+		return
+	}
+	if badRequest(w, err) {
 		return
 	}
 
 	poolID, err := strconv.Atoi(r.FormValue("pool-id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -203,8 +196,7 @@ func UserPoolAppendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = pool.Add(postID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

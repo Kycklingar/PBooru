@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
@@ -19,17 +18,13 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 51<<20)
 		r.ParseMultipartForm(50 << 20)
 		file, _, err := r.FormFile("file")
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 		defer file.Close()
 
 		dist, err := strconv.Atoi(r.FormValue("distance"))
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 

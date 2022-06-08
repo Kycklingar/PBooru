@@ -101,8 +101,7 @@ func editCommentHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	m, err := verifyInteger(r, cID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

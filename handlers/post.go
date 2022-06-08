@@ -382,8 +382,7 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	for _, v := range r.Form["post-id"] {
 		id, err := strconv.Atoi(v)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -418,8 +417,7 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	for _, v := range r.Form["post-id"] {
 		id, err := strconv.Atoi(v)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
@@ -966,8 +964,7 @@ func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := strconv.Atoi(spl[2])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 

@@ -93,8 +93,7 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	)
 
 	dupes.Post.ID, err = strconv.Atoi(r.FormValue("apple"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if badRequest(w, err) {
 		return
 	}
 
@@ -102,8 +101,7 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 	for _, pearStr := range pearsStr {
 		var p = DM.NewPost()
 		p.ID, err = strconv.Atoi(pearStr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if badRequest(w, err) {
 			return
 		}
 
