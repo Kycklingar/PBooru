@@ -1184,17 +1184,9 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 		rem = "AND removed = FALSE"
 	}
 
-	type phash struct {
-		post_id int
-		h1      uint16
-		h2      uint16
-		h3      uint16
-		h4      uint16
-	}
+	var ph phs
 
-	var ph phash
-
-	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.ID).Scan(&ph.post_id, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
+	err := q.QueryRow("SELECT * FROM phash WHERE post_id = $1", p.ID).Scan(&ph.postid, &ph.h1, &ph.h2, &ph.h3, &ph.h4)
 	if err != nil {
 		return nil, err
 	}
@@ -1227,27 +1219,22 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 	}
 	defer rows.Close()
 
-	var phs []phash
+	var phashes []phs
 
 	for rows.Next() {
-		var phn phash
-		if err = rows.Scan(&phn.post_id, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
+		var phn phs
+		if err = rows.Scan(&phn.postid, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
 			return nil, err
 		}
-		phs = append(phs, phn)
-	}
-	f := func(a phash) imgsim.Hash {
-		return imgsim.Hash(uint64(a.h1)<<16 | uint64(a.h2)<<32 | uint64(a.h3)<<48 | uint64(a.h4)<<64)
+		phashes = append(phashes, phn)
 	}
 
 	var posts []*Post
-	hasha := f(ph)
 
-	for _, h := range phs {
-		hashb := f(h)
-		if imgsim.Distance(hasha, hashb) < dist {
+	for _, h := range phashes {
+		if ph.distance(h) < dist {
 			pst := NewPost()
-			pst.ID = h.post_id
+			pst.ID = h.postid
 			posts = append(posts, pst)
 		}
 	}

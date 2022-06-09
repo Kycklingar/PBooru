@@ -1,9 +1,11 @@
 package DataManager
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Nr90/imgsim"
@@ -43,7 +45,7 @@ type DupeReportStats struct {
 
 func GetDupeReportDelay() (report DupeReportStats, err error) {
 	err = DB.QueryRow(`
-		SELECT count(*), EXTRACT(EPOCH FROM AVG(approved - timestamp)) AS delay
+		SELECT count(*), EXTRACT(EPOCH FROM AVG(approved - timestamp))::float AS delay
 		FROM duplicate_report
 		WHERE approved IS NOT NULL
 		AND report_type = 0
@@ -328,36 +330,63 @@ func GeneratePears() error {
 
 			defer commitOrDie(tx, &err)
 
-			var count int
-			for _, tree := range forest.trees {
-				count++
-				var pears []phs
-
-				// Weed out oranges, we only want to compare apples with pears
-				for _, pear := range tree.pears {
-					fmt.Printf("[%d/%d] comparing %d %d\n", count, len(forest.trees), tree.apple.postid, pear.postid)
-					if tree.apple.distance(pear) < 4 {
-						pears = append(pears, pear)
-					}
-				}
-
-				if err != nil {
-					return err
-				}
-
-				for _, apple := range pears {
-					_, err = tx.Exec(`
-						INSERT INTO apple_tree (apple, pear)
-						VALUES($1, $2)
-						`,
-						tree.apple.postid,
-						apple.postid,
-					)
-					if err != nil {
-						return err
-					}
-				}
+			var stmt *sql.Stmt
+			stmt, err = tx.Prepare(`
+				INSERT INTO apple_tree (apple, pear)
+				VALUES($1, $2)
+				`,
+			)
+			if err != nil {
+				return err
 			}
+			defer stmt.Close()
+
+			wg := new(sync.WaitGroup)
+			errChan := make(chan error)
+			wgDone := make(chan bool)
+
+			var counter = len(forest.trees)
+
+			for _, tree := range forest.trees {
+				wg.Add(1)
+				go func(tree Tree) {
+					defer func() {
+						counter--
+						wg.Done()
+					}()
+
+					var pears []phs
+
+					// Weed out oranges, we only want to compare apples with pears
+					for _, pear := range tree.pears {
+						fmt.Printf("[%d] comparing %d %d\n", counter, tree.apple.postid, pear.postid)
+						if tree.apple.distance(pear) < 4 {
+							pears = append(pears, pear)
+						}
+					}
+
+					for _, apple := range pears {
+						_, err = stmt.Exec(tree.apple.postid, apple.postid)
+						if err != nil {
+							errChan <- err
+							return
+						}
+					}
+				}(tree)
+			}
+			go func() {
+				wg.Wait()
+				close(wgDone)
+			}()
+
+			select {
+			case <-wgDone:
+				break
+			case err := <-errChan:
+				close(errChan)
+				return err
+			}
+
 			return nil
 		}()
 
@@ -476,10 +505,10 @@ type phs struct {
 
 func (p phs) hash() imgsim.Hash {
 	return imgsim.Hash(
-		uint64(p.h1)<<16 |
-			uint64(p.h2)<<32 |
-			uint64(p.h3)<<48 |
-			uint64(p.h4)<<64,
+		uint64(p.h1) |
+			uint64(p.h2)<<0x10 |
+			uint64(p.h3)<<0x20 |
+			uint64(p.h4)<<0x30,
 	)
 }
 
