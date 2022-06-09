@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -235,6 +236,148 @@ func PluckApple(dupe Dupe) error {
 		}
 	}
 
+	return nil
+}
+
+func RecalculateAppletree() error {
+	type aphashes struct {
+		apple phs
+		pears []phs
+	}
+
+	var applePearHashes = make(map[int]aphashes)
+	err := func() error {
+		rows, err := DB.Query(`
+		SELECT
+			a.post_id,
+			a.h1, a.h2,
+			a.h3, a.h4,
+			b.post_id,
+			b.h1, b.h2,
+			b.h3, b.h4
+		FROM apple_tree
+		JOIN phash a
+		ON a.post_id = apple
+		JOIN phash b
+		ON b.post_id = pear
+		ORDER BY a.post_id ASC
+		`,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				apple phs
+				pear  phs
+			)
+
+			err = rows.Scan(
+				&apple.postid,
+				&apple.h1,
+				&apple.h2,
+				&apple.h3,
+				&apple.h4,
+				&pear.postid,
+				&pear.h1,
+				&pear.h2,
+				&pear.h3,
+				&pear.h4,
+			)
+			if err != nil {
+				return err
+			}
+
+			aph := applePearHashes[apple.postid]
+			aph.apple = apple
+			aph.pears = append(aph.pears, pear)
+			applePearHashes[apple.postid] = aph
+		}
+
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	wg := new(sync.WaitGroup)
+	errChan := make(chan error)
+	ahChan := make(chan aphashes)
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`
+		DELETE FROM apple_tree
+		WHERE apple = $1
+		AND pear = $2
+		`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	var count int
+	length := len(applePearHashes)
+
+	workF := func(ahCh chan aphashes) {
+		defer wg.Done()
+
+		for ahs := range ahCh {
+			fmt.Printf("[%d/%d] %d:\t%d\n", count, length, ahs.apple.postid, len(ahs.pears))
+			var pears []int
+			for _, ph := range ahs.pears {
+				// Remove these
+				if ahs.apple.distance(ph) >= 4 {
+					pears = append(pears, ph.postid)
+				}
+			}
+
+			for _, pear := range pears {
+				_, err = stmt.Exec(ahs.apple.postid, pear)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+			}
+		}
+	}
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go workF(ahChan)
+	}
+
+	for _, ahash := range applePearHashes {
+		count++
+		select {
+		case err = <-errChan:
+			close(ahChan)
+			go func() {
+				wg.Wait()
+				close(errChan)
+			}()
+			for err2 := range errChan {
+				log.Println(err2)
+			}
+			return err
+		case ahChan <- ahash:
+			break
+		}
+	}
+
+	close(ahChan)
+	wg.Wait()
+	close(errChan)
+
+	tx.Commit()
 	return nil
 }
 

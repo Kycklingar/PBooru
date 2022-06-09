@@ -60,6 +60,7 @@ func main() {
 	generateFileDim := flag.Bool("gen-dimensions", false, "Generate file dimensions")
 	upgradePostCids := flag.Bool("upgrade-post-cids", false, "Upgrade post cids to base32")
 	genPears := flag.Bool("gen-pears", false, "Harvest apple tree")
+	recalcApple := flag.Bool("recalc-appletree", false, "Recalculate appletree")
 	genPhash := flag.Bool("gen-phash", false, "Generate phashes")
 	tombstoneFile := flag.String("read-tombstone", "", "Read tombstones from a tombstone file")
 	verifyFiles := flag.Int("verify-files", -1, "Verify the integrity of the files in ipfs")
@@ -99,6 +100,14 @@ func main() {
 
 	if *genPears {
 		if err := DM.GeneratePears(); err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	if *recalcApple {
+		if err := DM.RecalculateAppletree(); err != nil {
 			log.Fatal(err)
 		}
 
