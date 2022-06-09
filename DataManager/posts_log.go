@@ -54,7 +54,7 @@ func initPostLog(tx *sql.Tx, logID, postID int) error {
 	return err
 }
 
-func initPostsLog(logID int, tx *sql.Tx, pids []int) error {
+func logAffectedPosts(logID int, tx *sql.Tx, pids []int) error {
 	stmt, err := tx.Prepare(`
 		INSERT INTO log_post(
 			log_id,

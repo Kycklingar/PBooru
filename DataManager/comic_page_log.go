@@ -14,10 +14,17 @@ type logComicPage struct {
 	ChapterID int
 	PostID    int
 	Page      int
+
+	pids []int
 }
 
 func (l logComicPage) log(logID int, tx *sql.Tx) error {
-	_, err := tx.Exec(`
+	err := logAffectedPosts(logID, tx, l.pids)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
 		INSERT INTO log_comic_page (
 			log_id,
 			action,

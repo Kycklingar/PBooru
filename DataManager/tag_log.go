@@ -93,7 +93,7 @@ func (l logMultiTags) log(logID int, tx *sql.Tx) error {
 		return err
 	}
 
-	err = initPostsLog(logID, tx, l.pids)
+	err = logAffectedPosts(logID, tx, l.pids)
 	if err != nil {
 		return err
 	}

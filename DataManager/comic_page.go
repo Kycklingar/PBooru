@@ -36,6 +36,7 @@ func CreateComicPage(chapterID, postID, page int) loggingAction {
 			ChapterID: chapterID,
 			PostID:    postID,
 			Page:      page,
+			pids:      []int{postID},
 		}.log
 
 		return
@@ -89,6 +90,7 @@ func EditComicPage(pageID, chapterID, postID, page int) loggingAction {
 			ChapterID: chapterID,
 			PostID:    postID,
 			Page:      page,
+			pids:      []int{postID, pPostID},
 		}.log
 
 		return
@@ -117,6 +119,7 @@ func DeleteComicPage(pageID int) loggingAction {
 			return
 		}
 
+		lcp.pids = []int{lcp.PostID}
 		l.table = lComicPage
 		l.fn = lcp.log
 
