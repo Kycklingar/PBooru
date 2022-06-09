@@ -114,10 +114,28 @@ func (l spine) insert(tx *sql.Tx, logs []logger) error {
 		return err
 	}
 
-	for _, table := range l.affected(logs) {
+	for _, table := range l.tables(logs) {
 		_, err = tx.Exec(`
-			INSERT INTO logs_affected(log_id, log_table)
-			VALUES($1, $2)
+			INSERT INTO logs_tables(table_name)
+			VALUES($1)
+			ON CONFLICT DO NOTHING
+			`,
+			table,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(`
+			INSERT INTO logs_tables_altered(log_id, table_id)
+			VALUES(
+				$1,
+				(
+					SELECT id
+					FROM logs_tables
+					WHERE table_name = $2
+				)
+			)
 			`,
 			logID,
 			table,
@@ -136,7 +154,7 @@ func (l spine) insert(tx *sql.Tx, logs []logger) error {
 	return err
 }
 
-func (l spine) affected(logs []logger) []logtable {
+func (l spine) tables(logs []logger) []logtable {
 	var tablem = make(map[logtable]struct{})
 	var tables []logtable
 

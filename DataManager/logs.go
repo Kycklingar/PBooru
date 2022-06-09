@@ -88,7 +88,7 @@ func logs(q querier, query string, values ...interface{}) ([]Log, error) {
 	}
 
 	for i := range logs {
-		if err = logs[i].affected(q); err != nil {
+		if err = logs[i].altered(q); err != nil {
 			return nil, err
 		}
 	}
@@ -96,11 +96,13 @@ func logs(q querier, query string, values ...interface{}) ([]Log, error) {
 	return logs, nil
 }
 
-func (l *Log) affected(q querier) error {
+func (l *Log) altered(q querier) error {
 	tables, err := func() ([]logtable, error) {
 		rows, err := q.Query(`
-			SELECT log_table
-			FROM logs_affected
+			SELECT table_name
+			FROM logs_tables lt
+			JOIN logs_tables_altered lta
+			ON lt.id = lta.table_id
 			WHERE log_id = $1
 			`,
 			l.ID,

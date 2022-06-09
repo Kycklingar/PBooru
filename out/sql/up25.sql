@@ -27,11 +27,17 @@ CREATE TABLE logs (
 	timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE logs_affected (
-	log_id BIGSERIAL REFERENCES logs(log_id),
-	log_table TEXT NOT NULL,
+CREATE TABLE logs_tables (
+	id SERIAL PRIMARY KEY,
+	table_name TEXT NOT NULL UNIQUE,
+)
 
-	UNIQUE(log_id, log_table)
+
+CREATE TABLE logs_tables_altered (
+	log_id BIGINT REFERENCES logs(log_id),
+	table_id INTEGER NOT NULL REFERENCES logs_tables(id),
+
+	UNIQUE(log_id, table_id)
 );
 
 CREATE TABLE log_post(
