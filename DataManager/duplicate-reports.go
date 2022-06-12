@@ -305,7 +305,7 @@ func DuplicateReportCleanup() (int64, error) {
 
 	_, err = tx.Exec(`
 		WITH reports AS (
-			SELECT dr.id, dr.post_id AS lr, drp.post_id AS rr, report_type
+			SELECT dr.id, dr.post_id AS lr, drp.post_id AS rr, drp.id AS drpid, report_type
 			FROM duplicate_report dr
 			LEFT JOIN duplicate_report_posts drp
 			ON dr.id = drp.report_id
@@ -313,8 +313,8 @@ func DuplicateReportCleanup() (int64, error) {
 		)
 
 		DELETE FROM duplicate_report_posts
-		WHERE report_id IN(
-			SELECT reports.id
+		WHERE id IN(
+			SELECT reports.drpid
 			FROM apple_tree
 			RIGHT JOIN reports
 			ON (
