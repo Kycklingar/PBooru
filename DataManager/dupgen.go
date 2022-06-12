@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
@@ -11,6 +12,12 @@ import (
 
 	"github.com/Nr90/imgsim"
 )
+
+const appleTreeDistanceThres = 4
+
+func appleTreeThreshold(dist int) bool {
+	return dist <= appleTreeDistanceThres
+}
 
 type duration time.Duration
 
@@ -239,13 +246,14 @@ func PluckApple(dupe Dupe) error {
 	return nil
 }
 
-func RecalculateAppletree() error {
-	type aphashes struct {
-		apple phs
-		pears []phs
-	}
+type appleTreeHashes struct {
+	apple phs
+	pears []phs
+}
 
-	var applePearHashes = make(map[int]aphashes)
+// Remove mismatched appletrees
+func RecalculateAppletree() error {
+	var applePearHashes = make(map[int]appleTreeHashes)
 	err := func() error {
 		rows, err := DB.Query(`
 		SELECT
@@ -304,7 +312,7 @@ func RecalculateAppletree() error {
 
 	wg := new(sync.WaitGroup)
 	errChan := make(chan error)
-	ahChan := make(chan aphashes)
+	ahChan := make(chan appleTreeHashes)
 
 	tx, err := DB.Begin()
 	if err != nil {
@@ -326,7 +334,7 @@ func RecalculateAppletree() error {
 	var count int
 	length := len(applePearHashes)
 
-	workF := func(ahCh chan aphashes) {
+	workF := func(ahCh chan appleTreeHashes) {
 		defer wg.Done()
 
 		for ahs := range ahCh {
@@ -334,7 +342,7 @@ func RecalculateAppletree() error {
 			var pears []int
 			for _, ph := range ahs.pears {
 				// Remove these
-				if ahs.apple.distance(ph) >= 4 {
+				if !appleTreeThreshold(ahs.apple.distance(ph)) {
 					pears = append(pears, ph.postid)
 				}
 			}
@@ -382,159 +390,177 @@ func RecalculateAppletree() error {
 }
 
 func GeneratePears() error {
-	type Tree struct {
-		apple phs
-		pears []phs
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
 	}
 
-	type Forest struct {
-		trees map[int]Tree
+	err = GeneratePearsTx(tx)
+	if err != nil {
+		tx.Rollback()
+	} else {
+		tx.Commit()
 	}
 
-	getForest := func() (Forest, error) {
-		var forest = Forest{
-			make(map[int]Tree),
-		}
+	return err
+}
 
-		rows, err := DB.Query(`
+func GeneratePearsTx(tx *sql.Tx) error {
+	type Forest map[int]appleTreeHashes
+
+	getForest := func(tx *sql.Tx, start, bufSize int) (Forest, error) {
+		rows, err := tx.Query(`
 			SELECT
-				p1.post_id, p1.h1, p1.h2, p1.h3, p1.h4,
-				p2.post_id, p2.h1, p2.h2, p2.h3, p2.h4
+				p1.post_id,
+				p1.h1, p1.h2,
+				p1.h3, p1.h4,
+				p2.post_id,
+				p2.h1, p2.h2,
+				p2.h3, p2.h4
 			FROM phash p1
 			JOIN phash p2
 			ON p1.h1 = p2.h1
 			OR p1.h2 = p2.h2
 			OR p1.h3 = p2.h3
 			OR p1.h4 = p2.h4
+			LEFT JOIN apple_tree
+			ON p1.post_id = apple
+			AND p2.post_id = pear
+			LEFT JOIN duplicates d
+			ON d.post_id = p1.post_id
 			WHERE p1.post_id < p2.post_id
-			AND p1.post_id != p2.post_id
-			AND p1.post_id IN (
-				SELECT post_id
-				FROM phash
-				WHERE post_id > (
-					SELECT coalesce(max(apple), 0)
-					FROM apple_tree
-				)
-				ORDER BY post_id
-				LIMIT 10000
-			)
-			ORDER BY p1.post_id
+			AND apple IS NULL
+			AND d.post_id IS NULL
+			AND p1.post_id > $1
+			AND p1.post_id <= $2
+			ORDER BY p1.post_id ASC, p2.post_id ASC
 			`,
+			start,
+			start+bufSize,
 		)
 		if err != nil {
-			return forest, err
+			return nil, err
 		}
 		defer rows.Close()
+
+		var forest = make(Forest)
 
 		for rows.Next() {
 			var apple, pear phs
 			err = rows.Scan(
 				&apple.postid,
-				&apple.h1,
-				&apple.h2,
-				&apple.h3,
-				&apple.h4,
+				&apple.h1, &apple.h2,
+				&apple.h3, &apple.h4,
 				&pear.postid,
-				&pear.h1,
-				&pear.h2,
-				&pear.h3,
-				&pear.h4,
+				&pear.h1, &pear.h2,
+				&pear.h3, &pear.h4,
 			)
 			if err != nil {
 				return forest, err
 			}
 
-			tree := forest.trees[apple.postid]
+			tree := forest[apple.postid]
 
 			tree.apple = apple
 			tree.pears = append(tree.pears, pear)
 
-			forest.trees[apple.postid] = tree
-
+			forest[apple.postid] = tree
 		}
 
-		return forest, nil
+		return forest, rows.Err()
 	}
 
-	var err error
-	var forest Forest
+	type applepear struct {
+		apple phs
+		pear  phs
+	}
 
-	for {
-		forest, err = getForest()
-		if err != nil || len(forest.trees) <= 0 {
-			break
+	var (
+		maxPost int
+		count   int
+		bufSize = 10000
+		forest  Forest
+		err     error
+
+		// Rangers compare the fruit on each tree
+		treeChan chan appleTreeHashes
+
+		// Valid apple, pear pairs to be inserted into the db
+		pairChan    chan applepear
+		rangersWg   = new(sync.WaitGroup)
+		ctx, cancel = context.WithCancel(context.Background())
+	)
+	defer cancel()
+
+	err = tx.QueryRow("SELECT MAX(id) FROM posts").Scan(&maxPost)
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO apple_tree(apple, pear)
+		VALUES($1, $2)
+		`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	// Rangers calculate the likeness of the fruit and send them out on pairCh
+	rangerF := func(ctx context.Context, pairCh chan<- applepear, treeChan <-chan appleTreeHashes, wg *sync.WaitGroup) {
+		defer wg.Done()
+		for aph := range treeChan {
+			for _, pear := range aph.pears {
+				if appleTreeThreshold(aph.apple.distance(pear)) {
+					select {
+					case <-ctx.Done():
+						return
+					case pairCh <- applepear{apple: aph.apple, pear: pear}:
+					}
+				}
+			}
+
+		}
+	}
+
+forest:
+	for start := 0; start <= maxPost; start += bufSize {
+		fmt.Printf("Gathering forest of %d to %d up until %d, new pairs: %d\n", start, start+bufSize, maxPost, count)
+		forest, err = getForest(tx, start, bufSize)
+		if err != nil {
+			break forest
 		}
 
-		err = func() error {
-			tx, err := DB.Begin()
-			if err != nil {
-				return err
+		pairChan = make(chan applepear, 10)
+		treeChan = make(chan appleTreeHashes, 2)
+		go func() {
+		trees:
+			for _, tree := range forest {
+				select {
+				case <-ctx.Done():
+					break trees
+				case treeChan <- tree:
+				}
 			}
 
-			defer commitOrDie(tx, &err)
-
-			var stmt *sql.Stmt
-			stmt, err = tx.Prepare(`
-				INSERT INTO apple_tree (apple, pear)
-				VALUES($1, $2)
-				`,
-			)
-			if err != nil {
-				return err
-			}
-			defer stmt.Close()
-
-			wg := new(sync.WaitGroup)
-			errChan := make(chan error)
-			wgDone := make(chan bool)
-
-			var counter = len(forest.trees)
-
-			for _, tree := range forest.trees {
-				wg.Add(1)
-				go func(tree Tree) {
-					defer func() {
-						counter--
-						wg.Done()
-					}()
-
-					var pears []phs
-
-					// Weed out oranges, we only want to compare apples with pears
-					for _, pear := range tree.pears {
-						fmt.Printf("[%d] comparing %d %d\n", counter, tree.apple.postid, pear.postid)
-						if tree.apple.distance(pear) < 4 {
-							pears = append(pears, pear)
-						}
-					}
-
-					for _, apple := range pears {
-						_, err = stmt.Exec(tree.apple.postid, apple.postid)
-						if err != nil {
-							errChan <- err
-							return
-						}
-					}
-				}(tree)
-			}
-			go func() {
-				wg.Wait()
-				close(wgDone)
-			}()
-
-			select {
-			case <-wgDone:
-				break
-			case err := <-errChan:
-				close(errChan)
-				return err
-			}
-
-			return nil
+			close(treeChan)
+			rangersWg.Wait()
+			close(pairChan)
 		}()
 
-		if err != nil {
-			return err
+		// Spawn rangers
+		for i := 0; i < 50; i++ {
+			rangersWg.Add(1)
+			go rangerF(ctx, pairChan, treeChan, rangersWg)
+		}
+
+		for pair := range pairChan {
+			count++
+			_, err = stmt.Exec(pair.apple.postid, pair.pear.postid)
+			if err != nil {
+				break forest
+			}
 		}
 	}
 
@@ -595,22 +621,25 @@ func generateAppleTree(tx querier, ph phs) error {
 		return err
 	}
 
-	for _, h := range hashes {
-		if ph.distance(h) < 4 {
-			var apple, pear int
-			if h.postid < ph.postid {
-				apple = h.postid
-				pear = ph.postid
-			} else {
-				apple = ph.postid
-				pear = h.postid
-			}
-
-			_, err = tx.Exec(`
+	stmt, err := tx.Prepare(`
 				INSERT INTO apple_tree
 					(apple, pear)
 				VALUES ($1, $2)
 				`,
+	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, h := range hashes {
+		if appleTreeThreshold(ph.distance(h)) {
+			var apple, pear = h.postid, ph.postid
+			if apple > pear {
+				apple, pear = pear, apple
+			}
+
+			_, err = stmt.Exec(
 				apple,
 				pear,
 			)
