@@ -427,7 +427,8 @@ func GeneratePearsTx(tx *sql.Tx) error {
 			ON p1.post_id = apple
 			AND p2.post_id = pear
 			LEFT JOIN duplicates d
-			ON d.post_id = p1.post_id
+			ON d.dup_id = p1.post_id
+			OR d.dup_id = p2.post_id
 			WHERE p1.post_id < p2.post_id
 			AND apple IS NULL
 			AND d.post_id IS NULL
