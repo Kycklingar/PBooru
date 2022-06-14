@@ -249,8 +249,7 @@ func init() {
 
 	Handlers["/stats/"] = makeStatHandler(statisticsHandler)
 
-	Handlers["/spine/"] = makeStatHandler(logsHandler)
-	Handlers["/spine/post/"] = makeStatHandler(postLogsHandler)
+	Handlers["/spine/"] = makeStatHandler(searchLogsHandler)
 
 	Handlers["/"] = makeStatHandler(IndexHandler)
 	Handlers["/post/"] = makeStatHandler(PostHandler)

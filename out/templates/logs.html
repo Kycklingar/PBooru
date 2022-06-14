@@ -1,6 +1,24 @@
 {{template "base"}}
-{{with .Logs}}
-{{range .}}
+{{define "log-next"}}
+<div class="box">
+	<div>Showing logs {{.Showing}}-{{.To}} out of {{.OutOf}}</div>
+	{{with .PreviousPage}}
+	<form class="inline" method="GET">
+		<input type="hidden" name="page" value="{{.}}">
+		<input type="submit" value="Previous">
+	</form>
+	{{end}}
+	{{with .NextPage}}
+	<form class="inline" method="GET">
+		<input type="hidden" name="page" value="{{.}}">
+		<input type="submit" value="Next">
+	</form>
+	{{end}}
+</div>
+{{end}}
+{{if .Logs}}
+{{template "log-next" .}}
+{{range .Logs}}
 <div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
@@ -28,6 +46,7 @@
 	{{end}}
 </div>
 {{end}}
+{{template "log-next" .}}
 {{else}}
 SORRY NOTHING
 {{end}}

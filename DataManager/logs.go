@@ -1,5 +1,11 @@
 package DataManager
 
+import (
+	"fmt"
+
+	"github.com/kycklingar/sqhell/cond"
+)
+
 var logTableGetFuncs = make(map[logtable]logTableGetFunc)
 
 type logTableGetFunc func(*Log, querier) error
@@ -30,32 +36,125 @@ type Log struct {
 	ComicPages []logComicPage
 }
 
-func PostLogs(q querier, postid int) ([]Log, error) {
-	return logs(
-		q,
-		`
-		SELECT l.log_id, l.user_id, l.timestamp
-		FROM logs l
-		JOIN log_post p
-		ON l.log_id = p.log_id
-		WHERE p.post_id = $1
-		ORDER BY l.timestamp DESC
-		LIMIT 50
-		`,
-		postid,
-	)
+type LogCategory int
+
+const (
+	LogNoCat LogCategory = iota
+	LogCatPost
+	LogCatComic
+	LogCatChapter
+)
+
+type LogSearchOptions struct {
+	Category LogCategory
+	CatVal   int
+
+	// Filtering
+
+	Limit  int
+	Offset int
 }
 
-func RecentLogs(q querier) ([]Log, error) {
-	return logs(
-		q,
-		`
-		SELECT log_id, user_id, timestamp
-		FROM logs
-		ORDER BY timestamp DESC
-		LIMIT 50
-		`,
+func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
+	var (
+		join  = new(cond.Group)
+		where = new(cond.Group)
+		limit = new(cond.Group).
+			Add("", cond.P("Limit $%d")).
+			Add("\n", cond.P("Offset $%d"))
+		v []any
+		w string
+
+		paramIndex = 1
+		count      int
+		o          int
 	)
+
+	switch opts.Category {
+	case LogCatPost:
+		join.Add("\n",
+			cond.N(`
+			JOIN log_post p
+			ON l.log_id = p.log_id
+			`),
+		)
+		where.Add("\nAND", cond.P(`p.post_id = $%d`))
+		v = append(v, opts.CatVal)
+	case LogCatComic:
+		join.Add("\n",
+			cond.N(`
+			LEFT JOIN log_comics lc
+			ON l.log_id = lc.log_id
+			LEFT JOIN log_chapters lcc
+			ON l.log_id = lcc.log_id
+			`,
+			),
+		)
+		where.Add(
+			"\nAND",
+			new(cond.Group).
+				Add("", cond.O{S: "lc.id = $%d", I: &o}).
+				Add(" OR", cond.O{S: "lcc.comic_id = $%d", I: &o}),
+		)
+		v = append(v, opts.CatVal)
+	case LogCatChapter:
+		join.Add("\n",
+			cond.N(`
+			LEFT JOIN log_chapters lcc
+			ON l.log_id = lcc.log_id
+			LEFT JOIN log_comic_page lcp
+			ON l.log_id = lcp.log_id
+			`,
+			),
+		)
+		where.Add("\nAND",
+			new(cond.Group).
+				Add("", cond.O{S: "lcc.chapter_id = $%d", I: &o}).
+				Add(" OR", cond.O{S: "lcp.chapter_id = $%d", I: &o}),
+		)
+		v = append(v, opts.CatVal)
+	}
+
+	if len(v) > 0 {
+		w = "WHERE " + where.Eval(&paramIndex)
+	}
+
+	queryCount := fmt.Sprintf(`
+		SELECT count(*)
+		FROM logs l
+		%s
+		%s
+		`,
+		join.Eval(&paramIndex),
+		w,
+	)
+	err := DB.QueryRow(queryCount, v...).Scan(&count)
+	if err != nil {
+		return nil, count, err
+	}
+
+	paramIndex = 1
+
+	if len(v) > 0 {
+		o = 0
+		w = "WHERE " + where.Eval(&paramIndex)
+	}
+	v = append(v, opts.Limit, opts.Offset)
+
+	query := fmt.Sprintf(`
+		SELECT l.log_id, l.user_id, l.timestamp
+		FROM logs l
+		%s
+		%s
+		%s
+		`,
+		join.Eval(&paramIndex),
+		w,
+		limit.Eval(&paramIndex),
+	)
+
+	logs, err := logs(DB, query, v...)
+	return logs, count, err
 }
 
 func logs(q querier, query string, values ...interface{}) ([]Log, error) {

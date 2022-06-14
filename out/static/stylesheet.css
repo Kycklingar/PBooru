@@ -127,6 +127,11 @@ form.block input
 	display:block;
 }
 
+form.inline
+{
+	display:inline;
+}
+
 .greentext
 {
 	color:#c8c246;
