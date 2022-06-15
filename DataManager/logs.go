@@ -146,6 +146,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 		FROM logs l
 		%s
 		%s
+		ORDER BY l.timestamp DESC
 		%s
 		`,
 		join.Eval(&paramIndex),
