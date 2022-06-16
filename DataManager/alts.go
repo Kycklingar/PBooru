@@ -68,7 +68,7 @@ func SetAlts(posts []int) loggingAction {
 			return
 		}
 
-		l.table = lPostAlts
+		l.addTable(lPostAlts)
 		l.fn = logAlts{
 			AltGroup: maxID,
 			pids:     pids,
@@ -151,7 +151,7 @@ func SplitAlts(posts []int) loggingAction {
 			return
 		}
 
-		l.table = lPostAlts
+		l.addTable(lPostAlts)
 		l.fn = logAltsSplit{
 			a: logAlts{
 				AltGroup: aMax,

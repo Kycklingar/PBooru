@@ -113,6 +113,18 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			}
 		}
 
+		for _, page := range log.ComicPages {
+			err = page.Post.QMul(
+				DM.DB,
+				DM.PFHash,
+				DM.PFMime,
+				DM.PFThumbnails,
+			)
+			if internalError(w, err) {
+				return
+			}
+		}
+
 	}
 
 	p := struct {

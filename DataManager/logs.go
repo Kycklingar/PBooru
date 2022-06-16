@@ -120,7 +120,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 	}
 
 	queryCount := fmt.Sprintf(`
-		SELECT count(*)
+		SELECT count(DISTINCT l.log_id)
 		FROM logs l
 		%s
 		%s
@@ -142,7 +142,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 	v = append(v, opts.Limit, opts.Offset)
 
 	query := fmt.Sprintf(`
-		SELECT l.log_id, l.user_id, l.timestamp
+		SELECT DISTINCT l.log_id, l.user_id, l.timestamp
 		FROM logs l
 		%s
 		%s

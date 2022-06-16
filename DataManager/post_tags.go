@@ -73,7 +73,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 			return
 		}
 
-		l.table = lPostTags
+		l.addTable(lPostTags)
 		l.fn = logPostTags{
 			PostID:  postID,
 			Added:   add,
@@ -194,7 +194,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 		}
 
 		if len(multilogs) > 0 {
-			l.table = lMultiTags
+			l.addTable(lMultiTags)
 			l.fn = multilogs.log
 		}
 

@@ -132,6 +132,11 @@ form.inline
 	display:inline;
 }
 
+.inline
+{
+	display:inline-block;
+}
+
 .greentext
 {
 	color:#c8c246;

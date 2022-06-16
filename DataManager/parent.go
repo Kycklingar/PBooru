@@ -114,7 +114,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			}
 		}
 
-		l.table = lParent
+		l.addTable(lParent)
 		l.fn = logParent{
 			Children:  children,
 			Parents:   parents,

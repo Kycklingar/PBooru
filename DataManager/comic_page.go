@@ -29,12 +29,12 @@ func CreateComicPage(chapterID, postID, page int) loggingAction {
 			return
 		}
 
-		l.table = lComicPage
+		l.addTable(lComicPage)
 		l.fn = logComicPage{
 			Action:    aCreate,
 			ID:        id,
 			ChapterID: chapterID,
-			PostID:    postID,
+			postID:    postID,
 			Page:      page,
 			pids:      []int{postID},
 		}.log
@@ -83,12 +83,12 @@ func EditComicPage(pageID, chapterID, postID, page int) loggingAction {
 			return
 		}
 
-		l.table = lComicPage
+		l.addTable(lComicPage)
 		l.fn = logComicPage{
 			Action:    aModify,
 			ID:        pageID,
 			ChapterID: chapterID,
-			PostID:    postID,
+			postID:    postID,
 			Page:      page,
 			pids:      []int{postID, pPostID},
 		}.log
@@ -112,15 +112,15 @@ func DeleteComicPage(pageID int) loggingAction {
 			pageID,
 		).Scan(
 			&lcp.ChapterID,
-			&lcp.PostID,
+			&lcp.postID,
 			&lcp.Page,
 		)
 		if err != nil {
 			return
 		}
 
-		lcp.pids = []int{lcp.PostID}
-		l.table = lComicPage
+		lcp.pids = []int{lcp.postID}
+		l.addTable(lComicPage)
 		l.fn = lcp.log
 
 		return

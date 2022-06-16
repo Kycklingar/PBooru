@@ -61,7 +61,7 @@ func postAddCreationDate(postID int, md MetaData) loggingAction {
 
 		err = updatePostCreationDate(postID, tx)
 
-		l.table = lPostCreationDates
+		l.addTable(lPostCreationDates)
 		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aCreate,
@@ -89,7 +89,7 @@ func postRemoveCreationDate(postID int, md MetaData) loggingAction {
 
 		err = updatePostCreationDate(postID, tx)
 
-		l.table = lPostCreationDates
+		l.addTable(lPostCreationDates)
 		l.fn = logPostCreationDates{
 			postID: postID,
 			Action: aDelete,
@@ -139,7 +139,7 @@ func postAddMetaData(postID int, md MetaData) loggingAction {
 			return
 		}
 
-		l.table = lPostMetaData
+		l.addTable(lPostMetaData)
 		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aCreate,
@@ -163,7 +163,7 @@ func postRemoveMetaData(postID int, md MetaData) loggingAction {
 			md.value(),
 		)
 
-		l.table = lPostMetaData
+		l.addTable(lPostMetaData)
 		l.fn = logPostMetaData{
 			PostID:    postID,
 			Action:    aDelete,
@@ -185,7 +185,7 @@ func PostChangeDescription(postID int, newDescr string) loggingAction {
 			postID,
 		)
 
-		l.table = lPostDescription
+		l.addTable(lPostDescription)
 		l.fn = logPostDescription{
 			PostID:      postID,
 			Description: newDescr,

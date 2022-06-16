@@ -14,6 +14,8 @@ type logChapter struct {
 	ID      int
 	Order   int
 	Title   string
+
+	pages []logComicPage
 }
 
 func getLogChapter(log *Log, q querier) error {
@@ -69,6 +71,13 @@ func (l logChapter) log(logID int, tx *sql.Tx) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	for _, page := range l.pages {
+		err = page.log(logID, tx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

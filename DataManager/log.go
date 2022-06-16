@@ -17,12 +17,16 @@ type logtable string
 type lAction string
 
 type logger struct {
-	table logtable
-	fn    logFunc
+	tables []logtable
+	fn     logFunc
+}
+
+func (l *logger) addTable(table logtable) {
+	l.tables = append(l.tables, table)
 }
 
 func (l logger) valid() bool {
-	return !(l.table == "" || l.fn == nil)
+	return !(len(l.tables) == 0 || l.fn == nil)
 }
 
 type spine struct {
@@ -159,12 +163,14 @@ func (l spine) tables(logs []logger) []logtable {
 	var tables []logtable
 
 	for _, log := range logs {
-		if _, ok := tablem[log.table]; ok {
-			continue
-		}
+		for _, table := range log.tables {
+			if _, ok := tablem[table]; ok {
+				continue
+			}
 
-		tablem[log.table] = struct{}{}
-		tables = append(tables, log.table)
+			tablem[table] = struct{}{}
+			tables = append(tables, table)
+		}
 	}
 
 	return tables

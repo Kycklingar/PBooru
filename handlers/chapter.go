@@ -75,8 +75,8 @@ func editChapterHandler(w http.ResponseWriter, r *http.Request) {
 func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Comics() {
-		permError(w, "Comics")
+	if !user.QFlag(DM.DB).Special() {
+		permError(w, "Special")
 		return
 	}
 

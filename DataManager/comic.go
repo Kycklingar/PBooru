@@ -274,7 +274,7 @@ func CreateComic(title string, retid *int) loggingAction {
 
 		*retid = id
 
-		l.table = lComic
+		l.addTable(lComic)
 		l.fn = logComic{
 			Action: aCreate,
 			ID:     id,
@@ -317,7 +317,7 @@ func EditComic(comicID int, title string) loggingAction {
 			return
 		}
 
-		l.table = lComic
+		l.addTable(lComic)
 		l.fn = logComic{
 			Action: aModify,
 			ID:     comicID,

@@ -24,7 +24,7 @@
 	<div>{{.Timestamp}}</div>
 	{{template "log-comic" .}}
 	{{template "log-chapter" .}}
-	{{template "log-comic-page" .}}
+	{{template "log-comic-page" wrap2 "ComicPages" "UserInfo" .ComicPages $.UserInfo}}
 	{{template "log-alias" .}}
 	{{template "log-parent" .}}
 	{{template "log-multitags" .}}

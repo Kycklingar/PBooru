@@ -79,7 +79,7 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			}
 		}
 
-		l.table = lAlias
+		l.addTable(lAlias)
 		l.fn = logAlias{
 			From:      from,
 			To:        to[0],
@@ -155,7 +155,7 @@ func UnaliasTags(fromStr string) loggingAction {
 			lun[to.ID] = l
 		}
 
-		l.table = lAlias
+		l.addTable(lAlias)
 		l.fn = lun.log
 
 		return

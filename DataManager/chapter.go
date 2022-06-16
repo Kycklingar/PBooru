@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"errors"
 
 	mm "github.com/kycklingar/MinMax"
 )
@@ -86,7 +85,7 @@ func CreateChapter(comicID, order int, title string) loggingAction {
 			return
 		}
 
-		l.table = lChapter
+		l.addTable(lChapter)
 		l.fn = logChapter{
 			Action:  aCreate,
 			ComicID: comicID,
@@ -137,7 +136,7 @@ func EditChapter(chapterID, order int, title string) loggingAction {
 			return
 		}
 
-		l.table = lChapter
+		l.addTable(lChapter)
 		l.fn = logChapter{
 			Action:  aModify,
 			ComicID: comicID,
@@ -152,7 +151,63 @@ func EditChapter(chapterID, order int, title string) loggingAction {
 
 func DeleteChapter(chapterID int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		err = errors.New("not implemented")
+		// Remove all comic pages
+		rows, err := tx.Query(`
+			DELETE FROM comic_page
+			WHERE chapter_id = $1
+			RETURNING id, post_id, page
+			`,
+			chapterID,
+		)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		var lc = logChapter{
+			Action: aDelete,
+			ID:     chapterID,
+		}
+
+		for rows.Next() {
+			var lcp = logComicPage{
+				Action:    aDelete,
+				ChapterID: chapterID,
+			}
+			err = rows.Scan(
+				&lcp.ID,
+				&lcp.postID,
+				&lcp.Page,
+			)
+			if err != nil {
+				return
+			}
+			lcp.pids = []int{lcp.postID}
+			lc.pages = append(lc.pages, lcp)
+		}
+
+		err = tx.QueryRow(`
+			DELETE FROM comic_chapter
+			WHERE id = $1
+			RETURNING comic_id, c_order, title
+			`,
+			chapterID,
+		).Scan(
+			&lc.ComicID,
+			&lc.Order,
+			&lc.Title,
+		)
+		if err != nil {
+			return
+		}
+
+		l.addTable(lChapter)
+		if len(lc.pages) > 0 {
+			l.addTable(lComicPage)
+		}
+		l.fn = lc.log
+
 		return
+
 	}
 }

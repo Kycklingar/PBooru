@@ -1,25 +1,29 @@
 {{define "log-comic-page"}}
 {{range .ComicPages}}
-<table>
-	<caption>ComicPage</caption>
-	<thead>
+<div class="box inline">
+	<table class="center">
+		<caption>Comic Page</caption>
 		<tr>
-			<th>Action</th>
-			<th>Chapter ID</th>
-			<th>Page ID</th>
-			<th>Post ID</th>
-			<th>Page</th>
+			<th class="action-{{.Action}}" colspan="2">
+				{{template "thumbnail" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
+			</th>
 		</tr>
-	</thead>
-	<tbody>
 		<tr>
-			<td>{{.Action}}</td>
+			<th class="action-{{.Action}}" colspan="2">{{.Action}}</th>
+		</tr>
+		<tr>
+			<td>Chapter ID</td>
 			<td>{{.ChapterID}}</td>
+		</tr>
+		<tr>
+			<td>Page ID</td>
 			<td>{{.ID}}</td>
-			<td>{{.PostID}}</td>
+		</tr>
+		<tr>
+			<td>Page</td>
 			<td>{{.Page}}</td>
 		</tr>
-	</tbody>
-</table>
+	</table>
+</div>
 {{end}}
 {{end}}

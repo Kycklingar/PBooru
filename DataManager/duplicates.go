@@ -554,7 +554,7 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 		}
 
 		ua.Add(nullUA(logger{
-			table: lPostTags,
+			tables: []logtable{lPostTags},
 			fn: logPostTags{
 				PostID:  inf.ID,
 				Removed: infset,
@@ -572,7 +572,7 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 	}
 
 	ua.Add(nullUA(logger{
-		table: lPostTags,
+		tables: []logtable{lPostTags},
 		fn: logPostTags{
 			PostID: dupe.Post.ID,
 			Added:  newSet,
