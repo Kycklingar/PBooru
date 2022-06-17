@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -41,7 +43,40 @@ func searchLogsHandler(w http.ResponseWriter, r *http.Request) {
 	renderSpine(w, r, opts)
 }
 
+func parseTime(layout, value string) (time.Time, error) {
+	max := mm.Min(len(layout), len(value))
+	return time.ParseInLocation(layout[:max], value[:max], time.Local)
+}
+
 func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOptions) {
+	var err error
+	r.ParseForm()
+
+	if user, ok := r.Form["user"]; ok {
+		opts.UserID, err = strconv.Atoi(user[0])
+		if badRequest(w, err) {
+			return
+		}
+	}
+
+	const layout = "2006-01-02 15:04"
+
+	if dateSince := r.FormValue("date-since"); dateSince != "" {
+		since := fmt.Sprint(dateSince, " ", r.FormValue("time-since"))
+		opts.DateSince, err = parseTime(layout, since)
+		if badRequest(w, err) {
+			return
+		}
+	}
+
+	if dateUntil := r.FormValue("date-until"); dateUntil != "" {
+		until := fmt.Sprint(dateUntil, " ", r.FormValue("time-until"))
+		opts.DateUntil, err = parseTime(layout, until)
+		if badRequest(w, err) {
+			return
+		}
+	}
+
 	page, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil {
 		page = 1
@@ -140,7 +175,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 		UserInfo:     ui,
 		NextPage:     page + 1,
 		PreviousPage: page - 1,
-		Showing:      opts.Offset + 1,
+		Showing:      mm.Min(count, opts.Offset+1),
 		To:           mm.Min(count, opts.Offset+opts.Limit),
 		OutOf:        count,
 	}

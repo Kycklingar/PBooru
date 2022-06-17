@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kycklingar/sqhell/cond"
 )
@@ -50,7 +51,10 @@ type LogSearchOptions struct {
 	Category LogCategory
 	CatVal   int
 
-	// Filtering
+	UserID int
+
+	DateSince time.Time
+	DateUntil time.Time
 
 	Limit  int
 	Offset int
@@ -128,6 +132,27 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 		v = append(v, opts.CatVal)
 	}
 
+	if opts.UserID != 0 {
+		where.Add("\nAND",
+			cond.P("l.user_id = $%d"),
+		)
+		v = append(v, opts.UserID)
+	}
+
+	if !opts.DateSince.IsZero() {
+		where.Add("\nAND",
+			cond.P("l.timestamp > $%d"),
+		)
+		v = append(v, opts.DateSince)
+	}
+
+	if !opts.DateUntil.IsZero() {
+		where.Add("\nAND",
+			cond.P("l.timestamp < $%d"),
+		)
+		v = append(v, opts.DateUntil)
+	}
+
 	if len(v) > 0 {
 		w = "WHERE " + where.Eval(&paramIndex)
 	}
@@ -159,7 +184,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 		FROM logs l
 		%s
 		%s
-		ORDER BY l.timestamp DESC
+		ORDER BY l.timestamp DESC, l.log_id DESC
 		%s
 		`,
 		join.Eval(&paramIndex),

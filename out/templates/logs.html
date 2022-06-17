@@ -1,7 +1,21 @@
 {{template "base"}}
-{{define "log-next"}}
+{{define "log-forms"}}
 <div class="box">
 	<div>Showing logs {{.Showing}}-{{.To}} out of {{.OutOf}}</div>
+	<details>
+		<summary>Search</summary>
+		<form method="GET">
+			<label>Since
+				<input type="date" name="date-since">
+				<input type="time" name="time-since">
+			</label>
+			<label>Until
+				<input type="date" name="date-until">
+				<input type="time" name="time-until">
+			</label>
+			<input type="submit">
+		</form>
+	</details>
 	{{with .PreviousPage}}
 	<form class="inline" method="GET">
 		<input type="hidden" name="page" value="{{.}}">
@@ -16,8 +30,8 @@
 	{{end}}
 </div>
 {{end}}
+{{template "log-forms" .}}
 {{if .Logs}}
-{{template "log-next" .}}
 {{range .Logs}}
 <div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
@@ -46,7 +60,7 @@
 	{{end}}
 </div>
 {{end}}
-{{template "log-next" .}}
+{{template "log-forms" .}}
 {{else}}
 SORRY NOTHING
 {{end}}
