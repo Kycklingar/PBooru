@@ -6,8 +6,8 @@
 		<th>Namespace</th>
 		<th>Data</th>
 	{{range .}}
-		<tr class="action-{{.Action}}">
-			<td>{{.Action}}</td>
+		<tr>
+			<th class="action-{{.Action}}">{{.Action}}</th>
 			<td>{{.Namespace}}</td>
 			<td>{{.MetaData}}</td>
 		</tr>
@@ -20,8 +20,8 @@
 		<th>Action</th>
 		<th>Date</th>
 	{{range .}}
-		<tr class="action-{{.Action}}">
-			<td>{{.Action}}</td>
+		<tr>
+			<th class="action-{{.Action}}">{{.Action}}</th>
 			<td>{{.Date}}</td>
 		</tr>
 	{{end}}

@@ -2,24 +2,25 @@
 {{range .Chapters}}
 <table>
 	<caption>Chapter</caption>
-	<thead>
-		<tr>
-			<th>Action</th>
-			<th>Comic ID</th>
-			<th>ID</th>
-			<th>Title</th>
-			<th>Order</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			<td>{{.Action}}</td>
-			<td>{{.ComicID}}</td>
-			<td>{{.ID}}</td>
-			<td>{{.Title}}</td>
-			<td>{{.Order}}</td>
-		</tr>
-	</tbody>
+	<tr>
+		<th class="action-{{.Action}}" colspan="2">{{.Action}}</th>
+	</tr>
+	<tr>
+		<th>Comic ID</th>
+		<td><a href="/spine/comic/{{.ComicID}}">{{.ComicID}}</a></td>
+	</tr>
+	<tr>
+		<th>Chapter ID</th>
+		<td><a href="/spine/chapter/{{.ID}}">{{.ID}}</a></td>
+	</tr>
+	<tr>
+		<th>Title</th>
+		<td>{{.Title}}</td>
+	</tr>
+	<tr>
+		<th>Order</th>
+		<td>{{.Order}}</td>
+	</tr>
 </table>
 {{end}}
 {{end}}

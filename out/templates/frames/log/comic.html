@@ -3,20 +3,17 @@
 {{with .Comic}}
 <table>
 	<caption>Comic</caption>
-	<thead>
-		<tr>
-			<th>Action</th>
-			<th>ID</th>
-			<th>Title</th>
-		</tr>
-	</thead>
-	<tbody>
-		<tr>
-			<td>{{.Action}}</td>
-			<td>{{.ID}}</td>
-			<td>{{.Title}}</td>
-		</tr>
-	</tbody>
+	<tr>
+		<th class="action-{{.Action}}" colspan="2">{{.Action}}</th>
+	</tr>
+	<tr>
+		<th>Comic ID</th>
+		<td><a href="/spine/comic/{{.ID}}">{{.ID}}</a></td>
+	</tr>
+	<tr>
+		<th>Title</th>
+		<td>{{.Title}}</td>
+	</tr>
 </table>
 {{end}}
 {{end}}

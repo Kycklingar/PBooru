@@ -264,11 +264,18 @@ li
 }
 
 .log .action-create {
-	background-color: green;
+	background-color: yellowgreen;
+	color: black;
+}
+
+.log .action-modify {
+	background-color: goldenrod;
+	color: black;
 }
 
 .log .action-delete {
-	background-color: red;
+	background-color: #f0362d;
+	color: black;
 }
 
 /*---------- COMICS ---------*/

@@ -5,14 +5,14 @@
 			<caption>Tags</caption>
 		{{range .Added}}
 			<tr>
-				<td class="action-create">+</td>
-				<td class="namespace-{{.Namespace}}">{{.}}</td>
+				<th class="action-create">+</th>
+				<td class="tag namespace-{{.Namespace}}">{{.}}</td>
 			</tr>
 		{{end}}
 		{{range .Removed}}
 			<tr>
-				<td class="action-delete">-</td>
-				<td class="namespace-{{.Namespace}}">{{.}}</td>
+				<th class="action-delete">-</th>
+				<td class="tag namespace-{{.Namespace}}">{{.}}</td>
 			</tr>
 		{{end}}
 		</table>
