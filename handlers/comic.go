@@ -293,6 +293,28 @@ func editComicHandler(w http.ResponseWriter, r *http.Request) {
 	redirectToReferer(w, r, fmt.Sprintf("/comic/%d/", comicID))
 }
 
+func deleteComicHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		permError(w, "Comics")
+		return
+	}
+
+	comicID, err := strconv.Atoi(r.FormValue("comic-id"))
+	if badRequest(w, err) {
+		return
+	}
+
+	ua := DM.UserAction(user)
+	ua.Add(DM.DeleteComic(comicID))
+	err = ua.Exec()
+	if internalError(w, err) {
+		return
+	}
+
+	fmt.Fprint(w, "OK")
+}
+
 func addChapterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		notFoundHandler(w)
@@ -329,140 +351,6 @@ func addChapterHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, fmt.Sprintf("/comic/%d/%d/", m[comicIDK], m[orderK]), http.StatusSeeOther)
 }
-
-//func comicHandler(w http.ResponseWriter, r *http.Request) {
-//	page := struct {
-//		Base     base
-//		Comic    *DM.Comic
-//		User     *DM.User
-//		UserInfo UserInfo
-//		EditMode bool
-//	}{}
-//
-//	page.User, page.UserInfo = getUser(w, r)
-//	page.User.QFlag(DM.DB)
-//
-//	uri := uriSplitter(r)
-//
-//	if uri.length() >= 3 {
-//		chapterHandler(w, r)
-//		return
-//	}
-//
-//	comicID, err := uri.getIntAtIndex(1)
-//	if err != nil {
-//		notFoundHandler(w)
-//		return
-//	}
-//
-//	if err := r.ParseForm(); err != nil {
-//		log.Println(err)
-//	}
-//
-//	page.EditMode = len(r.Form["edit-mode"]) > 0
-//
-//	if page.Comic, err = DM.NewComicByID(comicID); err != nil {
-//		log.Println(err)
-//		notFoundHandler(w)
-//		return
-//	}
-//
-//	page.Comic.ID = comicID
-//	page.Comic.QTitle(DM.DB)
-//	page.Comic.QChapters(DM.DB)
-//
-//	page.Base.Title = page.Comic.Title
-//
-//	const postsPerChapter = 5
-//
-//	for _, chapter := range page.Comic.Chapters {
-//		chapter.QPosts(DM.DB)
-//		chapter.QTitle(DM.DB)
-//		chapter.QPageCount(DM.DB)
-//		for _, cpost := range chapter.PostsLimit(postsPerChapter) {
-//			cpost.QPost(DM.DB)
-//			cpost.Post.QMul(
-//				DM.DB,
-//				DM.PFHash,
-//				DM.PFThumbnails,
-//			)
-//		}
-//	}
-//
-//	renderTemplate(w, "comic", page)
-//}
-
-//func comicDeleteHandler(w http.ResponseWriter, r *http.Request) {
-//	if r.Method != http.MethodPost {
-//		notFoundHandler(w)
-//		return
-//	}
-//
-//	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
-//		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
-//		return
-//	}
-//
-//	const (
-//		comicIDKey = "comic-id"
-//	)
-//	m, err := verifyInteger(r, comicIDKey)
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusBadRequest)
-//		return
-//	}
-//
-//	c := DM.NewComic()
-//	c.ID = m[comicIDKey]
-//
-//	if err = c.Delete(user); err != nil {
-//		http.Error(w, err.Error(), http.StatusBadRequest)
-//		return
-//	}
-//
-//	http.Redirect(w, r, "/comics/", http.StatusSeeOther)
-//}
-
-//func comicUpdateHandler(w http.ResponseWriter, r *http.Request) {
-//	if r.Method != http.MethodPost {
-//		notFoundHandler(w)
-//		return
-//	}
-//
-//	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
-//		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
-//		return
-//	}
-//
-//	const (
-//		comicIDKey = "comic-id"
-//		titleKey   = "title"
-//	)
-//
-//	m, err := verifyInteger(r, comicIDKey)
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusBadRequest)
-//		return
-//	}
-//
-//	comic, err := DM.NewComicByID(m[comicIDKey])
-//	if err != nil {
-//		log.Println(err)
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	comic.Title = r.FormValue(titleKey)
-//	if err = comic.SaveEdit(user); err != nil {
-//		log.Println(err)
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-//}
 
 //func chapterHandler(w http.ResponseWriter, r *http.Request) {
 //	bm := benchmark.Begin()

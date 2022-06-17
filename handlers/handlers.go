@@ -323,7 +323,7 @@ func init() {
 	Handlers["/comics/"] = makeStatHandler(ComicsHandler)
 	Handlers["/comic/"] = makeStatHandler(comicHandler)
 	Handlers["/comic/create/"] = makeStatHandler(createComicHandler)
-	//Handlers["/comic/delete/"] = makeStatHandler(comicDeleteHandler)
+	Handlers["/comic/delete/"] = makeStatHandler(deleteComicHandler)
 	Handlers["/comic/edit/"] = makeStatHandler(editComicHandler)
 	Handlers["/comic/chapter/add/"] = makeStatHandler(addChapterHandler)
 	Handlers["/comic/chapter/edit/"] = makeStatHandler(editChapterHandler)

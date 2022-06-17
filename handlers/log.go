@@ -9,6 +9,13 @@ import (
 	DM "github.com/kycklingar/PBooru/DataManager"
 )
 
+var logCat = map[string]DM.LogCategory{
+	"post":      DM.LogCatPost,
+	"comic":     DM.LogCatComic,
+	"chapter":   DM.LogCatChapter,
+	"comicpage": DM.LogCatComicPage,
+}
+
 func searchLogsHandler(w http.ResponseWriter, r *http.Request) {
 	uri := uriSplitter(r)
 	var (
@@ -29,14 +36,7 @@ func searchLogsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	switch strings.ToLower(cat) {
-	case "post":
-		opts.Category = DM.LogCatPost
-	case "comic":
-		opts.Category = DM.LogCatComic
-	case "chapter":
-		opts.Category = DM.LogCatChapter
-	}
+	opts.Category = logCat[strings.ToLower(cat)]
 
 	renderSpine(w, r, opts)
 }

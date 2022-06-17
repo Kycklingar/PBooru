@@ -43,6 +43,7 @@ const (
 	LogCatPost
 	LogCatComic
 	LogCatChapter
+	LogCatComicPage
 )
 
 type LogSearchOptions struct {
@@ -111,6 +112,18 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 			new(cond.Group).
 				Add("", cond.O{S: "lcc.chapter_id = $%d", I: &o}).
 				Add(" OR", cond.O{S: "lcp.chapter_id = $%d", I: &o}),
+		)
+		v = append(v, opts.CatVal)
+	case LogCatComicPage:
+		join.Add("\n",
+			cond.N(`
+			LEFT JOIN log_comic_page lcp
+			ON l.log_id = lcp.log_id
+			`,
+			),
+		)
+		where.Add("\nAND",
+			cond.P("lcp.comic_page_id = $%d"),
 		)
 		v = append(v, opts.CatVal)
 	}

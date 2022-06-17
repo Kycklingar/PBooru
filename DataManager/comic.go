@@ -326,3 +326,25 @@ func EditComic(comicID int, title string) loggingAction {
 		return
 	}
 }
+
+func DeleteComic(comicID int) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		var title string
+		err = tx.QueryRow(`
+			DELETE FROM comics
+			WHERE id = $1
+			RETURNING title
+			`,
+			comicID,
+		).Scan(&title)
+
+		l.addTable(lComic)
+		l.fn = logComic{
+			Action: aDelete,
+			Title:  title,
+			ID:     comicID,
+		}.log
+
+		return
+	}
+}
