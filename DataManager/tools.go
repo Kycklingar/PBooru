@@ -18,6 +18,7 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 	ipfsdir "github.com/kycklingar/PBooru/DataManager/ipfs-dirgen"
 	migrate "github.com/kycklingar/PBooru/DataManager/migration"
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 func GenerateFileSizes() error {
@@ -855,7 +856,7 @@ func UpdateTombstone(filep string) error {
 			}
 		}
 
-		var ts = timestamp{&t}
+		var ts = timestamp.FromTime(&t)
 
 		var tomb = Tombstone{
 			E6id:    id,

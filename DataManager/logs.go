@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 	"github.com/kycklingar/sqhell/cond"
 )
 
@@ -14,7 +15,7 @@ type logTableGetFunc func(*Log, querier) error
 type Log struct {
 	ID        int
 	User      *User
-	Timestamp timestamp
+	Timestamp timestamp.Timestamp
 
 	// Post logs
 	Posts postHistoryMap

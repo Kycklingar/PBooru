@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 func GetTagHistory(limit, offset int) []*TagHistory {
@@ -69,7 +70,7 @@ type TagHistory struct {
 
 	User      *User
 	Post      *Post
-	Timestamp timestamp
+	Timestamp timestamp.Timestamp
 
 	ETags []*EditedTag
 }

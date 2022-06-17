@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	c "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 type Tombstone struct {
@@ -11,7 +12,7 @@ type Tombstone struct {
 	E6id    int
 	Md5     string
 	Reason  string
-	Removed timestamp
+	Removed timestamp.Timestamp
 }
 
 func GetTombstonedPosts(query string, limit, offset int) (int, []Tombstone, error) {

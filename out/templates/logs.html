@@ -36,6 +36,7 @@
 <div class="box log">
 	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
 	<div>{{.Timestamp}}</div>
+	<div>{{.Timestamp.Elapsed}}</div>
 	{{template "log-comic" .}}
 	{{template "log-chapter" .}}
 	{{template "log-comic-page" wrap2 "ComicPages" "UserInfo" .ComicPages $.UserInfo}}

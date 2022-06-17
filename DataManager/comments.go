@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 // CommentModel is used to retriev and save comments
@@ -18,7 +20,7 @@ type Comment struct {
 	User         *User
 	Text         string
 	CompiledText string
-	Time         timestamp
+	Time         timestamp.Timestamp
 }
 
 // Initialize a new comment

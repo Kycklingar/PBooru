@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 )
 
 type DupReport struct {
@@ -11,8 +13,8 @@ type DupReport struct {
 	ReportType reportType
 	Reporter   *User
 	Note       string
-	Approved   timestamp
-	Timestamp  timestamp
+	Approved   timestamp.Timestamp
+	Timestamp  timestamp.Timestamp
 	Dupe       Dupe
 }
 
