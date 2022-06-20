@@ -9,7 +9,7 @@ import (
 
 func diffHtml(a, b string) string {
 	differ := dmp.New()
-	return htmlDiff(differ.DiffMain(a, b, false))
+	return htmlDiff(differ.DiffCleanupSemantic(differ.DiffMain(a, b, false)))
 }
 
 func htmlDiff(diffs []dmp.Diff) string {
