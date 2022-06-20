@@ -11,10 +11,7 @@ type tagSet []*Tag
 func (set tagSet) Len() int      { return len(set) }
 func (set tagSet) Swap(i, j int) { set[i], set[j] = set[j], set[i] }
 func (set tagSet) Less(i, j int) bool {
-	return strings.Compare(
-		set[i].String(),
-		set[j].String(),
-	) != 1
+	return set[i].String() < set[j].String()
 }
 
 func (set tagSet) strindex(i int) string {

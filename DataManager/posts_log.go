@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"sort"
 )
 
 const (
@@ -126,7 +127,11 @@ func getLogPostTags(log *Log, q querier) error {
 		ph.Tags.PostID = pid
 
 		log.Posts[pid] = ph
+	}
 
+	for _, ph := range log.Posts {
+		sort.Sort(ph.Tags.Added)
+		sort.Sort(ph.Tags.Removed)
 	}
 
 	return nil
