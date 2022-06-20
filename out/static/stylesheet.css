@@ -226,6 +226,17 @@ li
 	width: 100%;
 }
 
+#sidebar .panel
+{
+	margin-top: 1em;
+}
+
+#sidebar .panel a:any-link
+{
+	color: #AAA;
+	display: block;
+}
+
 
 #advanced-search
 {
@@ -859,6 +870,7 @@ li
 #post .description
 {
 	white-space: pre-wrap;
+	clear: both;
 }
 
 #pageinator .current-page

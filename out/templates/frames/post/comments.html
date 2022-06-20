@@ -11,7 +11,7 @@
 	<li>
 		<div>
 			{{template "user-frame" .User}}
-			{{.Time.Elapsed}}
+			<span title="{{.Time}}">{{.Time.Elapsed}}</span>
 		</div>
 		<div>
 			<p>{{noescape .Text}}</p>

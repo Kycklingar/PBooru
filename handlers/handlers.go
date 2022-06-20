@@ -8,6 +8,8 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -219,6 +221,10 @@ func mul(x, y int) int {
 	return x * y
 }
 
+func stripExtension(filename string) string {
+	return strings.TrimSuffix(filename, path.Ext(filename))
+}
+
 func init() {
 	stat.init()
 
@@ -233,6 +239,7 @@ func init() {
 			"mul":       mul,
 			"colorID":   colorID,
 			"random":    func(chance int) bool { return rand.Int()%chance == 0 },
+			"stripExt":  stripExtension,
 		},
 	)
 
