@@ -53,7 +53,7 @@ func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error)
 		gwhere.Add(
 			"\nAND",
 			cond.Wrap{
-				new(cond.Group).Add(
+				Cond: new(cond.Group).Add(
 					"\n",
 					cond.O{
 						S: "lower(c.title) LIKE '%%' || $%d || '%%'",
