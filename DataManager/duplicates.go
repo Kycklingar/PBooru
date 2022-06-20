@@ -713,7 +713,7 @@ func moveDescription(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
 		b.WriteString(dupe.Post.Description)
 
 		for inf, descr := range descrs {
-			fmt.Fprintf(&b, "\n\n---- Appendix of duplicate %d ----\n", inf)
+			fmt.Fprintf(&b, "\n\n---- Addendum of duplicate %d ----\n", inf)
 			b.WriteString(descr)
 			ua.Add(PostChangeDescription(inf, ""))
 		}
