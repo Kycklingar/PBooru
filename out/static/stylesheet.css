@@ -856,7 +856,7 @@ li
 	max-width: unset;
 }
 
-#post .description p
+#post .description
 {
 	white-space: pre-wrap;
 }

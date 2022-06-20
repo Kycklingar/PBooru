@@ -1395,7 +1395,13 @@ func (p *Post) Comments(q querier) []*PostComment {
 		return nil
 	}
 
-	rows, err := q.Query("SELECT id, user_id, text, timestamp FROM post_comments WHERE post_id = $1 ORDER BY id DESC", p.ID)
+	rows, err := q.Query(`
+		SELECT id, user_id, text, timestamp
+		FROM post_comments
+		WHERE post_id = $1
+		ORDER BY id DESC`,
+		p.ID,
+	)
 	if err != nil {
 		log.Println(err)
 		return nil

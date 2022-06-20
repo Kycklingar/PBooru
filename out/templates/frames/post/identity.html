@@ -1,0 +1,37 @@
+{{define "post-identity"}}
+{{with .Post}}
+<div>
+	<table>
+		<tr>
+			<th>ID</th>
+			<td>{{.ID}}</td>
+		</tr>
+		<tr>
+			<th>Cid</th>
+			<td>{{.Hash}}</td>
+		</tr>
+		<tr>
+			<th>Sha256</th>
+			<td>{{.Checksums.Sha256}}</td>
+		</tr>
+		<tr>
+			<th>Md5</th>
+			<td>{{.Checksums.Md5}}</td>
+		</tr>
+	</table>
+	<table>
+		<caption>Thumbnails</caption>
+		<tr>
+			<th>Size</th>
+			<th>Cid</th>
+		</tr>
+		{{range .Thumbnails}}
+		<tr>
+			<td>{{.Size}}px</td>
+			<td><a href="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}">{{.Hash}}</a></td>
+		</tr>
+		{{end}}
+	</table>
+</div>
+{{end}}
+{{end}}

@@ -194,6 +194,8 @@
 		    {{end}}
 	    </details>
 	    {{end}}
+            <div>{{.Post.Mime}}</div>
+	    <div>{{.Post.SizePretty }}</div>
 	{{with .Alts}}
 	<div class="cpage-container nolink">
 		{{$zindex := 1000}}
@@ -216,53 +218,16 @@
 	{{range .Dns}}
 		{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
 	{{end}}
-	    {{with .Post.Description}}
-		<div class="box description">
-	    		<h3>Description</h3>
-	    		<p>{{.}}</p>
-		</div>
-	    {{end}}
-            <h4>ID:{{ .Post.ID }}</h4>
-            <h4>{{ .Post.Hash }}</h4>
-	    <h5>Sha256: {{ .Post.Checksums.Sha256 }}</h5>
-	    <h5>MD5: {{ .Post.Checksums.Md5}}</h5>
-		{{with .Post.Thumbnails}}
-			<span>Thumbnails:</span>
-			<ul>
-	    		{{range .}}
-	    			<li>{{.Size}}px <a href="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}">{{.Hash}}</a></li>
-			{{end}}
-			</ul>
-		{{end}}
-            <p>{{ .Post.Mime.Str }}</p>
-	    <p>{{ .Post.SizePretty }}</p>
+		<details>
+			<summary>Identity</summary>
+			{{template "post-identity" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
+		</details>
+		{{template "post-description" .Post.Description}}
+
             {{ if .Post.Removed }} <p style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</p>{{ end }}
             <p><a href="/similar/?id={{.Post.ID}}">Find Similar</a></p>
 
-            <div>
-                {{if .User.ID}}
-                <form method="POST">
-                    <input type="hidden" name="comment" value="true">
-                    <textarea cols="20" rows="1" name="text"></textarea>
-                    <br>
-                    <input type="submit" value="Post Comment">
-                </form>
-                {{end}}
-                <ul id="commentlist">
-                    {{ range .Comments }}
-                    <li>
-                        <div class="">
-                            <b>
-                            <span class="comment-username">{{if .User.ID}}{{.User.Name}}{{else}}Anonymous{{end}}</span>
-                            <span> | </span>
-                            <span class="comment-time">{{.Time}}</span>
-                            </b>
-                            <p>{{noescape .Text}}<p>
-                        </div>
-                    </li>
-                    {{ end}}
-                </ul>
-            </div>
+	    {{template "post-comments" wrap2 "User" "Comments" $.User .Comments}}
         </div>
     </div>
 </div>

@@ -167,7 +167,7 @@ type PostComment struct {
 	Post *Post
 	User *User
 	Text string
-	Time string
+	Time timestamp.Timestamp
 }
 
 // Save a new comment on a post

@@ -238,45 +238,6 @@ func (u uri) getAtIndex(index int) (string, error) {
 	return u.components[index], nil
 }
 
-type Comment struct {
-	ID           int
-	User         *DM.User
-	Text         string
-	CompiledText string
-	Time         string
-	Editable     bool
-}
-
-//func tComment(user *DM.User, c *DM.Comment) Comment {
-//	c.User.QName(DM.DB)
-//	return Comment{
-//		c.ID,
-//		c.User,
-//		c.Text,
-//		c.CompiledText,
-//		c.Time.String(),
-//		canEditComment(commentEditTimeoutMinutes, user, c),
-//	}
-//}
-//
-//func tComments(user *DM.User, cm []*DM.Comment) (r []Comment) {
-//	for _, c := range cm {
-//		r = append(r, tComment(user, c))
-//	}
-//	return
-//}
-
-func tPostComment(c *DM.PostComment) Comment {
-	return Comment{c.ID, c.User, c.Text, c.Text, c.Time, false}
-}
-
-func tPostComments(cm []*DM.PostComment) (r []Comment) {
-	for _, c := range cm {
-		r = append(r, tPostComment(c))
-	}
-	return
-}
-
 func PathEscape(uri string) string {
 	res := strings.Replace(uri, "%", "%25", -1)
 	res = strings.Replace(res, "/", "%25-2F", -1)

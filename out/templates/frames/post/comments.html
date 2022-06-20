@@ -1,0 +1,22 @@
+{{define "post-comments"}}
+{{if .User.ID}}
+<form method="POST">
+	<input type="hidden" name="comment" value="true">
+	<textarea cols="20" rows="1" name="text"></textarea>
+	<input type="submit" value="Post Comment">
+</form>
+{{end}}
+<ul id="commentlist">
+	{{range .Comments}}
+	<li>
+		<div>
+			{{template "user-frame" .User}}
+			{{.Time.Elapsed}}
+		</div>
+		<div>
+			<p>{{noescape .Text}}</p>
+		</div>
+	</li>
+	{{end}}
+</ul>
+{{end}}
