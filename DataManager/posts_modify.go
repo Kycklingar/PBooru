@@ -9,9 +9,10 @@ func PostAddMetaData(postID int, metaStr string) []loggingAction {
 	var acts []loggingAction
 
 	for _, md := range parseMetaDataString(metaStr) {
-		if md.Namespace() == "date" {
+		switch md.Namespace() {
+		case "date":
 			acts = append(acts, postAddCreationDate(postID, md))
-		} else {
+		default:
 			acts = append(acts, postAddMetaData(postID, md))
 		}
 	}
@@ -24,9 +25,10 @@ func PostRemoveMetaData(postID int, metaDataStrings []string) []loggingAction {
 
 	for _, mds := range metaDataStrings {
 		if md := parseMetaData(mds); md != nil {
-			if md.Namespace() == "date" {
+			switch md.Namespace() {
+			case "date":
 				acts = append(acts, postRemoveCreationDate(postID, md))
-			} else {
+			default:
 				acts = append(acts, postRemoveMetaData(postID, md))
 			}
 		}

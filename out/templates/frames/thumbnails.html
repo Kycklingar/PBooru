@@ -30,7 +30,7 @@
 	<div style="z-index:{{$zindex}};" class="comic-thumb">
 		{{$zindex = add $zindex -1}}
 		<a href="/post/{{.ID}}/{{.Hash}}">
-			<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
+			<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
 		</a>
 	</div>
 	{{end}}

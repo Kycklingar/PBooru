@@ -242,38 +242,54 @@ li
 
 /*---------- LOGS -----------*/
 
-.log table {
+.log table
+{
 	display: inline-block;
 }
 
-.log td {
+.log td
+{
 	max-width: 20em;
 	word-break: break-word;
 }
 
-.log table.description td {
+.log table.description td
+{
 	white-space: pre-wrap;
 }
 
-.log .diff-new{
+.log table caption
+{
+	background-color: #4E586A;
+	color: #EDE;
+	font-weight: bold;
+	border-radius: 3px 3px 0 0;
+}
+
+.log .diff-new
+{
 	background-color:green;
 }
 
-.log .diff-del{
+.log .diff-del
+{
 	background-color:red;
 }
 
-.log .action-create {
+.log .action-create
+{
 	background-color: yellowgreen;
 	color: black;
 }
 
-.log .action-modify {
+.log .action-modify
+{
 	background-color: goldenrod;
 	color: black;
 }
 
-.log .action-delete {
+.log .action-delete
+{
 	background-color: #f0362d;
 	color: black;
 }
@@ -856,6 +872,22 @@ li
     font-size:18px;
 }
 
+.user-frame
+{
+	display: inline-block;
+	min-width: 5em;
+	min-height: 1em;
+	background-color: #8022CE;
+	text-align: center;
+	font-weight: bold;
+}
+
+.user-frame a:any-link
+{
+	color: white;
+	text-decoration: none;
+}
+
 .user-subtitle
 {
 	font-size: 0.7em;
@@ -933,7 +965,8 @@ li
 }
 
 
-.removed
+.removed,
+.comic-thumb .removed
 {
     border: 2px solid red;
 }

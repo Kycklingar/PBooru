@@ -1,10 +1,12 @@
 package DataManager
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
@@ -12,6 +14,10 @@ import (
 type Dupe struct {
 	Post     *Post
 	Inferior []*Post
+}
+
+func (d Dupe) strindex(i int) string {
+	return strconv.Itoa(d.Inferior[i].ID)
 }
 
 func getDupeFromPost(q querier, p *Post) (Dupe, error) {
@@ -71,7 +77,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 
 	// Update alternatives
 	// must happen before dupe updates
-	if err = updateAlts(tx, dupe); err != nil {
+	if err = updateAlts(tx, dupe, ua); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -130,8 +136,20 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		}
 	}
 
+	// Move metadata
+	if err = moveMetadata(tx, dupe, ua); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	// Move description
+	if err = moveDescription(tx, dupe, ua); err != nil {
+		log.Println(err)
+		return err
+	}
+
 	// Replace comics with new post
-	if err = replaceComicPages(tx, user, dupe); err != nil {
+	if err = replaceComicPages(tx, dupe, ua); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -194,19 +212,91 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 	return nil
 }
 
-func updateAlts(tx querier, dupe Dupe) error {
-	// TODO: fix
-	//for _, p := range dupe.Inferior {
-	//	if err := p.setAlt(tx, dupe.Post.ID); err != nil {
-	//		return err
-	//	}
-	//	// Reset the inferior altgroup
-	//	if err := p.removeAlt(tx); err != nil {
-	//		return err
-	//	}
-	//}
+func updateAlts(tx querier, dupe Dupe, ua *UserActions) error {
+	// Get the alt groups of the inferior
+	// and merge with post alt group
 
-	return nil
+	infStr := sep(", ", len(dupe.Inferior), dupe.strindex)
+
+	// Alts of inferior to be applied to superior
+	rows, err := tx.Query(
+		fmt.Sprintf(`
+			SELECT id
+			FROM posts
+			WHERE alt_group IN(
+				SELECT alt_group
+				FROM posts
+				WHERE id IN(%s)
+			)
+			AND id NOT IN(%s)
+			`,
+			infStr,
+			infStr,
+		),
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var alts = logAlts{
+		pids: []int{dupe.Post.ID},
+	}
+
+	for rows.Next() {
+		var pid int
+		err = rows.Scan(&pid)
+		if err != nil {
+			return err
+		}
+
+		alts.pids = append(alts.pids, pid)
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+
+	if len(alts.pids) > 1 {
+		ua.addLogger(logger{
+			tables: []logtable{lPostAlts},
+			fn:     alts.log,
+		})
+	}
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+		UPDATE posts
+		SET alt_group = (
+			SELECT alt_group
+			FROM posts
+			WHERE id = $1
+		)
+		WHERE alt_group IN(
+			SELECT alt_group
+			FROM posts
+			WHERE id IN(%s)
+		) AND id NOT IN(%s)
+		`,
+			infStr,
+			infStr,
+		),
+		dupe.Post.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			UPDATE posts
+			SET alt_group = id
+			WHERE id IN(%s)
+			`,
+			infStr,
+		),
+	)
+
+	return err
 }
 
 func updateAppleTrees(tx querier, dupe Dupe) error {
@@ -493,37 +583,6 @@ func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
 	return tids, nil
 }
 
-//func moveTags(tx querier, dupe Dupe, ua *UserActions) (err error) {
-//	for _, p := range dupe.Inferior {
-//		_, err = tx.Exec(`
-//			INSERT INTO post_tag_mappings (post_id, tag_id)
-//				SELECT $1, tag_id FROM post_tag_mappings
-//				WHERE post_id = $2
-//			ON CONFLICT DO NOTHING
-//			`,
-//			dupe.Post.ID,
-//			p.ID,
-//		)
-//		if err != nil {
-//			log.Println(err)
-//			return
-//		}
-//
-//		_, err = tx.Exec(`
-//			DELETE FROM post_tag_mappings
-//			WHERE post_id = $1
-//			`,
-//			p.ID,
-//		)
-//		if err != nil {
-//			log.Println(err)
-//			return
-//		}
-//	}
-//
-//	return
-//}
-
 func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 	set, err := postTags(tx, dupe.Post.ID).unwrap()
 	if err != nil {
@@ -553,13 +612,13 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 			return err
 		}
 
-		ua.Add(nullUA(logger{
+		ua.addLogger(logger{
 			tables: []logtable{lPostTags},
 			fn: logPostTags{
 				PostID:  inf.ID,
 				Removed: infset,
 			}.log,
-		}))
+		})
 
 		newSet = append(newSet, infset.diff(newSet)...)
 	}
@@ -571,66 +630,137 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 		return err
 	}
 
-	ua.Add(nullUA(logger{
+	ua.addLogger(logger{
 		tables: []logtable{lPostTags},
 		fn: logPostTags{
 			PostID: dupe.Post.ID,
 			Added:  newSet,
 		}.log,
-	}))
+	})
 
 	return nil
 }
 
-// FIXME
-func replaceComicPages(tx querier, user *User, dupe Dupe) (err error) {
-	//exec := func(inferior *Post) ([]*ComicPost, error) {
-	//	rows, err := tx.Query(`
-	//		UPDATE comic_mappings
-	//		SET post_id = $1
-	//		WHERE post_id = $2
-	//		RETURNING id, chapter_id, post_order
-	//		`,
-	//		dupe.Post.ID,
-	//		inferior.ID,
-	//	)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	defer rows.Close()
+func moveMetadata(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
+	var metaMap = make(metaDataMap)
 
-	//	var cps []*ComicPost
+	for _, inf := range dupe.Inferior {
+		err := inf.QMul(tx, PFMetaData)
+		if err != nil {
+			return err
+		}
 
-	//	for rows.Next() {
-	//		var cp = newComicPost()
-	//		cp.Post = dupe.Post
+		metaMap.merge(inf.MetaData)
 
-	//		err = rows.Scan(&cp.ID, &cp.Chapter.ID, &cp.Order)
-	//		if err != nil {
-	//			return nil, err
-	//		}
+		// Remove metadata from inferior
+		for namespace, datas := range inf.MetaData {
+			for _, data := range datas {
+				switch namespace {
+				case "date":
+					ua.Add(postRemoveCreationDate(inf.ID, data))
+				default:
+					ua.Add(postRemoveMetaData(inf.ID, data))
+				}
+			}
+		}
+	}
 
-	//		cps = append(cps, cp)
-	//	}
+	// Add metadata to superior
+	for namespace, datas := range metaMap {
+		for _, data := range datas {
+			switch namespace {
+			case "date":
+				ua.Add(postAddCreationDate(dupe.Post.ID, data))
+			default:
+				ua.Add(postAddMetaData(dupe.Post.ID, data))
+			}
+		}
+	}
 
-	//	return cps, nil
-	//}
+	return nil
+}
 
-	//for _, p := range dupe.Inferior {
-	//	var cps []*ComicPost
-	//	cps, err = exec(p)
-	//	if err != nil {
-	//		return err
-	//	}
+func moveDescription(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
+	err := dupe.Post.QMul(tx, PFDescription)
+	if err != nil {
+		return err
+	}
 
-	//	// Log changes
-	//	for _, cp := range cps {
-	//		err = cp.log(tx, lUpdate, user)
-	//		if err != nil {
-	//			return
-	//		}
-	//	}
-	//}
+	var descrs = make(map[int]string)
+
+	for _, inf := range dupe.Inferior {
+		err = inf.QMul(tx, PFDescription)
+		if err != nil {
+			return err
+		}
+		if len(inf.Description) > 0 {
+			descrs[inf.ID] = inf.Description
+		}
+	}
+
+	if len(descrs) <= 0 {
+		return nil
+	}
+
+	// Empty dest, only one source. Replace
+	if len(descrs) == 1 && dupe.Post.Description == "" {
+		for inf, descr := range descrs {
+			ua.Add(PostChangeDescription(dupe.Post.ID, descr))
+			ua.Add(PostChangeDescription(inf, ""))
+		}
+	} else {
+		var b strings.Builder
+		b.WriteString(dupe.Post.Description)
+
+		for inf, descr := range descrs {
+			fmt.Fprintf(&b, "\n\n---- Appendix of duplicate %d ----\n", inf)
+			b.WriteString(descr)
+			ua.Add(PostChangeDescription(inf, ""))
+		}
+
+		ua.Add(PostChangeDescription(dupe.Post.ID, b.String()))
+	}
+
+	return nil
+}
+
+func replaceComicPages(tx querier, dupe Dupe, ua *UserActions) (err error) {
+	rows, err := tx.Query(
+		fmt.Sprintf(`
+			UPDATE comic_page
+			SET post_id = $1
+			WHERE post_id IN(%s)
+			RETURNING id, chapter_id, page
+			`,
+			sep(", ", len(dupe.Inferior), dupe.strindex),
+		),
+		dupe.Post.ID,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var lcp = logComicPage{
+			Action: aModify,
+			postID: dupe.Post.ID,
+		}
+
+		err = rows.Scan(
+			&lcp.ID,
+			&lcp.ChapterID,
+			&lcp.Page,
+		)
+		if err != nil {
+			return err
+		}
+
+		ua.addLogger(logger{
+			tables: []logtable{lComicPage},
+			fn:     lcp.log,
+		})
+	}
 
 	return
 }

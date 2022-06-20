@@ -3,6 +3,12 @@
 	{{with .Description}}
 	<table class="description">
 		<caption>Description</caption>
+		{{if not (and .Description .Old)}}
+			<th>Diff</th>
+			<tr>
+				<td>{{noescape .Diff}}</td>
+			</tr>
+		{{else}}
 		<th>New</th>
 		<th>Old</th>
 		<th>Diff</th>
@@ -11,6 +17,7 @@
 			<td>{{.Old}}</td>
 			<td>{{noescape .Diff}}</td>
 		</tr>
+		{{end}}
 	</table>
 	{{end}}
 	{{end}}

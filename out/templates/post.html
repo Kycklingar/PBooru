@@ -145,7 +145,7 @@
 			<div>Source</div>
 			<ul>
 				{{range .}}
-				<li><a href="{{.}}">{{.}}</a></li>
+				<li><a href="{{.Data}}">{{.Data}}</a></li>
 				{{end}}
 			</ul>
 		</div>
@@ -190,7 +190,7 @@
 	    <details style="display:inline;">
 		    <summary>Filenames</summary>
 		    {{range .}}
-		    <a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.}}" download>{{.}}</a>
+		    <a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data}}" download>{{.Data}}</a>
 		    {{end}}
 	    </details>
 	    {{end}}

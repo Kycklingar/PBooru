@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -102,6 +103,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 				DM.PFHash,
 				DM.PFMime,
 				DM.PFThumbnails,
+				DM.PFRemoved,
 			)
 			if internalError(w, err) {
 				return
@@ -115,6 +117,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 					DM.PFHash,
 					DM.PFMime,
 					DM.PFThumbnails,
+					DM.PFRemoved,
 				)
 				if internalError(w, err) {
 					return
@@ -154,9 +157,23 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 				DM.PFHash,
 				DM.PFMime,
 				DM.PFThumbnails,
+				DM.PFRemoved,
 			)
 			if internalError(w, err) {
 				return
+			}
+
+			if page.Diff != nil {
+				err = page.Diff.Post.QMul(
+					DM.DB,
+					DM.PFHash,
+					DM.PFMime,
+					DM.PFThumbnails,
+					DM.PFRemoved,
+				)
+				if internalError(w, err) {
+					return
+				}
 			}
 		}
 
@@ -170,6 +187,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 		Showing      int
 		To           int
 		OutOf        int
+		Form         url.Values
 	}{
 		Logs:         logs,
 		UserInfo:     ui,
@@ -178,6 +196,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 		Showing:      mm.Min(count, opts.Offset+1),
 		To:           mm.Min(count, opts.Offset+opts.Limit),
 		OutOf:        count,
+		Form:         r.Form,
 	}
 
 	if opts.Offset+opts.Limit > count {

@@ -206,6 +206,7 @@ func getLogPostDescriptions(log *Log, q querier) error {
 				WHERE post_id = d.post_id
 				AND log_id < d.log_id
 			)
+			AND post_id = d.post_id
 		), '') diff
 		FROM log_post_description d
 		WHERE d.log_id = $1

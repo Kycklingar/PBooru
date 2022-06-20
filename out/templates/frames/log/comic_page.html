@@ -5,6 +5,12 @@
 		<caption>Comic Page</caption>
 		<tr>
 			<th colspan="2">
+				{{if .Diff}}
+				{{if ne .Post.ID .Diff.Post.ID}}
+				{{template "thumbnail" wrap2 "Post" "UserInfo" .Diff.Post $.UserInfo}}
+				V
+				{{end}}
+				{{end}}
 				{{template "thumbnail" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
 			</th>
 		</tr>
@@ -21,7 +27,7 @@
 		</tr>
 		<tr>
 			<th>Page</th>
-			<td>{{.Page}}</td>
+			<td>{{if .Diff}}{{if ne .Page .Diff.Page}}{{.Diff.Page}} -> {{end}}{{end}}{{.Page}}</td>
 		</tr>
 	</table>
 </div>

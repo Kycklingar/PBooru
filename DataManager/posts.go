@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Nr90/imgsim"
 	"github.com/frustra/bbcode"
@@ -83,7 +82,13 @@ func CachedPost(p *Post) *Post {
 	return p
 }
 
-type metaDataMap map[string][]string
+type metaDataMap map[string][]MetaData
+
+func (m metaDataMap) merge(b metaDataMap) {
+	for k, v := range b {
+		m[k] = append(m[k], v...)
+	}
+}
 
 type Post struct {
 	ID         int
@@ -364,19 +369,38 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 	}
 	var metaMap = make(metaDataMap)
 
-	rows, err := q.Query(`
+	err := func() error {
+		rows, err := q.Query(`
 		SELECT namespace, metadata
 		FROM post_metadata
 		WHERE post_id = $1
 		`,
-		p.ID,
-	)
+			p.ID,
+		)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var m metadata
+			err = rows.Scan(&m.namespace, &m.data)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			metaMap[m.namespace] = append(metaMap[m.namespace], m)
+		}
+
+		return nil
+	}()
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	rows2, err := q.Query(`
+	rows, err := q.Query(`
 		SELECT created
 		FROM post_creation_dates
 		WHERE post_id = $1
@@ -384,28 +408,19 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 		p.ID,
 	)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-	defer rows2.Close()
+	defer rows.Close()
 
 	for rows.Next() {
-		var m metadata
-		err = rows.Scan(&m.namespace, &m.data)
-		if err != nil {
+		var t metaDate
+		if err = rows.Scan(&t); err != nil {
+			log.Println(err)
 			return err
 		}
 
-		metaMap[m.namespace] = append(metaMap[m.namespace], m.data)
-	}
-
-	for rows2.Next() {
-		var t time.Time
-		if err = rows2.Scan(&t); err != nil {
-			return err
-		}
-
-		metaMap["date"] = append(metaMap["date"], t.Format(iso8601))
-
+		metaMap["date"] = append(metaMap["date"], t)
 	}
 
 	p.MetaData = metaMap

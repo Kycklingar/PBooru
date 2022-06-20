@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -27,11 +26,11 @@ func lackingPermissions(priv string) string {
 var Templates *template.Template
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p interface{}) {
-	err := Templates.ExecuteTemplate(w, tmpl+".html", p)
-	if err != nil {
-		//http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Println(err)
-	}
+	Templates.ExecuteTemplate(w, tmpl+".html", p)
+	//if err != nil {
+	//	//http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	//log.Println(err)
+	//}
 }
 
 type base struct {

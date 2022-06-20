@@ -6,12 +6,12 @@
 		<summary>Search</summary>
 		<form method="GET">
 			<label>Since
-				<input type="date" name="date-since">
-				<input type="time" name="time-since">
+				<input type="date" name="date-since" value="{{.Form.Get "date-since"}}">
+				<input type="time" name="time-since" value="{{.Form.Get "time-since"}}">
 			</label>
 			<label>Until
-				<input type="date" name="date-until">
-				<input type="time" name="time-until">
+				<input type="date" name="date-until" value="{{.Form.Get "date-until"}}">
+				<input type="time" name="time-until" value="{{.Form.Get "time-until"}}">
 			</label>
 			<input type="submit">
 		</form>
@@ -34,9 +34,11 @@
 {{if .Logs}}
 {{range .Logs}}
 <div class="box log">
-	<div><a href="/user/{{.User.ID}}">{{.User.ID}}</a> - {{.User.Name}}</div>
-	<div>{{.Timestamp}}</div>
-	<div>{{.Timestamp.Elapsed}}</div>
+	<div>
+		<span>{{template "user-frame" .User}}</span>
+		<span>{{.Timestamp.Elapsed}}</span>
+		<span>{{.Timestamp}}</span>
+	</div>
 	{{template "log-comic" .}}
 	{{template "log-chapter" .}}
 	{{template "log-comic-page" wrap2 "ComicPages" "UserInfo" .ComicPages $.UserInfo}}
@@ -44,20 +46,20 @@
 	{{template "log-parent" .}}
 	{{template "log-multitags" .}}
 	{{with .Posts}}
-	<ul>
 	{{range .}}
-		<li>
+		<span class="box inline">
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 		{{template "log-tags" .}}
 		{{template "log-description" .}}
 		{{template "log-metadata" .}}
-		</li>
+		</span>
 	{{end}}
-	</ul>
 	{{end}}
 	{{range .Alts}}
+		<span class="box inline">
 		<span>Assigned alts</span>
 		{{template "thumbnail-cards" wrap2 "Posts" "UserInfo" .Posts $.UserInfo}}
+		</span>
 	{{end}}
 </div>
 {{end}}

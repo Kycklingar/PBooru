@@ -61,6 +61,10 @@ func (a *UserActions) Add(l ...loggingAction) {
 	a.actions = append(a.actions, l...)
 }
 
+func (a *UserActions) addLogger(l logger) {
+	a.Add(nullUA(l))
+}
+
 func (a UserActions) Exec() error {
 	tx, err := DB.Begin()
 	if err != nil {

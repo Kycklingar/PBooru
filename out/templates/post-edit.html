@@ -68,8 +68,8 @@ label{
 						<legend>{{$k}}</legend>
 						{{range $v}}
 						<label>
-							<input type="checkbox" name="post-metadata-remove" value="{{$k}}:{{.}}">
-							{{.}}
+							<input type="checkbox" name="post-metadata-remove" value="{{.}}">
+							{{.Data}}
 						</label>
 						{{end}}
 					</fieldset>

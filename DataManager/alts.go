@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
+
+	mm "github.com/kycklingar/MinMax"
 )
 
 func SetAlts(posts []int) loggingAction {
@@ -46,9 +48,7 @@ func SetAlts(posts []int) loggingAction {
 				return
 			}
 
-			if pid > maxID {
-				maxID = pid
-			}
+			maxID = mm.Max(maxID, pid)
 
 			pids = append(pids, pid)
 			alts = append(alts, alt)
@@ -70,8 +70,7 @@ func SetAlts(posts []int) loggingAction {
 
 		l.addTable(lPostAlts)
 		l.fn = logAlts{
-			AltGroup: maxID,
-			pids:     pids,
+			pids: pids,
 		}.log
 
 		return
@@ -116,17 +115,13 @@ func SplitAlts(posts []int) loggingAction {
 				return
 			}
 
-			if aMax < p {
-				aMax = p
-			}
+			aMax = mm.Max(aMax, p)
 
 			a = append(a, p)
 		}
 
 		for _, p := range posts {
-			if p > bMax {
-				bMax = p
-			}
+			bMax = mm.Max(bMax, p)
 		}
 
 		update := func(newAltGroup int, pids []int) error {
@@ -154,12 +149,10 @@ func SplitAlts(posts []int) loggingAction {
 		l.addTable(lPostAlts)
 		l.fn = logAltsSplit{
 			a: logAlts{
-				AltGroup: aMax,
-				pids:     a,
+				pids: a,
 			},
 			b: logAlts{
-				AltGroup: bMax,
-				pids:     posts,
+				pids: posts,
 			},
 		}.log
 
