@@ -391,6 +391,21 @@ li
 	transform:none;
 }
 
+.chapter-card a:any-link
+{
+	color: #AAA;
+}
+.comic-title
+{
+	font-size: 1.5em
+}
+
+.chapter-title
+{
+	padding-left: 1em;
+	font-size: 1.3em;
+}
+
 .comics-container
 {
     background-color: var(--box-background-color);

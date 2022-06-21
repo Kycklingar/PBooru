@@ -51,7 +51,8 @@ label{
 			</div>
 			<input type="hidden" name="post-tags-diff" value="{{template "printTags" .Tags}}">
 			<div class="column">
-				<textarea name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
+				<textarea class="stinput" name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
+				<script src="/static/suggestions.js"></script>
 			</div>
 		</div>
 		<div class="box">

@@ -2,8 +2,10 @@ package DataManager
 
 import (
 	"database/sql"
+	"fmt"
 
 	mm "github.com/kycklingar/MinMax"
+	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
 type Chapter struct {
@@ -11,6 +13,7 @@ type Chapter struct {
 	Title string
 	Order int
 	Pages []ComicPage
+	Comic *Comic
 }
 
 func (c *Chapter) PageCount() int {
@@ -21,13 +24,22 @@ func (c *Chapter) NPages(n int) []ComicPage {
 	return c.Pages[:mm.Min(n, len(c.Pages))]
 }
 
-func (c *Chapter) getPages(q querier) error {
-	rows, err := q.Query(`
-		SELECT id, post_id, page
-		FROM comic_page
-		WHERE chapter_id = $1
-		ORDER BY page ASC
-		`,
+func (c *Chapter) getPages(q querier, limit int) error {
+	var limitS string
+	if limit > 0 {
+		limitS = fmt.Sprintf("LIMIT %d", limit)
+	}
+
+	rows, err := q.Query(
+		fmt.Sprintf(`
+			SELECT id, post_id, page
+			FROM comic_page
+			WHERE chapter_id = $1
+			ORDER BY page ASC
+			%s
+			`,
+			limitS,
+		),
 		c.ID,
 	)
 	if err != nil {
@@ -60,8 +72,61 @@ func (c *Chapter) getPages(q querier) error {
 	return nil
 }
 
-func GetPostChapters(postID int) {
+func GetPostChapters(postID int, postFields ...sqlbinder.Field) ([]*Chapter, error) {
+	chapters, err := postChapters(DB, postID)
+	if noRows(err) != nil {
+		return nil, err
+	}
 
+	for _, chapter := range chapters {
+		err = chapter.getPages(DB, 5)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return chapters, nil
+}
+
+func postChapters(q querier, postID int) ([]*Chapter, error) {
+	rows, err := DB.Query(`
+		SELECT
+			c.id, c.title,
+			ch.id, ch.c_order, ch.title
+		FROM comic_page cp
+		JOIN comic_chapter ch
+		ON cp.chapter_id = ch.id
+		JOIN comics c
+		ON c.id = ch.comic_id
+		WHERE cp.post_id = $1
+		`,
+		postID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var chapters []*Chapter
+
+	for rows.Next() {
+		var chapter = new(Chapter)
+		chapter.Comic = new(Comic)
+		err = rows.Scan(
+			&chapter.Comic.ID,
+			&chapter.Comic.Title,
+			&chapter.ID,
+			&chapter.Order,
+			&chapter.Title,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		chapters = append(chapters, chapter)
+	}
+
+	return chapters, nil
 }
 
 func CreateChapter(comicID, order int, title string) loggingAction {
@@ -209,5 +274,59 @@ func DeleteChapter(chapterID int) loggingAction {
 
 		return
 
+	}
+}
+
+func ShiftChapterPages(chapterID, shiftBy, symbol, page int) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		var sym string
+
+		switch symbol {
+		case 1:
+			sym = ">"
+		default:
+			sym = "<"
+		}
+
+		rows, err := tx.Query(
+			fmt.Sprintf(`
+				UPDATE comic_page
+				SET page = page + $1
+				WHERE chapter_id = $2
+				AND page %s $3
+				RETURNING id, post_id, page
+				`,
+				sym,
+			),
+			shiftBy,
+			chapterID,
+			page,
+		)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+
+		var lcps logComicPages
+
+		for rows.Next() {
+			var lcp = logComicPage{
+				ChapterID: chapterID,
+				Action:    aModify,
+			}
+
+			rows.Scan(
+				&lcp.ID,
+				&lcp.postID,
+				&lcp.Page,
+			)
+
+			lcps = append(lcps, lcp)
+		}
+
+		l.addTable(lComicPage)
+		l.fn = lcps.log
+
+		return
 	}
 }

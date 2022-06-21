@@ -181,7 +181,7 @@ func (comic *Comic) fetch() error {
 	}
 
 	for _, chap := range comic.Chapters {
-		if err = chap.getPages(DB); err != nil {
+		if err = chap.getPages(DB, 0); err != nil {
 			return err
 		}
 		if comic.FrontPage == nil && chap.PageCount() > 0 {

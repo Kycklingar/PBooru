@@ -72,6 +72,47 @@ func editChapterHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
+func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		notFoundHandler(w)
+		return
+	}
+
+	user, _ := getUser(w, r)
+	if !user.QFlag(DM.DB).Comics() {
+		permError(w, "Comics")
+		return
+	}
+
+	const (
+		chapterIDKey = "chapter-id"
+		byKey        = "by"
+		symbolKey    = "symbol"
+		pageKey      = "page"
+	)
+
+	m, err := verifyInteger(r, chapterIDKey, byKey, symbolKey, pageKey)
+	if badRequest(w, err) {
+		return
+	}
+
+	ua := DM.UserAction(user)
+	ua.Add(
+		DM.ShiftChapterPages(
+			m[chapterIDKey],
+			m[byKey],
+			m[symbolKey],
+			m[pageKey],
+		),
+	)
+	err = ua.Exec()
+	if internalError(w, err) {
+		return
+	}
+
+	fmt.Fprint(w, "OK")
+}
+
 func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 

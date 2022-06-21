@@ -8,6 +8,19 @@ func init() {
 	logTableGetFuncs[lComicPage] = getLogComicPage
 }
 
+type logComicPages []logComicPage
+
+func (l logComicPages) log(logID int, tx *sql.Tx) error {
+	for _, lcp := range l {
+		err := lcp.log(logID, tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type logComicPage struct {
 	Action    lAction
 	ID        int

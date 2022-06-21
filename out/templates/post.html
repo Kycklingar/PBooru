@@ -196,21 +196,12 @@
 			<div>{{.Post.SizePretty }}</div>
 			{{with .Alts}}
 			<div class="cpage-container nolink">
-				{{$zindex := 1000}}
 				<a href="/posts/1/?alt-group={{$.Dupe.Post.AltGroup}}">
 					<div style="z-index:1001;" class="comic-thumb cover">
 						Browse all {{len $.Dupe.Post.Alts}} alts
 					</div>
 				</a>
-				{{range .}}
-				<div style="z-index:{{$zindex}};" class="comic-thumb" >
-					{{$zindex = add $zindex -1}}
-					<a href="/post/{{.ID}}/{{.Hash}}">
-						<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
-					</a>
-				</div>
-				{{end}}
-				<br>
+				{{template "post-cards" wrap2 "UserInfo" "Posts" $.UserInfo .}}
 			</div>
 			{{end}}
 			{{range .Dns}}
@@ -230,13 +221,9 @@
 
 {{range .Chapters}}
 	<div class="box">
-		<div>
-			<p><a href="/comic/{{.Comic.ID}}/">{{.Comic.Title}}</a></p>
-			<p><a href="/comic/{{.Comic.ID}}/{{.Order}}/">C{{.Order}}{{with .Title}} - {{.}}{{end}}</a></p>
-			<p>{{.Comic.PageCount}} pages</p>
-		</div>
+		{{template "chapter-title-card" .}}
 		<div class="cpage-container">
-			{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.PostsLimit 5)}}
+			{{template "chapter-cards" wrap2 "UserInfo" "Posts" $.UserInfo (.NPages 5)}}
 		</div>
 	</div>
 {{end}}

@@ -322,7 +322,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		c.User.QName(DM.DB)
 	}
 
-	//pp.Chapters = DM.GetPostChapters(pp.Dupe.Post.ID)
+	pp.Chapters, err = DM.GetPostChapters(pp.Dupe.Post.ID)
+	if internalError(w, err) {
+		return
+	}
 
 	//pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
 	//for _, c := range pp.Chapters {

@@ -1,0 +1,28 @@
+{{define "chapter-title-card"}}
+<div class="chapter-card">
+	<div class="comic-title"><a href="/comic/{{.Comic.ID}}/">{{.Comic.Title}}</a></div>
+	<div class="chapter-title"><a href="/comic/{{.Comic.ID}}/{{.Order}}/">{{.Title}}</a></div>
+</div>
+{{end}}
+{{define "chapter-cards"}}
+	{{$zindex := 100}}
+	{{range .Posts}}
+		<div style="z-index:{{$zindex}};" class="comic-thumb" >
+			{{$zindex = add $zindex -1}}
+        	    	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+        	            	<img src="{{$.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
+        	    	</a>
+        	</div>
+	{{end}}
+{{end}}
+{{define "post-cards"}}
+	{{$zindex := 100}}
+	{{range .Posts}}
+		<div style="z-index:{{$zindex}};" class="comic-thumb" >
+			{{$zindex = add $zindex -1}}
+        	    	<a href="/post/{{.ID}}/{{.Hash}}">
+        	            	<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}">
+        	    	</a>
+        	</div>
+	{{end}}
+{{end}}
