@@ -163,10 +163,12 @@
 			}
 			</script>
 			<img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
-			<b>
-				<a href="#fullsize">Fullsize</a>
-				<a href="#">Shrink to fit</a>
-			</b>
+			<div>
+				<b>
+					<a href="#fullsize">Fullsize</a>
+					<a href="#">Shrink to fit</a>
+				</b>
+			</div>
 		</div>
 		{{else if eq .Post.Mime.Type "video"}}
 		<div>
