@@ -90,7 +90,7 @@
 				<input type="text" class="stinput" name="parent">
 				<input type="submit">
 			</form>
-			{{if .To.ID}}
+			{{if and .Tag .To.ID}}
 			<form method="POST">
 				<p>Unalias</p>
 				<input type="hidden" name="action" value="unalias">
