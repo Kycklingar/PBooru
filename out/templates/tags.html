@@ -33,7 +33,7 @@
 			</ul>
 			{{end}}
 
-			{{ if ne .To.ID 0}}
+			{{if .To.ID}}
 			Aliased to:
 			<ul>
 				<li class="tag namespace-{{.To.Namespace}}">
@@ -90,6 +90,7 @@
 				<input type="text" class="stinput" name="parent">
 				<input type="submit">
 			</form>
+			{{if .To.ID}}
 			<form method="POST">
 				<p>Unalias</p>
 				<input type="hidden" name="action" value="unalias">
@@ -100,6 +101,7 @@
 				{{end}}
 				<input type="submit">
 			</form>
+			{{end}}
 
 			<script type="text/javascript" src="/static/suggestions.js"></script>
 		</div>

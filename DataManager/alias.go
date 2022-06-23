@@ -44,18 +44,16 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			return
 		}
 
-		updates := []func(*sql.Tx, *Tag, *Tag) error{
+		updates := []func(*sql.Tx, tagSet, *Tag) error{
 			updateDns,
 			updateAliases,
 			updateParents,
 		}
 
 		for _, f := range updates {
-			for _, tf := range from {
-				err = f(tx, tf, to[0])
-				if err != nil {
-					return
-				}
+			err = f(tx, from, to[0])
+			if err != nil {
+				return
 			}
 		}
 
@@ -414,94 +412,89 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 	return multiLogs, nil
 }
 
-func updateDns(tx *sql.Tx, to, from *Tag) error {
-	_, err := tx.Exec(`
+func updateDns(tx *sql.Tx, from tagSet, to *Tag) error {
+	stmt, err := tx.Prepare(`
 		UPDATE dns_tag_mapping
 		SET tag_id = $1
 		WHERE tag_id = $2
 		`,
-		to.ID,
-		from.ID,
 	)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
 
-	return err
+	for _, fromT := range from {
+		_, err = stmt.Exec(to.ID, fromT.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func updateAliases(tx *sql.Tx, from, to *Tag) error {
+func updateAliases(tx *sql.Tx, from tagSet, to *Tag) error {
 	// Update aliases
-	_, err := tx.Exec(`
+	stmt, err := tx.Prepare(`
 		UPDATE alias
 		SET alias_to = $1
 		WHERE alias_to = $2
 		`,
-		to.ID,
-		from.ID,
 	)
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
-	return err
+	for _, fromT := range from {
+		_, err = stmt.Exec(to.ID, fromT.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func updateParents(tx *sql.Tx, to, from *Tag) error {
-	_, err := tx.Exec(`
-		INSERT INTO parent_tags(
-			parent_id,
-			child_id
-		)
-		SELECT parent_id, $1
-		FROM parent_tags
-		WHERE child_id = $2
-		ON CONFLICT DO NOTHING
-		`,
+func updateParents(tx *sql.Tx, from tagSet, to *Tag) error {
+	froms := sep(",", len(from), from.strindex)
+	_, err := tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO parent_tags(
+				parent_id,
+				child_id
+			)
+			(
+				SELECT parent_id, $1
+				FROM parent_tags
+				WHERE child_id IN(%s)
+				UNION
+				SELECT $1, child_id
+				FROM parent_tags
+				WHERE parent_id IN(%s)
+			)
+			ON CONFLICT DO NOTHING
+			`,
+			froms,
+			froms,
+		),
 		to.ID,
-		from.ID,
-	)
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec(`
-		DELETE FROM parent_tags
-		WHERE child_id = $1
-		`,
-		from.ID,
 	)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(`
-		INSERT INTO parent_tags(
-			parent_id,
-			child_id
-		)
-		SELECT $1, child_id
-		FROM parent_tags
-		WHERE parent_id = $2
-		ON CONFLICT DO NOTHING
-		`,
-		to.ID,
-		from.ID,
-	)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`
-		DELETE FROM parent_tags
-		WHERE parent_id = $1
-		`,
-		from.ID,
-	)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`
-		DELETE FROM parent_tags
-		WHERE parent_id = child_id
-		`,
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			DELETE FROM parent_tags
+			WHERE parent_id = child_id
+			OR child_id IN(%s)
+			OR parent_id IN(%s)
+			`,
+			froms,
+			froms,
+		),
 	)
 
 	return err
