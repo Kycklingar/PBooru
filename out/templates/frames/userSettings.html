@@ -4,33 +4,25 @@
 		<label>Ipfs Gateway<br>
 			<input type="text" name="gateway" value="{{.Gateway}}">
 		</label>
-		<br>
 		<label>Posts Per Page</br>
 			<input type="text" name="limit" value="{{.Limit}}">
 		</label>
-		<br>
 		<label>Thumbnail Size</br>
 			<input type="text" name="thumbnail-size" value="{{.ThumbnailSize}}">
 		</label>
-		<br>
 		<label>Thumbnail Image Size</br>
 			<input type="text" name="real-thumbnail-size" title="0 clamps to thumbnail size" value="{{.RealThumbnailSize}}">
 		</label>
-		<br>
-		<br>
 		<div>
 			<label>Thumbnail preview on hover
 				<input type="checkbox" name="thumb-hover" {{if .ThumbHover}}checked{{end}}>
 			</label>
-			<br>
 			<div>
 				<label>└ Previews use full image (js)
 					<input type="checkbox" name="thumb-hover-full" {{if .ThumbHoverFull}}checked{{end}}>
 				</label>
 			</div>
 		</div>
-		<br>
-		<br>
 		<input type="submit">
 	</form>
 
