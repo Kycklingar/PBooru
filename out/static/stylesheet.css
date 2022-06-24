@@ -882,15 +882,48 @@ li
 	max-width: unset;
 }
 
+#post .identity,
+#post .metadata
+{
+	font-size: 0.75em;
+	font-family: mono;
+}
+
 #post .metadata
 {
 	float: right;
+	font-weight: bold;
 }
+
+#post .identity td,
+#post .identity th
+{
+	border: none;
+	padding: initial;
+	padding-right: 1em;
+	text-align: left;
+}
+
+#filenames
+{
+	display: inline-block;
+}
+
+#filenames ul
+{
+	margin: 0;
+}
+
 
 .description
 {
 	white-space: pre-wrap;
 	clear: both;
+}
+
+.spantop span
+{
+	vertical-align: top;
 }
 
 #commentlist li

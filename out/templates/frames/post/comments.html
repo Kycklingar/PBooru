@@ -6,8 +6,9 @@
 	<input class="center" type="submit" value="Publish Comment">
 </form>
 {{end}}
+{{with .Comments}}
 <ul id="commentlist">
-	{{range .Comments}}
+	{{range .}}
 	<li>
 		<div>
 			{{template "user-frame" .User}}
@@ -17,4 +18,5 @@
 	</li>
 	{{end}}
 </ul>
+{{end}}
 {{end}}

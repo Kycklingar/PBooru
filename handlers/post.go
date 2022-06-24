@@ -237,6 +237,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFRemoved,
 		DM.PFDeleted,
 		DM.PFSize,
+		DM.PFTimestamp,
 		DM.PFMime,
 		DM.PFDimension,
 		DM.PFThumbnails,

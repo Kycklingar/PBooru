@@ -20,6 +20,7 @@ import (
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
+	"github.com/kycklingar/PBooru/DataManager/timestamp"
 	"github.com/kycklingar/sqhell/cond"
 )
 
@@ -100,6 +101,7 @@ type Post struct {
 	Size       int64
 	Dimension  Dimension
 	Score      float64
+	Timestamp  timestamp.Timestamp
 
 	Checksums checksums
 
@@ -140,6 +142,7 @@ const (
 	PFSize
 	PFDimension
 	PFScore
+	PFTimestamp
 	PFChecksums
 	PFAlts
 	PFAltGroup
@@ -194,6 +197,8 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 		sel.Bind(&p.Size, "p.file_size", "")
 	case PFScore:
 		sel.Bind(&p.Score, "p.score / 1000.0", "")
+	case PFTimestamp:
+		sel.Bind(&p.Timestamp, "p.timestamp", "")
 	case PFAltGroup:
 		sel.Bind(&p.AltGroup, "p.alt_group", "")
 	case PFTombstone:

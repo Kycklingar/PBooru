@@ -184,19 +184,23 @@
 				<div class="metadata">
 					<div>{{.Post.Mime}}</div>
 					<div>{{.Post.SizePretty }}</div>
+					<div title="{{.Post.Timestamp.Elapsed}}">{{.Post.Timestamp}}</div>
 				</div>
-				<span><a href="/similar/?id={{.Post.ID}}">Find Similar</a></span>
-				<span><a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a></span>
-				{{with .Post.MetaData.filename}}
-				<details>
-					<summary>Filenames</summary>
-					<ul>
-					{{range .}}
-					<li><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></li>
+				<div class="spantop">
+					<span><a href="/similar/?id={{.Post.ID}}">Find Similar</a></span>
+					<span><a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a></span>
+					{{with .Post.MetaData.filename}}
+					<details id="filenames">
+						<summary>Filename</summary>
+						<ul>
+						{{range .}}
+						<li><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></li>
+						{{end}}
+						</ul>
+					</details>
 					{{end}}
-					</ul>
-				</details>
-				{{end}}
+				</div>
+				<br>
 				{{template "post-identity" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
 				{{with .Alts}}
 				<div class="cpage-container nolink">
