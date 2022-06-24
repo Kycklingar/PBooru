@@ -882,10 +882,26 @@ li
 	max-width: unset;
 }
 
-#post .description
+#post .metadata
+{
+	float: right;
+}
+
+.description
 {
 	white-space: pre-wrap;
 	clear: both;
+}
+
+#commentlist li
+{
+	margin-bottom: 1em;
+}
+
+#commentlist p
+{
+	margin-top: 0.5em;
+	margin-left: 2em;
 }
 
 #pageinator .current-page
@@ -1082,6 +1098,7 @@ li
 	min-height: 100px;
 	z-index:1;
 	overflow:auto;
+	clear:both;
 }
 
 .box .dns-card

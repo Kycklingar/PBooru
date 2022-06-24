@@ -2,8 +2,8 @@
 {{if .User.ID}}
 <form method="POST">
 	<input type="hidden" name="comment" value="true">
-	<textarea cols="20" rows="1" name="text"></textarea>
-	<input type="submit" value="Post Comment">
+	<textarea class="center" cols="40" rows="4" name="text"></textarea>
+	<input class="center" type="submit" value="Publish Comment">
 </form>
 {{end}}
 <ul id="commentlist">
@@ -13,9 +13,7 @@
 			{{template "user-frame" .User}}
 			<span title="{{.Time}}">{{.Time.Elapsed}}</span>
 		</div>
-		<div>
-			<p>{{noescape .Text}}</p>
-		</div>
+		<p>{{noescape .Text}}</p>
 	</li>
 	{{end}}
 </ul>

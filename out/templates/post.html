@@ -150,74 +150,82 @@
 			{{end}}
 		</div>
 	</div>
-	<div class="box" id="post">
-		{{if eq .Post.Mime.Type "image"}}
-		<div id="image">
-			<script>
-			function resize(caller){
-			    if (caller.style.maxWidth == "unset"){
-				caller.style.maxWidth = "100%";
-			    }else{
-				caller.style.maxWidth = "unset";
-			    }
-			}
-			</script>
-			<img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+	<div>
+		<div class="box" id="post">
+			{{if eq .Post.Mime.Type "image"}}
+			<div id="image">
+				<script>
+				function resize(caller){
+				    if (caller.style.maxWidth == "unset"){
+					caller.style.maxWidth = "100%";
+				    }else{
+					caller.style.maxWidth = "unset";
+				    }
+				}
+				</script>
+				<img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+				<div>
+					<b>
+						<a href="#fullsize">Fullsize</a>
+						<a href="#">Shrink to fit</a>
+					</b>
+				</div>
+			</div>
+			{{else if eq .Post.Mime.Type "video"}}
 			<div>
-				<b>
-					<a href="#fullsize">Fullsize</a>
-					<a href="#">Shrink to fit</a>
-				</b>
+				<video loop controls>
+					<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+				</video>
 			</div>
-		</div>
-		{{else if eq .Post.Mime.Type "video"}}
-		<div>
-			<video loop controls>
-				<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
-			</video>
-		</div>
-		{{else}}
-		<div>No Preview</div>
-		{{end}}
-		<details style="float:right">
-			<summary>Identity</summary>
-			{{template "post-identity" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
-		</details>
-		<div class="box">
-			<a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a>
-			<a href="/similar/?id={{.Post.ID}}">Find Similar</a>
-			{{with .Post.MetaData.filename}}
-			<details>
-				<summary>Filenames</summary>
-				{{range .}}
-				<div><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></div>
-				{{end}}
-			</details>
-			{{end}}
-			<div>{{.Post.Mime}}</div>
-			<div>{{.Post.SizePretty }}</div>
-			{{with .Alts}}
-			<div class="cpage-container nolink">
-				<a href="/posts/1/?alt-group={{$.Dupe.Post.AltGroup}}">
-					<div style="z-index:1001;" class="comic-thumb cover">
-						Browse all {{len $.Dupe.Post.Alts}} alts
-					</div>
-				</a>
-				{{template "post-cards" wrap2 "UserInfo" "Posts" $.UserInfo .}}
-			</div>
-			{{end}}
-			{{range .Dns}}
-			{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
-			{{end}}
-			{{template "post-description" .Post.Description}}
-
-			{{ if .Post.Removed }}
-			<div style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</div>
 			{{else}}
-			{{template "post-comments" wrap2 "User" "Comments" $.User .Comments}}
-			{{ end }}
-
+			<div>No Preview</div>
+			{{end}}
+			<div class="box">
+				<div class="metadata">
+					<div>{{.Post.Mime}}</div>
+					<div>{{.Post.SizePretty }}</div>
+				</div>
+				<span><a href="/similar/?id={{.Post.ID}}">Find Similar</a></span>
+				<span><a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a></span>
+				{{with .Post.MetaData.filename}}
+				<details>
+					<summary>Filenames</summary>
+					<ul>
+					{{range .}}
+					<li><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></li>
+					{{end}}
+					</ul>
+				</details>
+				{{end}}
+				{{template "post-identity" wrap2 "Post" "UserInfo" .Post $.UserInfo}}
+				{{with .Alts}}
+				<div class="cpage-container nolink">
+					<a href="/posts/1/?alt-group={{$.Dupe.Post.AltGroup}}">
+						<div style="z-index:1001;" class="comic-thumb cover">
+							Browse all {{len $.Dupe.Post.Alts}} alts
+						</div>
+					</a>
+					{{template "post-cards" wrap2 "UserInfo" "Posts" $.UserInfo .}}
+				</div>
+				{{end}}
+				{{range .Dns}}
+				{{template "dns-card" wrap2 "UserInfo" "Dns" $.UserInfo .}}
+				{{end}}
+				{{ if .Post.Removed }}
+				<div style="color:#A00; text-shadow:1px 1px #400;">This post has been removed from search results.</div>
+				{{ end }}
+			</div>
 		</div>
+		{{with .Post.Description}}
+		<div class="box">
+			{{template "post-description" .}}
+		</div>
+		{{end}}
+		{{if not .Post.Removed}}
+		<div class="box comments">
+			{{template "post-comments" wrap2 "User" "Comments" $.User .Comments}}
+		</div>
+		{{end}}
 	</div>
 </div>
 
