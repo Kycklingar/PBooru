@@ -1,90 +1,51 @@
 {{template "base"}}
-<style>
-.row {
-	display: flex;
-}
-
-.column {
-	flex: 50%;
-}
-
-.expander {
-	margin:1em;
-	width:100%;
-	min-width:20em;
-}
-.expander img {
-	background-color: black;
-	max-width:100%;
-}
-
-.resizable {
-	resize:both;
-	overflow:scroll;
-	min-width:400px;
-}
-
-.overflow {
-	overflow:auto;
-	white-space:nowrap;
-}
-
-textarea{
-	width:100%;
-	height:100%;
-	resize:none;
-}
-
-label{
-	display:block;
-}
-</style>
-
 <div class="row">
 	<form action="/post/edit/description/" method="POST">
-		<input type="hidden" name="post-id" value="{{.Post.ID}}">
-		<div class="box row resizable">
-			<div class="column overflow">
-				{{range .Tags}}
-				<div><span class="tag namespace-{{.Namespace}}">{{.}}</span></div>
-				{{end}}
+		<div id="post-editor" class="resizable-horizontal">
+			<input type="hidden" name="post-id" value="{{.Post.ID}}">
+			<div class="box row resizable-vertical">
+				<div class="column overflow">
+					{{range .Tags}}
+					<div><span class="tag namespace-{{.Namespace}}">{{.}}</span></div>
+					{{end}}
+				</div>
+				<input type="hidden" name="post-tags-diff" value="{{template "printTags" .Tags}}">
+				<div class="column">
+					<textarea class="stinput no-resize" name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
+					<script src="/static/suggestions.js"></script>
+				</div>
 			</div>
-			<input type="hidden" name="post-tags-diff" value="{{template "printTags" .Tags}}">
-			<div class="column">
-				<textarea class="stinput" name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
-				<script src="/static/suggestions.js"></script>
-			</div>
-		</div>
-		<div class="box">
-			<fieldset class="row">
-				<legend>Metadata</legend>
-				<fieldset class="column">
-					<legend>Add</legend>
-					<textarea name="post-metadata" wrap="off" placeholder="filename, source, date"></textarea>
-				</fieldset>
-				<fieldset class="column">
-					<legend>Remove</legend>
-					{{ range $k, $v := .Post.MetaData}}
-					<fieldset>
-						<legend>{{$k}}</legend>
-						{{range $v}}
-						<label>
-							<input type="checkbox" name="post-metadata-remove" value="{{.}}">
-							{{.Data}}
-						</label>
+			<div class="box">
+				<fieldset class="row">
+					<legend>Metadata</legend>
+					<fieldset class="column">
+						<legend>Add</legend>
+						<textarea class="vertical-resize" name="post-metadata" wrap="off" placeholder="filename, source, date"></textarea>
+					</fieldset>
+					<fieldset class="column">
+						<legend>Remove</legend>
+						{{ range $k, $v := .Post.MetaData}}
+						<fieldset>
+							<legend>{{$k}}</legend>
+							{{range $v}}
+							<label>
+								<input type="checkbox" name="post-metadata-remove" value="{{.}}">
+								<span title="{{.Data}}">{{.Data}}</span>
+							</label>
+							{{end}}
+						</fieldset>
 						{{end}}
 					</fieldset>
-					{{end}}
 				</fieldset>
-			</fieldset>
-			<fieldset>
-				<legend>Description</legend>
-				<input type="hidden" name="post-description-diff" value="{{.Post.Description}}">
-				<textarea name="post-description" style="resize:vertical">{{.Post.Description}}</textarea>
-			</fieldset>
-		</div>
-		<div class="box">
-			<input type="submit" value="GoGoGo" class="center">
+				<fieldset>
+					<legend>Description</legend>
+					<input type="hidden" name="post-description-diff" value="{{.Post.Description}}">
+					<textarea class="vertical-resize" name="post-description">{{.Post.Description}}</textarea>
+				</fieldset>
+			</div>
+			<div class="box">
+				<input type="submit" value="GoGoGo" class="center">
+			</div>
 		</div>
 	</form>
 	<div class="expander">

@@ -176,15 +176,56 @@ li
 	max-width:100%;
 }
 
-.resizable {
-	resize:both;
-	overflow:scroll;
-	min-width:400px;
+.resizable-vertical {
+	resize: vertical;
+	overflow: scroll;
+}
+
+.resizable-horizontal
+{
+	resize: horizontal;
+	overflow: scroll;
 }
 
 .overflow {
 	overflow:auto;
 	white-space:nowrap;
+}
+
+.no-resize
+{
+	resize: none;
+}
+
+.vertical-resize
+{
+	resize: vertical;
+}
+
+#post-editor
+{
+	min-width: 30em;
+}
+
+#post-editor fieldset
+{
+	overflow: hidden;
+	min-width: auto;
+}
+
+#post-editor label
+{
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+
+#post-editor textarea
+{
+	width: 100%;
+	height: 100%;
 }
 
 .separator
