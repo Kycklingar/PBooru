@@ -332,17 +332,29 @@ li
 {
 	background-color: yellowgreen;
 	color: black;
+	font-weight: bold;
+	padding: 0.1em;
 }
 
 .log .action-modify
 {
 	background-color: goldenrod;
 	color: black;
+	font-weight: bold;
+	padding: 0.1em;
 }
 
 .log .action-delete
 {
 	background-color: #f0362d;
+	color: black;
+	font-weight: bold;
+	padding: 0.1em;
+}
+
+.log .action-create:any-link,
+.log .action-delete:any-link
+{
 	color: black;
 }
 
@@ -956,7 +968,7 @@ li
 }
 
 
-.description
+#post .description
 {
 	white-space: pre-wrap;
 	clear: both;

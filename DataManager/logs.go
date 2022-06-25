@@ -108,7 +108,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 			cond.N(`
 			LEFT JOIN log_chapters lcc
 			ON l.log_id = lcc.log_id
-			LEFT JOIN log_comic_page lcp
+			LEFT JOIN view_log_comic_page_diff lcp
 			ON l.log_id = lcp.log_id
 			`,
 			),
@@ -116,7 +116,7 @@ func SearchLogs(opts LogSearchOptions) ([]Log, int, error) {
 		where.Add("\nAND",
 			new(cond.Group).
 				Add("", cond.O{S: "lcc.chapter_id = $%d", I: &o}).
-				Add(" OR", cond.O{S: "lcp.chapter_id = $%d", I: &o}),
+				Add(" OR", cond.O{S: "$%d IN(lcp.chapter_id, lcp.old_chapter_id)", I: &o}),
 		)
 		v = append(v, opts.CatVal)
 	case LogCatComicPage:

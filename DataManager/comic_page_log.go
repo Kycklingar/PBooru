@@ -64,18 +64,10 @@ func (l logComicPage) log(logID int, tx *sql.Tx) error {
 
 func getLogComicPage(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT p1.action, p1.comic_page_id, p1.chapter_id, p1.post_id, p1.page,
-			p2.post_id, p2.page
-		FROM log_comic_page p1
-		LEFT JOIN log_comic_page p2
-		ON p1.comic_page_id = p2.comic_page_id
-		AND p2.log_id = (
-			SELECT MAX(log_id)
-			FROM log_comic_page
-			WHERE log_id < p1.log_id
-			AND comic_page_id = p1.comic_page_id
-		)
-		WHERE p1.log_id = $1
+		SELECT action, comic_page_id, chapter_id, post_id, page,
+			old_chapter_id, old_post_id, old_page
+		FROM view_log_comic_page_diff
+		WHERE log_id = $1
 		`,
 		log.ID,
 	)
@@ -86,9 +78,10 @@ func getLogComicPage(log *Log, q querier) error {
 
 	for rows.Next() {
 		var (
-			lcp        logComicPage
-			diffPostID sql.NullInt32
-			diffPage   sql.NullInt32
+			lcp           logComicPage
+			diffChapterID sql.NullInt32
+			diffPostID    sql.NullInt32
+			diffPage      sql.NullInt32
 		)
 
 		lcp.Post = NewPost()
@@ -99,6 +92,7 @@ func getLogComicPage(log *Log, q querier) error {
 			&lcp.ChapterID,
 			&lcp.Post.ID,
 			&lcp.Page,
+			&diffChapterID,
 			&diffPostID,
 			&diffPage,
 		)
@@ -112,6 +106,7 @@ func getLogComicPage(log *Log, q querier) error {
 				Page: int(diffPage.Int32),
 			}
 			lcp.Diff.Post.ID = int(diffPostID.Int32)
+			lcp.Diff.ChapterID = int(diffChapterID.Int32)
 		}
 
 		log.ComicPages = append(log.ComicPages, lcp)

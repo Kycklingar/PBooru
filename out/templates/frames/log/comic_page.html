@@ -18,16 +18,31 @@
 			<th class="action-{{.Action}}" colspan="2">{{.Action}}</th>
 		</tr>
 		<tr>
-			<th>Chapter ID</th>
-			<td><a href="/spine/chapter/{{.ChapterID}}">{{.ChapterID}}</a></td>
-		</tr>
-		<tr>
 			<th>Page ID</th>
 			<td><a href="/spine/comicpage/{{.ID}}">{{.ID}}</a></td>
 		</tr>
 		<tr>
+			<th>Chapter ID</th>
+			<td>
+				{{if and .Diff (ne .ChapterID .Diff.ChapterID) -}}
+				<a class="action-delete" href="/spine/chapter/{{.Diff.ChapterID}}">{{.Diff.ChapterID}}</a> -&gt;
+				<a class="action-create" href="/spine/chapter/{{.ChapterID}}">{{.ChapterID}}</a>
+				{{else}}
+				<a href="/spine/chapter/{{.ChapterID}}">{{.ChapterID}}</a>
+				{{end}}
+			</td>
+		</tr>
+		<tr>
 			<th>Page</th>
-			<td>{{if .Diff}}{{if ne .Page .Diff.Page}}{{.Diff.Page}} -> {{end}}{{end}}{{.Page}}</td>
+			<td>
+				{{if and .Diff (ne .Page .Diff.Page)}}
+				<span class="action-delete">{{.Diff.Page}}</span>
+				<span>-&gt;</span>
+				<span class="action-create">{{.Page}}</span>
+				{{else}}
+				{{.Page}}
+				{{end}}
+			</td>
 		</tr>
 	</table>
 </div>
