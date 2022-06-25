@@ -60,16 +60,35 @@ type User struct {
 type flag int
 
 const (
-	flagTagging = 1
-	flagUpload  = 2
-	flagComics  = 4
-	flagBanning = 8
-	flagDelete  = 16
-	flagTags    = 32
-	flagSpecial = 64
+	flagTagging = 0x1
+	flagUpload  = 0x2
+	flagComics  = 0x4
+	flagBanning = 0x8
+	flagDelete  = 0x10
+	flagTags    = 0x20
+	flagSpecial = 0x40
 
 	flagAll = 0xff
 )
+
+type flagstr struct {
+	f   flag
+	str string
+}
+
+func (f flagstr) String() string {
+	return f.str
+}
+
+var flagstrs = []flagstr{
+	flagstr{flagSpecial, "Admin"},
+	flagstr{flagBanning, "Banning"},
+	flagstr{flagDelete, "Delete"},
+	flagstr{flagTags, "Tags"},
+	flagstr{flagComics, "Comics"},
+	flagstr{flagUpload, "Upload"},
+	flagstr{flagTagging, "Tagging"},
+}
 
 func (f flag) Tagging() bool {
 	return f&flagTagging != 0
@@ -99,6 +118,17 @@ func (f flag) Special() bool {
 	return f&flagSpecial != 0
 }
 
+func (f flag) flags() []flagstr {
+	var flags []flagstr
+	for _, flag := range flagstrs {
+		if f&flag.f != 0 {
+			flags = append(flags, flag)
+		}
+	}
+
+	return flags
+}
+
 func (u *User) QID(q querier) int {
 	if u.ID != 0 {
 		return u.ID
@@ -117,7 +147,7 @@ func (u *User) QID(q querier) int {
 }
 
 func (u *User) Title() string {
-	ec := u.tagEditCount(DB)
+	ec := u.logCount(DB)
 	var title string
 	switch {
 	case ec > 100000:
@@ -135,12 +165,17 @@ func (u *User) Title() string {
 	return title
 }
 
-func (u *User) tagEditCount(q querier) int {
+func (u *User) logCount(q querier) int {
 	if u.editCount != nil {
 		return *u.editCount
 	}
 	u.editCount = new(int)
-	err := q.QueryRow("SELECT count(*) FROM tag_history th JOIN edited_tags et ON th.id = et.history_id WHERE th.user_id = $1", u.QID(q)).Scan(u.editCount)
+	err := q.QueryRow(`
+		SELECT count(*)
+		FROM logs
+		WHERE user_id = $1`,
+		u.QID(q),
+	).Scan(u.editCount)
 	if err != nil {
 		log.Println(err)
 		return 0
@@ -205,6 +240,10 @@ func (u *User) QName(q querier) string {
 
 func (u *User) SetName(name string) {
 	u.Name = name
+}
+
+func (u User) Flags() []flagstr {
+	return u.flag.flags()
 }
 
 func (u *User) Flag() flag {

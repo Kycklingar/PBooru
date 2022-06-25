@@ -1005,20 +1005,39 @@ li
 	text-decoration: none;
 }
 
-.user-subtitle
+#profile>div
+{
+	margin: 1em;
+}
+
+#profile div a
+{
+	font-weight: bold;
+}
+
+.profile-name
+{
+	font-size: 1.5em;
+	font-weight: bold;
+}
+
+.profile-subtitle
 {
 	font-size: 0.7em;
 	color: grey;
 	text-shadow: 1px 1px 1px black;
 }
 
-.privileges p
-{
-	text-shadow:2px 2px 2px black;
-	display:inline;
+.privileges {
+	margin: 1em;
 }
 
-.privileges .p-special
+.privileges span
+{
+	text-shadow: 2px 2px 2px black;
+}
+
+.privileges .flag-admin
 {
 	color:#ff2d2d;
 }

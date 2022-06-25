@@ -2,64 +2,47 @@
 
 <div class="box">
 	{{if .Profile.ID}}
-		<div id="profile-id">
-			<h2>{{.Profile.Name}} <span class="user-subtitle">{{.Profile.Title}}</span></h2>
-			<div class="privileges">
-				<h4>Privileges</h4>
-			{{if .Profile.Flag.Special}}
-				<p class="p-special">Admin</p>
-			{{end}}
-			{{if .Profile.Flag.Tagging}}
-				<p class="p-tagging">Tagging</p>
-			{{end}}
-			{{if .Profile.Flag.Upload}}
-				<p class="p-upload">Upload</p>
-			{{end}}
-			{{if .Profile.Flag.Comics}}
-				<p class="p-comics">Comics</p>
-			{{end}}
-			{{if .Profile.Flag.Banning}}
-				<p class="p-banning">Banning</p>
-			{{end}}
-			{{if .Profile.Flag.Delete}}
-				<p class="p-delete">Delete</p>
-			{{end}}
-			{{if .Profile.Flag.Tags}}
-				<p class="p-tags">Tags</p>
+	<div id="profile">
+		<span class="profile-name">
+			{{.Profile.Name}} <span class="profile-subtitle">{{.Profile.Title}}</span>
+		</span>
+		<div class="privileges">
+			{{range .Profile.Flags}}
+			<span class="flag-{{.}}">{{.}}</span>
 			{{end}}
 
 			{{if .User.Flag.Special}}
-				<h4>Upgrade User</h4>
-				<form action="/user/edit/flag/" method="POST">
-					<input type="hidden" name="user-id" value="{{.Profile.ID}}">
-					<input type="text" name="flag" placeholder="{{.Profile.Flag}}">
-					<input type="submit">
-				</form>
+			<h4>Upgrade User</h4>
+			<form action="/user/edit/flag/" method="POST">
+				<input type="hidden" name="user-id" value="{{.Profile.ID}}">
+				<input type="text" name="flag" placeholder="{{.Profile.Flag}}">
+				<input type="submit">
+			</form>
 			{{end}}
+		</div>
+		<div>
 			{{if .User.ID}}
 			{{if ne .User.ID .Profile.ID}}
 			<div>
-				<h3><a href="/user/message/new/?recipient={{.Profile.ID}}">Send Message</a></h3>
+				<a href="/user/message/new/?recipient={{.Profile.ID}}">Send Message</a>
 			</div>
 			{{else}}
 			<div>
-				<h3><a href="/user/messages/new/">Messages ({{.NewMessages}})</a></h3>
+				<a href="/user/messages/new/">Messages ({{.NewMessages}})</a>
 			</div>
 			{{end}}
 			{{end}}
-			</div>
 		</div>
-
 		<div>
-			<h3><a href="/user/pools/{{.Profile.ID}}">Pools</a></h3>
+			<a href="/user/pools/{{.Profile.ID}}">Pools</a>
 		</div>
 
 		{{with .RecentPosts}}
 		<div>
-			<h4>Recent uploads</h4>
+			<div>Recent uploads</div>
 			<div class="comic-strip">
 				{{range .}}
-					{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+				{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
 				{{end}}
 			</div>
 		</div>
@@ -67,36 +50,33 @@
 
 		{{with .RecentVotes}}
 		<div>
-			<h4>Recent votes</h4>
+			<div>Recent votes</div>
 			<div class="comic-strip">
 				{{range .}}
-					{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+				{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
 				{{end}}
 			</div>
 		</div>
 		{{end}}
-
-		<p><a href="/user/taghistory/{{.Profile.ID}}/">Tag history</a></p>
+		<div>
+			<a href="/spine/?user={{.Profile.ID}}">Logs</a>
+		</div>
+	</div>
 
 	{{else if .User.ID}}
-		No user by that ID
-	{{end}}
-	{{define "login-panel"}}
-		{{if .ID}}
-			<h2><a href="/logout/">Logout</a></h2>
-			<h3><a href="/login/">Sessions</a></h3>
-		{{else}}
-			<h2><a href="/login/">Login</a></h2>
-			<h2><a href="/register/">Register</a></h2>
-		{{end}}
+	No user by that ID
 	{{end}}
 
 	{{if eq .User.ID .Profile.ID}}
-		{{template "login-panel" .User}}
-	{{else}}
-		</div>
-		<div class="box">
-		{{template "login-panel" .User}}
+	<div>
+		{{if .User.ID}}
+		<div><a href="/login/">Sessions</a></div>
+		<div><a href="/logout/">Logout</a></div>
+		{{else}}
+		<div><a href="/login/">Login</a></div>
+		<div><a href="/register/">Register</a></div>
+		{{end}}
+	</div>
 	{{end}}
 </div>
 {{template "baseEnd"}}
