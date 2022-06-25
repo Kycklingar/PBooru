@@ -127,7 +127,7 @@ func insertTombstones(tombs []Tombstone) error {
 			t.E6id,
 			t.Md5,
 			t.Reason,
-			*t.Removed.Time(),
+			t.Removed.Time(),
 		); err != nil {
 			return err
 		}

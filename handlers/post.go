@@ -773,6 +773,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFHash,
 				DM.PFMime,
 				DM.PFScore,
+				DM.PFTimestamp,
 				DM.PFThumbnails,
 				DM.PFAlts,
 				DM.PFAltGroup,
@@ -783,6 +784,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFHash,
 				DM.PFMime,
 				DM.PFScore,
+				DM.PFTimestamp,
 				DM.PFThumbnails,
 			)
 		}

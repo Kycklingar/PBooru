@@ -85,7 +85,7 @@ func CommentWallHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func canEditComment(min time.Duration, user *DM.User, c *DM.Comment) bool {
-	return user.ID > 0 && (user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(*c.Time.Time()) < time.Minute*min))
+	return user.ID > 0 && (user.QFlag(DM.DB).Special() || (c.User.ID == user.ID && time.Now().Sub(c.Time.Time()) < time.Minute*min))
 }
 
 func editCommentHandler(w http.ResponseWriter, r *http.Request) {

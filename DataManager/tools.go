@@ -856,7 +856,7 @@ func UpdateTombstone(filep string) error {
 			}
 		}
 
-		var ts = timestamp.FromTime(&t)
+		var ts = timestamp.Timestamp(t)
 
 		var tomb = Tombstone{
 			E6id:    id,

@@ -17,40 +17,46 @@ const (
 	year  = month * 12
 )
 
-func FromTime(t *time.Time) Timestamp { return Timestamp{t} }
+//func FromTime(t *time.Time) Timestamp { return Timestamp{t} }
 
-type Timestamp struct {
-	time *time.Time
-}
+type Timestamp time.Time
 
-func (t Timestamp) Time() *time.Time {
-	return t.time
+//type Timestamp struct {
+//	time *time.Time
+//}
+
+func (t Timestamp) Time() time.Time {
+	return time.Time(t)
 }
 
 func (t Timestamp) String() string {
-	if t.time != nil {
-		return t.time.Format(displayTimestamp)
+	if t.Time().IsZero() {
+		return ""
 	}
-	return ""
+
+	return t.Time().Format(displayTimestamp)
 }
 
-func (t *Timestamp) Scan(data interface{}) error {
-	var err error
+func (t *Timestamp) Scan(data interface{}) (err error) {
 	switch v := data.(type) {
 	case nil:
 	case time.Time:
-		t.time = &v
+		*t = Timestamp(v)
 	default:
 		err = fmt.Errorf("timestamp incorrect type %v", data)
 	}
 
-	return err
+	return
 }
 
-func (t *Timestamp) Elapsed() string {
+func (t Timestamp) Elapsed() string {
+	if t.Time().IsZero() {
+		return "~"
+	}
+
 	var elapsed string
 
-	e := time.Since(*t.time)
+	e := time.Since(t.Time())
 
 	type u struct {
 		d time.Duration
