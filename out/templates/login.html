@@ -24,14 +24,14 @@
 {{else}}
 	<h2>Login</h2>
 	<form method="post">
-	        <label for="username">Username</label><br>
-	        <input id="username" type="text" name="username"><br>
-	        <label for="password">Password</label><br>
-	        <input id="password" type="password" name="password"><br>
-	        <label for="captcha">Captcha</label><br>
-	        <img style="background-color:white;" src="/captcha/{{ .Key }}.png"><br>
+	        <label for="username">Username</label>
+	        <input id="username" type="text" name="username">
+	        <label for="password">Password</label>
+	        <input id="password" type="password" name="password">
+	        <label for="captcha">Captcha</label>
+	        <img style="background-color:white;" src="/captcha/{{ .Key }}.png">
 	        <input type="hidden" name="key" value="{{ .Key }}"><br>
-	        <input id="captcha" type="text" name="code"><br>
+	        <input id="captcha" type="text" name="code">
 	        <input type="submit" value="Login">
 	</form>
 	<style>

@@ -3,15 +3,15 @@
 	<h2>Register</h2>
 
 	<form method="post">
-	    <label for="username">Username</label><br>
-	    <input type="text" name="username"><br>
-	    <label for="password">Password</label><br>
-	    <input type="password" name="password"><br>
-	    <label for="password-verify">Verify password</label><br>
-	    <input type="password" name="password-verify"><br>
-	    <label for="captcha">Captcha</label><br>
+	    <label for="username">Username</label>
+	    <input type="text" name="username">
+	    <label for="password">Password</label>
+	    <input type="password" name="password">
+	    <label for="password-verify">Verify password</label>
+	    <input type="password" name="password-verify">
+	    <label for="captcha">Captcha</label>
 	    <img style="background-color:white;" src="/captcha/{{ . }}.png"><br>
-	    <input type="hidden" name="key" value="{{ . }}"><br>
+	    <input type="hidden" name="key" value="{{ . }}">
 	    <input id="captcha" type="text" name="code"><br>
 	    <input type="submit" value="Register">
 	</form>
