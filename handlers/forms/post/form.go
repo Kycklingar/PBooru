@@ -27,12 +27,22 @@ func ProcessFormData(ua *DM.UserActions, form url.Values) error {
 
 	meta := form.Get(metadata)
 	if len(meta) > 0 {
-		ua.Add(DM.PostAddMetaData(postID, meta)...)
+		metalogs, err := DM.PostAddMetaData(postID, meta)
+		if err != nil {
+			return err
+		}
+
+		ua.Add(metalogs...)
 	}
 
 	metaRem := form[metadataRemove]
 	if len(metaRem) > 0 {
-		ua.Add(DM.PostRemoveMetaData(postID, metaRem)...)
+		metalogs, err := DM.PostRemoveMetaData(postID, metaRem)
+		if err != nil {
+			return err
+		}
+
+		ua.Add(metalogs...)
 	}
 
 	descr := form.Get(description)

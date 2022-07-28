@@ -1,7 +1,7 @@
 package DataManager
 
 import (
-	"log"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -14,40 +14,53 @@ type MetaData interface {
 	value() interface{}
 }
 
-func parseMetaDataString(metaStr string) []MetaData {
+func parseMetaDataString(metaStr string) ([]MetaData, error) {
 	var retu []MetaData
 
 	for _, m := range strings.Split(metaStr, "\n") {
-		if md := parseMetaData(m); md != nil {
+		md, err := parseMetaData(m)
+		if err != nil {
+			return nil, err
+		}
+
+		if md != nil {
 			retu = append(retu, md)
 		}
 	}
 
-	return retu
+	return retu, nil
 }
 
-func parseMetaData(mstr string) MetaData {
+func parsePartialDate(format, date string) (time.Time, error) {
+	var l = len(date)
+	if l > len(format) || l < 4 {
+		return time.Time{}, fmt.Errorf("invalid date: %s, expected form is 2022-07-28", date)
+	}
+
+	return time.Parse(format[:l], date)
+}
+
+func parseMetaData(mstr string) (MetaData, error) {
 	data := strings.SplitN(strings.TrimSpace(mstr), ":", 2)
 	if len(data) < 2 {
-		return nil
+		return nil, nil
 	}
 
 	namespace, value := data[0], data[1]
 
 	if namespace == "date" {
-		t, err := time.Parse(iso8601, value)
+		t, err := parsePartialDate(iso8601, value)
 		if err != nil {
-			log.Println(err)
-			return nil
+			return nil, err
 		}
 
-		return metaDate(t)
+		return metaDate(t), nil
 	}
 
 	return metadata{
 		namespace: data[0],
 		data:      data[1],
-	}
+	}, nil
 }
 
 type metadata struct {

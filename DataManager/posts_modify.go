@@ -5,10 +5,14 @@ import (
 	"log"
 )
 
-func PostAddMetaData(postID int, metaStr string) []loggingAction {
+func PostAddMetaData(postID int, metaStr string) ([]loggingAction, error) {
 	var acts []loggingAction
+	mds, err := parseMetaDataString(metaStr)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, md := range parseMetaDataString(metaStr) {
+	for _, md := range mds {
 		switch md.Namespace() {
 		case "date":
 			acts = append(acts, postAddCreationDate(postID, md))
@@ -17,14 +21,18 @@ func PostAddMetaData(postID int, metaStr string) []loggingAction {
 		}
 	}
 
-	return acts
+	return acts, nil
 }
 
-func PostRemoveMetaData(postID int, metaDataStrings []string) []loggingAction {
+func PostRemoveMetaData(postID int, metaDataStrings []string) ([]loggingAction, error) {
 	var acts []loggingAction
 
 	for _, mds := range metaDataStrings {
-		if md := parseMetaData(mds); md != nil {
+		md, err := parseMetaData(mds)
+		if err != nil {
+			return nil, err
+		}
+		if md != nil {
 			switch md.Namespace() {
 			case "date":
 				acts = append(acts, postRemoveCreationDate(postID, md))
@@ -32,10 +40,10 @@ func PostRemoveMetaData(postID int, metaDataStrings []string) []loggingAction {
 				acts = append(acts, postRemoveMetaData(postID, md))
 			}
 		}
+
 	}
 
-	return acts
-
+	return acts, nil
 }
 
 func postAddCreationDate(postID int, md MetaData) loggingAction {

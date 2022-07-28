@@ -680,7 +680,11 @@ func CreatePost(file io.ReadSeeker, user *User, ud UploadData) (*Post, error) {
 
 	ua := UserAction(user)
 	ua.Add(AlterPostTags(d.Post.ID, ud.TagStr, ""))
-	ua.Add(PostAddMetaData(d.Post.ID, ud.MetaData)...)
+	metalogs, err := PostAddMetaData(d.Post.ID, ud.MetaData)
+	if err != nil {
+		return nil, err
+	}
+	ua.Add(metalogs...)
 
 	if ud.Description != "" {
 		// Add description only if none exists already
