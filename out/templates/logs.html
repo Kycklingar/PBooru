@@ -56,10 +56,10 @@
 	{{end}}
 	{{end}}
 	{{range .Alts}}
-		<span class="box inline">
-		<span>Assigned alts</span>
+		<div class="box">
+		<div>Assigned alts</div>
 		{{template "thumbnail-cards" wrap2 "Posts" "UserInfo" .Posts $.UserInfo}}
-		</span>
+		</div>
 	{{end}}
 </div>
 {{end}}

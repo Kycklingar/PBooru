@@ -474,6 +474,7 @@ li
     margin:1em;
     position:relative;
     padding;1em;
+    overflow: auto;
 }
 
 .cpage-container img
