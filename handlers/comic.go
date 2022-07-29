@@ -290,7 +290,7 @@ func editComicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprintf("/comic/%d/", comicID))
+	toRefOrBackup(w, r, fmt.Sprintf("/comic/%d/", comicID))
 }
 
 func deleteComicHandler(w http.ResponseWriter, r *http.Request) {
@@ -312,7 +312,7 @@ func deleteComicHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, "OK")
+	http.Redirect(w, r, "/comics/", http.StatusSeeOther)
 }
 
 func addChapterHandler(w http.ResponseWriter, r *http.Request) {

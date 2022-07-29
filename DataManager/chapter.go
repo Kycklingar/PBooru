@@ -214,7 +214,7 @@ func EditChapter(chapterID, order int, title string) loggingAction {
 	}
 }
 
-func DeleteChapter(chapterID int) loggingAction {
+func DeleteChapter(chapterID int, comicID *int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		// Remove all comic pages
 		rows, err := tx.Query(`
@@ -265,6 +265,8 @@ func DeleteChapter(chapterID int) loggingAction {
 		if err != nil {
 			return
 		}
+
+		*comicID = lc.ComicID
 
 		l.addTable(lChapter)
 		if len(lc.pages) > 0 {

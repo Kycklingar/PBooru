@@ -110,7 +110,7 @@ func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, "OK")
+	toRefOrOK(w, r, "Pages shifted successfully!")
 }
 
 func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,15 +126,15 @@ func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var comicID int
 	ua := DM.UserAction(user)
-	ua.Add(DM.DeleteChapter(chapterID))
+	ua.Add(DM.DeleteChapter(chapterID, &comicID))
 	err = ua.Exec()
 	if internalError(w, err) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	http.Redirect(w, r, fmt.Sprintf("/comic/%d/", comicID), http.StatusSeeOther)
 }
 
 func addComicPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,8 +163,7 @@ func addComicPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	toRefOrOK(w, r, "Comic page has been added")
 }
 
 func editComicPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,8 +193,7 @@ func editComicPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	toRefOrOK(w, r, "Comic page has been edited")
 }
 
 func deleteComicPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +216,5 @@ func deleteComicPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	toRefOrOK(w, r, "Comic page has been deleted")
 }

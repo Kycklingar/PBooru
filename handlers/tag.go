@@ -147,6 +147,8 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		ua.Add(DM.UnaliasTags(from))
 	case "parent":
 		ua.Add(DM.ParentTags(children, parents))
+		//case "unparent":
+		//	ua.Add(DM.UnparentTags(children, parents))
 	}
 
 	err := ua.Exec()

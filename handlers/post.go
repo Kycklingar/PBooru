@@ -399,7 +399,7 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprintf("/post/%d/", pids[0]))
+	toRefOrBackup(w, r, fmt.Sprintf("/post/%d/", pids[0]))
 }
 
 func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
@@ -434,7 +434,7 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprintf("/post/%d/", pids[0]))
+	toRefOrBackup(w, r, fmt.Sprintf("/post/%d/", pids[0]))
 
 }
 
@@ -906,12 +906,12 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// FIXME
-		//if len(r.FormValue("chapter-id")) > 0 {
-		//	r.Form.Add("post-id", strconv.Itoa(post.ID))
-		//	r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
-		//	comicAddPageHandler(w, r)
-		//	return
-		//}
+		if len(r.FormValue("chapter-id")) > 0 {
+			r.Form.Add("post-id", strconv.Itoa(post.ID))
+			r.Header.Set("Referer", fmt.Sprintf("/post/%d", post.ID))
+			addComicPageHandler(w, r)
+			return
+		}
 
 		http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusSeeOther)
 
@@ -1157,7 +1157,7 @@ func postModifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectToReferer(w, r, fmt.Sprint("/post/edit/", r.Form.Get("post-id")))
+	toRefOrBackup(w, r, fmt.Sprint("/post/edit/", r.Form.Get("post-id")))
 }
 
 func PostEditHandler(w http.ResponseWriter, r *http.Request) {
