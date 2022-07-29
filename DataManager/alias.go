@@ -34,7 +34,7 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		if err != nil {
 			return
 		}
-		err = to.chain().save(tx).err
+		err = to.chain().save(tx).aliases(tx).err
 		if err != nil {
 			return
 		}
