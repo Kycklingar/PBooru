@@ -334,6 +334,7 @@ li
 	color: black;
 	font-weight: bold;
 	padding: 0.1em;
+	user-select: none;
 }
 
 .log .action-modify
@@ -342,6 +343,7 @@ li
 	color: black;
 	font-weight: bold;
 	padding: 0.1em;
+	user-select: none;
 }
 
 .log .action-delete
@@ -350,6 +352,7 @@ li
 	color: black;
 	font-weight: bold;
 	padding: 0.1em;
+	user-select: none;
 }
 
 .log .action-create:any-link,
