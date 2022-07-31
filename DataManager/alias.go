@@ -39,6 +39,12 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			return
 		}
 
+		from = from.diffID(to)
+		if len(from) < 1 {
+			err = errors.New("nothing to alias from")
+			return
+		}
+
 		multiLogs, err := updatePtm(tx, from, to[0])
 		if err != nil {
 			return
