@@ -361,6 +361,18 @@ li
 	color: black;
 }
 
+.log .post
+{
+	border-radius: 1em;
+	border: 4px grey ridge;
+	padding: 1em;
+	background-color: #0014;
+}
+.log .post table
+{
+	vertical-align: top;
+}
+
 /*---------- COMICS ---------*/
 
 .comics

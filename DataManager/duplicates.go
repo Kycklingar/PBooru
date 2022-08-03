@@ -4,11 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
-
-	c "github.com/kycklingar/PBooru/DataManager/cache"
 )
 
 type Dupe struct {
@@ -58,161 +55,83 @@ func getDupeFromPost(q querier, p *Post) (Dupe, error) {
 	return dup, nil
 }
 
+type dupeProcedures func(*sql.Tx, *Dupe) error
+
+func dprocUAWrap(f func(*sql.Tx, *Dupe, *UserActions) error, ua *UserActions) dupeProcedures {
+	return func(tx *sql.Tx, dupe *Dupe) error {
+		return f(tx, dupe, ua)
+	}
+}
+
 func AssignDuplicates(dupe Dupe, user *User) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	var a func() error
-	a = tx.Rollback
-
-	defer func() {
-		if err := a(); err != nil {
-			log.Println(err)
-		}
-	}()
+	defer commitOrDie(tx, &err)
 
 	ua := UserAction(user)
 
-	// Update alternatives
-	// must happen before dupe updates
-	if err = updateAlts(tx, dupe, ua); err != nil {
-		log.Println(err)
-		return err
+	var procedures = []dupeProcedures{
+		upgradeDupe,
+		conflicts,
+		updateDupes,
+		insertDupes,
+		dprocUAWrap(updateAlts, ua),
+		dprocUAWrap(moveTags, ua),
+		dprocUAWrap(moveMetadata, ua),
+		dprocUAWrap(moveDescription, ua),
+		dprocUAWrap(replaceComicPages, ua),
+		moveVotes,
+		moveViews,
+		movePoolPosts,
+		removeInferiors,
+		updateAppleTrees,
+		updateDupeReports,
 	}
 
-	// Handle conflicts
-	if err = conflicts(tx, dupe); err != nil {
-		return err
-	}
-
-	dup, err := getDupeFromPost(tx, dupe.Post)
-	if err != nil {
-		return err
-	}
-
-	dupe.Post = dup.Post
-
-	if err = updateDupes(tx, dupe); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	var values string
-	for _, p := range dupe.Inferior {
-		if values != "" {
-			values += ","
-		}
-		values += fmt.Sprintf("(%d, %d)", dupe.Post.ID, p.ID)
-	}
-
-	var query = fmt.Sprint("INSERT INTO duplicates(post_id, dup_id) VALUES", values)
-	_, err = tx.Exec(query)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Find tags in common to superior
-	var cmnTags map[int]int
-	cmnTags, err = commonTags(tx, dupe)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// For each inferior post, move tags to superior
-	if err = moveTags(tx, dupe, ua); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Recount common tags
-	for k, v := range cmnTags {
-		if v >= 1 {
-			var tag = &Tag{ID: k}
-			tag.updateCount(tx, -v)
-		}
-	}
-
-	// Move metadata
-	if err = moveMetadata(tx, dupe, ua); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Move description
-	if err = moveDescription(tx, dupe, ua); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Replace comics with new post
-	if err = replaceComicPages(tx, dupe, ua); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Move votes to the new post
-	if err = moveVotes(tx, dupe); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Move views
-	if err = moveViews(tx, dupe); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	// Move user pool posts
-	if err = movePoolPosts(tx, dupe); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	for _, p := range dupe.Inferior {
-		if err = p.Remove(tx); err != nil {
-			log.Println(err)
+	for _, proc := range procedures {
+		err = proc(tx, &dupe)
+		if err != nil {
 			return err
 		}
 	}
 
-	// TODO
-	// Move post descriptions and comments
+	err = ua.Exec()
 
-	// Update apple trees
-	if err = updateAppleTrees(tx, dupe); err != nil {
-		log.Println(err)
-		return err
+	return err
+}
+
+func insertDupes(tx *sql.Tx, dupe *Dupe) error {
+	var query = fmt.Sprintf(`
+		INSERT INTO duplicates(post_id, dup_id)
+		SELECT $1, UNNEST(ARRAY[%s])
+		`,
+		sep(",", len(dupe.Inferior), dupe.strindex),
+	)
+	_, err := tx.Exec(query, dupe.Post.ID)
+	return err
+}
+
+// Upgrade dupe.Post to its superior
+func upgradeDupe(tx *sql.Tx, dupe *Dupe) error {
+	u, err := getDupeFromPost(tx, dupe.Post)
+	dupe.Post = u.Post
+	return err
+}
+
+func removeInferiors(tx *sql.Tx, dupe *Dupe) error {
+	for _, inf := range dupe.Inferior {
+		if err := inf.Remove(tx); err != nil {
+			return err
+		}
 	}
 
-	// Update reports
-	if err = updateDupeReports(tx, dupe); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	err = ua.exec(tx)
-	if err != nil {
-		return err
-	}
-
-	// Reset tag cache
-	tc := new(TagCollector)
-	tc.GetFromPost(tx, dupe.Post)
-	for _, tag := range tc.Tags {
-		resetCacheTag(tx, tag.ID)
-	}
-
-	a = tx.Commit
-
-	c.Cache.Purge("TPC", strconv.Itoa(dupe.Post.ID))
 	return nil
 }
 
-func updateAlts(tx querier, dupe Dupe, ua *UserActions) error {
+func updateAlts(tx *sql.Tx, dupe *Dupe, ua *UserActions) error {
 	// Get the alt groups of the inferior
 	// and merge with post alt group
 
@@ -299,7 +218,7 @@ func updateAlts(tx querier, dupe Dupe, ua *UserActions) error {
 	return err
 }
 
-func updateAppleTrees(tx querier, dupe Dupe) error {
+func updateAppleTrees(tx *sql.Tx, dupe *Dupe) error {
 	var err error
 	for _, p := range dupe.Inferior {
 
@@ -357,7 +276,7 @@ func updateAppleTrees(tx querier, dupe Dupe) error {
 	return nil
 }
 
-func updateDupeReports(tx querier, dupe Dupe) (err error) {
+func updateDupeReports(tx *sql.Tx, dupe *Dupe) (err error) {
 	// Update pluck reports
 	// replace fruit == dupe with post
 	// A
@@ -455,7 +374,7 @@ func updateDupeReports(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func movePoolPosts(tx querier, dupe Dupe) (err error) {
+func movePoolPosts(tx *sql.Tx, dupe *Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
 			UPDATE pool_mappings
@@ -488,7 +407,7 @@ func movePoolPosts(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func moveVotes(tx querier, dupe Dupe) (err error) {
+func moveVotes(tx *sql.Tx, dupe *Dupe) (err error) {
 	for _, p := range dupe.Inferior {
 		_, err = tx.Exec(`
 			UPDATE post_score_mapping
@@ -521,7 +440,7 @@ func moveVotes(tx querier, dupe Dupe) (err error) {
 	return
 }
 
-func moveViews(tx querier, dupe Dupe) error {
+func moveViews(tx *sql.Tx, dupe *Dupe) error {
 	stmt, err := tx.Prepare(`
 		UPDATE post_views
 		SET post_id = $1
@@ -543,19 +462,17 @@ func moveViews(tx querier, dupe Dupe) error {
 	return dupe.Post.updateScore(tx)
 }
 
-func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
-	var pids string
-	for _, p := range dupe.Inferior {
-		pids += fmt.Sprint(p.ID, ",")
-	}
-
-	pids += fmt.Sprint(dupe.Post.ID)
+// get tags and counts having at least two posts in common
+func commonTags(tx querier, dupe *Dupe) (map[int]int, error) {
+	pids := fmt.Sprint(sep(",", len(dupe.Inferior), dupe.strindex), ",", dupe.Post.ID)
 
 	rows, err := tx.Query(
 		fmt.Sprintf(`
-			SELECT tag_id
+			SELECT tag_id, count(*) - 1
 			FROM post_tag_mappings
 			WHERE post_id IN(%s)
+			GROUP BY tag_id
+			HAVING count(*) > 1
 			`,
 			pids,
 		),
@@ -568,22 +485,25 @@ func commonTags(tx querier, dupe Dupe) (map[int]int, error) {
 	var tids = make(map[int]int)
 
 	for rows.Next() {
-		var tid int
-		if err = rows.Scan(&tid); err != nil {
+		var tid, count int
+		if err = rows.Scan(&tid, &count); err != nil {
 			return nil, err
 		}
 
-		if _, ok := tids[tid]; !ok {
-			tids[tid] = 0
-		} else {
-			tids[tid]++
-		}
+		tids[tid] = count
 	}
 
 	return tids, nil
 }
 
-func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
+func moveTags(tx *sql.Tx, dupe *Dupe, ua *UserActions) error {
+	// Find tags in common to superior
+	var cmnTags map[int]int
+	cmnTags, err := commonTags(tx, dupe)
+	if err != nil {
+		return err
+	}
+
 	set, err := postTags(tx, dupe.Post.ID).unwrap()
 	if err != nil {
 		return err
@@ -638,10 +558,16 @@ func moveTags(tx querier, dupe Dupe, ua *UserActions) error {
 		}.log,
 	})
 
+	// Recount common tags
+	for k, v := range cmnTags {
+		var tag = &Tag{ID: k}
+		tag.updateCount(tx, -v)
+	}
+
 	return nil
 }
 
-func moveMetadata(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
+func moveMetadata(tx *sql.Tx, dupe *Dupe, ua *UserActions) error {
 	var metaMap = make(metaDataMap)
 
 	for _, inf := range dupe.Inferior {
@@ -680,7 +606,7 @@ func moveMetadata(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
 	return nil
 }
 
-func moveDescription(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
+func moveDescription(tx *sql.Tx, dupe *Dupe, ua *UserActions) error {
 	err := dupe.Post.QMul(tx, PFDescription)
 	if err != nil {
 		return err
@@ -724,7 +650,7 @@ func moveDescription(tx *sql.Tx, dupe Dupe, ua *UserActions) error {
 	return nil
 }
 
-func replaceComicPages(tx querier, dupe Dupe, ua *UserActions) (err error) {
+func replaceComicPages(tx *sql.Tx, dupe *Dupe, ua *UserActions) (err error) {
 	rows, err := tx.Query(
 		fmt.Sprintf(`
 			UPDATE comic_page
@@ -765,20 +691,16 @@ func replaceComicPages(tx querier, dupe Dupe, ua *UserActions) (err error) {
 	return
 }
 
-func updateDupes(tx querier, dupe Dupe) error {
-	for _, p := range dupe.Inferior {
-		dup, err := getDupeFromPost(tx, p)
-		if err != nil {
-			return err
-		}
-
-		_, err = tx.Exec(`
+// Update existing duplicates, point to new superiors
+func updateDupes(tx *sql.Tx, dupe *Dupe) error {
+	for _, inf := range dupe.Inferior {
+		_, err := tx.Exec(`
 			UPDATE duplicates
 			SET post_id = $1
 			WHERE post_id = $2
 			`,
 			dupe.Post.ID,
-			dup.Post.ID,
+			inf.ID,
 		)
 		if err != nil {
 			return err
@@ -788,106 +710,65 @@ func updateDupes(tx querier, dupe Dupe) error {
 	return nil
 }
 
-func conflicts(tx querier, dupe Dupe) error {
-	in := func(dups []Dupe, p *Post) bool {
-		for _, d := range dups {
-			if d.Post.ID == p.ID {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	var newSets []Dupe
-	for _, p := range dupe.Inferior {
-		dup, err := getDupeFromPost(tx, p)
-		if err != nil {
-			return err
-		}
-
-		if !in(newSets, dup.Post) {
-			newSets = append(newSets, dup)
-		}
-	}
-
-	superiors := func() bool {
-		for _, p := range dupe.Inferior {
-			for _, dupSet := range newSets {
-				if dupSet.Post.ID == p.ID {
-					return true
-				}
-			}
-		}
-
-		return false
-	}
-
-	bdupe, err := getDupeFromPost(tx, dupe.Post)
+// Ensures non of the inferiors are inferior of other dupe sets
+func conflicts(tx *sql.Tx, dupe *Dupe) error {
+	// there is a conflict if an inferior already is an inferior of another dupe
+	// the superior of the other dupe needs to be check against the superior of
+	// this dupe
+	rows, err := tx.Query(
+		fmt.Sprintf(`
+			SELECT post_id
+			FROM duplicates
+			WHERE dup_id IN(%s)
+			`,
+			sep(",", len(dupe.Inferior), dupe.strindex),
+		),
+	)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
-	// There are two sets
-	// A > B
-	// D > E
+	var conflict DupeConflict
 
-	// Do these new sets work
-	// B > C
-	// Yes. Replace B with A > C
-	//if bdupe.Post.ID != dupe.Post.ID && superiors() {
-	//	return nil
-	//}
-
-	//// B > D
-	//// Yes. Replace B with A > D
-	//if bdupe.Post.ID != dupe.Post.ID && superiors() {
-	//	return nil
-	//}
-
-	//// C > B
-	//// No. Replace B with A, we don't know if C > A
-	//if len(bdupe.Inferior) <= 0 && !superiors() {
-	//	return error
-	//}
-
-	//// B > E
-	//// No. Replace B with A and E with D, we don't know if A > D
-	//if bdupe.Post.ID != dupe.Post.ID && !superiors() {
-	//	return error
-	//}
-
-	// Will alway result in conflict
-	if !superiors() {
-		var derr DupeConflict
-
-		derr.NeedChecking = append(derr.NeedChecking, bdupe.Post)
-
-		for _, set := range newSets {
-			derr.NeedChecking = append(derr.NeedChecking, set.Post)
+	for rows.Next() {
+		var sup int
+		err = rows.Scan(&sup)
+		if err != nil {
+			return err
 		}
-
-		return derr
+		conflict.check = append(conflict.check, sup)
 	}
 
-	// Don't want to assign a post to itself
-	for _, set := range newSets {
-		if set.Post.ID == bdupe.Post.ID {
-			return errors.New("Conflicting dupe assignment. Trying to assign post as a dupe of itself")
+	if len(conflict.check) > 0 {
+		conflict.check = append([]int{dupe.Post.ID}, conflict.check...)
+		return conflict
+	}
+
+	// Remove self assignments
+	var inferior []*Post
+	for _, inf := range dupe.Inferior {
+		if inf.ID != dupe.Post.ID {
+			inferior = append(inferior, inf)
 		}
+	}
+	dupe.Inferior = inferior
+
+	if len(dupe.Inferior) == 0 {
+		return errors.New("Dupe assignment has been reduced to no duplicates")
 	}
 
 	return nil
 }
 
 type DupeConflict struct {
-	NeedChecking []*Post
+	check []int
 }
 
 func (d DupeConflict) Error() string {
 	var str string
-	for _, p := range d.NeedChecking {
-		str += fmt.Sprint(p.ID, " ")
+	for _, id := range d.check {
+		str += fmt.Sprint(id, " ")
 	}
 	return fmt.Sprint("Duplicate conflict. Please compare: ", str)
 }

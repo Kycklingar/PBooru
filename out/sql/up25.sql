@@ -119,7 +119,6 @@ CREATE TABLE log_multi_posts_affected (
 	UNIQUE(id, post_id)
 );
 
--- NEW
 CREATE TABLE log_comics (
 	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
 	id INTEGER NOT NULL,

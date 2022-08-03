@@ -47,7 +47,7 @@
 	{{template "log-multitags" .}}
 	{{with .Posts}}
 	{{range .}}
-		<span class="box inline">
+		<span class="post box inline">
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
 		{{template "log-tags" .}}
 		{{template "log-description" .}}
