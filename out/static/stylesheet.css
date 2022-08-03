@@ -158,25 +158,31 @@ li
     list-style-type:none;
 }
 
-.row {
+.row
+{
 	display: flex;
 }
 
-.column {
+.column
+{
 	flex: 50%;
 }
 
-.expander {
+.expander
+{
 	margin:1em;
 	width:100%;
 	min-width:20em;
 }
-.expander img {
+.expander img,
+.expander video
+{
 	background-color: black;
 	max-width:100%;
 }
 
-.resizable-vertical {
+.resizable-vertical
+{
 	resize: vertical;
 	overflow: scroll;
 }
@@ -187,7 +193,8 @@ li
 	overflow: scroll;
 }
 
-.overflow {
+.overflow
+{
 	overflow:auto;
 	white-space:nowrap;
 }

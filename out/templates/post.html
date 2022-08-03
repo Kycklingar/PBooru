@@ -103,7 +103,7 @@
 						console.log(op)
 					}
 
-					if (chapters != null)
+					if (chapters && chapters.length > 0)
 					{
 						document.getElementById("quickadd-page").value = chapters[0].lastPage
 					}
@@ -164,22 +164,22 @@
 				}
 				</script>
 				<img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
-				<div>
-					<b>
-						<a href="#fullsize">Fullsize</a>
-						<a href="#">Shrink to fit</a>
-					</b>
-				</div>
 			</div>
 			{{else if eq .Post.Mime.Type "video"}}
 			<div>
-				<video loop controls>
+				<video id="fullsize" loop controls>
 					<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
 				</video>
 			</div>
 			{{else}}
 			<div>No Preview</div>
 			{{end}}
+			<div>
+				<b>
+					<a href="#fullsize">Fullsize</a>
+					<a href="#">Shrink to fit</a>
+				</b>
+			</div>
 			<div class="box">
 				<div class="metadata">
 					<div>{{.Post.Mime}}</div>
