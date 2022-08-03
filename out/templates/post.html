@@ -138,16 +138,6 @@
 					<div><a href="https://gelbooru.com/index.php?page=post&s=list&md5={{.Post.Checksums.Md5}}">gelbooru.org</a></div>
 				</div>
 			</details>
-			{{with .Post.MetaData.source}}
-			<div class="box compact">
-				<div class="center">
-					Sources
-				</div>
-				{{range .}}
-				<div><a href="{{.Data}}">{{.Data}}</a></div>
-				{{end}}
-			</div>
-			{{end}}
 		</div>
 	</div>
 	<div id="post">
@@ -186,6 +176,18 @@
 					<div>{{.Post.Mime}}</div>
 					<div title="{{.Post.Size}}">{{.Post.SizePretty }}</div>
 					<div title="{{.Post.Timestamp.Elapsed}}">{{.Post.Timestamp}}</div>
+					{{range $namespace, $data := .Post.MetaData}}
+					<div class="metadata-namespace">{{$namespace}}</div>
+					{{if eq $namespace "source"}}
+					{{range $data}}
+					<div title="{{.Data}}"><a href="{{.Data}}">{{.Data}}</a></div>
+					{{end}}
+					{{else}}
+					{{range $data}}
+					<div title="{{.Data}}">{{.Data}}</div>
+					{{end}}
+					{{end}}
+					{{end}}
 				</div>
 				<div class="spantop">
 					<span><a href="/similar/?id={{.Post.ID}}">Find Similar</a></span>

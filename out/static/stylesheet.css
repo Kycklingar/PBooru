@@ -969,6 +969,21 @@ li
 {
 	float: right;
 	font-weight: bold;
+	max-width: 25%;
+}
+
+#post .metadata div
+{
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#post .metadata-namespace
+{
+	font-style: italic;
+	margin-top: 0.5em;
+	text-align: center;
+	border-top: ridge #74C 2px;
 }
 
 #post .identity td,
