@@ -152,18 +152,19 @@
 	</div>
 	<div id="post">
 		<div class="box">
+			<script>
+				function resize(){
+				if(!fullsize) return
+				if (fullsize.style.maxWidth == "unset"){
+					fullsize.style.maxWidth = "100%";
+				}else{
+					fullsize.style.maxWidth = "unset";
+				}
+			}
+			</script>
 			{{if eq .Post.Mime.Type "image"}}
 			<div id="image">
-				<script>
-				function resize(caller){
-				    if (caller.style.maxWidth == "unset"){
-					caller.style.maxWidth = "100%";
-				    }else{
-					caller.style.maxWidth = "unset";
-				    }
-				}
-				</script>
-				<img id="fullsize" onclick="resize(this)" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
 			</div>
 			{{else if eq .Post.Mime.Type "video"}}
 			<div>
@@ -176,8 +177,8 @@
 			{{end}}
 			<div>
 				<b>
-					<a href="#fullsize">Fullsize</a>
-					<a href="#">Shrink to fit</a>
+					<a href="#fullsize" onclick="resize();return false">Fullsize</a>
+					<a href="#" onclick="resize();return false">Shrink to fit</a>
 				</b>
 			</div>
 			<div class="box">
