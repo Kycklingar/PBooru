@@ -375,6 +375,13 @@ li
 	padding: 1em;
 	background-color: #0014;
 }
+
+.log .post .thumbnail
+{
+	left: 50%;
+	transform: translateX(-50%);
+}
+
 .log .post table
 {
 	vertical-align: top;
