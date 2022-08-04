@@ -23,6 +23,9 @@ type Log struct {
 	// Alts
 	Alts []logAlts
 
+	// Duplicates
+	Duplicates logDuplicates
+
 	// Alias
 	Aliases logAliasMap
 

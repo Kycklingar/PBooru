@@ -374,6 +374,7 @@ li
 	border: 4px grey ridge;
 	padding: 1em;
 	background-color: #0014;
+	vertical-align: top;
 }
 
 .log .post .thumbnail

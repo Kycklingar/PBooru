@@ -108,6 +108,19 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			if internalError(w, err) {
 				return
 			}
+
+			for i := range ph.Duplicates.Inferior {
+				err = ph.Duplicates.Inferior[i].QMul(
+					DM.DB,
+					DM.PFHash,
+					DM.PFMime,
+					DM.PFThumbnails,
+					DM.PFRemoved,
+				)
+				if internalError(w, err) {
+					return
+				}
+			}
 		}
 
 		for _, a := range log.Alts {

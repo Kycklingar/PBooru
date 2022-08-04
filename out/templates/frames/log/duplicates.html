@@ -1,0 +1,12 @@
+{{define "log-duplicates"}}
+{{with .Duplicates}}
+{{if .Inferior}}
+<div class="box">
+	<div>Assigned Duplicate</div>
+	{{range .Inferior}}
+	{{template "thumbnail" wrap2 "Post" "UserInfo" . $.UserInfo}}
+	{{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}

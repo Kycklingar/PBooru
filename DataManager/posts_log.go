@@ -29,6 +29,7 @@ type postHistory struct {
 	MetaData      []logPostMetaData
 	CreationDates []logPostCreationDates
 	Tags          logPostTags
+	Duplicates    logDuplicates
 }
 
 func (l *Log) initPostHistory(postID int) postHistory {

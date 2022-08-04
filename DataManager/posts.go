@@ -458,7 +458,7 @@ func (p Post) Thumbnails() []Thumb {
 	return thumbs
 }
 
-func (p *Post) ClosestThumbnail(size int) (ret string) {
+func (p Post) ClosestThumbnail(size int) (ret string) {
 	if len(p.thumbnails) <= 0 {
 		return ""
 	}

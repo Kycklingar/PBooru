@@ -49,6 +49,7 @@
 	{{range .}}
 		<span class="post box inline">
 		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+		{{template "log-duplicates" wrap2 "Duplicates" "UserInfo" .Duplicates $.UserInfo}}
 		{{template "log-tags" .}}
 		{{template "log-description" .}}
 		{{template "log-metadata" .}}

@@ -165,3 +165,17 @@ AND old.log_id = (
 	WHERE log_id < new.log_id
 	AND comic_page_id = new.comic_page_id
 );
+
+CREATE TABLE log_duplicates (
+	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,
+	action log_action NOT NULL,
+	id INTEGER SERIAL PRIMARY KEY,
+	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE log_duplicate_posts (
+	id INTEGER NOT NULL REFERENCES log_duplicates(id),
+	dup_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+	PRIMARY KEY(id, dup_id)
+);
+
