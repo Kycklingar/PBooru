@@ -17,20 +17,30 @@
 	</form>
 </div>
 <div id="content">
+	<script>
+		function toggleAll()
+		{
+			document.querySelectorAll("input[type='checkbox']")
+				.forEach(function(e) {
+					e.checked = !e.checked
+				})
+		}
+	</script>
 	<form>
-	{{range .Posts}}
+		{{range .Posts}}
 		<span style="border-bottom: ridge 4px #{{colorID .AltGroup}}">
-		{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
-		<input type="checkbox" class="centHorizont" name="post-id" value="{{.ID}}">
+			{{template "thumbnail" (wrap2 "Post" "UserInfo" . $.UserInfo)}}
+			<input type="checkbox" class="centHorizont" name="post-id" value="{{.ID}}">
 		</span>
-	{{end}}
+		{{end}}
 
-	<br>
-	<br>
-	<input type="submit" formaction="/compare/" value="Compare">
-	<input type="submit" formaction="/compare2/" value="Compare2.js">
-	<input type="submit" formmethod="POST" formaction="/post/edit/alts/assign/" value="Assign alts">
-	<input type="submit" formmethod="POST" formaction="/post/edit/alts/split/" value="Split alts">
+		<br>
+		<br>
+		<button onclick="toggleAll();return false;">Toggle All</button>
+		<input type="submit" formaction="/compare/" value="Compare">
+		<input type="submit" formaction="/compare2/" value="Compare2.js">
+		<input type="submit" formmethod="POST" formaction="/post/edit/alts/assign/" value="Assign alts">
+		<input type="submit" formmethod="POST" formaction="/post/edit/alts/split/" value="Split alts">
 	</form>
 
 </div>
