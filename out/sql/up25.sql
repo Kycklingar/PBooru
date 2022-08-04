@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS post_metadata (
 	post_id INTEGER NOT NULL REFERENCES posts(id),
 	namespace_id INTEGER NOT NULL REFERENCES namespaces(id),
 	metadata TEXT NOT NULL,
-	UNIQUE(post_id, namespace, metadata)
+	UNIQUE(post_id, namespace_id, metadata)
 );
 
 DROP TABLE post_description;
