@@ -376,8 +376,10 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 
 	err := func() error {
 		rows, err := q.Query(`
-		SELECT namespace, metadata
+		SELECT nspace, metadata
 		FROM post_metadata
+		JOIN namespaces
+		ON namespaces.id = namespace_id
 		WHERE post_id = $1
 		`,
 			p.ID,
@@ -396,7 +398,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 				return err
 			}
 
-			metaMap[m.namespace] = append(metaMap[m.namespace], m)
+			metaMap[string(m.namespace)] = append(metaMap[string(m.namespace)], m)
 		}
 
 		return nil

@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"sort"
+
+	"github.com/kycklingar/PBooru/DataManager/namespace"
 )
 
 const (
@@ -269,8 +271,10 @@ func (l logPostDescription) log(logid int, tx *sql.Tx) error {
 
 func getLogPostMetaData(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT action, post_id, namespace, metadata
+		SELECT action, post_id, nspace, metadata
 		FROM log_post_metadata
+		JOIN namespaces
+		ON namespaces.id = namespace_id
 		WHERE log_id = $1
 		`,
 		log.ID,
@@ -298,17 +302,22 @@ func getLogPostMetaData(log *Log, q querier) error {
 type logPostMetaData struct {
 	PostID    int
 	Action    lAction
-	Namespace string
+	Namespace namespace.Namespace
 	MetaData  string
 }
 
 func (l logPostMetaData) log(logid int, tx *sql.Tx) error {
-	_, err := tx.Exec(`
+	namespaceID, err := l.Namespace.ID(tx)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
 		INSERT INTO log_post_metadata (
 			log_id,
 			action,
 			post_id,
-			namespace,
+			namespace_id,
 			metadata
 		)
 		VALUES($1,$2,$3,$4,$5)
@@ -316,7 +325,7 @@ func (l logPostMetaData) log(logid int, tx *sql.Tx) error {
 		logid,
 		l.Action,
 		l.PostID,
-		l.Namespace,
+		namespaceID,
 		l.MetaData,
 	)
 	if err != nil {

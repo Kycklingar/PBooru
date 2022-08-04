@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/kycklingar/PBooru/DataManager/namespace"
 )
 
 type MetaData interface {
 	String() string
 
-	Namespace() string
+	Namespace() namespace.Namespace
 	Data() string
 	value() interface{}
 }
@@ -46,9 +48,9 @@ func parseMetaData(mstr string) (MetaData, error) {
 		return nil, nil
 	}
 
-	namespace, value := data[0], data[1]
+	nspace, value := data[0], data[1]
 
-	if namespace == "date" {
+	if nspace == "date" {
 		t, err := parsePartialDate(iso8601, value)
 		if err != nil {
 			return nil, err
@@ -57,27 +59,30 @@ func parseMetaData(mstr string) (MetaData, error) {
 		return metaDate(t), nil
 	}
 
-	return metadata{
-		namespace: data[0],
-		data:      data[1],
-	}, nil
+	var (
+		md  = metadata{data: value}
+		err error
+	)
+	md.namespace, _, err = namespace.New(DB, nspace)
+
+	return md, err
 }
 
 type metadata struct {
-	namespace string
+	namespace namespace.Namespace
 	data      string
 }
 
-func (m metadata) Namespace() string  { return m.namespace }
-func (m metadata) Data() string       { return m.data }
-func (m metadata) String() string     { return m.namespace + ":" + m.data }
-func (m metadata) value() interface{} { return m.data }
+func (m metadata) Namespace() namespace.Namespace { return m.namespace }
+func (m metadata) Data() string                   { return m.data }
+func (m metadata) String() string                 { return string(m.namespace) + ":" + m.data }
+func (m metadata) value() interface{}             { return m.data }
 
 const iso8601 = "2006-01-02"
 
 type metaDate time.Time
 
-func (m metaDate) Namespace() string  { return "date" }
-func (m metaDate) Data() string       { return time.Time(m).Format(iso8601) }
-func (m metaDate) String() string     { return "date" + ":" + m.Data() }
-func (m metaDate) value() interface{} { return time.Time(m) }
+func (m metaDate) Namespace() namespace.Namespace { return namespace.Namespace("date") }
+func (m metaDate) Data() string                   { return time.Time(m).Format(iso8601) }
+func (m metaDate) String() string                 { return "date" + ":" + m.Data() }
+func (m metaDate) value() interface{}             { return time.Time(m) }

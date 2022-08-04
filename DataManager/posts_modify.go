@@ -127,17 +127,22 @@ func updatePostCreationDate(postID int, tx *sql.Tx) error {
 
 func postAddMetaData(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
+		namespaceID, err := md.Namespace().ID(tx)
+		if err != nil {
+			return
+		}
+
 		res, err := tx.Exec(`
 			INSERT INTO post_metadata (
 				post_id,
-				namespace,
+				namespace_id,
 				metadata
 			)
 			VALUES ($1, $2, $3)
 			ON CONFLICT DO NOTHING
 			`,
 			postID,
-			md.Namespace(),
+			namespaceID,
 			md.value(),
 		)
 		if err != nil {
@@ -162,14 +167,19 @@ func postAddMetaData(postID int, md MetaData) loggingAction {
 
 func postRemoveMetaData(postID int, md MetaData) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
+		namespaceID, err := md.Namespace().ID(tx)
+		if err != nil {
+			return
+		}
+
 		_, err = tx.Exec(`
 			DELETE FROM post_metadata
 			WHERE post_id = $1
-			AND namespace = $2
+			AND namespace_id = $2
 			AND metadata = $3
 			`,
 			postID,
-			md.Namespace(),
+			namespaceID,
 			md.value(),
 		)
 

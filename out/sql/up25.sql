@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS post_metadata (
 	id BIGSERIAL PRIMARY KEY,
 	post_id INTEGER NOT NULL REFERENCES posts(id),
-	namespace TEXT NOT NULL,
+	namespace_id INTEGER NOT NULL REFERENCES namespaces(id),
 	metadata TEXT NOT NULL,
 	UNIQUE(post_id, namespace, metadata)
 );
@@ -56,7 +56,7 @@ CREATE TABLE log_post_metadata (
 	action log_action NOT NULL,
 
 	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-	namespace TEXT NOT NULL,
+	namespace_id INTEGER NOT NULL REFERENCES namespaces(id),
 	metadata TEXT NOT NULL
 );
 
