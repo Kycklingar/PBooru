@@ -1,3 +1,12 @@
+-- Rename old log tables
+ALTER TABLE log_alts RENAME TO old_log_alts;
+ALTER TABLE log_comic RENAME TO old_log_comic;
+ALTER TABLE log_chapter RENAME TO old_log_chapter;
+ALTER TABLE log_comic_page RENAME TO old_log_comic_page;
+ALTER TABLE tag_history RENAME TO old_tag_history;
+ALTER TABLE edited_tags RENAME TO old_edited_tags;
+
+
 -- FILENAMES, SOURCES, VERSION, ETC
 CREATE TABLE IF NOT EXISTS post_metadata (
 	id BIGSERIAL PRIMARY KEY,
@@ -137,7 +146,6 @@ CREATE TABLE log_chapters (
 
 ALTER TABLE comic_mappings RENAME TO comic_page;
 ALTER TABLE comic_page RENAME COLUMN post_order TO page;
-ALTER TABLE log_comic_page RENAME TO log_comic_page_old;
 
 CREATE TABLE log_comic_page (
 	log_id BIGINT REFERENCES logs(log_id) ON DELETE CASCADE,

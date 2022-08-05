@@ -56,7 +56,7 @@ func thBatch(tx *sql.Tx, limit, offset int) (x *sql.Tx, m map[int]th, low int, h
 
 	rows, err := tx.Query(`
 		SELECT id, user_id, post_id, timestamp
-		FROM tag_history
+		FROM old_tag_history
 		ORDER BY id ASC
 		LIMIT $1
 		OFFSET $2
@@ -105,7 +105,7 @@ func thEdits(tx *sql.Tx, batch map[int]th, low, high int, err error) (map[int]th
 
 	rows, err := tx.Query(`
 		SELECT history_id, tag_id, direction
-		FROM edited_tags
+		FROM old_edited_tags
 		WHERE history_id >= $1
 		AND history_id <= $2
 		`,
