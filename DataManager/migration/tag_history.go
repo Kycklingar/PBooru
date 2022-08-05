@@ -2,7 +2,6 @@ package migrate
 
 import (
 	"database/sql"
-	"log"
 	"time"
 )
 
@@ -21,22 +20,34 @@ func TagHistoryToUserActions(tx *sql.Tx) error {
 		offset int
 	)
 
+	_, err := tx.Exec(`
+		INSERT INTO logs_tables(table_name)
+		VALUES('post_tags')
+		`,
+	)
+	if err != nil {
+		return err
+	}
+
 	for {
-		batch, err := thEdits(thBatch(tx, limit, offset))
+		batch, low, high, err := thBatch(tx, limit, offset)
 		if err != nil {
-			log.Println(tx.Rollback())
 			return err
 		}
-
-		offset += limit
 
 		if len(batch) <= 0 {
 			return nil
 		}
 
+		batch, err = thEdits(tx, batch, low, high)
+		if err != nil {
+			return err
+		}
+
+		offset += limit
+
 		err = createUserActions(tx, batch)
 		if err != nil {
-			log.Println(tx.Rollback())
 			return err
 		}
 	}
@@ -51,8 +62,8 @@ func noRows(err error) error {
 	return err
 }
 
-func thBatch(tx *sql.Tx, limit, offset int) (x *sql.Tx, m map[int]th, low int, high int, err error) {
-	x = tx
+func thBatch(tx *sql.Tx, limit, offset int) (m map[int]th, low, high int, err error) {
+	m = make(map[int]th, limit)
 
 	rows, err := tx.Query(`
 		SELECT id, user_id, post_id, timestamp
@@ -69,8 +80,6 @@ func thBatch(tx *sql.Tx, limit, offset int) (x *sql.Tx, m map[int]th, low int, h
 		return
 	}
 	defer rows.Close()
-
-	m = make(map[int]th)
 
 	for rows.Next() {
 		var t th
@@ -98,11 +107,7 @@ func thBatch(tx *sql.Tx, limit, offset int) (x *sql.Tx, m map[int]th, low int, h
 	return
 }
 
-func thEdits(tx *sql.Tx, batch map[int]th, low, high int, err error) (map[int]th, error) {
-	if err != nil {
-		return nil, err
-	}
-
+func thEdits(tx *sql.Tx, batch map[int]th, low, high int) (map[int]th, error) {
 	rows, err := tx.Query(`
 		SELECT history_id, tag_id, direction
 		FROM old_edited_tags
@@ -128,7 +133,10 @@ func thEdits(tx *sql.Tx, batch map[int]th, low, high int, err error) (map[int]th
 			return nil, err
 		}
 
-		t := batch[hid]
+		t, ok := batch[hid]
+		if !ok {
+			continue
+		}
 
 		// Added
 		if dir == 1 {
@@ -199,8 +207,15 @@ func createUserActions(tx *sql.Tx, batch map[int]th) error {
 	defer postStmt.Close()
 
 	tableStmt, err := tx.Prepare(`
-		INSERT INTO logs_affected(log_id, log_table)
-		VALUES($1, $2)
+		INSERT INTO logs_tables_altered(log_id, table_id)
+		VALUES(
+			$1,
+			(
+				SELECT id
+				FROM logs_tables
+				WHERE table_name = $2
+			)
+		)
 		`,
 	)
 	if err != nil {
