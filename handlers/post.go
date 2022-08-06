@@ -316,7 +316,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Sidebar.Tags = tc.Tags
 
-	pp.Comments = p.Comments(DM.DB)
+	pp.Comments, err = p.Comments(DM.DB)
+	if internalError(w, err) {
+		return
+	}
 
 	for _, c := range pp.Comments {
 		c.User.QFlag(DM.DB)
@@ -957,52 +960,52 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 	notFoundHandler(w)
 }
 
-func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	u, ui := getUser(w, r)
-	u = DM.CachedUser(u)
-
-	u.QFlag(DM.DB)
-
-	spl := splitURI(r.URL.Path)
-	if len(spl) < 3 {
-		notFoundHandler(w)
-		return
-	}
-
-	id, err := strconv.Atoi(spl[2])
-	if badRequest(w, err) {
-		return
-	}
-
-	const limit = 10
-	page, _ := strconv.Atoi("page")
-
-	post := DM.NewPost()
-	post.ID = id
-
-	post = DM.CachedPost(post)
-
-	totalEdits, err := post.QTagHistoryCount(DM.DB)
-	if internalError(w, err) {
-		return
-	}
-
-	ths, err := post.TagHistory(DM.DB, limit, page*limit)
-	if internalError(w, err) {
-		return
-	}
-
-	var thp TagHistoryPage
-	thp.Base.Title = fmt.Sprint("Tag History for ", post.ID)
-	thp.History = ths
-	thp.UserInfo = ui
-	thp.Pageinator = pageinate(totalEdits, limit, page, 10)
-	thp.User = u
-
-	preloadTagHistory(thp.History)
-
-	renderTemplate(w, "taghistory", thp)
-}
+//func postHistoryHandler(w http.ResponseWriter, r *http.Request) {
+//	u, ui := getUser(w, r)
+//	u = DM.CachedUser(u)
+//
+//	u.QFlag(DM.DB)
+//
+//	spl := splitURI(r.URL.Path)
+//	if len(spl) < 3 {
+//		notFoundHandler(w)
+//		return
+//	}
+//
+//	id, err := strconv.Atoi(spl[2])
+//	if badRequest(w, err) {
+//		return
+//	}
+//
+//	const limit = 10
+//	page, _ := strconv.Atoi("page")
+//
+//	post := DM.NewPost()
+//	post.ID = id
+//
+//	post = DM.CachedPost(post)
+//
+//	totalEdits, err := post.QTagHistoryCount(DM.DB)
+//	if internalError(w, err) {
+//		return
+//	}
+//
+//	ths, err := post.TagHistory(DM.DB, limit, page*limit)
+//	if internalError(w, err) {
+//		return
+//	}
+//
+//	var thp TagHistoryPage
+//	thp.Base.Title = fmt.Sprint("Tag History for ", post.ID)
+//	thp.History = ths
+//	thp.UserInfo = ui
+//	thp.Pageinator = pageinate(totalEdits, limit, page, 10)
+//	thp.User = u
+//
+//	preloadTagHistory(thp.History)
+//
+//	renderTemplate(w, "taghistory", thp)
+//}
 
 //func NewDuplicateHandler(w http.ResponseWriter, r *http.Request) {
 //	if r.Method != http.MethodPost {

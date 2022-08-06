@@ -281,32 +281,29 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 		return nil
 	}
 
-	rows, err := q.Query(`
-		SELECT id
+	var (
+		altIDs []int
+		id     int
+	)
+
+	err := query(
+		q,
+		`SELECT id
 		FROM posts
 		WHERE alt_group = (
 			SELECT alt_group
 			FROM posts
 			WHERE id = $1
 		)
-		ORDER BY id DESC
-		`,
+		ORDER BY id DESC`,
 		p.ID,
-	)
+	)(func(scan scanner) error {
+		err := scan(&id)
+		altIDs = append(altIDs, id)
+		return err
+	})
 	if err != nil {
 		return err
-	}
-	defer rows.Close()
-
-	var altIDs []int
-
-	var id int
-	for rows.Next() {
-		if err = rows.Scan(&id); err != nil {
-			return err
-		}
-
-		altIDs = append(altIDs, id)
 	}
 
 	if len(altIDs) <= 1 {
@@ -338,29 +335,25 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	var t thumbnails
 	selector := sqlbinder.BindFieldAddresses(t, fields...)
 
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM thumbnails
-		WHERE post_id = $1
-		`,
-		selector.Select(),
-	)
-
-	rows, err := q.Query(query, p.ID)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
+	err := query(
+		q,
+		fmt.Sprintf(`
+			SELECT %s
+			FROM thumbnails
+			WHERE post_id = $1
+			`,
+			selector.Select(),
+		),
+		p.ID,
+	)(func(scan scanner) error {
 		var thumb Thumb
 		selector.ReBind(&thumb, fields...)
-		err = rows.Scan(selector.Values()...)
-		if err != nil {
-			return err
-		}
-
+		err := scan(selector.Values()...)
 		t = append(t, thumb)
+		return err
+	})
+	if err != nil {
+		return err
 	}
 
 	p.thumbnails = t
@@ -374,60 +367,38 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 	}
 	var metaMap = make(metaDataMap)
 
-	err := func() error {
-		rows, err := q.Query(`
-		SELECT nspace, metadata
+	err := query(
+		q,
+		`SELECT nspace, metadata
 		FROM post_metadata
 		JOIN namespaces
 		ON namespaces.id = namespace_id
-		WHERE post_id = $1
-		`,
-			p.ID,
-		)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var m metadata
-			err = rows.Scan(&m.namespace, &m.data)
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-
-			metaMap[string(m.namespace)] = append(metaMap[string(m.namespace)], m)
-		}
-
-		return nil
-	}()
-	if err != nil {
-		return err
-	}
-
-	rows, err := q.Query(`
-		SELECT created
-		FROM post_creation_dates
-		WHERE post_id = $1
-		`,
+		WHERE post_id = $1`,
 		p.ID,
-	)
+	)(func(scan scanner) error {
+		var m metadata
+		err := scan(&m.namespace, &m.data)
+		metaMap[string(m.namespace)] = append(metaMap[string(m.namespace)], m)
+		return err
+	})
 	if err != nil {
-		log.Println(err)
 		return err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
+	err = query(
+		q,
+		`SELECT created
+		FROM post_creation_dates
+		WHERE post_id = $1`,
+		p.ID,
+	)(func(scan scanner) error {
 		var t metaDate
-		if err = rows.Scan(&t); err != nil {
-			log.Println(err)
-			return err
-		}
-
+		err := scan(&t)
 		metaMap["date"] = append(metaMap["date"], t)
+		return err
+	})
+	if err != nil {
+		return err
 	}
 
 	p.MetaData = metaMap
@@ -519,35 +490,35 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 	return p.editCount, err
 }
 
-func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
-	if p.ID <= 0 {
-		return nil, errors.New("no post id specified")
-	}
-	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ths []*TagHistory
-
-	for rows.Next() {
-		var th = NewTagHistory()
-		if err = rows.Scan(&th.ID, &th.User.ID, &th.Timestamp); err != nil {
-			log.Println(err)
-			return nil, err
-		}
-
-		th.Post = p
-
-		ths = append(ths, th)
-	}
-
-	err = rows.Err()
-
-	return ths, err
-}
+//func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
+//	if p.ID <= 0 {
+//		return nil, errors.New("no post id specified")
+//	}
+//	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
+//	if err != nil {
+//		log.Println(err)
+//		return nil, err
+//	}
+//	defer rows.Close()
+//
+//	var ths []*TagHistory
+//
+//	for rows.Next() {
+//		var th = NewTagHistory()
+//		if err = rows.Scan(&th.ID, &th.User.ID, &th.Timestamp); err != nil {
+//			log.Println(err)
+//			return nil, err
+//		}
+//
+//		th.Post = p
+//
+//		ths = append(ths, th)
+//	}
+//
+//	err = rows.Err()
+//
+//	return ths, err
+//}
 
 func (p *Post) SizePretty() string {
 	const unit = 1000
@@ -1272,7 +1243,10 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 		return nil, err
 	}
 
-	rows, err := q.Query(
+	var phashes []phs
+
+	err = query(
+		q,
 		fmt.Sprintf(
 			`
 			SELECT post_id, h1, h2, h3, h4
@@ -1294,20 +1268,14 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 		ph.h2,
 		ph.h3,
 		ph.h4,
-	)
+	)(func(scan scanner) error {
+		var phn phs
+		err = scan(&phn.postid, &phn.h1, &phn.h2, &phn.h3, &phn.h4)
+		phashes = append(phashes, phn)
+		return err
+	})
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-
-	var phashes []phs
-
-	for rows.Next() {
-		var phn phs
-		if err = rows.Scan(&phn.postid, &phn.h1, &phn.h2, &phn.h3, &phn.h4); err != nil {
-			return nil, err
-		}
-		phashes = append(phashes, phn)
 	}
 
 	var posts []*Post
@@ -1323,73 +1291,81 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 	return posts, nil
 }
 
-func (p *Post) Chapters(q querier) []*Chapter {
-	if p.ID == 0 {
-		return nil
-	}
+//func (p *Post) Chapters(q querier) []*Chapter {
+//	if p.ID == 0 {
+//		return nil
+//	}
+//
+//	var chapters []*Chapter
+//	err := query(
+//		q,
+//		`SELECT DISTINCT chapter_id
+//		FROM comic_mappings
+//		WHERE post_id = $1`,
+//		p.ID,
+//	)(func(scan scanner) error {
+//
+//	})
+//	if err != nil {
+//		if err != sql.ErrNoRows {
+//			log.Println(err)
+//		}
+//		return nil
+//	}
+//
+//	defer rows.Close()
+//
+//	in := func(id int) bool {
+//		for _, chapter := range chapters {
+//			if chapter.ID == id {
+//				return true
+//			}
+//		}
+//
+//		return false
+//	}
+//
+//	for rows.Next() {
+//		var c = new(Chapter)
+//		if err := rows.Scan(&c.ID); err != nil {
+//			log.Println(err)
+//			return nil
+//		}
+//
+//		if !in(c.ID) {
+//			chapters = append(chapters, c)
+//		}
+//	}
+//
+//	if err = rows.Err(); err != nil {
+//		log.Println(err)
+//		return nil
+//	}
+//
+//	return chapters
+//}
 
-	rows, err := q.Query("SELECT chapter_id FROM comic_mappings WHERE post_id = $1", p.ID)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Println(err)
-		}
-		return nil
-	}
-
-	defer rows.Close()
-	var chapters []*Chapter
-
-	in := func(id int) bool {
-		for _, chapter := range chapters {
-			if chapter.ID == id {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	for rows.Next() {
-		var c = new(Chapter)
-		if err := rows.Scan(&c.ID); err != nil {
-			log.Println(err)
-			return nil
-		}
-
-		if !in(c.ID) {
-			chapters = append(chapters, c)
-		}
-	}
-
-	if err = rows.Err(); err != nil {
-		log.Println(err)
-		return nil
-	}
-
-	return chapters
-}
-
-func (p *Post) Comics(q querier) []*Comic {
-	if p.ID == 0 {
-		return nil
-	}
-	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.ID)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	var comics []*Comic
-	for rows.Next() {
-		var c Comic
-		rows.Scan(&c.ID)
-		if rows.Err() != nil {
-			log.Print(err)
-			return nil
-		}
-		comics = append(comics, &c)
-	}
-	return comics
-}
+//func (p *Post) Comics(q querier) []*Comic {
+//	if p.ID == 0 {
+//		return nil
+//	}
+//	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.ID)
+//	if err != nil {
+//		return nil
+//	}
+//	defer rows.Close()
+//	var comics []*Comic
+//	for rows.Next() {
+//		var c Comic
+//		rows.Scan(&c.ID)
+//		if rows.Err() != nil {
+//			log.Print(err)
+//			return nil
+//		}
+//		comics = append(comics, &c)
+//	}
+//	return comics
+//}
 
 func (p *Post) Duplicates(q querier) (Dupe, error) {
 	return getDupeFromPost(q, p)
@@ -1401,30 +1377,26 @@ func (p *Post) NewComment() *PostComment {
 	return pc
 }
 
-func (p *Post) Comments(q querier) []*PostComment {
+func (p *Post) Comments(q querier) ([]*PostComment, error) {
 	if p.ID <= 0 {
-		return nil
+		return nil, nil
 	}
 
-	rows, err := q.Query(`
-		SELECT id, user_id, text, timestamp
+	var pcs []*PostComment
+
+	return pcs, query(
+		q,
+		`SELECT id, user_id, text, timestamp
 		FROM post_comments
 		WHERE post_id = $1
 		ORDER BY id DESC`,
 		p.ID,
-	)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-	defer rows.Close()
-
-	var pcs []*PostComment
-
-	for rows.Next() {
-		pc := p.NewComment()
-		var text string
-		err = rows.Scan(&pc.ID, &pc.User.ID, &text, &pc.Time)
+	)(func(scan scanner) error {
+		var (
+			text string
+			pc   = p.NewComment()
+			err  = scan(&pc.ID, &pc.User.ID, &text, &pc.Time)
+		)
 		if err != nil {
 			log.Println(err)
 			return nil
@@ -1435,9 +1407,9 @@ func (p *Post) Comments(q querier) []*PostComment {
 		pc.Text = cmp.Compile(text)
 
 		pcs = append(pcs, pc)
-	}
 
-	return pcs
+		return nil
+	})
 }
 
 func NewPostCollector() *PostCollector {

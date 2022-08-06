@@ -265,7 +265,7 @@ func init() {
 	Handlers["/post/edit/thumbnails/generate/"] = makeStatHandler(generateThumbnailsHandler)
 	Handlers["/post/edit/tags/add/"] = makeStatHandler(postAddTagsHandler)
 	Handlers["/post/edit/tags/remove/"] = makeStatHandler(postRemoveTagsHandler)
-	Handlers["/post/taghistory/"] = postHistoryHandler
+	//Handlers["/post/taghistory/"] = postHistoryHandler
 	Handlers["/post/report/"] = reportPostHandler
 	Handlers["/post/vote/"] = PostVoteHandler
 
