@@ -118,6 +118,7 @@ func updatePostCreationDate(postID int, tx *sql.Tx) error {
 			FROM post_creation_dates
 			WHERE post_id = $1
 		)
+		WHERE id = $1
 		`,
 		postID,
 	)
