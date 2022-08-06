@@ -86,7 +86,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		add, err := parseTags(addStr, '\n').chain().save(tx).unwrap()
+		add, err := parseTags(addStr, '\n').chain().save(tx).upgrade(tx).unwrap()
 		if err != nil {
 			return
 		}
