@@ -96,7 +96,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 		}
 	}
 
-	err = ua.Exec()
+	err = ua.exec(tx)
 
 	return err
 }
