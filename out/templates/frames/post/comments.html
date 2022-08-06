@@ -1,9 +1,10 @@
 {{define "post-comments"}}
 {{if .User.ID}}
+{{template "user-frame" .User}}
 <form method="POST">
 	<input type="hidden" name="comment" value="true">
-	<textarea class="center" cols="40" rows="4" name="text"></textarea>
-	<input class="center" type="submit" value="Publish Comment">
+	<textarea class="" cols="40" rows="4" name="text"></textarea>
+	<input class="" type="submit" value="Publish Comment">
 </form>
 {{end}}
 {{with .Comments}}

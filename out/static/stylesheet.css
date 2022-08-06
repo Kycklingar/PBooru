@@ -1025,12 +1025,12 @@ li
 	vertical-align: top;
 }
 
-#commentlist li
+#post #commentlist li
 {
 	margin-bottom: 1em;
 }
 
-#commentlist p
+#post #commentlist p
 {
 	margin-top: 0.5em;
 	margin-left: 2em;
@@ -1114,6 +1114,18 @@ li
 
 .attention a:visited {
 	color: #A6E;
+}
+
+.constrainer
+{
+	display: flex;
+	word-wrap: break-word;
+}
+
+.constrainer>div
+{
+	flex-grow: 1;
+	width: 0;
 }
 
 .postcomment

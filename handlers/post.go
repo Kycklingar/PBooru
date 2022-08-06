@@ -190,6 +190,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	pp.User, pp.UserInfo = getUser(w, r)
 
 	pp.User.QID(DM.DB)
+	pp.User.QName(DM.DB)
 	pp.User.QFlag(DM.DB)
 	pp.User.QPools(DM.DB)
 

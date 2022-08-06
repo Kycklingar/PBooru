@@ -224,13 +224,17 @@
 			</div>
 		</div>
 		{{with .Post.Description}}
-		<div class="box">
-			{{template "post-description" .}}
+		<div class="box constrainer">
+			<div>
+				{{template "post-description" .}}
+			</div>
 		</div>
 		{{end}}
-		{{if not .Post.Removed}}
-		<div class="box comments">
-			{{template "post-comments" wrap2 "User" "Comments" $.User .Comments}}
+		{{if or .Comments $.User.ID}}
+		<div class="box comments constrainer">
+			<div>
+				{{template "post-comments" wrap2 "User" "Comments" $.User .Comments}}
+			</div>
 		</div>
 		{{end}}
 	</div>

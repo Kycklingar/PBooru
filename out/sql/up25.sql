@@ -187,3 +187,6 @@ CREATE TABLE log_duplicate_posts (
 	PRIMARY KEY(id, dup_id)
 );
 
+CREATE INDEX ON log_post_tags (post_id);
+CREATE INDEX ON log_post_tags (log_id);
+CREATE INDEX ON log_post_tags_map (ptid);
