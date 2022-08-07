@@ -104,7 +104,7 @@
 				<div>Page:{{.Page}}</div>
 				{{with .Post.Description}}
 				<div class="constrainer">
-					<div>{{.}}</div>
+					{{template "post-description" .}}
 				</div>
 				{{end}}
 				{{if and $.EditMode $.User.Flag.Comics}}
