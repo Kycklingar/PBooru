@@ -1,6 +1,10 @@
 package DataManager
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/kycklingar/PBooru/DataManager/set"
+)
 
 const (
 	lPostAlts logtable = "post_alts"
@@ -12,7 +16,7 @@ func init() {
 
 type logAlts struct {
 	Posts []*Post
-	pids  []int
+	pids  set.Set[int]
 }
 
 type logAltsSplit struct {
@@ -57,7 +61,7 @@ func (l logAlts) log(logID int, tx *sql.Tx) error {
 	}
 	defer stmt.Close()
 
-	for _, pid := range l.pids {
+	for pid, _ := range l.pids {
 		if _, err = stmt.Exec(alID, pid); err != nil {
 			return err
 		}

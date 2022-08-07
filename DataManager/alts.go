@@ -5,13 +5,20 @@ import (
 	"fmt"
 
 	mm "github.com/kycklingar/MinMax"
+	"github.com/kycklingar/PBooru/DataManager/set"
 )
 
 func SetAlts(posts []int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		rows, err := tx.Query(
+		var (
+			pids  = make(set.Set[int])
+			maxID int
+		)
+
+		err = query(
+			tx,
 			fmt.Sprintf(`
-				SELECT id, alt_group
+				SELECT id
 				FROM posts
 				WHERE alt_group IN(
 					SELECT alt_group
@@ -28,30 +35,15 @@ func SetAlts(posts []int) loggingAction {
 				`,
 				strSep(posts, ","),
 			),
-		)
+		)(func(scan scanner) error {
+			var pid int
+			err := scan(&pid)
+			maxID = mm.Max(maxID, pid)
+			pids.Add(pid)
+			return err
+		})
 		if err != nil {
 			return
-		}
-		defer rows.Close()
-
-		var (
-			pids  []int
-			alts  []int
-			maxID int
-		)
-
-		for rows.Next() {
-			var pid, alt int
-
-			err = rows.Scan(&pid, &alt)
-			if err != nil {
-				return
-			}
-
-			maxID = mm.Max(maxID, pid)
-
-			pids = append(pids, pid)
-			alts = append(alts, alt)
 		}
 
 		_, err = tx.Exec(
@@ -60,7 +52,7 @@ func SetAlts(posts []int) loggingAction {
 				SET alt_group = $1
 				WHERE id IN(%s)
 				`,
-				strSep(pids, ","),
+				pids,
 			),
 			maxID,
 		)
@@ -82,7 +74,17 @@ func SetAlts(posts []int) loggingAction {
 // the other with the remaining alts
 func SplitAlts(posts []int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		rows, err := tx.Query(
+		var (
+			aMax int
+			bMax int
+			a    = make(set.Set[int])
+			b    = make(set.Set[int])
+		)
+
+		b.Add(posts...)
+
+		err = query(
+			tx,
 			fmt.Sprintf(`
 				SELECT id
 				FROM posts
@@ -93,45 +95,32 @@ func SplitAlts(posts []int) loggingAction {
 				)
 				AND id NOT IN(%s)
 				`,
-				strSep(posts, ","),
+				b,
 			),
 			posts[0],
-		)
+		)(func(scan scanner) error {
+			var id int
+			err := scan(&id)
+			aMax = mm.Max(aMax, id)
+			a.Add(id)
+			return err
+		})
 		if err != nil {
 			return
 		}
-		defer rows.Close()
 
-		var (
-			aMax int
-			bMax int
-			a    []int
-		)
-
-		for rows.Next() {
-			var p int
-			err = rows.Scan(&p)
-			if err != nil {
-				return
-			}
-
-			aMax = mm.Max(aMax, p)
-
-			a = append(a, p)
-		}
-
-		for _, p := range posts {
+		for p, _ := range b {
 			bMax = mm.Max(bMax, p)
 		}
 
-		update := func(newAltGroup int, pids []int) error {
+		update := func(newAltGroup int, pids set.Set[int]) error {
 			_, err := tx.Exec(
 				fmt.Sprintf(`
 					UPDATE posts
 					SET alt_group = $1
 					WHERE id IN(%s)
 					`,
-					strSep(pids, ","),
+					pids,
 				),
 				newAltGroup,
 			)
@@ -142,7 +131,7 @@ func SplitAlts(posts []int) loggingAction {
 			return
 		}
 
-		if err = update(bMax, posts); err != nil {
+		if err = update(bMax, b); err != nil {
 			return
 		}
 
@@ -152,7 +141,7 @@ func SplitAlts(posts []int) loggingAction {
 				pids: a,
 			},
 			b: logAlts{
-				pids: posts,
+				pids: b,
 			},
 		}.log
 

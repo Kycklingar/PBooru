@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	mm "github.com/kycklingar/MinMax"
+	"github.com/kycklingar/PBooru/DataManager/set"
 )
 
 type Dupe struct {
@@ -176,9 +179,12 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 
 	infStr := sep(", ", len(dupe.Inferior), dupe.strindex)
 
-	var alts = logAlts{
-		pids: []int{dupe.Post.ID},
-	}
+	var (
+		alts = logAlts{
+			pids: make(set.Set[int]),
+		}
+		max = dupe.Post.ID
+	)
 
 	// Alts of inferior to be applied to superior
 	err := query(
@@ -199,12 +205,15 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 	)(func(scan scanner) error {
 		var pid int
 		err := scan(&pid)
-		alts.pids = append(alts.pids, pid)
+		alts.pids.Add(pid)
+		max = mm.Max(max, pid)
 		return err
 	})
 	if err != nil {
 		return err
 	}
+
+	alts.pids.Add(dupe.Post.ID)
 
 	if len(alts.pids) > 1 {
 		ua.addLogger(logger{
@@ -215,27 +224,19 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 
 	_, err = tx.Exec(
 		fmt.Sprintf(`
-		UPDATE posts
-		SET alt_group = (
-			SELECT alt_group
-			FROM posts
-			WHERE id = $1
-		)
-		WHERE alt_group IN(
-			SELECT alt_group
-			FROM posts
-			WHERE id IN(%s)
-		) AND id NOT IN(%s)
-		`,
-			infStr,
-			infStr,
+			UPDATE posts
+			SET alt_group = $1
+			WHERE id IN (%s)
+			`,
+			alts.pids,
 		),
-		dupe.Post.ID,
+		max,
 	)
 	if err != nil {
 		return err
 	}
 
+	// Reset the altgroup of inferior
 	_, err = tx.Exec(
 		fmt.Sprintf(`
 			UPDATE posts

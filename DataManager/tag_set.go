@@ -141,7 +141,7 @@ func parseTags(tagstr string, delim rune) tagSet {
 			}
 		}
 
-		spitter <- tag
+		spitter <- strings.ToLower(tag)
 		close(spitter)
 	}(tagSpitter)
 

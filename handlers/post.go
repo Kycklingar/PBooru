@@ -160,22 +160,23 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}
-		if !user.QFlag(DM.DB).Tagging() {
-			http.Error(w, "Insufficent privileges. Want 'Tagging'", http.StatusBadRequest)
-			return
-		}
+		//if !user.QFlag(DM.DB).Tagging() {
+		//	http.Error(w, "Insufficent privileges. Want 'Tagging'", http.StatusBadRequest)
+		//	return
+		//}
 
 		//tagStrAdd := r.FormValue("addtags")
 		//tagStrRem := r.FormValue("remtags")
 
-		tags := r.FormValue("tags")
+		//tags := r.FormValue("tags")
 
-		err := post.EditTags(user, tags)
-		if internalError(w, err) {
-			return
-		}
+		//err := post.EditTags(user, tags)
+		//if internalError(w, err) {
+		//	return
+		//}
 		// http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID(DM.DB), post.Hash(DM.DB)), http.StatusSeeOther)
-		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+		//http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+		http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -549,6 +550,8 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
+	return
 	user, _ := getUser(w, r)
 
 	if !user.QFlag(DM.DB).Tagging() {
@@ -562,9 +565,9 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if internalError(w, post.AddTags(user, r.FormValue("tags"))) {
-		return
-	}
+	//if internalError(w, post.AddTags(user, r.FormValue("tags"))) {
+	//	return
+	//}
 
 	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
@@ -575,6 +578,8 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
+	return
 	user, _ := getUser(w, r)
 
 	if !user.QFlag(DM.DB).Tagging() {
@@ -588,9 +593,9 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if internalError(w, post.RemoveTags(user, r.FormValue("tags"))) {
-		return
-	}
+	//if internalError(w, post.RemoveTags(user, r.FormValue("tags"))) {
+	//	return
+	//}
 
 	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
 }
