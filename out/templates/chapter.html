@@ -101,7 +101,12 @@
 					<img src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
 				</a>
 				<br>
-				<p>Page:{{.Page}}</p>
+				<div>Page:{{.Page}}</div>
+				{{with .Post.Description}}
+				<div class="constrainer">
+					<div>{{.}}</div>
+				</div>
+				{{end}}
 				{{if and $.EditMode $.User.Flag.Comics}}
 				<details>
 					<summary>Edit</summary>

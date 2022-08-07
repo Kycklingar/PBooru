@@ -30,7 +30,8 @@ func (c *Chapter) getPages(q querier, limit int) error {
 		limitS = fmt.Sprintf("LIMIT %d", limit)
 	}
 
-	rows, err := q.Query(
+	return query(
+		q,
 		fmt.Sprintf(`
 			SELECT id, post_id, page
 			FROM comic_page
@@ -41,18 +42,12 @@ func (c *Chapter) getPages(q querier, limit int) error {
 			limitS,
 		),
 		c.ID,
-	)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
+	)(func(scan scanner) error {
 		var cp = ComicPage{
 			Post: NewPost(),
 		}
 
-		err = rows.Scan(&cp.ID, &cp.Post.ID, &cp.Page)
+		err := scan(&cp.ID, &cp.Post.ID, &cp.Page)
 		if err != nil {
 			return err
 		}
@@ -61,15 +56,15 @@ func (c *Chapter) getPages(q querier, limit int) error {
 			q,
 			PFHash,
 			PFThumbnails,
+			PFDescription,
 		)
 		if err != nil {
 			return err
 		}
 
 		c.Pages = append(c.Pages, cp)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func GetPostChapters(postID int, postFields ...sqlbinder.Field) ([]*Chapter, error) {
