@@ -79,11 +79,11 @@
 			</details>
 			<details id="quickadd" style="display:none">
 				<summary>Add to chapter</summary>
-				<form style="width:min-content" onsubmit="return incr(this)" method="post" action="/comic/page/add/">
+				<form style="width:min-content" onsubmit="return incr(this)" method="post" action="/comic/chapter/page/add/">
 					<br>
 					<input type="hidden" name="post-id" value="{{.Post.ID}}">
 					<select id="quickadd-chapter" name="chapter-id"></select>
-					<input id="quickadd-page" style="margin:2px; padding:3px 0px;" placeholder="Page" type="number" name="order">
+					<input id="quickadd-page" style="margin:2px; padding:3px 0px;" placeholder="Page" type="number" name="page">
 					<input type="submit" value="Add to chapter">
 				</form>
 				<script src="/static/scripts/quickadd.js"></script>
@@ -110,7 +110,7 @@
 
 					function incr(form)
 					{
-						qaIncrement(form["chapter-id"].value, form["order"].value)
+						qaIncrement(form["chapter-id"].value, form["page"].value)
 					}
 				</script>
 			</details>
