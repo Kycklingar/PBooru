@@ -66,12 +66,13 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 		q = "?" + q
 	}
 
-	page.Paginator = paginate.Paginator{
-		Current: currentPage,
-		Last:    page.Total / limit,
-		Plength: 30,
-		Format:  fmt.Sprintf("/tombstone/%%d/%s", strings.ReplaceAll(q, "%", "%%")),
-	}
+	page.Paginator = paginate.New(
+		currentPage,
+		page.Total,
+		limit,
+		30,
+		fmt.Sprintf("/tombstone/%%d/%s", strings.ReplaceAll(q, "%", "%%")),
+	)
 
 	renderTemplate(w, "tombstone", page)
 

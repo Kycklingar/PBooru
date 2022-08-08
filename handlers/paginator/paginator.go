@@ -2,10 +2,20 @@ package paginate
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	mm "github.com/kycklingar/MinMax"
 )
+
+func New(current, itemsTotal, itemsPP, pageButtons int, format string) Paginator {
+	return Paginator{
+		Current: current,
+		Last:    int(math.Ceil(float64(itemsTotal) / float64(itemsPP))),
+		Plength: pageButtons,
+		Format:  format,
+	}
+}
 
 type Paginator struct {
 	// Current page

@@ -114,12 +114,13 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			bm.End(performBenchmarks)
 		}
 
-		p.Paginator = paginate.Paginator{
-			Current: currPage,
-			Last:    tc.Total() / tagLimit,
-			Plength: 30,
-			Format:  fmt.Sprintf("/tags/%%d/%s%s", ctag, strings.ReplaceAll(p.Query, "%", "%%")),
-		}
+		p.Paginator = paginate.New(
+			currPage,
+			tc.Total(),
+			tagLimit,
+			30,
+			fmt.Sprintf("/tags/%%d/%s%s", ctag, strings.ReplaceAll(p.Query, "%", "%%")),
+		)
 
 		renderTemplate(w, "tags", p)
 		return

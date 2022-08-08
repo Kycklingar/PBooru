@@ -22,20 +22,14 @@
 </details>
 <div class="content">
 {{range .Tombstone}}
-	{{template "thumbnail-open" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
-		<div>
-			<h4>{{.Removed}}</h4>
-			<p>{{.Reason}}</p>
-	{{template "thumbnail-close"}}
+	<div class="box inline">
+		<h4>{{.Removed}}</h4>
+		<p>{{.Reason}}</p>
+		<div class="center">
+		{{template "thumbnail" (wrap2 "Post" "UserInfo" .Post $.UserInfo)}}
+		</div>
+	</div>
 {{end}}
 </div>
-<div class="nolink" id="pageinator">
-	{{range .Paginator.Paginate}}
-		{{if .Current}}
-		<span class="current-page">{{.Val}}</span>
-		{{else}}
-		<span><a href="{{.Href}}">{{.Val}}</a></span>
-		{{end}}
-	{{end}}
-</div>
+{{template "paginator" .Paginator}}
 {{template "baseEnd"}}

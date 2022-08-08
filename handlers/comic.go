@@ -123,12 +123,13 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page.Comics = res.Comics
-	page.Paginator = paginate.Paginator{
-		Current: offset,
-		Last:    res.Total / comicsPerPage,
-		Plength: 10,
-		Format:  fmt.Sprintf("/comics/%%d/%s", strings.ReplaceAll(page.Query.Encode(), "%", "%%")),
-	}
+	page.Paginator = paginate.New(
+		offset,
+		res.Total,
+		comicsPerPage,
+		10,
+		fmt.Sprintf("/comics/%%d/%s", strings.ReplaceAll(page.Query.Encode(), "%", "%%")),
+	)
 
 	page.Time = bm.EndStr(false)
 
