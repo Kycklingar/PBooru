@@ -550,8 +550,6 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
-	return
 	user, _ := getUser(w, r)
 
 	if !user.QFlag(DM.DB).Tagging() {
@@ -562,6 +560,12 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 	post, err := postFromForm(r)
 	if err != nil {
 		postError(w, err)
+		return
+	}
+
+	ua := DM.UserAction(user)
+	ua.Add(DM.AlterPostTags(post.ID, r.FormValue("tags"), ""))
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
