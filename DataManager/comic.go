@@ -25,7 +25,7 @@ type Comic struct {
 }
 
 func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error) {
-	tags, err := parseTags(tagStr, ',').chain().qids(DB).unwrap()
+	tags, err := parseTags(tagStr, ',').chain().qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		return
 	}

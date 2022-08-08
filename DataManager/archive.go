@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log"
-	"math"
 	"path"
 	"strconv"
 	"strings"
@@ -239,12 +238,13 @@ func (arch *archive) start() {
 			Pag   paginate.Paginator
 		}{
 			Posts: posts[i:mm.Min(len(posts), i+ppp)],
-			Pag: paginate.Paginator{
-				Current: 1 + i/ppp,
-				Last:    int(math.Ceil(float64(len(posts)) / float64(ppp))),
-				Plength: 20,
-				Format:  "./%d",
-			},
+			Pag: paginate.New(
+				1+i/ppp,
+				len(posts),
+				ppp,
+				20,
+				"./%d",
+			),
 		}
 
 		w.Reset()
