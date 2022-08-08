@@ -136,6 +136,34 @@ func (chain tagSetChain) aliases(q querier) tagSetChain {
 	return chain
 }
 
+func (chain tagSetChain) addCount(q querier, n int) tagSetChain {
+	if chain.err != nil {
+		return chain
+	}
+
+	var stmt *sql.Stmt
+	stmt, chain.err = q.Prepare(`
+		UPDATE tags
+		SET count = count + $1
+		WHERE id = $2
+		`,
+	)
+	if chain.err != nil {
+		return chain
+	}
+
+	defer stmt.Close()
+
+	for _, tag := range chain.set {
+		_, chain.err = stmt.Exec(n, tag.ID)
+		if chain.err != nil {
+			return chain
+		}
+	}
+
+	return chain
+}
+
 func (chain tagSetChain) recount(q querier) tagSetChain {
 	if chain.err != nil || len(chain.set) <= 0 {
 		return chain

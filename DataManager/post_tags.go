@@ -55,17 +55,14 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 			return
 		}
 
-		qErr := []func(q querier) tagSetChain{
-			add.chain().recount,
-			remove.chain().recount,
-			add.chain().purgeCountCache,
-			remove.chain().purgeCountCache,
+		err = add.chain().addCount(tx, 1).purgeCountCache(tx).err
+		if err != nil {
+			return
 		}
 
-		for _, f := range qErr {
-			if err = f(tx).err; err != nil {
-				return
-			}
+		err = remove.chain().addCount(tx, -1).purgeCountCache(tx).err
+		if err != nil {
+			return
 		}
 
 		err = clearEmptySearchCountCache(tx)
