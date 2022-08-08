@@ -5,7 +5,7 @@
     	{{with .History}}
         	{{range .}}
         	    <h4>{{.User.Name}} - {{.Timestamp}}</h4>
-        	    <a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
+        	    <a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
         	        <img style="max-width:100px;max-height:100px;" src="{{$.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 100}}">
         	    </a>
         	    <table>    

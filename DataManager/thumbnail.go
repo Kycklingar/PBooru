@@ -75,7 +75,7 @@ func makeThumbnails(file io.ReadSeeker) ([]Thumb, error) {
 			return nil, err
 		}
 
-		thumbs = append(thumbs, Thumb{Hash: thumbHash, Size: int(size)})
+		thumbs = append(thumbs, Thumb{Cid: thumbHash, Size: int(size)})
 	}
 
 	return thumbs, nil

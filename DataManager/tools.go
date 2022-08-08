@@ -468,14 +468,14 @@ func GenerateThumbnail(postID int) error {
 			continue
 		}
 
-		_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Hash)
+		_, err = tx.Exec("INSERT INTO thumbnails(post_id, dimension, multihash) VALUES($1, $2, $3) ON CONFLICT (post_id, dimension) DO UPDATE SET multihash = EXCLUDED.multihash", postID, thumb.Size, thumb.Cid)
 		if err != nil {
 			log.Println(err)
 			tx.Rollback()
 			continue
 		}
 
-		if err = store.Store(thumb.Hash, storeThumbnailDest(hash, thumb.Size)); err != nil {
+		if err = store.Store(thumb.Cid, storeThumbnailDest(hash, thumb.Size)); err != nil {
 			log.Println(err)
 			tx.Rollback()
 			continue
@@ -738,7 +738,7 @@ func GenPhash() error {
 
 		for rows.Next() {
 			var p Post
-			err = rows.Scan(&p.ID, &p.Hash)
+			err = rows.Scan(&p.ID, &p.Cid)
 			if err != nil {
 				return nil, err
 			}
@@ -768,8 +768,8 @@ func GenPhash() error {
 		}
 
 		for _, post := range batch {
-			fmt.Println("Working on ", post.ID, post.Hash)
-			f, err := ipfs.Cat(post.Hash)
+			fmt.Println("Working on ", post.ID, post.Cid)
+			f, err := ipfs.Cat(post.Cid)
 			if err != nil {
 				tx.Rollback()
 				return err

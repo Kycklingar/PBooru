@@ -15,11 +15,11 @@ var reportNoneDupes = document.getElementById("non-dupes")
 
 canvas.onclick = function(){rightInterface.focus()}
 
-function postStruct(id, hash, thumb, preview, dimensions, filesize, mime, removed)
+function postStruct(id, cid, thumb, preview, dimensions, filesize, mime, removed)
 {
 	return {
 		"id":id,
-		"hash":hash,
+		"cid":cid,
 		"thumbnail":thumb,
 		"preview":preview,
 		"dimensions":dimensions,
@@ -39,7 +39,7 @@ function preloadImage(post)
 		if (optElim)
 			img.src = ipfsLink(post.preview)
 		else
-			img.src = ipfsLink(post.hash)
+			img.src = ipfsLink(post.cid)
 	}
 }
 
@@ -147,7 +147,7 @@ function closestThumb(minsize, thumbs)
 			r = thumbs[i]
 	}
 
-	return r.Hash
+	return r.Cid
 }
 
 function mimeObj(mime)
@@ -169,9 +169,9 @@ function getRemotePost(id)
 				addPost(
 					postStruct(
 						j.ID,
-						j.Hash,
-						closestThumb(100, j.ThumbHashes),
-						closestThumb(1024, j.ThumbHashes),
+						j.Cid,
+						closestThumb(100, j.Thumbnails),
+						closestThumb(1024, j.Thumbnails),
 						j.Dimension,
 						j.Filesize,
 						mimeObj(j.Mime),
@@ -369,9 +369,9 @@ function reorderPostsByElements()
 	posts = arr
 }
 
-function ipfsLink(hash)
+function ipfsLink(cid)
 {
-	return gateway + "/ipfs/" + hash
+	return gateway + "/ipfs/" + cid
 }
 
 let lt = null
@@ -414,7 +414,7 @@ function renderPost(post)
 	let img = new Image()
 	iload = img
 
-	let src = ipfsLink(post.hash)
+	let src = ipfsLink(post.cid)
 	if (optElim)
 	{
 		src = ipfsLink(post.preview)

@@ -97,8 +97,8 @@
 		{{range .Chapter.Pages}}
 		<div class="comic-page" page="{{.Page}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
 			<div class="container">
-				<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-					<img src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Hash}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Hash}}">
+				<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
+					<img src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Cid}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Cid}}">
 				</a>
 				<br>
 				<div>Page:{{.Page}}</div>

@@ -224,7 +224,7 @@ func compareReportHandler(w http.ResponseWriter, r *http.Request) {
 
 		p.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 			DM.PFDimension,

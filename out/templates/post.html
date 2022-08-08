@@ -47,7 +47,7 @@
 					<form method="POST" action="/post/edit/alts/split/">
 						<span>Remove alt</span>
 						<input type="hidden" name="post-id" value="{{.Post.ID}}">
-						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Hash}}/">
+						<input type="hidden" name="ref" value="/post/{{.Post.ID}}/{{.Post.Cid}}/">
 						<input type="submit">
 					</form>
 					{{end}}
@@ -154,12 +154,12 @@
 			</script>
 			{{if eq .Post.Mime.Type "image"}}
 			<div id="image">
-				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}">
 			</div>
 			{{else if eq .Post.Mime.Type "video"}}
 			<div>
 				<video id="fullsize" loop controls>
-					<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+					<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}">
 				</video>
 			</div>
 			{{else}}
@@ -191,13 +191,13 @@
 				</div>
 				<div class="spantop">
 					<span><a href="/similar/?id={{.Post.ID}}">Find Similar</a></span>
-					<span><a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}" download>Download</a></span>
+					<span><a href="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}" download>Download</a></span>
 					{{with .Post.MetaData.filename}}
 					<details id="filenames">
 						<summary>Filename</summary>
 						<ul>
 						{{range .}}
-						<li><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Hash}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></li>
+						<li><a href="{{$.UserInfo.Gateway}}/ipfs/{{$.Post.Cid}}?filename={{.Data | stripExt}}" download>{{.Data}}</a></li>
 						{{end}}
 						</ul>
 					</details>

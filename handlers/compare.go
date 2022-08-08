@@ -109,7 +109,7 @@ func comparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 		page.Posts[i].QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 			DM.PFDimension,
@@ -158,7 +158,7 @@ func compare2Handler(w http.ResponseWriter, r *http.Request) {
 
 		page.Posts[i].QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 			DM.PFDimension,

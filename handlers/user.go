@@ -56,7 +56,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	for _, post := range p.RecentPosts {
 		post.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
 		)
@@ -66,7 +66,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	for _, post := range p.RecentVotes {
 		post.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
 		)
@@ -117,7 +117,7 @@ func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 		h.Post.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 		)

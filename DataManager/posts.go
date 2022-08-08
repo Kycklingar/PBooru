@@ -35,7 +35,7 @@ func NewPost() *Post {
 
 func GetPostFromCID(cid string) (*Post, error) {
 	var p = NewPost()
-	p.Hash = cid
+	p.Cid = cid
 	err := DB.QueryRow(`
 		SELECT id FROM posts
 		WHERE multihash = $1
@@ -93,7 +93,7 @@ func (m metaDataMap) merge(b metaDataMap) {
 
 type Post struct {
 	ID         int
-	Hash       string
+	Cid        string
 	thumbnails []Thumb
 	Mime       *Mime
 	Removed    bool
@@ -134,7 +134,7 @@ const (
 
 const (
 	PFID sqlbinder.Field = iota
-	PFHash
+	PFCid
 	PFThumbnails
 	PFMime
 	PFRemoved
@@ -162,7 +162,7 @@ type Dimension struct {
 }
 
 type Thumb struct {
-	Hash string
+	Cid  string
 	Size int
 }
 
@@ -184,8 +184,8 @@ func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
 	case PFID:
 		sel.Bind(&p.ID, "p.id", "")
-	case PFHash:
-		sel.Bind(&p.Hash, "p.multihash", "")
+	case PFCid:
+		sel.Bind(&p.Cid, "p.multihash", "")
 	case PFMime:
 		sel.Bind(&p.Mime.Name, "m.mime", "LEFT JOIN mime_type m ON mime_id = m.id")
 		sel.Bind(&p.Mime.Type, "m.type", "")
@@ -263,7 +263,7 @@ type thumbnails []Thumb
 func (t *Thumb) Rebind(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
 	case PFThumbnails:
-		sel.Rebind(&t.Hash)
+		sel.Rebind(&t.Cid)
 		sel.Rebind(&t.Size)
 	}
 }
@@ -315,7 +315,7 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 		alt.ID = id
 		if err = alt.QMul(
 			q,
-			PFHash,
+			PFCid,
 			PFThumbnails,
 		); err != nil {
 			return err
@@ -436,7 +436,7 @@ func (p Post) ClosestThumbnail(size int) (ret string) {
 	var s int
 	for _, k := range p.thumbnails {
 		if k.Size > s {
-			ret = k.Hash
+			ret = k.Cid
 			s = k.Size
 		}
 	}
@@ -446,7 +446,7 @@ func (p Post) ClosestThumbnail(size int) (ret string) {
 		}
 		if k.Size < s {
 			s = k.Size
-			ret = k.Hash
+			ret = k.Cid
 		}
 	}
 	return
@@ -624,12 +624,12 @@ func CreatePost(file io.ReadSeeker, user *User, ud UploadData) (*Post, error) {
 				`,
 				p.ID,
 				thumb.Size,
-				thumb.Hash,
+				thumb.Cid,
 			); err != nil {
 				return nil, err
 			}
 
-			err = store.Store(thumb.Hash, storeThumbnailDest(cid, thumb.Size))
+			err = store.Store(thumb.Cid, storeThumbnailDest(cid, thumb.Size))
 			if err != nil {
 				return nil, err
 			}
@@ -840,7 +840,7 @@ func (p *Post) Delete() error {
 	}
 	defer commitOrDie(tx, &err)
 
-	err = p.QMul(tx, PFHash, PFThumbnails)
+	err = p.QMul(tx, PFCid, PFThumbnails)
 	if err != nil {
 		return err
 	}
@@ -852,13 +852,13 @@ func (p *Post) Delete() error {
 
 	// Remove files from ipfs
 	for _, thumb := range p.thumbnails {
-		err = store.Remove(storeThumbnailDest(p.Hash, thumb.Size))
+		err = store.Remove(storeThumbnailDest(p.Cid, thumb.Size))
 		if err != nil {
 			return err
 		}
 	}
 
-	err = store.Remove(storeFileDest(p.Hash))
+	err = store.Remove(storeFileDest(p.Cid))
 
 	return err
 }

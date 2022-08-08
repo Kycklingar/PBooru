@@ -100,7 +100,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 		for _, ph := range log.Posts {
 			err := ph.Post.QMul(
 				DM.DB,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFMime,
 				DM.PFThumbnails,
 				DM.PFRemoved,
@@ -112,7 +112,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			for i := range ph.Duplicates.Inferior {
 				err = ph.Duplicates.Inferior[i].QMul(
 					DM.DB,
-					DM.PFHash,
+					DM.PFCid,
 					DM.PFMime,
 					DM.PFThumbnails,
 					DM.PFRemoved,
@@ -127,7 +127,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			for _, p := range a.Posts {
 				err := p.QMul(
 					DM.DB,
-					DM.PFHash,
+					DM.PFCid,
 					DM.PFMime,
 					DM.PFThumbnails,
 					DM.PFRemoved,
@@ -167,7 +167,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 		for _, page := range log.ComicPages {
 			err = page.Post.QMul(
 				DM.DB,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFMime,
 				DM.PFThumbnails,
 				DM.PFRemoved,
@@ -179,7 +179,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			if page.Diff != nil {
 				err = page.Diff.Post.QMul(
 					DM.DB,
-					DM.PFHash,
+					DM.PFCid,
 					DM.PFMime,
 					DM.PFThumbnails,
 					DM.PFRemoved,

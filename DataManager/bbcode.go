@@ -32,13 +32,13 @@ func createCompiler(q querier, gateway string) bbcode.Compiler {
 
 		post.QMul(
 			DB,
-			PFHash,
+			PFCid,
 			PFThumbnails,
 		)
 
 		a := bbcode.NewHTMLTag("")
 		a.Name = "a"
-		a.Attrs["href"] = fmt.Sprintf("/post/%d/%s", post.ID, post.Hash)
+		a.Attrs["href"] = fmt.Sprintf("/post/%d/%s", post.ID, post.Cid)
 		img := bbcode.NewHTMLTag("")
 		img.Name = "img"
 		img.Attrs["src"] = gateway + "/ipfs/" + post.ClosestThumbnail(250)

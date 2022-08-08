@@ -51,7 +51,7 @@ func tombstoneHandler(w http.ResponseWriter, r *http.Request) {
 	for _, p := range page.Tombstone {
 		err := p.Post.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 			DM.PFRemoved,

@@ -1,50 +1,47 @@
 {{template "base"}}
 
 <style>
-    #image img
-    {
-        position: fixed;
-        max-width: 100%;
-        max-height: 100%;
+#image img {
+	position: fixed;
+	max-width: 100%;
+	max-height: 100%;
 
-        top: 50%;
-        /* left: 50%; */
-        /* transform: translate(-50%, -50%); */
-        transform: translateY(-50%);
-    }
+	top: 50%;
+	/* left: 50%; */
+	/* transform: translate(-50%, -50%); */
+	transform: translateY(-50%);
+}
 </style>
 <div style="position:fixed; z-index: 10; bottom: 0px; left: 0px;">
-    <span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
-    <div id="controller" >
-        <form onsubmit="slider.search(this); return false">
-            <input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search (AND)">
-            <br>
-            <input class="stinput" type="text" name="or" id="orinput" placeholder="Search (OR)">
-            <br>
-            <input class="stinput" type="text" name="filter" id="filterinput" placeholder="Filter">
-            <br>
-            <input class="stinput" type="text" name="unless" id="unlessinput" placeholder="Unless">
-            <br>
-            <input type="radio" name="order" value="desc" checked><label>Descending</label><br>
-            <input type="radio" name="order" value="asc"><label>Ascending</label><br>
-            <input type="radio" name="order" value="random"><label>Random</label><br>
-            <input type="submit">
-        </form>
-        <script type="text/javascript" src="/static/suggestions.js"></script>
-        <button onclick="slider.stopSlideshow()">Stop</button>
-        <br>
-        <label>Tickrate</label>
-        <br>
-        1<input type="range" min="1" max="100" id="tickrate" value=25 oninput="slider.tickrate = this.value">100
-        <br>
-        <label>PixelsPerTick</label>
-        <br>
-        1<input type="range" min="1" max="10" id="pixelsPerTick" value="5" oninput="slider.pixelsPerTick = this.value">10
-    </div>
+	<span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
+	<div id="controller" >
+		<form onsubmit="slider.search(this); return false">
+			<input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search (AND)">
+			<br>
+			<input class="stinput" type="text" name="or" id="orinput" placeholder="Search (OR)">
+			<br>
+			<input class="stinput" type="text" name="filter" id="filterinput" placeholder="Filter">
+			<br>
+			<input class="stinput" type="text" name="unless" id="unlessinput" placeholder="Unless">
+			<br>
+			<input type="radio" name="order" value="desc" checked><label>Descending</label><br>
+			<input type="radio" name="order" value="asc"><label>Ascending</label><br>
+			<input type="radio" name="order" value="random"><label>Random</label><br>
+			<input type="submit">
+		</form>
+		<script type="text/javascript" src="/static/suggestions.js"></script>
+		<button onclick="slider.stopSlideshow()">Stop</button>
+		<br>
+		<label>Tickrate</label>
+		<br>
+		1<input type="range" min="1" max="100" id="tickrate" value=25 oninput="slider.tickrate = this.value">100
+		<br>
+		<label>PixelsPerTick</label>
+		<br>
+		1<input type="range" min="1" max="10" id="pixelsPerTick" value="5" oninput="slider.pixelsPerTick = this.value">10
+	</div>
 </div>
-<div id="image" >
-</div>
-
+<div id="image"></div>
 
 <script>
     var im = document.getElementById("image")
@@ -130,18 +127,18 @@
 
             let post = this.data.Posts[this.index++]
 
-            if(post.ThumbHashes == null)
+            if(post.Thumbnails == null)
             {
                 this.nextImage()
                 return
             }
 
 	    let thumbnail = null
-	    for(let i = 0; i < post.ThumbHashes.length; i++)
+	    for(let i = 0; i < post.Thumbnails.length; i++)
 	    {
-	    	if(thumbnail == null || post.ThumbHashes[i].Size > thumbnail.Size)
+	    	if(thumbnail == null || post.Thumbnails[i].Size > thumbnail.Size)
 		{
-			thumbnail = post.ThumbHashes[i]
+			thumbnail = post.Thumbnails[i]
 		}
 	    }
 
@@ -150,9 +147,9 @@
 
             let image = new Image()
 
-            image.src = "{{.Gateway}}/ipfs/" + thumbnail.Hash
+            image.src = "{{.Gateway}}/ipfs/" + thumbnail.Cid
             image.onclick = function(){
-                window.open("/post/" + post.ID + "/" + post.Hash, "_blank")
+                window.open("/post/" + post.ID + "/" + post.Cid, "_blank")
             }
             image.style.cursor = "pointer"
             

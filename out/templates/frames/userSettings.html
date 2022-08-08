@@ -48,7 +48,7 @@
 		function thumbPreview(el)
 		{
 			var video = document.createElement("video")
-			video.src = "{{.Gateway}}/ipfs/" + el.getAttribute("hash")
+			video.src = "{{.Gateway}}/ipfs/" + el.getAttribute("cid")
 			video.className = "preview"
 			video.autoplay = true
 			video.loop = true

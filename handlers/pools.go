@@ -40,7 +40,7 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 			post.Post.QMul(
 				DM.DB,
 				DM.PFThumbnails,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFRemoved,
 			)
 		}
@@ -74,7 +74,7 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 		pm.Post.QMul(
 			DM.DB,
 			DM.PFThumbnails,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFRemoved,
 		)
 	}

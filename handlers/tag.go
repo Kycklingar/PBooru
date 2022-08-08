@@ -217,7 +217,7 @@ func preloadTagHistory(histories []*DM.TagHistory) {
 		}
 		h.Post.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFMime,
 		)

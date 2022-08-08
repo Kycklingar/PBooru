@@ -16,9 +16,9 @@
 	{{end}}
 	{{if not .EditMode}}
 	{{if .User.Flag.Comics}}
-		<form>
-			<button type="submit" name="edit-mode">Edit</button>
-		</form>
+	<form>
+		<button type="submit" name="edit-mode">Edit</button>
+	</form>
 	{{end}}
 	{{end}}
 
@@ -43,44 +43,44 @@
 	{{range .Comic.Chapters}}
 	<div class="comics-container box">
 		<h3><a href="/comic/{{$.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}</a>{{if .Title}} - {{.Title}}{{end}}</h3>
-	    	<h4>Pages: {{.PageCount}}</h4>
-	    	<div class="cpage-container">
-		{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.NPages $PostLimit)}}
+		<h4>Pages: {{.PageCount}}</h4>
+		<div class="cpage-container">
+			{{template "chapterPosts" wrap2 "UserInfo" "Posts" $.UserInfo (.NPages $PostLimit)}}
 		</div>
 		{{if and $.EditMode $.User.Flag.Comics}}
-			<details>
+		<details>
 			<summary>Edit</summary>
-				<form method="post" action="/comic/chapter/edit/">
-					<label>Chapter ID: <b>{{.ID}}</b></label>
-					<input type="hidden" name="chapter-id" value="{{.ID}}">
-					<label>Title
-						<input type="text" name="title" value="{{.Title}}">
-					</label>
-					<label>Order
-						<input type="number" name="order" value="{{.Order}}">
-					</label>
-					<input type="submit">
-				</form>
-				<form action="/comic/chapter/delete/" method="POST">
-					<input type="hidden" name="chapter-id" value="{{.ID}}">
-					<input type="submit" value="Delete">
-				</form>
-			</details>
+			<form method="post" action="/comic/chapter/edit/">
+				<label>Chapter ID: <b>{{.ID}}</b></label>
+				<input type="hidden" name="chapter-id" value="{{.ID}}">
+				<label>Title
+					<input type="text" name="title" value="{{.Title}}">
+				</label>
+				<label>Order
+					<input type="number" name="order" value="{{.Order}}">
+				</label>
+				<input type="submit">
+			</form>
+			<form action="/comic/chapter/delete/" method="POST">
+				<input type="hidden" name="chapter-id" value="{{.ID}}">
+				<input type="submit" value="Delete">
+			</form>
+		</details>
 		{{end}}
 	</div>
 	{{end}}
 </div>
 
 {{define "chapterPosts"}}
-	{{$zindex := 10}}
-	{{range .Posts}}
-		<div style="z-index:{{$zindex}};" class="comic-thumb" >
-			{{$zindex = add $zindex -1}}
-        	    	<a href="/post/{{.Post.ID}}/{{.Post.Hash}}">
-        	            	<img src="{{$.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Hash}}">
-        	    	</a>
-        	</div>
-	{{end}}
+{{$zindex := 10}}
+{{range .Posts}}
+<div style="z-index:{{$zindex}};" class="comic-thumb" >
+	{{$zindex = add $zindex -1}}
+	<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
+		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 256}}" alt="{{.Post.Cid}}">
+	</a>
+</div>
+{{end}}
 {{end}}
 
 {{template "baseEnd"}}

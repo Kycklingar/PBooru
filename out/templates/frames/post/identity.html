@@ -7,7 +7,7 @@
 	</tr>
 	<tr>
 		<th>CID</th>
-		<td>{{.Hash}}</td>
+		<td>{{.Cid}}</td>
 	</tr>
 	<tr>
 		<th>Sha256</th>
@@ -25,7 +25,7 @@
 	{{range .}}
 	<tr>
 		<th>{{.Size}}</th>
-		<td><a href="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}">{{.Hash}}</a></td>
+		<td><a href="{{$.UserInfo.Gateway}}/ipfs/{{.Cid}}">{{.Cid}}</a></td>
 	</tr>
 	{{end}}
 </table>

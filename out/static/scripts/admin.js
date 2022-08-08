@@ -112,7 +112,7 @@ function createPost(post) {
 		div.style.border = "solid red"
 	}
 
-	if (post.ThumbHashes == null) {
+	if (post.Thumbnails == null) {
 		var d = document.createElement("div")
 		d.style = "background-color:grey;"
 		d.className = "centered"
@@ -120,10 +120,10 @@ function createPost(post) {
 		div.appendChild(d)
 	}
 	else {
-		thumb = closestThumb(0, post.ThumbHashes)
+		thumb = closestThumb(0, post.Thumbnails)
 		var img = new Image()
-		img.src = UserInfo.Gateway + "/ipfs/" + thumb.Hash
-		img.alt = post.Hash
+		img.src = UserInfo.Gateway + "/ipfs/" + thumb.Cid
+		img.alt = post.Cid
 		// img.style.maxWidth = UserInfo.ThumbSize
 		// img.style.maxHeight = UserInfo.ThumbSize
 		div.appendChild(img)
@@ -217,7 +217,7 @@ function constructSelectionPost(post) {
 		return ret
 	}()
 
-	if (post.ThumbHashes == null) {
+	if (post.Thumbnails == null) {
 		var d = document.createElement("div")
 		d.style = "background-color:grey;"
 		d.className = "centered"
@@ -229,10 +229,10 @@ function constructSelectionPost(post) {
 		div.appendChild(a)
 	}
 	else {
-		thumb = closestThumb(0, post.ThumbHashes)
+		thumb = closestThumb(0, post.Thumbnails)
 		var img = new Image()
-		img.src = UserInfo.Gateway + "/ipfs/" + thumb.Hash
-		img.alt = post.Hash
+		img.src = UserInfo.Gateway + "/ipfs/" + thumb.Cid
+		img.alt = post.Cid
 		// img.style.maxWidth = UserInfo.ThumbSize
 		// img.style.maxHeight = UserInfo.ThumbSize
 		let a = document.createElement("a")

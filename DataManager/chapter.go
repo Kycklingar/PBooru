@@ -54,7 +54,7 @@ func (c *Chapter) getPages(q querier, limit int) error {
 
 		err = cp.Post.QMul(
 			q,
-			PFHash,
+			PFCid,
 			PFThumbnails,
 			PFDescription,
 		)

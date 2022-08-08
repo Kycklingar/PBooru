@@ -1,318 +1,294 @@
 {{template "base"}}
 
-<div>
-	<div class="box" style="float:right;max-width:50%;">
-		<h2>Structures</h2>
-		<ul>
+<div class="box" style="float:right;max-width:50%;">
+	<h2>Structures</h2>
+	<ul>
+		<div class="box">
+			{{block "apiv1-post" .}}
+			<table>
+				<b>Post</b>
+				<tr>
+					<td>ID</td>
+					<td>Integer</td>
+				</tr>
+				<tr>
+					<td>Cid</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Sha256</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Md5</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Filesize</td>
+					<td>Uint64</td>
+				</tr>
+				<tr>
+					<td>Mime</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Removed</td>
+					<td>Boolean</td>
+				</tr>
+				<tr>
+					<td>Deleted</td>
+					<td>Boolean</td>
+				</tr>
+				<tr>
+					<td>Description</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Thumbnails</td>
+					<td>[ ]Thumbnail</td>
+				</tr>
+				<tr>
+					<td>Metadata</td>
+					<td>Map[String][]String</td>
+				</tr>
+				<tr>
+					<td>Tags</td>
+					<td>[ ]Tag</td>
+				</tr>
+			</table>
+			{{end}}
+		</div>
+		<div class="box">
+			<table>
+				<b>Thumbnail</b>
+				<tr>
+					<td>Cid</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Size</td>
+					<td>Integer</td>
+				</tr>
+			</table>
+		</div>
+		<div class="box">
+			<table>
+				<b>Tag</b>
+				<tr>
+					<td>Tag</td>
+					<td>String</td>
+				</tr>
+				<tr>
+					<td>Namespace</td>
+					<td>String</td>
+				</tr>
+			</table>
+			<table>
+				<b>Tag</b><span> (with combTagNamespace)</span>
+				<tr>
+					<td>Tag</td>
+					<td>String</td>
+				</tr>
+			</table>
+		</div>
+	</ul>
+</div>
+<div class="" style="float:left;">
+	<ul>
+		<li>
 			<div class="box">
-				<table>
-					<b>Post</b>
-					<tr>
-						<td>ID</td>
-						<td>Integer</td>
-					</tr>
-					<tr>
-						<td>Hash</td>
-						<td>String</td>
-					</tr>
-					<tr>
-						<td>ThumbHashes</td>
-						<td>[ ]Thumbnail</td>
-					</tr>
-					<tr>
-						<td>Mime</td>
-						<td>String</td>
-					</tr>
-					<tr>
-						<td>Removed</td>
-						<td>Boolean</td>
-					</tr>
-					<tr>
-						<td>Deleted</td>
-						<td>Boolean</td>
-					</tr>
-					<tr>
-						<td>Tags</td>
-						<td>[ ]Tag</td>
-					</tr>
-				</table>
+				<b>
+					<a href="post">
+						/api/v1/post
+					</a>
+				</b>
+				<ul>
+					Arguments:
+					<table>
+						<th>Arg</th>
+						<th>Type</th>
+						<th>Required</th>
+						<th>Description</th>
+						<tr>
+							<td>
+								<b>id</b>
+							</td>
+							<td>Integer</td>
+							<td>No*</td>
+							<td>*At least one identifier must be used</td>
+						</tr>
+						<tr>
+							<td>
+								<b>ipfs</b>
+							</td>
+							<td>String</td>
+							<td>No*</td>
+							<td>Ipfs CID</td>
+						</tr>
+						<tr>
+							<td>
+								<b>md5</b>
+							</td>
+							<td>String</td>
+							<td>No*</td>
+							<td>MD5 checksum</td>
+						</tr>
+						<tr>
+							<td>
+								<b>sha256</b>
+							</td>
+							<td>String</td>
+							<td>No*</td>
+							<td>Sha256 checksum</td>
+						</tr>
+						<tr>
+							<td>
+								<b>combTagNamespace</b>
+							</td>
+							<td>Boolean</td>
+							<td>No</td>
+							<td>Combine tags with their namespace. Useful for tag parsing in hydrus</td>
+						</tr>
+					</table>
+					<br>
+					Returns:
+					{{template "apiv1-post"}}
+					<p>Example query:</p>
+					<p>/api/v1/post?id=10</p>
+				</ul>
 			</div>
+		</li>
+		<li>
 			<div class="box">
-				<table>
-					<b>Thumbnail</b>
-					<tr>
-						<td>Hash</td>
-						<td>String</td>
-					</tr>
-					<tr>
-						<td>Size</td>
-						<td>Integer</td>
-					</tr>
-				</table>
-			</div>
-			<div class="box">
-				<table>
-					<b>Tag</b>
-					<tr>
-						<td>Tag</td>
-						<td>String</td>
-					</tr>
-					<tr>
-						<td>Namespace</td>
-						<td>String</td>
-					</tr>
-				</table>
-				<table>
-					<b>Tag</b><span> (with combTagNamespace)</span>
-					<tr>
-						<td>Tag</td>
-						<td>String</td>
-					</tr>
-				</table>
-			</div>
-		</ul>
-	</div>
-	<div class="" style="float:left;">
-		<ul>
-			<li>
-				<div class="box">
-					<b>
-						<a href="post">
-							/api/v1/post
-						</a>
-					</b>
+				<b>
+					<a href="posts">/api/v1/posts</a>
+				</b>
+				<ul>
+					Arguments:
+					<table>
+						<th>Arg</th>
+						<th>Type</th>
+						<th>Required</th>
+						<th>Description</th>
+						<tr>
+							<td>
+								<b>tags</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+						</tr>
+						<tr>
+							<td>
+								<b>or</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+						</tr>
+						<tr>
+							<td>
+								<b>filter</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+						</tr>
+						<tr>
+							<td>
+								<b>unless</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+						</tr>
+						<tr>
+							<td>
+								<b>limit</b>
+							</td>
+							<td>Integer</td>
+							<td>No</td>
+							<td>0 - 100</td>
+						</tr>
+						<tr>
+							<td>
+								<b>offset</b>
+							</td>
+							<td>Integer</td>
+							<td>No</td>
+						</tr>
+						<tr>
+							<td>
+								<b>order</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+							<td>Possible values: "asc", "desc", "random", "score"<br>Default: "desc"</td>
+						</tr>
+						<tr>
+							<td>
+								<b>mime-type</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+							<td>Example values: "image", "video"</td>
+						</tr>
+						<tr>
+							<td>
+								<b>mime</b>
+							</td>
+							<td>String</td>
+							<td>No</td>
+							<td>Example values: "png", "gif", "mp4"</td>
+						</tr>
+						<tr>
+							<td>
+								<b>inclTags</b>
+							</td>
+							<td>Boolean</td>
+							<td>No</td>
+							<td>Include post tags in the result</td>
+						</tr>
+						<tr>
+							<td>
+								<b>combTagNamespace</b>
+							</td>
+							<td>Boolean</td>
+							<td>No</td>
+						</tr>
+					</table>
+					<br> Returns:
+					<table>
+						<th>Name</th>
+						<th>Type</th>
+						<tr>
+							<td>
+								<b>TotalPosts</b>
+							</td>
+							<td>Integer</td>
+						</tr>
+						<tr>
+							<td>
+								<b>Posts</b>
+							</td>
+							<td>[ ]Post</td>
+						</tr>
+					</table>
+					<br>
+					<p>Example queries:</p>
 					<ul>
-						Arguments:
-						<table>
-							<th>Arg</th>
-							<th>Type</th>
-							<th>Required</th>
-							<th>Description</th>
-							<tr>
-								<td>
-									<b>id</b>
-								</td>
-								<td>Integer</td>
-								<td>No*</td>
-								<td>*At least one identifier must be used</td>
-							</tr>
-							<tr>
-								<td>
-									<b>ipfs</b>
-								</td>
-								<td>String</td>
-								<td>No*</td>
-								<td>Ipfs CID</td>
-							</tr>
-							<tr>
-								<td>
-									<b>md5</b>
-								</td>
-								<td>String</td>
-								<td>No*</td>
-								<td>MD5 checksum</td>
-							</tr>
-							<tr>
-								<td>
-									<b>sha256</b>
-								</td>
-								<td>String</td>
-								<td>No*</td>
-								<td>Sha256 checksum</td>
-							</tr>
-							<tr>
-								<td>
-									<b>combTagNamespace</b>
-								</td>
-								<td>Boolean</td>
-								<td>No</td>
-								<td>Combine tags with their namespace. Useful for tag parsing in hydrus</td>
-							</tr>
-						</table>
-						<br> Returns:
-						<table>
-							<th>Name</th>
-							<th>Type</th>
-							<tr>
-								<td>
-									<b>ID</b>
-								</td>
-								<td>Integer</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Hash</b>
-								</td>
-								<td>String</td>
-							</tr>
-							<tr>
-								<td>
-									<b>ThumbHashes</b>
-								</td>
-								<td>[ ]Thumbnail</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Mime</b>
-								</td>
-								<td>String</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Removed</b>
-								</td>
-								<td>Boolean</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Deleted</b>
-								</td>
-								<td>Boolean</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Tags</b>
-								</td>
-								<td>[ ]Tag</td>
-							</tr>
-							</TABLE>
-							<p>Example query:</p>
-							<p>/api/v1/post?id=10</p>
+						<li>
+							/api/v1/posts
+						</li>
+						<li>
+							/api/v1/posts?offset=4
+						</li>
+						<li>
+							/api/v1/posts?tags=example:tag,another:tag&offset=2
+						</li>
+						<li>
+							/api/v1/posts?mime-type=video&mime=png&mime=gif
+						</li>
 					</ul>
-				</div>
-			</li>
-			<li>
-				<div class="box">
-					<b>
-						<a href="posts">/api/v1/posts</a>
-					</b>
-					<ul>
-						Arguments:
-						<table>
-							<th>Arg</th>
-							<th>Type</th>
-							<th>Required</th>
-							<th>Description</th>
-							<tr>
-								<td>
-									<b>tags</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-							</tr>
-							<tr>
-								<td>
-									<b>or</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-							</tr>
-							<tr>
-								<td>
-									<b>filter</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-							</tr>
-							<tr>
-								<td>
-									<b>unless</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-							</tr>
-							<tr>
-								<td>
-									<b>limit</b>
-								</td>
-								<td>Integer</td>
-								<td>No</td>
-								<td>0 - 100</td>
-							</tr>
-							<tr>
-								<td>
-									<b>offset</b>
-								</td>
-								<td>Integer</td>
-								<td>No</td>
-							</tr>
-							<tr>
-								<td>
-									<b>order</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-								<td>Possible values: "asc", "desc", "random", "score"<br>Default: "desc"</td>
-							</tr>
-							<tr>
-								<td>
-									<b>mime-type</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-								<td>Example values: "image", "video"</td>
-							</tr>
-							<tr>
-								<td>
-									<b>mime</b>
-								</td>
-								<td>String</td>
-								<td>No</td>
-								<td>Example values: "png", "gif", "mp4"</td>
-							</tr>
-							<tr>
-								<td>
-									<b>inclTags</b>
-								</td>
-								<td>Boolean</td>
-								<td>No</td>
-								<td>Include post tags in the result</td>
-							</tr>
-							<tr>
-								<td>
-									<b>combTagNamespace</b>
-								</td>
-								<td>Boolean</td>
-								<td>No</td>
-							</tr>
-						</table>
-						<br> Returns:
-						<table>
-							<th>Name</th>
-							<th>Type</th>
-							<tr>
-								<td>
-									<b>TotalPosts</b>
-								</td>
-								<td>Integer</td>
-							</tr>
-							<tr>
-								<td>
-									<b>Posts</b>
-								</td>
-								<td>[ ]Post</td>
-							</tr>
-						</table>
-						<br>
-						<p>Example queries:</p>
-						<ul>
-							<li>
-								/api/v1/posts
-							</li>
-							<li>
-								/api/v1/posts?offset=4
-							</li>
-							<li>
-								/api/v1/posts?tags=example:tag,another:tag&offset=2
-							</li>
-							<li>
-								/api/v1/posts?mime-type=video&mime=png&mime=gif
-							</li>
-						</ul>
-					</ul>
-				</div>
-		</ul>
-	</div>
+				</ul>
+			</div>
+	</ul>
 </div>
 
 {{template "baseEnd"}}

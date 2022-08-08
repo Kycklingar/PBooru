@@ -6,9 +6,9 @@
 {{define "thumbnail-open"}}
 {{with .Post}}
 <div postid="{{.ID}}" class="thumbnail {{.Mime.Type}}">
-	<a href="/post/{{.ID}}/{{.Hash}}">
+	<a href="/post/{{.ID}}/{{.Cid}}">
 		{{if .Thumbnails}}
-		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
+		<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Cid}}" class="{{if .Removed}}removed{{end}}">
 		{{else}}
 		<div class="mimetype">
 			<span>{{.Mime}}</span>
@@ -29,8 +29,8 @@
 	{{range .Posts}}
 	<div style="z-index:{{$zindex}};" class="comic-thumb">
 		{{$zindex = add $zindex -1}}
-		<a href="/post/{{.ID}}/{{.Hash}}">
-			<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Hash}}" class="{{if .Removed}}removed{{end}}">
+		<a href="/post/{{.ID}}/{{.Cid}}">
+			<img src="{{$.UserInfo.Gateway}}/ipfs/{{.ClosestThumbnail 256}}" alt="{{.Cid}}" class="{{if .Removed}}removed{{end}}">
 		</a>
 	</div>
 	{{end}}

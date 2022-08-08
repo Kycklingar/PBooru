@@ -81,7 +81,7 @@
 	{{range .Posts}}
 		addPost(postStruct(
 			{{.ID}},
-			{{.Hash}},
+			{{.Cid}},
 			{{.ClosestThumbnail 100}},
 			{{.ClosestThumbnail 1024}},
 			{{.Dimension}},//{{with .Dimension}}{"width":{{.Width}},"height":{{.Height}}}{{else}}null{{end}},

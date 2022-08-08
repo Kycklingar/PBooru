@@ -14,7 +14,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	p.ID = 1
 	err := p.QMul(
 		DM.DB,
-		DM.PFHash,
+		DM.PFCid,
 		DM.PFMime,
 		DM.PFDeleted,
 		DM.PFSize,

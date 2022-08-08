@@ -144,7 +144,7 @@ func (arch *archive) start() {
 		for _, res := range results {
 			err = res.Post.QMul(
 				DB,
-				PFHash,
+				PFCid,
 				PFThumbnails,
 				PFMime,
 			)
@@ -155,15 +155,15 @@ func (arch *archive) start() {
 
 			var thumbPath string
 			if thumb := res.Post.ClosestThumbnail(256); thumb != "" {
-				thumbPath = path.Join("thumbnails", cidDir(res.Post.Hash), res.Post.Hash)
+				thumbPath = path.Join("thumbnails", cidDir(res.Post.Cid), res.Post.Cid)
 			}
 
 			var a = archivePost{
 				Post:          res.Post,
 				Tags:          res.Tags,
-				FilePath:      storeFileDest(res.Post.Hash),
+				FilePath:      storeFileDest(res.Post.Cid),
 				ThumbnailPath: thumbPath,
-				PostPath:      path.Join("posts", cidDir(res.Post.Hash), res.Post.Hash),
+				PostPath:      path.Join("posts", cidDir(res.Post.Cid), res.Post.Cid),
 			}
 
 			posts = append(posts, a)
@@ -185,7 +185,7 @@ func (arch *archive) start() {
 		afiles = append(afiles, archiveFile{
 			dir:      strings.Split(pdir, "/"),
 			filename: fname,
-			cid:      p.Post.Hash,
+			cid:      p.Post.Cid,
 		})
 
 		//Create the thumbnail file if exists

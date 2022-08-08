@@ -38,7 +38,7 @@ func imageLookupHandler(w http.ResponseWriter, r *http.Request) {
 		for _, pst := range posts {
 			pst.QMul(
 				DM.DB,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFThumbnails,
 				DM.PFRemoved,
 				DM.PFMime,

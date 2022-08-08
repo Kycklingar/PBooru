@@ -104,10 +104,10 @@
 		{{range .Posts}}
 		<span postid="{{.ID}}">
 		<span class="default">
-			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}"></a>
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="img-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Cid}}"></a>
 		</span>
 		<span class="zoom5x">
-			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Hash}}"></a>
+			<a href="#"><img style="border:solid #{{$.ColorID .ID}};" id="zoom-{{.ID}}" src="{{$.UserInfo.Gateway}}/ipfs/{{.Cid}}"></a>
 		</span>
 		</span>
 		{{end}}
@@ -145,7 +145,7 @@
 				<a onclick="zoom({{.ID}})" class="thumb-button" href="#zoom-{{.ID}}" style="top:50%; left:0px; right:0px; bottom:0px">Zoom</a>
 			</div>
 			<div>
-				<p>ID: <a href="/post/{{.ID}}/{{.Hash}}/">{{.ID}}</a></p>
+				<p>ID: <a href="/post/{{.ID}}/{{.Cid}}/">{{.ID}}</a></p>
 				<p>Mime: {{.Mime.Type}} / {{.Mime.Name}}
 				<p>Size: {{.SizePretty}}</p>
 				{{with .Dimension}}

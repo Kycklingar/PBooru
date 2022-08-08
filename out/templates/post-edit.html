@@ -50,10 +50,10 @@
 	</form>
 	<div class="expander">
 		{{if eq .Post.Mime.Type "image"}}
-		<img src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+		<img src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}">
 		{{else if eq .Post.Mime.Type "video"}}
 		<video loop controls>
-			<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Hash}}">
+			<source src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}">
 		</video>
 		{{else}}
 		<span>No preview for {{.Post.Mime.Type}}</span>

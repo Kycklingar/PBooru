@@ -23,16 +23,18 @@ func APIv1Handler(w http.ResponseWriter, r *http.Request) {
 
 type APIv1Post struct {
 	ID          int
-	Hash        string
+	Cid         string
 	Sha256      string
 	Md5         string
-	ThumbHashes []DM.Thumb
+	Filesize    int64
 	Mime        string
 	Removed     bool
 	Deleted     bool
-	Tags        []APIv1TagI
+	Description string
 	Dimension   DM.Dimension
-	Filesize    int64
+	Thumbnails  []DM.Thumb
+	Metadata    map[string][]string
+	Tags        []APIv1TagI
 }
 
 type APIv1TagI interface {
@@ -197,7 +199,7 @@ func DMToAPIPost(p *DM.Post, tags []*DM.Tag, combineTagNamespace bool) (APIv1Pos
 
 	if err := p.QMul(
 		DM.DB,
-		DM.PFHash,
+		DM.PFCid,
 		DM.PFMime,
 		DM.PFRemoved,
 		DM.PFDeleted,
@@ -205,21 +207,32 @@ func DMToAPIPost(p *DM.Post, tags []*DM.Tag, combineTagNamespace bool) (APIv1Pos
 		DM.PFChecksums,
 		DM.PFThumbnails,
 		DM.PFDimension,
+		DM.PFMetaData,
+		DM.PFDescription,
 	); err != nil {
 		log.Println(err)
 	}
 
 	AP = APIv1Post{
 		ID:          p.ID,
-		Hash:        p.Hash,
+		Cid:         p.Cid,
 		Sha256:      p.Checksums.Sha256,
 		Md5:         p.Checksums.Md5,
-		ThumbHashes: p.Thumbnails(),
+		Thumbnails:  p.Thumbnails(),
 		Mime:        p.Mime.Str(),
 		Removed:     p.Removed,
 		Deleted:     p.Deleted,
 		Filesize:    p.Size,
 		Dimension:   p.Dimension,
+		Description: p.Description,
+	}
+
+	AP.Metadata = make(map[string][]string)
+
+	for namespace, datas := range p.MetaData {
+		for _, data := range datas {
+			AP.Metadata[namespace] = append(AP.Metadata[namespace], data.Data())
+		}
 	}
 
 	for _, tag := range tags {

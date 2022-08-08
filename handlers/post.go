@@ -234,7 +234,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = p.QMul(
 		DM.DB,
-		DM.PFHash,
+		DM.PFCid,
 		DM.PFChecksums,
 		DM.PFRemoved,
 		DM.PFDeleted,
@@ -259,7 +259,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err = pp.Dupe.Post.QMul(
 		DM.DB,
-		DM.PFHash,
+		DM.PFCid,
 		DM.PFRemoved,
 		DM.PFThumbnails,
 		DM.PFAlts,
@@ -273,7 +273,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	for _, p := range pp.Dupe.Inferior {
 		if err = p.QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
 		); err != nil {
@@ -541,7 +541,7 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 }
 
 func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -573,7 +573,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 }
 
 func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
@@ -601,7 +601,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 }
 
 type tagSort []*DM.Tag
@@ -632,13 +632,13 @@ func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post.QMul(DM.DB, DM.PFHash)
+	post.QMul(DM.DB, DM.PFCid)
 
 	if internalError(w, post.Vote(DM.DB, u)) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 }
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {
@@ -783,7 +783,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		if p.Sidebar.Alts {
 			pt.Post.QMul(
 				DM.DB,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFMime,
 				DM.PFScore,
 				DM.PFTimestamp,
@@ -794,7 +794,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			pt.Post.QMul(
 				DM.DB,
-				DM.PFHash,
+				DM.PFCid,
 				DM.PFMime,
 				DM.PFScore,
 				DM.PFTimestamp,
@@ -963,7 +963,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			}
 		}
-		http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Hash), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 		return
 	}
 
@@ -1136,7 +1136,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 
 		p.Posts[i].QMul(
 			DM.DB,
-			DM.PFHash,
+			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
 			DM.PFMime,
@@ -1187,7 +1187,7 @@ func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 	post.ID = id
 	post.QMul(
 		DM.DB,
-		DM.PFHash,
+		DM.PFCid,
 		DM.PFDescription,
 		DM.PFMetaData,
 		DM.PFMime,
