@@ -3,6 +3,8 @@ package DataManager
 import (
 	"strconv"
 	"strings"
+
+	"github.com/kycklingar/PBooru/DataManager/set"
 )
 
 type tagSet []*Tag
@@ -21,16 +23,16 @@ func (set tagSet) strindex(i int) string {
 // Return the tag ids in a that are not in b
 func (a tagSet) diffID(b tagSet) tagSet {
 	var (
-		diff = make(map[int]struct{})
+		diff = make(set.Set[int])
 		ret  tagSet
 	)
 
 	for _, tag := range b {
-		diff[tag.ID] = struct{}{}
+		diff.Add(tag.ID)
 	}
 
 	for _, tag := range a {
-		if _, ok := diff[tag.ID]; !ok {
+		if !diff.Has(tag.ID) {
 			ret = append(ret, tag)
 		}
 	}
@@ -41,16 +43,16 @@ func (a tagSet) diffID(b tagSet) tagSet {
 // Return the tags in a that are not in b
 func (a tagSet) diff(b tagSet) tagSet {
 	var (
-		diff = make(map[string]struct{})
+		diff = make(set.Set[string])
 		ret  tagSet
 	)
 
 	for _, tag := range b {
-		diff[tag.String()] = struct{}{}
+		diff.Add(tag.String())
 	}
 
 	for _, tag := range a {
-		if _, ok := diff[tag.String()]; !ok {
+		if !diff.Has(tag.String()) {
 			ret = append(ret, tag)
 		}
 	}
