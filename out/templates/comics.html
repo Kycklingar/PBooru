@@ -54,38 +54,7 @@
 	{{end}}
 </div>
 
-<div class="nolink" id="pageinator">
-    {{ if ne 0 $.Pageinator.Prev}}
-        <a href="/comics/{{.Pageinator.First}}/{{.Query.Encode}}">
-            First
-        </a>
-    
-        <a href="/comics/{{$.Pageinator.Prev}}/{{.Query.Encode}}" id="prev">
-            Previous
-        </a>
-    {{ end }}
-    {{ range .Pageinator.Pages }}
-        <span>
-            {{ if eq $.Pageinator.Current . }}
-            <span style="font-size:25px;">
-                {{.}}
-            </span>
-            {{ else }}
-            <a href="/comics/{{.}}/{{$.Query.Encode}}">
-                {{.}}
-            </a>
-            {{ end }}
-        </span>
-    {{ end }}
-    {{ if ne 0 $.Pageinator.Next}}
-        <a href="/comics/{{.Pageinator.Next}}/{{.Query.Encode}}">
-            Next
-        </a>
-        <a href="/comics/{{.Pageinator.Last}}/{{.Query.Encode}}">
-            Last
-        </a>
-    {{ end }}
-</div>
+{{template "paginator" .Paginator}}
 
 {{template "userSettings" .UserInfo}}
 

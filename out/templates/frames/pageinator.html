@@ -1,39 +1,50 @@
+{{define "paginator"}}
+<div class="nolink" id="pageinator">
+	{{range .Paginate}}
+	{{if .Current}}
+	<span class="current-page">{{.Val}}</span>
+	{{else}}
+	<span><a href="{{.Href}}">{{.Val}}</a></span>
+	{{end}}
+	{{end}}
+</div>
+{{end}}
+
 {{define "pageinate"}}
-	<div class="nolink" id="pageinator">
-	
+<div class="nolink" id="pageinator">
 	{{ if ne 0 $.Pageinator.Prev}}
-	    <a href="./{{.Pageinator.First}}">
-	        First
-	    </a>
-	
-	    <a href="./{{$.Pageinator.Prev}}" id="prev">
-	        Previous
-	    </a>
+	<a href="./{{.Pageinator.First}}">
+		First
+	</a>
+
+	<a href="./{{$.Pageinator.Prev}}" id="prev">
+		Previous
+	</a>
 	{{ end }}
 	{{ range .Pageinator.Pages }}
-	    <span>
-	        {{ if eq $.Pageinator.Current . }}
-	        <span style="font-size:25px;">
-	            {{.}}
-	        </span>
-	        {{ else }}
-	        <a href="./{{.}}">
-	            {{.}}
-	        </a>
-	        {{ end }}
-	    </span>
+	<span>
+		{{ if eq $.Pageinator.Current . }}
+		<span style="font-size:25px;">
+			{{.}}
+		</span>
+		{{ else }}
+		<a href="./{{.}}">
+			{{.}}
+		</a>
+		{{ end }}
+	</span>
 	{{ end }}
 	{{ if ne 0 $.Pageinator.Next}}
-	    <a href="./{{.Pageinator.Next}}">
-	        Next
-	    </a>
-	    <a href="./{{.Pageinator.Last}}">
-	        Last
-	    </a>
+	<a href="./{{.Pageinator.Next}}">
+		Next
+	</a>
+	<a href="./{{.Pageinator.Last}}">
+		Last
+	</a>
 	{{ end }}
-	
+
 	<br>
 	<br>
 	<br>
-	</div>
+</div>
 {{end}}

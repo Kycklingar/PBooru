@@ -5,17 +5,19 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
 type comicsPage struct {
-	Comics     []*DM.Comic
-	User       *DM.User
-	UserInfo   UserInfo
-	Pageinator Pageination
-	Time       string
-	Edit       bool
+	Comics    []*DM.Comic
+	User      *DM.User
+	UserInfo  UserInfo
+	Paginator paginate.Paginator
+	Time      string
+	Edit      bool
 
 	Query values
 }
@@ -27,15 +29,18 @@ func (v values) Encode() string {
 		return ""
 	}
 
-	var out string
+	var out strings.Builder
+	out.WriteRune('?')
 	for k, v := range v {
-		if len(out) > 0 {
-			out += "&"
+		if out.Len() > 0 {
+			out.WriteRune('&')
 		}
-		out += url.QueryEscape(k) + "=" + url.QueryEscape(v)
+		out.WriteString(url.QueryEscape(k))
+		out.WriteRune('=')
+		out.WriteString(url.QueryEscape(v))
 	}
 
-	return "?" + out
+	return out.String()
 }
 
 func (v values) AddEncode(key, val string) string {
@@ -82,8 +87,7 @@ func createComicHandler(w http.ResponseWriter, r *http.Request) {
 
 	ua := DM.UserAction(user)
 	ua.Add(DM.CreateComic(title, &id))
-	err := ua.Exec()
-	if internalError(w, err) {
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
@@ -97,19 +101,33 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		title  = r.FormValue("title")
 		tags   = r.FormValue("tags")
 		offset int
+		err    error
 
 		page comicsPage
 	)
 
+	page.Query = vals(r.Form)
+
+	uri := uriSplitter(r)
+	offset, err = uri.getIntAtIndex(1)
+	if err != nil {
+		offset = 1
+	}
+
 	page.User, page.UserInfo = getUser(w, r)
 
-	res, err := DM.SearchComics(title, tags, comicsPerPage, offset)
+	res, err := DM.SearchComics(title, tags, comicsPerPage, (offset-1)*comicsPerPage)
 	if internalError(w, err) {
 		return
 	}
 
 	page.Comics = res.Comics
-	page.Pageinator = pageinate(res.Total, comicsPerPage, offset, 10)
+	page.Paginator = paginate.Paginator{
+		Current: offset,
+		Last:    res.Total / comicsPerPage,
+		Plength: 10,
+		Format:  fmt.Sprintf("/comics/%%d/%s", strings.ReplaceAll(page.Query.Encode(), "%", "%%")),
+	}
 
 	renderTemplate(w, "comics", page)
 }

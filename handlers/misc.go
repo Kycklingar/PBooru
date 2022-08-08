@@ -110,6 +110,15 @@ func allowedContentType(contentType string) bool {
 	return false
 }
 
+func encodeForm(r *http.Request) string {
+	encode := "?" + r.Form.Encode()
+	if encode == "?" {
+		return ""
+	}
+
+	return encode
+}
+
 type Pageination struct {
 	Pages   []int
 	Current int
