@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/benchmark"
 	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
@@ -102,8 +103,8 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		tags   = r.FormValue("tags")
 		offset int
 		err    error
-
-		page comicsPage
+		bm     = benchmark.Begin()
+		page   comicsPage
 	)
 
 	page.Query = vals(r.Form)
@@ -128,6 +129,8 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 		Plength: 10,
 		Format:  fmt.Sprintf("/comics/%%d/%s", strings.ReplaceAll(page.Query.Encode(), "%", "%%")),
 	}
+
+	page.Time = bm.EndStr(false)
 
 	renderTemplate(w, "comics", page)
 }
