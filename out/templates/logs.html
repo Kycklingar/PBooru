@@ -17,16 +17,10 @@
 		</form>
 	</details>
 	{{with .PreviousPage}}
-	<form class="inline" method="GET">
-		<input type="hidden" name="page" value="{{.}}">
-		<input type="submit" value="Previous">
-	</form>
+	<a href="{{.}}"><button>Previous</button></a>
 	{{end}}
 	{{with .NextPage}}
-	<form class="inline" method="GET">
-		<input type="hidden" name="page" value="{{.}}">
-		<input type="submit" value="Next">
-	</form>
+	<a href="{{.}}"><button>Next</button></a>
 	{{end}}
 </div>
 {{end}}

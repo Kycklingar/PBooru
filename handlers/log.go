@@ -192,11 +192,30 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 
 	}
 
+	var nextPage, prevPage string
+
+	// Clear empty
+	for k, v := range r.Form {
+		if len(v[0]) == 0 {
+			r.Form.Del(k)
+		}
+	}
+
+	if opts.Offset+opts.Limit <= count {
+		r.Form.Set("page", strconv.Itoa(page+1))
+		nextPage = "?" + r.Form.Encode()
+	}
+	if page > 1 {
+		r.Form.Set("page", strconv.Itoa(page-1))
+		prevPage = "?" + r.Form.Encode()
+	}
+	r.Form.Del("page")
+
 	p := struct {
 		Logs         []DM.Log
 		UserInfo     UserInfo
-		NextPage     int
-		PreviousPage int
+		NextPage     string
+		PreviousPage string
 		Showing      int
 		To           int
 		OutOf        int
@@ -204,8 +223,8 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 	}{
 		Logs:         logs,
 		UserInfo:     ui,
-		NextPage:     page + 1,
-		PreviousPage: page - 1,
+		NextPage:     nextPage,
+		PreviousPage: prevPage,
 		Showing:      mm.Min(count, opts.Offset+1),
 		To:           mm.Min(count, opts.Offset+opts.Limit),
 		OutOf:        count,
@@ -213,7 +232,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 	}
 
 	if opts.Offset+opts.Limit > count {
-		p.NextPage = 0
+		p.NextPage = ""
 	}
 
 	renderTemplate(w, "logs", p)
