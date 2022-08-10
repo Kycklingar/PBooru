@@ -67,7 +67,7 @@
 {{end}}
 
 {{ define "tag-s"}}
-<span class="tag namespace-{{.Namespace.Namespace}}"><a href="/posts/?tags={{.}}">{{.}}</a></span>
+<span class="tag namespace-{{.Namespace}}"><a href="/posts/?tags={{.}}">{{.}}</a></span>
 {{end}}
 
 {{ define "sidebar tags"}}
@@ -85,41 +85,41 @@
 {{end}}
 
 {{ define "sidebartag" }}
-    {{ if eq .Namespace.Namespace "none" }}
-    <li class="tag namespace-{{ .Namespace.Namespace }}">
+    {{ if eq .Namespace "none" }}
+    <li class="tag namespace-{{ .Namespace }}">
         <span style="cursor: pointer" onclick="appendQuery(this, '{{.Tag}}')">+</span>
         <a href="/posts/?tags={{ .Tag }}"><span>{{ .Tag }}</span></a>
         <!--<span class="counter">{{/*.Count*/}}</span>-->
     </li>
     {{ else }}
-    <li class="tag namespace-{{ .Namespace.Namespace }}">
-        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace.Namespace}}:{{.Tag}}')">+</span>
-        <a href="/posts/?tags={{ .Namespace.Namespace }}:{{ .Tag }}"><span>{{ .Namespace.Namespace }}:{{ .Tag }}</span></a>
+    <li class="tag namespace-{{ .Namespace }}">
+        <span style="cursor: pointer" onclick="appendQuery(this, '{{.Namespace}}:{{.Tag}}')">+</span>
+        <a href="/posts/?tags={{ .Namespace }}:{{ .Tag }}"><span>{{ .Namespace }}:{{ .Tag }}</span></a>
         <!--<span class="counter">{{/*.Count*/}}</span>-->
     </li>
     {{ end }}
 {{ end }}
 
 {{ define "tag"}}
-    {{ if eq .Namespace.Namespace "none" }}
-    <div class="tag namespace-{{ .Namespace.Namespace }}">
+    {{ if eq .Namespace "none" }}
+    <div class="tag namespace-{{ .Namespace }}">
         <span>{{ .Tag }}</span>
     </div>
     {{ else }}
-    <div class="tag namespace-{{ .Namespace.Namespace }}">
-       <span>{{ .Namespace.Namespace }}:{{ .Tag }}</span>
+    <div class="tag namespace-{{ .Namespace }}">
+       <span>{{ .Namespace }}:{{ .Tag }}</span>
     </div>
     {{ end }}
 {{end}}
 
 {{ define "tagSpan"}}
-{{ if eq .Namespace.Namespace "none" }}
-<span class="tag namespace-{{ .Namespace.Namespace }}">
+{{ if eq .Namespace "none" }}
+<span class="tag namespace-{{ .Namespace }}">
     <span>{{ .Tag }}</span>
 </span>
 {{ else }}
-<span class="tag namespace-{{ .Namespace.Namespace }}">
-   <span>{{ .Namespace.Namespace }}:{{ .Tag }}</span>
+<span class="tag namespace-{{ .Namespace }}">
+   <span>{{ .Namespace }}:{{ .Tag }}</span>
 </span>
 {{ end }}
 {{end}}

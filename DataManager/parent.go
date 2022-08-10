@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/kycklingar/set"
 )
 
 const (
@@ -15,8 +17,7 @@ func init() {
 
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		children, err := parseTags(childStr, ',').
-			chain().
+		children, err := tagChain(parseTags(childStr, ',')).
 			save(tx).
 			aliases(tx).
 			unwrap()
@@ -25,8 +26,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			return
 		}
 
-		parents, err := parseTags(parentStr, ',').
-			chain().
+		parents, err := tagChain(parseTags(parentStr, ',')).
 			save(tx).
 			aliases(tx).
 			unwrap()
@@ -34,12 +34,12 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			return
 		}
 
-		grandParents, err := parents.chain().upgrade(tx).unwrap()
+		grandParents, err := tagChain(parents).upgrade(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		if len(children) <= 0 || len(parents) <= 0 {
+		if len(children.Slice) <= 0 || len(parents.Slice) <= 0 {
 			err = fmt.Errorf(
 				"parent tags: no children or parents present: [%s] [%s]",
 				childStr,
@@ -58,7 +58,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 				WHERE hc.tag_id IN(%s)
 				AND hp.post_id IS NULL
 				`,
-				sep(",", len(children), children.strindex),
+				tSetStr(children),
 			),
 			tx,
 			aCreate,
@@ -82,8 +82,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 		}
 		defer stmt.Close()
 
-		for _, c := range children {
-			for _, p := range parents {
+		for _, c := range children.Slice {
+			for _, p := range parents.Slice {
 				_, err = stmt.Exec(p.ID, c.ID)
 				if err != nil {
 					return
@@ -100,7 +100,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 				WHERE tag_id IN(%s)
 				ON CONFLICT DO NOTHING
 				`,
-				sep(",", len(children), children.strindex),
+				tSetStr(children),
 			),
 		)
 		if err != nil {
@@ -108,7 +108,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 		}
 		defer ins.Close()
 
-		for _, parent := range grandParents {
+		for _, parent := range grandParents.Slice {
 			if _, err = ins.Exec(parent.ID); err != nil {
 				return
 			}
@@ -116,8 +116,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 
 		l.addTable(lParent)
 		l.fn = logParent{
-			Children:  children,
-			Parents:   parents,
+			Children:  children.Slice,
+			Parents:   parents.Slice,
 			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
@@ -127,44 +127,46 @@ func ParentTags(childStr, parentStr string) loggingAction {
 }
 
 func getLogParents(log *Log, q querier) error {
-	rows, err := q.Query(`
-		SELECT action, parent, child
+	parents := set.New[Tag](lessfnTagID)
+	children := set.New[Tag](lessfnTagID)
+
+	err := query(
+		q,
+		`SELECT action,
+			tp.tag, tp.namespace,
+			tc.tag, tc.namespace
 		FROM log_tag_parent
+		JOIN tag tp
+		ON parent = tp.id
+		JOIN tag tc
+		ON child = tc.id
 		WHERE log_id = $1
 		`,
 		log.ID,
-	)
+	)(func(scan scanner) error {
+		var parent, child Tag
+		err := scan(
+			&log.Parents.Action,
+			&parent.Tag, &parent.Namespace,
+			&child.Tag, &child.Namespace,
+		)
+		parents.Set(parent)
+		children.Set(child)
+		return err
+	})
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	var parents, children tagSet
-
-	for rows.Next() {
-		var (
-			parent = NewTag()
-			child  = NewTag()
-		)
-
-		err := rows.Scan(&log.Parents.Action, &parent.ID, &child.ID)
-		if err != nil {
-			return err
-		}
-
-		parents = append(parents, parent)
-		children = append(children, child)
-	}
-
-	log.Parents.Parents = parents.uniqueID()
-	log.Parents.Children = children.uniqueID()
+	log.Parents.Parents = parents.Slice
+	log.Parents.Children = children.Slice
 
 	return getMultiLogs(log, q)
 }
 
 type logParent struct {
-	Children tagSet
-	Parents  tagSet
+	Children []Tag
+	Parents  []Tag
 	Action   lAction
 
 	multiLogs []logMultiTags

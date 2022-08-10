@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	mm "github.com/kycklingar/MinMax"
-	"github.com/kycklingar/PBooru/DataManager/set"
+	"github.com/kycklingar/set"
 )
 
 type Dupe struct {
@@ -180,10 +180,8 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 	infStr := sep(", ", len(dupe.Inferior), dupe.strindex)
 
 	var (
-		alts = logAlts{
-			pids: make(set.Set[int]),
-		}
-		max = dupe.Post.ID
+		max  = dupe.Post.ID
+		pids = set.NewOrdered[int]()
 	)
 
 	// Alts of inferior to be applied to superior
@@ -205,7 +203,7 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 	)(func(scan scanner) error {
 		var pid int
 		err := scan(&pid)
-		alts.pids.Add(pid)
+		pids.Set(pid)
 		max = mm.Max(max, pid)
 		return err
 	})
@@ -213,12 +211,12 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 		return err
 	}
 
-	alts.pids.Add(dupe.Post.ID)
-
-	if len(alts.pids) > 1 {
+	if len(pids.Slice) > 1 {
 		ua.addLogger(logger{
 			tables: []logtable{lPostAlts},
-			fn:     alts.log,
+			fn: logAlts{
+				pids: pids.Slice,
+			}.log,
 		})
 	}
 
@@ -228,7 +226,7 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 			SET alt_group = $1
 			WHERE id IN (%s)
 			`,
-			alts.pids,
+			join(",", pids.Slice),
 		),
 		max,
 	)
@@ -530,12 +528,12 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 		return err
 	}
 
-	set, err := postTags(tx, dupe.Post.ID).unwrap()
+	postSet, err := postTags(tx, dupe.Post.ID).unwrap()
 	if err != nil {
 		return err
 	}
 
-	var newSet tagSet
+	var newSet = set.New[Tag](lessfnTag)
 
 	stmt, err := tx.Prepare(`
 		DELETE FROM post_tag_mappings
@@ -562,14 +560,14 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 			tables: []logtable{lPostTags},
 			fn: logPostTags{
 				PostID:  inf.ID,
-				Removed: infset,
+				Removed: infset.Slice,
 			}.log,
 		})
 
-		newSet = append(newSet, infset.diff(newSet)...)
+		newSet = set.Union(newSet, infset)
 	}
 
-	newSet = newSet.diff(set)
+	newSet = set.Diff(newSet, postSet)
 
 	err = prepPTExec(tx, queryInsertPTM, dupe.Post.ID, newSet)
 	if err != nil {
@@ -580,7 +578,7 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 		tables: []logtable{lPostTags},
 		fn: logPostTags{
 			PostID: dupe.Post.ID,
-			Added:  newSet,
+			Added:  newSet.Slice,
 		}.log,
 	})
 

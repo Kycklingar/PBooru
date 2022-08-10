@@ -40,6 +40,31 @@ func (n Namespace) ID(db rowQuery) (int, error) {
 	return query(db, n)
 }
 
+func (n Namespace) Create(db rowQuery) (int, error) {
+	var id int
+	err := db.QueryRow(`
+		SELECT id
+		FROM namespaces
+		WHERE nspace = $1
+		`,
+		n,
+	).Scan(&id)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return id, err
+		}
+		err = db.QueryRow(`
+			INSERT INTO namespaces(nspace)
+			VALUES($1)
+			RETURNING id
+			`,
+			n,
+		).Scan(&id)
+	}
+
+	return id, err
+}
+
 func insert(db rowQuery, namespace Namespace) (int, error) {
 	return queryIntoMap(
 		db,

@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/kycklingar/set"
 )
 
 const (
@@ -20,44 +21,44 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		from := parseTags(fromStr, ',')
 		to := parseTags(toStr, ',')
 
-		if len(to) != 1 {
+		if len(to.Slice) != 1 {
 			err = fmt.Errorf("cannot create an alias to multiple tags: %s", toStr)
 			return
 		}
 
-		if len(from) < 1 {
+		if len(from.Slice) < 1 {
 			err = errors.New("nothing to alias from")
 			return
 		}
 
-		err = from.chain().save(tx).err
+		from, err = tagChain(from).save(tx).unwrap()
 		if err != nil {
 			return
 		}
-		err = to.chain().save(tx).aliases(tx).err
+		to, err = tagChain(to).save(tx).aliases(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		from = from.diffID(to)
-		if len(from) < 1 {
+		from = set.Diff(from, to)
+		if len(from.Slice) < 1 {
 			err = errors.New("nothing to alias from")
 			return
 		}
 
-		multiLogs, err := updatePtm(tx, from, to[0])
+		multiLogs, err := updatePtm(tx, from, to.Slice[0])
 		if err != nil {
 			return
 		}
 
-		updates := []func(*sql.Tx, tagSet, *Tag) error{
+		updates := []func(*sql.Tx, set.Sorted[Tag], Tag) error{
 			updateDns,
 			updateAliases,
 			updateParents,
 		}
 
 		for _, f := range updates {
-			err = f(tx, from, to[0])
+			err = f(tx, from, to.Slice[0])
 			if err != nil {
 				return
 			}
@@ -76,8 +77,8 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		}
 		defer stmt.Close()
 
-		for _, t := range from {
-			_, err = stmt.Exec(t.ID, to[0].ID)
+		for _, t := range from.Slice {
+			_, err = stmt.Exec(t.ID, to.Slice[0].ID)
 			if err != nil {
 				return
 			}
@@ -85,8 +86,8 @@ func AliasTags(fromStr, toStr string) loggingAction {
 
 		l.addTable(lAlias)
 		l.fn = logAlias{
-			From:      from,
-			To:        to[0],
+			From:      from.Slice,
+			To:        to.Slice[0],
 			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
@@ -140,8 +141,8 @@ func UnaliasTags(fromStr string) loggingAction {
 
 		var lun = make(logAliasMap)
 
-		for _, f := range from.unique() {
-			var to = NewTag()
+		for _, f := range from.Slice {
+			var to Tag
 			err = stmt.QueryRow(f.ID).Scan(&to.ID)
 			if err != nil {
 				return
@@ -167,76 +168,81 @@ func UnaliasTags(fromStr string) loggingAction {
 }
 
 // Returns the aliased tag or input if none
-func aliasedTo(q querier, tag *Tag) (*Tag, error) {
-	var to = NewTag()
+func aliasedTo(q querier, tag Tag) (Tag, error) {
+	var to Tag
 
 	err := q.QueryRow(`
-		SELECT t.id, t.tag, n.nspace
-		FROM tags t
-		JOIN namespaces n
-		ON t.namespace_id = n.id
-		WHERE t.id = (
+		SELECT id, tag, namespace
+		FROM tag
+		WHERE id = (
 			SELECT COALESCE(alias_to, $1)
 			FROM alias
 			WHERE alias_from = $1
 		)
 		`,
 		tag.ID,
-	).Scan(&to.ID, &to.Tag, &to.Namespace.Namespace)
+	).Scan(&to.ID, &to.Tag, &to.Namespace)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return tag, nil
 		}
 
-		return nil, err
+		return to, err
 	}
 
 	return to, nil
 }
 
 type logAlias struct {
-	From   tagSet
-	To     *Tag
+	From   []Tag
+	To     Tag
 	Action lAction
 
 	multiLogs []logMultiTags
 }
 
 func getLogAlias(log *Log, q querier) error {
-	rows, err := q.Query(`
-		SELECT action, alias_from, alias_to
+	log.Aliases = make(logAliasMap)
+
+	err := query(
+		q,
+		`SELECT action,
+			tf.tag, tf.namespace,
+			tt.tag, tt.namespace
 		FROM log_tag_alias
-		WHERE log_id = $1
-		`,
+		JOIN tag tf
+		ON tf.id = alias_from
+		JOIN tag tt
+		ON tt.id = alias_to
+		WHERE log_id = $1`,
 		log.ID,
-	)
-	if err != nil {
-		return err
-	}
-
-	var la = make(logAliasMap)
-
-	for rows.Next() {
+	)(func(scan scanner) error {
 		var (
-			action lAction
-			to     = NewTag()
-			from   = NewTag()
+			action   lAction
+			to, from Tag
 		)
 
-		err = rows.Scan(&action, &from.ID, &to.ID)
+		err := scan(
+			&action,
+			&from.Tag, &from.Namespace,
+			&to.Tag, &to.Namespace,
+		)
 		if err != nil {
 			return err
 		}
 
-		l := la[to.ID]
+		l := log.Aliases[to.ID]
 		l.To = to
 		l.Action = action
 		l.From = append(l.From, from)
-		la[to.ID] = l
-	}
+		log.Aliases[to.ID] = l
 
-	log.Aliases = la
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
 	return getMultiLogs(log, q)
 }
@@ -273,65 +279,8 @@ func (l logAlias) log(logID int, tx *sql.Tx) error {
 	return nil
 }
 
-func NewAlias() *Alias {
-	var a Alias
-	a.Tag = NewTag()
-	a.To = NewTag()
-	return &a
-}
-
-type Alias struct {
-	Tag  *Tag
-	From []*Tag
-	To   *Tag
-}
-
-func (a *Alias) QFrom(q querier) []*Tag {
-	if a.From != nil {
-		return a.From
-	}
-	if a.Tag.QID(q) == 0 {
-		return nil
-	}
-	rows, err := q.Query("SELECT alias_from FROM alias WHERE alias_to=$1", a.Tag.QID(q))
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		t := NewTag()
-		//t.SetQ(q)
-		err = rows.Scan(&t.ID)
-		if err != nil {
-			log.Print(err)
-			return nil
-		}
-		a.From = append(a.From, t)
-	}
-	return a.From
-}
-
-func (a *Alias) QTo(q querier) (*Tag, error) {
-	if a.Tag.QID(q) == 0 {
-		return a.To, nil
-	}
-	if a.To.QID(q) != 0 {
-		return a.To, nil
-	}
-
-	err := q.QueryRow("SELECT alias_to FROM alias WHERE alias_from=$1", a.Tag.QID(q)).Scan(&a.To.ID)
-	if err != nil && err != sql.ErrNoRows {
-		log.Print(err)
-		return nil, err
-	}
-
-	return a.To, nil
-}
-
-func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
-	tos, err := tagSet{to}.chain().upgrade(tx).unwrap()
+func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error) {
+	tos, err := tagChainFromTag(to).upgrade(tx).unwrap()
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +312,7 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 			WHERE hf.tag_id IN (%s)
 			AND ht.post_id IS NULL
 			`,
-			sep(",", len(from), from.strindex),
+			tSetStr(from),
 		),
 		tx,
 		aCreate,
@@ -387,8 +336,8 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 			WHERE tag_id IN(%s)
 			ON CONFLICT DO NOTHING
 			`,
-			sep(",", len(tos), tos.strindex),
-			sep(",", len(from), from.strindex),
+			tSetStr(tos),
+			tSetStr(from),
 		),
 	)
 	if err != nil {
@@ -402,23 +351,24 @@ func updatePtm(tx *sql.Tx, from tagSet, to *Tag) ([]logMultiTags, error) {
 			post_tag_mappings
 			WHERE tag_id IN(%s)
 			`,
-			sep(",", len(from), from.strindex),
+			tSetStr(from),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, f := range []func(querier) tagSetChain{tos.chain().recount, from.chain().recount} {
-		if err = f(tx).err; err != nil {
-			return nil, err
-		}
+	if err = tagChain(tos).recount(tx).err; err != nil {
+		return nil, err
+	}
+	if err = tagChain(from).recount(tx).err; err != nil {
+		return nil, err
 	}
 
 	return multiLogs, nil
 }
 
-func updateDns(tx *sql.Tx, from tagSet, to *Tag) error {
+func updateDns(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
 	stmt, err := tx.Prepare(`
 		UPDATE dns_tag_mapping
 		SET tag_id = $1
@@ -430,7 +380,7 @@ func updateDns(tx *sql.Tx, from tagSet, to *Tag) error {
 	}
 	defer stmt.Close()
 
-	for _, fromT := range from {
+	for _, fromT := range from.Slice {
 		_, err = stmt.Exec(to.ID, fromT.ID)
 		if err != nil {
 			return err
@@ -440,7 +390,7 @@ func updateDns(tx *sql.Tx, from tagSet, to *Tag) error {
 	return nil
 }
 
-func updateAliases(tx *sql.Tx, from tagSet, to *Tag) error {
+func updateAliases(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
 	// Update aliases
 	stmt, err := tx.Prepare(`
 		UPDATE alias
@@ -453,7 +403,7 @@ func updateAliases(tx *sql.Tx, from tagSet, to *Tag) error {
 	}
 	defer stmt.Close()
 
-	for _, fromT := range from {
+	for _, fromT := range from.Slice {
 		_, err = stmt.Exec(to.ID, fromT.ID)
 		if err != nil {
 			return err
@@ -463,8 +413,8 @@ func updateAliases(tx *sql.Tx, from tagSet, to *Tag) error {
 	return nil
 }
 
-func updateParents(tx *sql.Tx, from tagSet, to *Tag) error {
-	froms := sep(",", len(from), from.strindex)
+func updateParents(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
+	froms := tSetStr(from)
 	_, err := tx.Exec(
 		fmt.Sprintf(`
 			INSERT INTO parent_tags(

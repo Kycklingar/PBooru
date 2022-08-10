@@ -21,11 +21,11 @@ type Comic struct {
 	Chapters  []*Chapter
 	PageCount int
 
-	TagSummary []*Tag
+	TagSummary []Tag
 }
 
 func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error) {
-	tags, err := parseTags(tagStr, ',').chain().qids(DB).aliases(DB).unwrap()
+	tags, err := tagChain(parseTags(tagStr, ',')).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		return
 	}
@@ -39,7 +39,7 @@ func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error)
 		pi     = 1
 	)
 
-	for i, tag := range tags {
+	for i, tag := range tags.Slice {
 		where = "WHERE "
 		tjoin.Add("\n", cond.N(fmt.Sprintf("JOIN post_tag_mappings ptm%d", i))).
 			Add("\n", cond.N(fmt.Sprintf("ON cm.post_id = ptm%d.post_id\n", i)))
@@ -246,8 +246,8 @@ func (comic *Comic) tagSummary(q querier) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var t = NewTag()
-		err = rows.Scan(&t.Tag, &t.Namespace.Namespace)
+		var t Tag
+		err = rows.Scan(&t.Tag, &t.Namespace)
 		if err != nil {
 			return err
 		}

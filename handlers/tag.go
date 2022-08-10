@@ -8,13 +8,12 @@ import (
 	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
-	"github.com/kycklingar/PBooru/benchmark"
 	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
 type Sidebar struct {
 	TotalPosts int
-	Tags       []*DM.Tag
+	Tags       []DM.Tag
 	Form       url.Values
 	Query      string
 	Or         string
@@ -30,96 +29,64 @@ const tagLimit = 100
 
 func TagsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		var p struct {
-			Query    string
-			Tags     []*DM.Tag
-			Tag      *DM.Tag
-			To       *DM.Tag
-			From     []*DM.Tag
-			Parents  []*DM.Tag
-			Children []*DM.Tag
-			//Paginator Pageination
-			Paginator paginate.Paginator
-		}
-
-		tagStr := r.FormValue("tag")
-		currPage := 1
-		var err error
-		f := splitURI(r.URL.Path)
-		if len(f) >= 2 && f[1] != "" {
-			currPage, err = strconv.Atoi(f[1])
-			if internalError(w, err) {
-				return
+		var (
+			err    error
+			tagStr = r.FormValue("tag")
+			uri    = uriSplitter(r)
+			p      struct {
+				Query        string
+				Tags         []DM.Tag
+				Tag          *DM.Tag
+				To           *DM.Tag
+				From         []DM.Tag
+				Parents      []DM.Tag
+				GrandParents []DM.Tag
+				Children     []DM.Tag
+				Paginator    paginate.Paginator
+				CurrentPage  int
 			}
+		)
+
+		p.CurrentPage, err = uri.getIntAtIndex(1)
+		if err != nil {
+			p.CurrentPage = 1
 		}
 
-		bm := benchmark.Begin()
-		var tc DM.TagCollector
-
-		if len(tagStr) > 0 {
-			tc.Parse(tagStr, ",")
-			tc = tc.SuggestedTags(DM.DB)
-			p.Query = "?tag=" + tagStr
-		} else {
-			err = tc.Get(tagLimit, (currPage-1)*tagLimit)
-			if internalError(w, err) {
-				return
-			}
+		result, err := DM.SearchTags(tagStr, tagLimit, (p.CurrentPage-1)*tagLimit)
+		if internalError(w, err) {
+			return
 		}
 
-		for _, t := range tc.Tags {
-			t.QTag(DM.DB)
-			t.QNamespace(DM.DB).QNamespace(DM.DB)
+		p.Tags = result.Tags
+		p.Query = r.Form.Encode()
+		if p.Query != "" {
+			p.Query = "?" + p.Query
 		}
 
-		p.Tags = tc.Tags
+		var currentTag string
 
-		var ctag string
+		if id, err := uri.getIntAtIndex(2); err == nil {
+			currentTag, _ = uri.getAtIndex(2)
 
-		if len(f) >= 3 && f[2] != "" {
-			ctag = f[2]
-			tagID, err := strconv.Atoi(f[2])
+			tag, err := DM.TagFromID(id)
+			p.To, p.From, err = tag.Aliasing()
 			if internalError(w, err) {
 				return
 			}
 
-			preload := func(tags ...*DM.Tag) {
-				for _, tag := range tags {
-					tag.QID(DM.DB)
-					tag.QTag(DM.DB)
-					tag.QNamespace(DM.DB).QNamespace(DM.DB)
-				}
-			}
-
-			a := DM.NewAlias()
-			a.Tag.SetID(tagID)
-			preload(a.Tag)
-
-			p.Tag = a.Tag
-			p.From = a.QFrom(DM.DB)
-			preload(p.From...)
-
-			p.To, err = a.QTo(DM.DB)
+			p.Children, p.Parents, _, _, err = tag.Family()
 			if internalError(w, err) {
 				return
 			}
-			preload(p.To)
-
-			p.Parents = p.Tag.Parents(DM.DB)
-			preload(p.Parents...)
-
-			p.Children = p.Tag.Children(DM.DB)
-			preload(p.Children...)
-
-			bm.End(performBenchmarks)
+			p.Tag = &tag
 		}
 
 		p.Paginator = paginate.New(
-			currPage,
-			tc.Total(),
+			p.CurrentPage,
+			result.Count,
 			tagLimit,
 			30,
-			fmt.Sprintf("/tags/%%d/%s%s", ctag, strings.ReplaceAll(p.Query, "%", "%%")),
+			fmt.Sprintf("/tags/%%d/%s%s", currentTag, strings.ReplaceAll(p.Query, "%", "%%")),
 		)
 
 		renderTemplate(w, "tags", p)
@@ -148,84 +115,16 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 		ua.Add(DM.UnaliasTags(from))
 	case "parent":
 		ua.Add(DM.ParentTags(children, parents))
+		//TODO
 		//case "unparent":
 		//	ua.Add(DM.UnparentTags(children, parents))
 	}
 
-	err := ua.Exec()
-	if internalError(w, err) {
+	if internalError(w, ua.Exec()) {
 		return
 	}
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-}
-
-type TagHistoryPage struct {
-	Base       base
-	History    []*DM.TagHistory
-	UserInfo   UserInfo
-	Pageinator Pageination
-	User       *DM.User
-}
-
-func ReverseTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		u, _ := getUser(w, r)
-
-		if !u.QFlag(DM.DB).Delete() {
-			http.Error(w, "Insufficent privileges. Want \"delete\"", http.StatusBadRequest)
-			return
-		}
-		var (
-			th  = DM.NewTagHistory()
-			err error
-		)
-
-		th.ID, err = strconv.Atoi(r.FormValue("taghistory-id"))
-		if badRequest(w, err) {
-			return
-		}
-
-		err = th.Reverse()
-		if internalError(w, err) {
-			return
-		}
-	}
-
-	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-}
-
-func TagHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	var p TagHistoryPage
-
-	p.UserInfo = userCookies(w, r)
-	p.History = DM.GetTagHistory(10, 0)
-
-	preloadTagHistory(p.History)
-
-	p.Base.Title = "Tag History"
-
-	renderTemplate(w, "taghistory", p)
-}
-
-func preloadTagHistory(histories []*DM.TagHistory) {
-	for _, h := range histories {
-		for _, e := range h.QETags(DM.DB) {
-			e.Tag.QID(DM.DB)
-			e.Tag.QTag(DM.DB)
-			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
-		}
-		h.Post.QMul(
-			DM.DB,
-			DM.PFCid,
-			DM.PFThumbnails,
-			DM.PFMime,
-		)
-
-		h.User.QName(DM.DB)
-		h.User.QID(DM.DB)
-		h.User.QFlag(DM.DB)
-	}
 }
 
 func multiTagsHandler(w http.ResponseWriter, r *http.Request) {

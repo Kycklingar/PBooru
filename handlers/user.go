@@ -78,60 +78,6 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "user", p)
 }
 
-func UserTagHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	paths := splitURI(r.URL.Path)
-	if len(paths) < 3 {
-		http.Error(w, "invalid path", http.StatusBadRequest)
-		return
-	}
-
-	userID, err := strconv.Atoi(paths[2])
-	if badRequest(w, err) {
-		return
-	}
-
-	var page = 1
-	if len(paths) >= 4 {
-		page, _ = strconv.Atoi(paths[3])
-		page = mm.Max(1, page)
-	}
-
-	var p TagHistoryPage
-	p.User, p.UserInfo = getUser(w, r)
-	p.User.QFlag(DM.DB)
-
-	const pageLimit = 5
-	var total int
-	p.History, total = DM.GetUserTagHistory(pageLimit, (page-1)*pageLimit, userID)
-	p.Pageinator = pageinate(total, pageLimit, page, 20)
-
-	for _, h := range p.History {
-		for _, e := range h.QETags(DM.DB) {
-			e.Tag.QID(DM.DB)
-			e.Tag = DM.CachedTag(e.Tag)
-			e.Tag.QTag(DM.DB)
-			e.Tag.QNamespace(DM.DB).QNamespace(DM.DB)
-		}
-
-		h.Post = DM.CachedPost(h.Post)
-
-		h.Post.QMul(
-			DM.DB,
-			DM.PFCid,
-			DM.PFThumbnails,
-			DM.PFMime,
-		)
-
-		h.User.QName(DM.DB)
-		h.User.QID(DM.DB)
-		h.User.QFlag(DM.DB)
-	}
-
-	p.Base.Title = "Tag History"
-
-	renderTemplate(w, "taghistory", p)
-}
-
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")

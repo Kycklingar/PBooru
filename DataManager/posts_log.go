@@ -2,7 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-	"sort"
 
 	"github.com/kycklingar/PBooru/DataManager/namespace"
 )
@@ -83,8 +82,10 @@ func logAffectedPosts(logID int, tx *sql.Tx, pids []int) error {
 }
 
 func getLogPostTags(log *Log, q querier) error {
-	rows, err := q.Query(`
-		SELECT post_id, action, t.id, t.tag, n.id, n.nspace
+
+	err := query(
+		q,
+		`SELECT post_id, action, t.id, t.tag, n.nspace
 		FROM log_post_tags pt
 		JOIN log_post_tags_map ptm
 		ON pt.id = ptm.ptid
@@ -92,29 +93,21 @@ func getLogPostTags(log *Log, q querier) error {
 		ON ptm.tag_id = t.id
 		JOIN namespaces n
 		ON t.namespace_id = n.id
-		WHERE log_id = $1
-		`,
+		WHERE log_id = $1`,
 		log.ID,
-	)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
+	)(func(scan scanner) error {
 		var (
 			pid    int
 			action lAction
-			tag    = NewTag()
+			tag    Tag
 		)
 
-		err = rows.Scan(
+		err := scan(
 			&pid,
 			&action,
 			&tag.ID,
 			&tag.Tag,
-			&tag.Namespace.ID,
-			&tag.Namespace.Namespace,
+			&tag.Namespace,
 		)
 		if err != nil {
 			return err
@@ -130,11 +123,11 @@ func getLogPostTags(log *Log, q querier) error {
 		ph.Tags.PostID = pid
 
 		log.Posts[pid] = ph
-	}
 
-	for _, ph := range log.Posts {
-		sort.Sort(ph.Tags.Added)
-		sort.Sort(ph.Tags.Removed)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -142,12 +135,12 @@ func getLogPostTags(log *Log, q querier) error {
 
 type logPostTags struct {
 	PostID  int
-	Added   tagSet
-	Removed tagSet
+	Added   []Tag
+	Removed []Tag
 }
 
 func (l logPostTags) log(logid int, tx *sql.Tx) error {
-	createAction := func(action lAction, set tagSet) error {
+	createAction := func(action lAction, set []Tag) error {
 		if len(set) <= 0 {
 			return nil
 		}

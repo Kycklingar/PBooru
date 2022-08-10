@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"errors"
 	"io"
 	"sync"
 	"time"
@@ -14,7 +15,7 @@ type DnsCreator struct {
 	Name      string
 	Score     int
 	Tags      []DnsTag
-	LocalTags []*Tag
+	LocalTags []Tag
 	Domains   map[string]DnsDomain
 	Banners   map[string]string
 }
@@ -139,9 +140,9 @@ func (c *DnsCreator) getLocalTags() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var t = NewTag()
+		var t Tag
 
-		err = rows.Scan(&t.ID, &t.Tag, &t.Namespace.Namespace)
+		err = rows.Scan(&t.ID, &t.Tag, &t.Namespace)
 		if err != nil {
 			return err
 		}
@@ -347,13 +348,13 @@ func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {
 }
 
 func DnsMapTag(creatorID int, tagstr string) error {
-	tag := NewTag()
-	err := tag.Parse(tagstr)
+	set, err := tagChain(parseTags(tagstr, ',')).qids(DB).unwrap()
 	if err != nil {
 		return err
 	}
+	if len(set.Slice) <= 0 {
+		return errors.New("no tags")
+	}
 
-	tag.QID(DB)
-
-	return dns.MapTag(DB, creatorID, tag.ID)
+	return dns.MapTag(DB, creatorID, set.Slice[0].ID)
 }

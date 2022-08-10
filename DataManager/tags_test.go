@@ -43,11 +43,6 @@ import (
 
 func BenchmarkParseTags(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		var tc = new(TagCollector)
-		err := tc.ParseEscape("test, tag\\, tag, tag \\, tag \\, tag, tag tag tag, tag\\,", ',')
-		//err := tc.ParseEscape("test", ',')
-		if err != nil {
-			b.Log(err)
-		}
+		parseTags("test, tag\\, tag, tag \\, tag \\, tag, tag tag tag, tag\\,", ',')
 	}
 }

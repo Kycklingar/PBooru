@@ -4,114 +4,30 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kycklingar/PBooru/DataManager/set"
+	"github.com/kycklingar/set"
 )
 
-type tagSet []*Tag
-
-// sort.Interface implementation
-func (set tagSet) Len() int      { return len(set) }
-func (set tagSet) Swap(i, j int) { set[i], set[j] = set[j], set[i] }
-func (set tagSet) Less(i, j int) bool {
-	return set[i].String() < set[j].String()
+func tSetStr(s set.Sorted[Tag]) string {
+	return sep(",", len(s.Slice), func(i int) string {
+		return strconv.Itoa(s.Slice[i].ID)
+	})
 }
 
-func (set tagSet) strindex(i int) string {
-	return strconv.Itoa(set[i].ID)
+func lessfnTagID(a, b Tag) bool {
+	return a.ID < b.ID
+}
+func lessfnTag(a, b Tag) bool {
+	return a.String() < b.String()
 }
 
-// Return the tag ids in a that are not in b
-func (a tagSet) diffID(b tagSet) tagSet {
-	var (
-		diff = make(set.Set[int])
-		ret  tagSet
-	)
-
-	for _, tag := range b {
-		diff.Add(tag.ID)
-	}
-
-	for _, tag := range a {
-		if !diff.Has(tag.ID) {
-			ret = append(ret, tag)
-		}
-	}
-
-	return ret
+func parseTagsWithID(q querier, tagstr string, delim rune) (set.Sorted[Tag], error) {
+	return tagChain(parseTags(tagstr, delim)).qids(q).unwrap()
 }
 
-// Return the tags in a that are not in b
-func (a tagSet) diff(b tagSet) tagSet {
-	var (
-		diff = make(set.Set[string])
-		ret  tagSet
-	)
-
-	for _, tag := range b {
-		diff.Add(tag.String())
-	}
-
-	for _, tag := range a {
-		if !diff.Has(tag.String()) {
-			ret = append(ret, tag)
-		}
-	}
-
-	return ret
-}
-
-// Return a tagSet with unique ids
-func (a tagSet) uniqueID() tagSet {
-	m := make(map[int]*Tag)
-
-	for _, t := range a {
-		m[t.ID] = t
-	}
-
-	var (
-		retu = make(tagSet, len(m))
-		i    int
-	)
-
-	for _, t := range m {
-		retu[i] = t
-		i++
-	}
-
-	return retu
-}
-
-// Return a tagSet with unique tags
-func (a tagSet) unique() tagSet {
-	m := make(map[string]*Tag)
-
-	for _, t := range a {
-		m[t.String()] = t
-	}
-
-	var (
-		retu = make(tagSet, len(m))
-		i    int
-	)
-
-	for _, t := range m {
-		retu[i] = t
-		i++
-	}
-
-	return retu
-}
-
-func parseTagsWithID(q querier, tagstr string, delim rune) (tagSet, error) {
-	set := parseTags(tagstr, delim)
-
-	return set.chain().qids(q).unwrap()
-}
-
-func parseTags(tagstr string, delim rune) tagSet {
+func parseTags(tagStr string, delim rune) set.Sorted[Tag] {
 	var (
 		tagSpitter = make(chan string)
-		set        tagSet
+		set        = set.New[Tag](lessfnTag)
 	)
 
 	go func(spitter chan string) {
@@ -122,53 +38,48 @@ func parseTags(tagstr string, delim rune) tagSet {
 
 		var (
 			state = next
-			tag   string
+			tag   strings.Builder
 		)
 
-		for _, c := range tagstr {
+		var spit = func() {
+			spitter <- strings.ToLower(strings.TrimSpace(tag.String()))
+		}
+
+		for _, c := range tagStr {
 			switch state {
 			case next:
 				switch c {
 				case '\\':
 					state = unescape
 				case delim:
-					spitter <- strings.TrimSpace(tag)
-					tag = ""
+					spit()
+					tag.Reset()
 				default:
-					tag += string(c)
+					tag.WriteRune(c)
 				}
 			case unescape:
-				tag += string(c)
+				tag.WriteRune(c)
 				state = next
 			}
 		}
 
-		spitter <- strings.ToLower(tag)
+		if tag.Len() > 0 {
+			spit()
+		}
+
 		close(spitter)
 	}(tagSpitter)
 
 	for tag := range tagSpitter {
-		var t = NewTag()
-
-		split := strings.SplitN(tag, ":", 2)
-
-		switch len(split) {
-		case 1:
-			t.Tag = strings.TrimSpace(split[0])
-		case 2:
-			t.Namespace.Namespace = strings.TrimSpace(split[0])
-			t.Tag = strings.TrimSpace(split[1])
-		}
+		var t Tag
+		t.parse(tag)
 
 		// Discard empty tags
 		if t.Tag == "" {
 			continue
 		}
-		if t.Namespace.Namespace == "" {
-			t.Namespace.Namespace = "none"
-		}
 
-		set = append(set, t)
+		set.Set(t)
 	}
 
 	return set

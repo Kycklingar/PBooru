@@ -2,6 +2,8 @@ package DataManager
 
 import (
 	"database/sql"
+
+	"github.com/kycklingar/set"
 )
 
 const lMultiTags logtable = "multi_tags"
@@ -13,7 +15,7 @@ func init() {
 type logMultipleTags []logMultiTags
 
 type logMultiTags struct {
-	Tag           *Tag
+	Tag           Tag
 	Action        lAction
 	PostsAffected int
 
@@ -22,12 +24,16 @@ type logMultiTags struct {
 
 func getMultiLogs(log *Log, q querier) error {
 	rows, err := q.Query(`
-		SELECT m.tag_id, m.action, count(p)
+		SELECT t.tag, n.nspace, m.action, count(p)
 		FROM log_multi_post_tags m
+		JOIN tags t
+		ON m.tag_id = t.id
+		JOIN namespaces n
+		ON t.namespace_id = n.id
 		JOIN log_multi_posts_affected p
 		ON m.id = p.id
 		WHERE log_id = $1
-		GROUP BY m.tag_id, m.action
+		GROUP BY t.tag, n.nspace, m.action
 		`,
 		log.ID,
 	)
@@ -39,12 +45,11 @@ func getMultiLogs(log *Log, q querier) error {
 	var multilogs = make(map[lAction][]logMultiTags)
 
 	for rows.Next() {
-		var ml = logMultiTags{
-			Tag: NewTag(),
-		}
+		var ml logMultiTags
 
 		err = rows.Scan(
-			&ml.Tag.ID,
+			&ml.Tag.Tag,
+			&ml.Tag.Namespace,
 			&ml.Action,
 			&ml.PostsAffected,
 		)
@@ -120,14 +125,14 @@ func (l logMultiTags) log(logID int, tx *sql.Tx) error {
 	return nil
 }
 
-func multiLogStmtFromSet(query string, tx *sql.Tx, action lAction, set tagSet) (multiLogs []logMultiTags, err error) {
+func multiLogStmtFromSet(query string, tx *sql.Tx, action lAction, set set.Sorted[Tag]) (multiLogs []logMultiTags, err error) {
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return
 	}
 	defer stmt.Close()
 
-	for _, t := range set {
+	for _, t := range set.Slice {
 		var ml = logMultiTags{
 			Tag:    t,
 			Action: action,

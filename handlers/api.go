@@ -38,20 +38,13 @@ type APIv1Post struct {
 }
 
 type APIv1TagI interface {
-	Parse(*DM.Tag)
+	Parse(DM.Tag)
 }
 
 type APIv1TagString string
 
-func (t *APIv1TagString) Parse(tag *DM.Tag) {
-	var str string
-	if tag.QNamespace(DM.DB).QNamespace(DM.DB) == "none" {
-		str = tag.QTag(DM.DB)
-	} else {
-		str = fmt.Sprintf("%s:%s", tag.QNamespace(DM.DB).QNamespace(DM.DB), tag.QTag(DM.DB))
-	}
-
-	*t = APIv1TagString(str)
+func (t *APIv1TagString) Parse(tag DM.Tag) {
+	*t = APIv1TagString(tag.String())
 }
 
 type APIv1Tag struct {
@@ -60,9 +53,9 @@ type APIv1Tag struct {
 	Count     int
 }
 
-func (t *APIv1Tag) Parse(tag *DM.Tag) {
-	t.Tag = tag.QTag(DM.DB)
-	t.Namespace = tag.QNamespace(DM.DB).QNamespace(DM.DB)
+func (t *APIv1Tag) Parse(tag DM.Tag) {
+	t.Tag = tag.Tag
+	t.Namespace = string(tag.Namespace)
 	t.Count = tag.Count
 }
 
@@ -131,20 +124,13 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 		combineTags = true
 	}
 
-	tc := DM.TagCollector{}
-	err = tc.FromPostMul(
-		DM.DB,
-		p,
-		DM.FTag,
-		DM.FCount,
-		DM.FNamespace,
-	)
+	tags, err := p.Tags()
 	if err != nil {
 		APIError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	AP, err := DMToAPIPost(p, tc.Tags, combineTags)
+	AP, err := DMToAPIPost(p, tags, combineTags)
 	if err != nil {
 		log.Print(err)
 		APIError(w, ErrInternal, http.StatusInternalServerError)
@@ -194,7 +180,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 //	jsonEncode(w, dp)
 //}
 
-func DMToAPIPost(p *DM.Post, tags []*DM.Tag, combineTagNamespace bool) (APIv1Post, error) {
+func DMToAPIPost(p *DM.Post, tags []DM.Tag, combineTagNamespace bool) (APIv1Post, error) {
 	var AP APIv1Post
 
 	if err := p.QMul(
@@ -372,49 +358,38 @@ func APIError(w http.ResponseWriter, err string, code int) {
 
 func APIv1SuggestTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tagStr := r.FormValue("tags")
-	delim := r.FormValue("delim")
-	if delim == "" {
-		delim = ","
-	}
 
 	timer := BM.Begin()
-	var tc DM.TagCollector
-	tc.ParseEscape(tagStr, rune(delim[0]))
+
+	hints, err := DM.TagHints(tagStr)
+	if err != nil {
+		APIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	if len(r.FormValue("opensearch")) >= 1 {
-		jsonEncode(w, openSearchSuggestions(tagStr, tc))
+		jsonEncode(w, openSearchSuggestions(tagStr, hints))
 	} else {
-		sugt := tc.SuggestedTags(DM.DB)
-
-		var tags []APIv1Tag
-		for _, t := range sugt.Tags {
-			var nt APIv1Tag
-			nt.Tag = t.QTag(DM.DB)
-			nt.Namespace = t.QNamespace(DM.DB).QNamespace(DM.DB)
-
-			tags = append(tags, nt)
+		var tags = make([]APIv1Tag, len(hints))
+		for i := range hints {
+			tags[i].Tag = hints[i].Tag
+			tags[i].Namespace = string(hints[i].Namespace)
+			tags[i].Count = hints[i].Count
 		}
-		jsonEncode(w, tags)
+		if len(tags) > 0 {
+			jsonEncode(w, tags)
+		} else {
+			jsonEncode(w, nil)
+		}
 	}
 
 	timer.End(performBenchmarks)
 }
 
-func openSearchSuggestions(query string, tc DM.TagCollector) []interface{} {
+func openSearchSuggestions(query string, hints []DM.Tag) []interface{} {
 	var tags []string
-	//var counts []string
-	for _, t := range tc.SuggestedTags(DM.DB).Tags {
-		var str string
-		tag := t.QTag(DM.DB)
-		namespace := t.QNamespace(DM.DB).QNamespace(DM.DB)
-		if namespace == "none" {
-			str = tag
-		} else {
-			str = namespace + ":" + tag
-		}
-
-		tags = append(tags, str)
-		//counts = append(counts, fmt.Sprint(t.QCount(DM.DB), " results"))
+	for _, t := range hints {
+		tags = append(tags, t.String())
 	}
 
 	return []interface{}{query, tags} //, counts}

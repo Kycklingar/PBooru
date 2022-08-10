@@ -2,7 +2,7 @@
 {{define "tagcat"}}
 <div>
 	{{range .}}
-	<span class="tag namespace-{{.Namespace.Namespace}}">{{.Tag}}</span>
+	<span class="tag namespace-{{.Namespace}}">{{.Tag}}</span>
 	{{end}}
 </div>
 {{end}}
@@ -91,7 +91,7 @@
 						</div>
 						{{end}}
 						{{range .Tags}}
-						<span class="tag namespace-{{.Namespace.Namespace}}">{{.String}}</span>
+						<span class="tag namespace-{{.Namespace}}">{{.String}}</span>
 						{{end}}
 					</div>
 					{{if $.Sidebar.Alts}}

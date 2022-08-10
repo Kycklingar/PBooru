@@ -21,6 +21,7 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/image"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
+	"github.com/kycklingar/set"
 	"github.com/kycklingar/sqhell/cond"
 )
 
@@ -165,20 +166,6 @@ type Thumb struct {
 	Cid  string
 	Size int
 }
-
-//type bindContext struct {
-//	p     *Post
-//	pinfo bool
-//}
-//
-//func (b *bindContext) joinPostInfo() string {
-//	if !b.pinfo {
-//		b.pinfo = true
-//		return "LEFT JOIN post_info ON p.id = post_info.post_id"
-//	}
-//
-//	return ""
-//}
 
 func (p *Post) BindField(sel *sqlbinder.Selection, field sqlbinder.Field) {
 	switch field {
@@ -490,36 +477,6 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 	return p.editCount, err
 }
 
-//func (p *Post) TagHistory(q querier, limit, offset int) ([]*TagHistory, error) {
-//	if p.ID <= 0 {
-//		return nil, errors.New("no post id specified")
-//	}
-//	rows, err := q.Query("SELECT id, user_id, timestamp FROM tag_history WHERE post_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", p.ID, limit, offset)
-//	if err != nil {
-//		log.Println(err)
-//		return nil, err
-//	}
-//	defer rows.Close()
-//
-//	var ths []*TagHistory
-//
-//	for rows.Next() {
-//		var th = NewTagHistory()
-//		if err = rows.Scan(&th.ID, &th.User.ID, &th.Timestamp); err != nil {
-//			log.Println(err)
-//			return nil, err
-//		}
-//
-//		th.Post = p
-//
-//		ths = append(ths, th)
-//	}
-//
-//	err = rows.Err()
-//
-//	return ths, err
-//}
-
 func (p *Post) SizePretty() string {
 	const unit = 1000
 	if p.Size < unit {
@@ -795,13 +752,13 @@ func (p *Post) Remove(q querier) error {
 	}
 	totalPosts = 0
 
-	tc := TagCollector{}
-	if err = tc.GetFromPost(q, p); err != nil {
-		log.Print(err)
+	tags, err := postTags(q, p.ID).unwrap()
+	if err != nil {
 		return err
 	}
-	for _, t := range tc.Tags {
-		resetCacheTag(q, t.QID(q))
+
+	for _, t := range tags.Slice {
+		resetCacheTag(q, t.ID)
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
@@ -819,13 +776,13 @@ func (p *Post) Reinstate(q querier) error {
 	}
 	totalPosts = 0
 
-	tc := TagCollector{}
-	if err = tc.GetFromPost(q, p); err != nil {
-		log.Print(err)
+	tags, err := postTags(q, p.ID).unwrap()
+	if err != nil {
 		return err
 	}
-	for _, t := range tc.Tags {
-		resetCacheTag(q, t.QID(q))
+
+	for _, t := range tags.Slice {
+		resetCacheTag(q, t.ID)
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
 
@@ -889,342 +846,6 @@ func (p *Post) del(q querier) error {
 
 	return err
 }
-
-//func (p *Post) addTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
-//	// Collect only new tags
-//	var newTags []*Tag
-//	for _, tag := range tags {
-//		if !isTagIn(tag, currentTags) {
-//			newTags = append(newTags, tag)
-//		}
-//	}
-//
-//	for _, tag := range newTags {
-//		_, err := tx.Exec(`
-//			INSERT INTO post_tag_mappings(
-//				post_id, tag_id
-//			)
-//			VALUES ($1, $2)
-//			`,
-//			p.ID,
-//			tag.ID,
-//		)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		err = tag.updateCount(tx, 1)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	return newTags, nil
-//}
-//
-//func (p *Post) removeTags(tx querier, currentTags, tags []*Tag) ([]*Tag, error) {
-//	in := func(t *Tag, tags []*Tag) bool {
-//		for _, tag := range tags {
-//			if tag.ID == t.ID {
-//				return true
-//			}
-//		}
-//
-//		return false
-//	}
-//
-//	var removedTags []*Tag
-//
-//	for _, tag := range currentTags {
-//		if in(tag, tags) {
-//			removedTags = append(removedTags, tag)
-//		}
-//	}
-//
-//	for _, tag := range removedTags {
-//		_, err := tx.Exec(`
-//			DELETE FROM post_tag_mappings
-//			WHERE post_id = $1
-//			AND tag_id = $2
-//			`,
-//			p.ID,
-//			tag.ID,
-//		)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		err = tag.updateCount(tx, -1)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	return removedTags, nil
-//}
-//
-//func (p *Post) AddTags(user *User, tagStr string) error {
-//	tx, err := DB.Begin()
-//	if err != nil {
-//		return err
-//	}
-//
-//	defer commitOrDie(tx, &err)
-//
-//	err = p.editTagsAdd(tx, user, tagStr)
-//
-//	return err
-//}
-//
-//func (p *Post) RemoveTags(user *User, tagStr string) error {
-//	tx, err := DB.Begin()
-//	if err != nil {
-//		return err
-//	}
-//
-//	defer commitOrDie(tx, &err)
-//
-//	err = p.editTagsRemove(tx, user, tagStr)
-//
-//	return err
-//}
-//
-//func (p *Post) editTagsRemove(tx querier, user *User, tagStr string) error {
-//	var tags TagCollector
-//	err := tags.Parse(tagStr, "\n")
-//	if err != nil {
-//		return err
-//	}
-//
-//	err = tags.upgrade(tx, false)
-//	if err != nil {
-//		return err
-//	}
-//
-//	dupe, err := getDupeFromPost(tx, p)
-//	if err != nil {
-//		return err
-//	}
-//
-//	var currentTags TagCollector
-//	if err = currentTags.GetFromPost(tx, dupe.Post); err != nil {
-//		return err
-//	}
-//
-//	removedTags, err := dupe.Post.removeTags(tx, currentTags.Tags, tags.Tags)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if len(removedTags) <= 0 {
-//		return nil
-//	}
-//
-//	if err = dupe.Post.logTagEdit(tx, user, nil, removedTags); err != nil {
-//		return err
-//	}
-//
-//	for _, tag := range removedTags {
-//		resetCacheTag(tx, tag.ID)
-//	}
-//
-//	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
-//
-//	return clearEmptySearchCountCache(tx)
-//}
-//
-//func (p *Post) editTagsAdd(tx querier, user *User, tagStr string) error {
-//
-//	var tags TagCollector
-//	err := tags.Parse(tagStr, "\n")
-//	if err != nil {
-//		return err
-//	}
-//
-//	if err = tags.save(tx); err != nil {
-//		return err
-//	}
-//
-//	// Get post dupe
-//	dupe, err := getDupeFromPost(tx, p)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Upgrade tags to aliases and add parents
-//	err = tags.upgrade(tx, true)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Get current tags on the post
-//	var currentTags TagCollector
-//	if err = currentTags.GetFromPost(tx, dupe.Post); err != nil {
-//		return err
-//	}
-//
-//	newTags, err := dupe.Post.addTags(tx, currentTags.Tags, tags.Tags)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if len(newTags) <= 0 {
-//		return nil
-//	}
-//
-//	if err = dupe.Post.logTagEdit(tx, user, newTags, nil); err != nil {
-//		return err
-//	}
-//
-//	for _, tag := range newTags {
-//		resetCacheTag(tx, tag.ID)
-//	}
-//
-//	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
-//
-//	return clearEmptySearchCountCache(tx)
-//}
-//
-//func (p *Post) EditTagsQ(q querier, user *User, tagStr string) error {
-//	var tags TagCollector
-//	err := tags.Parse(tagStr, "\n")
-//	if err != nil {
-//		//log.Print(err)
-//	}
-//
-//	if err = tags.save(q); err != nil {
-//		return err
-//	}
-//
-//	dupe, err := getDupeFromPost(q, p)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Upgrade to aliases
-//
-//	err = tags.upgrade(q, true)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Get current tags
-//
-//	var currentTags TagCollector
-//	if err = currentTags.GetFromPost(q, dupe.Post); err != nil {
-//		return err
-//	}
-//
-//	// Add tags to post
-//
-//	newTags, err := dupe.Post.addTags(q, currentTags.Tags, tags.Tags)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Remove tags not in tagStr
-//	var removedTags []*Tag
-//
-//	for _, tag := range currentTags.Tags {
-//		if !isTagIn(tag, tags.Tags) {
-//			removedTags = append(removedTags, tag)
-//		}
-//	}
-//
-//	removedTags, err = dupe.Post.removeTags(q, currentTags.Tags, removedTags)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if len(newTags) < 1 && len(removedTags) < 1 {
-//		return nil
-//		//return errors.New("no tags in edit")
-//	}
-//
-//	if err = dupe.Post.logTagEdit(q, user, newTags, removedTags); err != nil {
-//		return err
-//	}
-//
-//	for _, tag := range newTags {
-//		resetCacheTag(q, tag.ID)
-//	}
-//
-//	for _, tag := range removedTags {
-//		resetCacheTag(q, tag.ID)
-//	}
-//
-//	C.Cache.Purge("TPC", strconv.Itoa(p.ID))
-//
-//	return clearEmptySearchCountCache(q)
-//}
-//
-//func (p *Post) logTagEdit(tx querier, user *User, newTags, removedTags []*Tag) error {
-//	var historyID int
-//
-//	err := tx.QueryRow(`
-//		INSERT INTO tag_history(
-//			user_id, post_id, timestamp
-//		)
-//		VALUES(
-//			$1, $2, CURRENT_TIMESTAMP
-//		)
-//		RETURNING id`,
-//		user.QID(tx),
-//		p.ID,
-//	).Scan(&historyID)
-//	if err != nil {
-//		return err
-//	}
-//
-//	for _, tag := range newTags {
-//		_, err = tx.Exec(`
-//			INSERT INTO edited_tags(
-//				history_id, tag_id, direction
-//			)
-//			VALUES($1, $2, $3)
-//			`,
-//			historyID,
-//			tag.QID(tx),
-//			1,
-//		)
-//		if err != nil {
-//			return err
-//		}
-//	}
-//
-//	for _, tag := range removedTags {
-//		_, err = tx.Exec(`
-//			INSERT INTO edited_tags(
-//				history_id, tag_id, direction
-//			)
-//			VALUES($1, $2, $3)
-//			`,
-//			historyID,
-//			tag.QID(tx),
-//			-1,
-//		)
-//		if err != nil {
-//			return err
-//		}
-//	}
-//
-//	return nil
-//}
-//
-//func (p *Post) EditTags(user *User, tagStr string) error {
-//	tx, err := DB.Begin()
-//	if err != nil {
-//		log.Println(err)
-//		return err
-//	}
-//
-//	if err = p.EditTagsQ(tx, user, tagStr); err != nil {
-//		log.Println(err)
-//		return txError(tx, err)
-//	}
-//
-//	return tx.Commit()
-//}
 
 func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 	if p.ID == 0 {
@@ -1291,82 +912,6 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 	return posts, nil
 }
 
-//func (p *Post) Chapters(q querier) []*Chapter {
-//	if p.ID == 0 {
-//		return nil
-//	}
-//
-//	var chapters []*Chapter
-//	err := query(
-//		q,
-//		`SELECT DISTINCT chapter_id
-//		FROM comic_mappings
-//		WHERE post_id = $1`,
-//		p.ID,
-//	)(func(scan scanner) error {
-//
-//	})
-//	if err != nil {
-//		if err != sql.ErrNoRows {
-//			log.Println(err)
-//		}
-//		return nil
-//	}
-//
-//	defer rows.Close()
-//
-//	in := func(id int) bool {
-//		for _, chapter := range chapters {
-//			if chapter.ID == id {
-//				return true
-//			}
-//		}
-//
-//		return false
-//	}
-//
-//	for rows.Next() {
-//		var c = new(Chapter)
-//		if err := rows.Scan(&c.ID); err != nil {
-//			log.Println(err)
-//			return nil
-//		}
-//
-//		if !in(c.ID) {
-//			chapters = append(chapters, c)
-//		}
-//	}
-//
-//	if err = rows.Err(); err != nil {
-//		log.Println(err)
-//		return nil
-//	}
-//
-//	return chapters
-//}
-
-//func (p *Post) Comics(q querier) []*Comic {
-//	if p.ID == 0 {
-//		return nil
-//	}
-//	rows, err := q.Query("SELECT comic_id FROM comic_mappings WHERE post_id=$1", p.ID)
-//	if err != nil {
-//		return nil
-//	}
-//	defer rows.Close()
-//	var comics []*Comic
-//	for rows.Next() {
-//		var c Comic
-//		rows.Scan(&c.ID)
-//		if rows.Err() != nil {
-//			log.Print(err)
-//			return nil
-//		}
-//		comics = append(comics, &c)
-//	}
-//	return comics
-//}
-
 func (p *Post) Duplicates(q querier) (Dupe, error) {
 	return getDupeFromPost(q, p)
 }
@@ -1420,13 +965,13 @@ type PostCollector struct {
 	emptySet bool
 
 	posts     map[int][]*Post
-	id        []int
-	or        []int
-	filter    []int
-	unless    []int
+	and       set.Sorted[Tag]
+	or        set.Sorted[Tag]
+	filter    set.Sorted[Tag]
+	unless    set.Sorted[Tag]
 	tombstone bool
 
-	tags       []*Tag //Sidebar
+	tags       []Tag //Sidebar
 	TotalPosts int
 
 	mimeIDs []int
@@ -1471,82 +1016,22 @@ func (e ErrorTag) Error() string {
 }
 
 func (pc *PostCollector) Get(opts SearchOptions) error {
-	in := func(i int, arr []int) bool {
-		for _, j := range arr {
-			if i == j {
-				return true
-			}
-		}
-		return false
-	}
-
-	type strat int
-	const (
-		stratContinue strat = iota
-		stratError
-	)
-
-	addto := func(arr *[]int, tstr string, tagNoExistStrat strat) error {
-		var isin = make(map[int]struct{})
-		if len(tstr) >= 1 {
-			var tc TagCollector
-			err := tc.ParseEscape(tstr, ',')
-			if err != nil {
-				return err
-			}
-
-			for _, tag := range tc.Tags {
-				if tag.QID(DB) == 0 {
-					switch tagNoExistStrat {
-					case stratError:
-						return ErrorTag(tag.String())
-					default:
-						continue
-					}
-
-				}
-
-				alias := NewAlias()
-				alias.Tag = tag
-				to, err := alias.QTo(DB)
-				if err != nil {
-					return err
-				}
-
-				if to.QID(DB) != 0 {
-					tag = to
-				}
-
-				if _, in := isin[tag.QID(DB)]; !in {
-					isin[tag.ID] = struct{}{}
-					*arr = append(*arr, tag.ID)
-				}
-			}
-		}
-
-		sort.Ints(*arr)
-
-		return nil
-	}
-
-	if err := addto(&pc.id, opts.And, stratError); err != nil {
+	var err error
+	pc.and, err = tagChain(parseTags(opts.And, ',')).qids(DB).aliases(DB).unwrap()
+	if err != nil {
 		pc.emptySet = true
-		return err
 	}
-
-	if err := addto(&pc.or, opts.Or, stratError); err != nil {
+	pc.or, err = tagChain(parseTags(opts.Or, ',')).qids(DB).aliases(DB).unwrap()
+	if err != nil {
 		pc.emptySet = true
-		return err
 	}
-
-	if err := addto(&pc.filter, opts.Filter, stratError); err != nil {
+	pc.filter, err = tagChain(parseTags(opts.Filter, ',')).qids(DB).aliases(DB).unwrap()
+	if err != nil {
 		pc.emptySet = true
-		return err
 	}
-
-	if err := addto(&pc.unless, opts.Unless, stratError); err != nil {
+	pc.unless, err = tagChain(parseTags(opts.Unless, ',')).qids(DB).aliases(DB).unwrap()
+	if err != nil {
 		pc.emptySet = true
-		return err
 	}
 
 	switch strings.ToUpper(opts.Order) {
@@ -1562,12 +1047,13 @@ func (pc *PostCollector) Get(opts SearchOptions) error {
 	pc.altGroup = opts.Altgroup
 	pc.tombstone = opts.Tombstone
 
+	// TODO cleanup
 	// Check if the mime id exist in the db
-	for _, mime := range Mimes {
-		if in(mime.ID, opts.MimeIDs) {
-			pc.mimeIDs = append(pc.mimeIDs, mime.ID)
-		}
-	}
+	//for _, mime := range Mimes {
+	//	if in(mime.ID, opts.MimeIDs) {
+	//		pc.mimeIDs = append(pc.mimeIDs, mime.ID)
+	//	}
+	//}
 	sort.Ints(pc.mimeIDs)
 
 	return nil
@@ -1602,18 +1088,24 @@ func (pc *PostCollector) countIDStr() string {
 		return "NIL"
 	}
 
-	if !pc.tombstone && len(pc.id) <= 0 && len(pc.or) <= 0 && len(pc.filter) <= 0 && len(pc.mimeIDs) <= 0 && !pc.collectAlts && pc.altGroup <= 0 {
+	if !pc.tombstone &&
+		len(pc.and.Slice) <= 0 &&
+		len(pc.or.Slice) <= 0 &&
+		len(pc.filter.Slice) <= 0 &&
+		len(pc.mimeIDs) <= 0 &&
+		!pc.collectAlts &&
+		pc.altGroup <= 0 {
 		return "0"
 	}
 
 	return fmt.Sprint(
-		strSep(pc.id, " "),
+		tSetStr(pc.and),
 		" - ",
-		strSep(pc.or, " "),
+		tSetStr(pc.or),
 		" - ",
-		strSep(pc.filter, " "),
+		tSetStr(pc.filter),
 		" - ",
-		strSep(pc.unless, " "),
+		tSetStr(pc.unless),
 		" - ",
 		strSep(pc.mimeIDs, " "),
 		" - ",
@@ -1646,7 +1138,7 @@ type SearchResult []resultSet
 
 type resultSet struct {
 	Post *Post
-	Tags []*Tag
+	Tags []Tag
 }
 
 // Where key is post id and val is tags
@@ -1662,7 +1154,7 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	}
 
 	sg := searchGroup(
-		pc.id,
+		pc.and,
 		pc.or,
 		pc.filter,
 		pc.unless,
@@ -1848,11 +1340,12 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				}
 
 				if tagID.Valid {
-					var t = NewTag()
-					t.ID = int(tagID.Int64)
-					t.Count = int(tagCount.Int64)
-					t.Tag = tagName.String
-					t.Namespace.Namespace = namespace.String
+					var t = Tag{
+						ID:        int(tagID.Int64),
+						Tag:       tagName.String,
+						Namespace: Namespace(namespace.String),
+						Count:     int(tagCount.Int64),
+					}
 					set.Tags = append(set.Tags, t)
 				}
 
@@ -1899,11 +1392,12 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 				}
 
 				if tagID.Valid {
-					var t = NewTag()
-					t.ID = int(tagID.Int64)
-					t.Count = int(tagCount.Int64)
-					t.Tag = tagName.String
-					t.Namespace.Namespace = namespace.String
+					var t = Tag{
+						ID:        int(tagID.Int64),
+						Tag:       tagName.String,
+						Namespace: Namespace(namespace.String),
+						Count:     int(tagCount.Int64),
+					}
 					res[resCount-1].Tags = append(res[resCount-1].Tags, t)
 
 				}
@@ -1921,14 +1415,14 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 	return result, nil
 }
 
-func (pc *PostCollector) Tags(maxTags int) []*Tag {
+func (pc *PostCollector) Tags(maxTags int) []Tag {
 	pc.tagLock.Lock()
 	defer pc.tagLock.Unlock()
 	if len(pc.tags) > 0 {
 		return pc.tags
 	}
 
-	var allTags []*Tag
+	var allTags []Tag
 
 	if pc.countIDStr() == "-1" {
 		return nil
@@ -1944,35 +1438,28 @@ func (pc *PostCollector) Tags(maxTags int) []*Tag {
 	// Get tags from all posts
 	pc.pl.RLock()
 	for _, set := range result {
-		//var ptc TagCollector
-		//err := ptc.GetFromPost(DB, set.Post)
-		//if err != nil {
-		//	continue
-		//}
-		//allTags = append(allTags, ptc.Tags...)
 		allTags = append(allTags, set.Tags...)
 	}
 	pc.pl.RUnlock()
 
 	type tagMap struct {
-		tag   *Tag
+		tag   Tag
 		count int
 	}
 
-	tm := make(map[int]*tagMap)
+	tm := make(map[int]tagMap)
 
 	for _, tag := range allTags {
-		if t, ok := tm[tag.ID]; ok {
-			t.count++
-		} else {
-			tm[tag.ID] = &tagMap{tag, 1}
-		}
+		m := tm[tag.ID]
+		m.tag = tag
+		m.count++
+		tm[tag.ID] = m
 	}
 
 	var countMap = make([]tagMap, len(tm))
 	var i int
 	for _, v := range tm {
-		countMap[i] = *v
+		countMap[i] = v
 		i++
 	}
 
@@ -2073,39 +1560,12 @@ func (pc *PostCollector) ccSet(c int) {
 		return
 	}
 
-	in := func(id int, sl []int) bool {
-		for _, i := range sl {
-			if id == i {
-				return true
-			}
-		}
-		return false
-	}
+	union := set.Union(pc.and, pc.or)
+	union = set.Union(union, pc.filter)
+	union = set.Union(union, pc.unless)
 
-	var tagids []int
-	for _, id := range pc.id {
-		if !in(id, tagids) {
-			tagids = append(tagids, id)
-		}
-	}
-	for _, id := range pc.or {
-		if !in(id, tagids) {
-			tagids = append(tagids, id)
-		}
-	}
-	for _, id := range pc.filter {
-		if !in(id, tagids) {
-			tagids = append(tagids, id)
-		}
-	}
-	for _, id := range pc.unless {
-		if !in(id, tagids) {
-			tagids = append(tagids, id)
-		}
-	}
-
-	for _, id := range tagids {
-		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, id)
+	for _, t := range union.Slice {
+		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, t.ID)
 		if err != nil {
 			log.Println(err)
 			txError(tx, err)

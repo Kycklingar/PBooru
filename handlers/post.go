@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
 	mm "github.com/kycklingar/MinMax"
@@ -84,7 +82,7 @@ type Postpage struct {
 	Time     string
 }
 
-var catMap = map[string]int{
+var catMap = map[DM.Namespace]int{
 	"creator":   0,
 	"gender":    1,
 	"character": 2,
@@ -96,10 +94,10 @@ type postAndTags struct {
 	Post *DM.Post
 
 	// Namespaced tags displayed first
-	Namespace [][]*DM.Tag
+	Namespace [][]DM.Tag
 
 	// The rest
-	Tags []*DM.Tag
+	Tags []DM.Tag
 }
 
 type PostsPage struct {
@@ -287,16 +285,17 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Voted = pp.User.Voted(DM.DB, pp.Dupe.Post)
 
-	var tc DM.TagCollector
-
 	bm.Split("Queriying tags")
-	err = tc.FromPostMul(DM.DB, pp.Dupe.Post, DM.FID, DM.FTag, DM.FCount, DM.FNamespace)
-	if err != nil {
-		log.Print(err)
+	tags, err := pp.Dupe.Post.Tags()
+	if internalError(w, err) {
+		return
 	}
 
-	for _, tag := range tc.Tags {
-		if tag.Namespace.Namespace == "creator" {
+	pp.Base.Title = strconv.Itoa(pp.Post.ID)
+
+	for _, tag := range tags {
+		if tag.Namespace == "creator" {
+			pp.Base.Title += " - " + tag.Tag
 			dns, err := DM.DnsGetCreatorFromTag(tag.ID)
 			if err != nil {
 				continue
@@ -306,17 +305,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//for _, tag := range tc.Tags {
-	//	if err := tag.QueryAll(DM.DB); err != nil {
-	//		log.Println(err)
-	//	}
-	//	//tag.QTag(DM.DB)
-	//	//tag.QCount(DM.DB)
-	//	//tag.QNamespace(DM.DB).QNamespace(DM.DB)
-	//	fmt.Println(tag.Namespace, tag.Tag)
-	//}
-
-	pp.Sidebar.Tags = tc.Tags
+	pp.Sidebar.Tags = tags
 
 	pp.Comments, err = p.Comments(DM.DB)
 	if internalError(w, err) {
@@ -332,39 +321,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	if internalError(w, err) {
 		return
 	}
-
-	//pp.Chapters = pp.Dupe.Post.Chapters(DM.DB)
-	//for _, c := range pp.Chapters {
-	//	c.QComic(DM.DB)
-	//	c.Comic.QTitle(DM.DB)
-	//	c.Comic.QPageCount(DM.DB)
-	//	c.QTitle(DM.DB)
-	//	c.QOrder(DM.DB)
-	//	for i, p := range c.QPosts(DM.DB) {
-	//		if i > 5 {
-	//			break
-	//		}
-	//		p.QOrder(DM.DB)
-	//		p.QPost(DM.DB)
-	//		p.Post.QMul(
-	//			DM.DB,
-	//			DM.PFHash,
-	//			DM.PFThumbnails,
-	//		)
-	//	}
-	//}
-
-	pp.Base.Title = strconv.Itoa(pp.Post.ID)
-
-	bm.Split("Gathering creator tags")
-	for _, tag := range pp.Sidebar.Tags {
-		if tag.Namespace.Namespace == "creator" {
-			pp.Base.Title += " - " + tag.Tag
-		}
-	}
-
-	bm.Split("Sorting tags")
-	sort.Sort(tagSort(pp.Sidebar.Tags))
 
 	DM.RegisterPostView(pp.Dupe.Post.ID)
 
@@ -582,8 +538,10 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
-	return
+	if true {
+		http.Error(w, errors.New("Temporarily disabled").Error(), http.StatusInternalServerError)
+		return
+	}
 	user, _ := getUser(w, r)
 
 	if !user.QFlag(DM.DB).Tagging() {
@@ -604,7 +562,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/post/%d/%s", post.ID, post.Cid), http.StatusSeeOther)
 }
 
-type tagSort []*DM.Tag
+type tagSort []DM.Tag
 
 func (t tagSort) Len() int {
 	return len(t)
@@ -615,7 +573,7 @@ func (t tagSort) Swap(i, j int) {
 }
 
 func (t tagSort) Less(i, j int) bool {
-	return strings.Compare(t[i].String(), t[j].String()) != 1
+	return t[i].String() < t[j].String()
 }
 
 func PostVoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -777,7 +735,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, set := range result {
 		var pt = postAndTags{
 			Post:      set.Post,
-			Namespace: make([][]*DM.Tag, len(catMap)),
+			Namespace: make([][]DM.Tag, len(catMap)),
 		}
 
 		if p.Sidebar.Alts {
@@ -803,7 +761,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, tag := range set.Tags {
-			if v, ok := catMap[tag.Namespace.Namespace]; ok {
+			if v, ok := catMap[tag.Namespace]; ok {
 				pt.Namespace[v] = append(pt.Namespace[v], tag)
 			} else {
 				pt.Tags = append(pt.Tags, tag)
@@ -819,30 +777,20 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("After posts")
 
-	var tc DM.TagCollector
-	tc.Parse(tagString, ",")
-	tc.Parse(p.Sidebar.Or, ",")
-	tc.Parse(p.Sidebar.Filter, ",")
-	tc.Parse(p.Sidebar.Unless, ",")
+	// FIXME
+	//var tc DM.TagCollector
+	//tc.Parse(tagString, ",")
+	//tc.Parse(p.Sidebar.Or, ",")
+	//tc.Parse(p.Sidebar.Filter, ",")
+	//tc.Parse(p.Sidebar.Unless, ",")
 
-	for _, t := range tc.SuggestedTags(DM.DB).Tags {
-		t.QTag(DM.DB)
-		t.QNamespace(DM.DB).QNamespace(DM.DB)
-		p.SuggestedTags = append(p.SuggestedTags, t)
-	}
+	//for _, t := range tc.SuggestedTags(DM.DB).Tags {
+	//	t.QTag(DM.DB)
+	//	t.QNamespace(DM.DB).QNamespace(DM.DB)
+	//	p.SuggestedTags = append(p.SuggestedTags, t)
+	//}
 
-	sidebarTags := pc.Tags(maxTagsPerPage)
-	p.Sidebar.Tags = make([]*DM.Tag, len(sidebarTags))
-	for i, tag := range sidebarTags {
-		//p.Sidebar.Tags[i] = DM.CachedTag(p.Sidebar.Tags[i])
-		tag.QTag(DM.DB)
-		tag.QCount(DM.DB)
-		tag.QNamespace(DM.DB).QNamespace(DM.DB)
-
-		//fmt.Println(tag.Tag, tag.Namespace)
-
-		p.Sidebar.Tags[i] = tag
-	}
+	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 
 	bm.Split("Retrieved and appended tags")
 
@@ -1193,20 +1141,18 @@ func PostEditHandler(w http.ResponseWriter, r *http.Request) {
 		DM.PFMime,
 	)
 
-	var tc DM.TagCollector
-
-	if internalError(w, tc.FromPostMul(DM.DB, post, DM.FTag, DM.FCount, DM.FNamespace)) {
+	tags, err := post.Tags()
+	if internalError(w, err) {
 		return
 	}
-	sort.Sort(tagSort(tc.Tags))
 
 	var p = struct {
 		Post     *DM.Post
-		Tags     []*DM.Tag
+		Tags     []DM.Tag
 		UserInfo UserInfo
 	}{
 		Post:     post,
-		Tags:     tc.Tags,
+		Tags:     tags,
 		UserInfo: ui,
 	}
 

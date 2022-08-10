@@ -11,7 +11,7 @@
 	<div class="box">
 		<ul>
 			{{ range .Tags }}
-			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
 			{{ end }}
 		</ul>
 	</div>
@@ -19,7 +19,7 @@
 		{{if .Tag}}
 			<h2>
 				<span class="tag namespace-{{.Tag.Namespace}}">
-					<a href="/tags/{{$.Paginator.Current}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a>
+					<a href="/tags/{{$.CurrentPage}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a>
 				</span>
 			</h2>
 			{{with .From}}
@@ -27,17 +27,17 @@
 			<ul>
 				{{range .}}
 				<li class="tag namespace-{{.Namespace}}">
-					<a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a>
+					<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
 				</li>
 				{{end}}
 			</ul>
 			{{end}}
 
-			{{if .To.ID}}
+			{{with .To}}
 			Aliased to:
 			<ul>
-				<li class="tag namespace-{{.To.Namespace}}">
-					<a href="/tags/{{$.Paginator.Current}}/{{.To.ID}}{{$.Query}}">{{.To}}</a>
+				<li class="tag namespace-{{.Namespace}}">
+					<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
 				</li>
 			</ul>
 			{{end}}
@@ -46,7 +46,7 @@
 			Parents:
 			<ul>
 				{{range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
 				{{end}}
 			</ul>
 			{{end}}
@@ -55,7 +55,7 @@
 			Children:
 			<ul>
 				{{ range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.Paginator.Current}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
 				{{ end }}
 			</ul>
 			{{end}}
@@ -68,7 +68,7 @@
 			<form method="POST">
 				<input type="hidden" name="action" value="alias">
 				{{with .Tag}}
-				<input type="hidden" name="from" value="{{.Namespace.Namespace}}:{{.Tag}}">
+				<input type="hidden" name="from" value="{{.Namespace}}:{{.Tag}}">
 				{{else}}
 				<p>Alias from</p>
 				<input type="text" class="stinput" name="from">
@@ -81,7 +81,7 @@
 			<form method="POST">
 				<input type="hidden" name="action" value="parent">
 				{{with .Tag}}
-				<input type="hidden" name="child" value="{{.Namespace.Namespace}}:{{.Tag}}">
+				<input type="hidden" name="child" value="{{.Namespace}}:{{.Tag}}">
 				{{else}}
 				<p>Child</p>
 				<input type="text" class="stinput" name="child">
@@ -90,7 +90,7 @@
 				<input type="text" class="stinput" name="parent">
 				<input type="submit">
 			</form>
-			{{if and .Tag .To.ID}}
+			{{if and .Tag .To}}
 			<form method="POST">
 				<p>Unalias</p>
 				<input type="hidden" name="action" value="unalias">
@@ -108,13 +108,5 @@
 	</div>
 </div>
 
-<div class="nolink" id="pageinator">
-	{{range .Paginator.Paginate}}
-		{{if .Current}}
-		<span class="current-page">{{.Val}}</span>
-		{{else}}
-		<span><a href="{{.Href}}">{{.Val}}</a></span>
-		{{end}}
-	{{end}}
-</div>
+{{template "paginator" .Paginator}}
 {{ template "baseEnd" }}

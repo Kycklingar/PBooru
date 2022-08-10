@@ -3,20 +3,21 @@ package DataManager
 import (
 	"fmt"
 
+	"github.com/kycklingar/set"
 	"github.com/kycklingar/sqhell/cond"
 )
 
 type group struct {
 	//nested []group
 
-	and       []int
-	or        []int
-	filter    []int
-	unless    []int
+	and       set.Sorted[Tag]
+	or        set.Sorted[Tag]
+	filter    set.Sorted[Tag]
+	unless    set.Sorted[Tag]
 	tombstone bool
 }
 
-func searchGroup(and, or, filter, unless []int, tombstone bool) group {
+func searchGroup(and, or, filter, unless set.Sorted[Tag], tombstone bool) group {
 	return group{
 		and,
 		or,
@@ -39,23 +40,11 @@ func (g group) sel(where *cond.Group) string {
 	//	trail = "AND"
 	//}
 
-	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
+	if !g.tombstone && !(len(g.or.Slice) > 0 || len(g.and.Slice) > 0 || len(g.filter.Slice) > 0) {
 		return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
 	}
 
-	sep := func(s []int, seperator string) string {
-		var out string
-		for i, v := range s {
-			out += fmt.Sprint(v)
-			if i < len(s)-1 {
-				out += ","
-			}
-		}
-
-		return out
-	}
-
-	if len(g.or) > 0 {
+	if len(g.or.Slice) > 0 {
 		joins.Add(
 			"\nJOIN",
 			cond.N(
@@ -67,7 +56,7 @@ func (g group) sel(where *cond.Group) string {
 					) o
 					ON p.id = o.post_id
 					`,
-					sep(g.or, ","),
+					tSetStr(g.or),
 				),
 			),
 		)
@@ -77,9 +66,9 @@ func (g group) sel(where *cond.Group) string {
 		//trail = "AND"
 	}
 
-	if len(g.and) > 0 {
+	if len(g.and.Slice) > 0 {
 		var join, w string
-		for i := 1; i < len(g.and); i++ {
+		for i := 1; i < len(g.and.Slice); i++ {
 			join += fmt.Sprintf(`
 				JOIN post_tag_mappings a%d
 				ON p.id = a%d.post_id
@@ -87,7 +76,7 @@ func (g group) sel(where *cond.Group) string {
 				i+1,
 				i+1,
 			)
-			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and[i])
+			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and.Slice[i].ID)
 		}
 
 		joins.Add(
@@ -110,7 +99,7 @@ func (g group) sel(where *cond.Group) string {
 				a1.tag_id = %d
 				%s
 				`,
-					g.and[0],
+					g.and.Slice[0].ID,
 					w,
 				),
 			))
@@ -118,17 +107,17 @@ func (g group) sel(where *cond.Group) string {
 		//trail = "AND"
 	}
 
-	if len(g.filter) > 0 {
+	if len(g.filter.Slice) > 0 {
 
 		var unlessJ, unlessW string
 
-		if len(g.unless) > 0 {
+		if len(g.unless.Slice) > 0 {
 			unlessJ = fmt.Sprintf(`
 				LEFT JOIN post_tag_mappings u
 				ON f.post_id = u.post_id
 				AND u.tag_id IN(%s)
 				`,
-				sep(g.unless, ","),
+				tSetStr(g.unless),
 			)
 
 			unlessW = "AND u.post_id IS NULL"
@@ -149,7 +138,7 @@ func (g group) sel(where *cond.Group) string {
 				ON p.id = f.post_id
 				`,
 					unlessJ,
-					sep(g.filter, ","),
+					tSetStr(g.filter),
 					unlessW,
 				),
 			),

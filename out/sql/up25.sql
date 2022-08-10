@@ -190,3 +190,9 @@ CREATE TABLE log_duplicate_posts (
 CREATE INDEX ON log_post_tags (post_id);
 CREATE INDEX ON log_post_tags (log_id);
 CREATE INDEX ON log_post_tags_map (ptid);
+
+CREATE VIEW tag AS
+	SELECT id, tag, nspace AS namespace, count
+	FROM tags
+	JOIN namespaces n
+	ON namespace_id = n.id;

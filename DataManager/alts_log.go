@@ -2,8 +2,6 @@ package DataManager
 
 import (
 	"database/sql"
-
-	"github.com/kycklingar/PBooru/DataManager/set"
 )
 
 const (
@@ -16,7 +14,7 @@ func init() {
 
 type logAlts struct {
 	Posts []*Post
-	pids  set.Set[int]
+	pids  []int
 }
 
 type logAltsSplit struct {
@@ -61,7 +59,7 @@ func (l logAlts) log(logID int, tx *sql.Tx) error {
 	}
 	defer stmt.Close()
 
-	for pid, _ := range l.pids {
+	for _, pid := range l.pids {
 		if _, err = stmt.Exec(alID, pid); err != nil {
 			return err
 		}

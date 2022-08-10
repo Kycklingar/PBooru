@@ -15,6 +15,7 @@ import (
 	mm "github.com/kycklingar/MinMax"
 	idir "github.com/kycklingar/PBooru/DataManager/ipfs-dirgen"
 	paginate "github.com/kycklingar/PBooru/handlers/paginator"
+	"github.com/kycklingar/set"
 )
 
 const archiveVersion = "0.1"
@@ -116,7 +117,7 @@ func (arch *archive) error(err error) {
 func (arch *archive) start() {
 	type archivePost struct {
 		Post          *Post
-		Tags          []*Tag
+		Tags          []Tag
 		FilePath      string
 		ThumbnailPath string
 		PostPath      string
@@ -345,31 +346,22 @@ func (arch *archive) start() {
 }
 
 type archiveIdentity struct {
-	And      []*Tag
-	Or       []*Tag
-	Filter   []*Tag
-	Unless   []*Tag
+	And      []Tag
+	Or       []Tag
+	Filter   []Tag
+	Unless   []Tag
 	Mimes    []string
 	Altgroup int
 }
 
 func (a *archive) searchIdentity() archiveIdentity {
-	tags := func(ids []int) []*Tag {
-		tags := make([]*Tag, len(ids))
-		for i := 0; i < len(ids); i++ {
-			tags[i] = NewTag()
-			tags[i].ID = ids[i]
-			err := tags[i].QueryAll(DB)
-			if err != nil {
-				log.Println(err)
-				return nil
-			}
-		}
-		return tags
+	//TODO cleanup
+	tags := func(tags set.Sorted[Tag]) []Tag {
+		return tagChain(tags).query(DB).set.Slice
 	}
 
 	ai := archiveIdentity{
-		And:      tags(a.pc.id),
+		And:      tags(a.pc.and),
 		Or:       tags(a.pc.or),
 		Filter:   tags(a.pc.filter),
 		Unless:   tags(a.pc.unless),

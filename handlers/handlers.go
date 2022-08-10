@@ -298,12 +298,12 @@ func init() {
 	Handlers["/options"] = makeStatHandler(OptionsHandler)
 	Handlers["/options/"] = makeStatHandler(OptionsHandler)
 	Handlers["/tags/"] = makeStatHandler(TagsHandler)
-	Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
-	Handlers["/taghistory/reverse/"] = makeStatHandler(ReverseTagHistoryHandler)
+	//Handlers["/taghistory/"] = makeStatHandler(TagHistoryHandler)
+	//Handlers["/taghistory/reverse/"] = makeStatHandler(ReverseTagHistoryHandler)
 
 	Handlers["/user/"] = makeStatHandler(UserHandler)
 	Handlers["/user/edit/flag/"] = upgradeUserHandler
-	Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
+	//Handlers["/user/taghistory/"] = makeStatHandler(UserTagHistoryHandler)
 	Handlers["/user/pool/"] = makeStatHandler(UserPoolHandler)
 	Handlers["/user/pool/remove/"] = makeStatHandler(editUserPoolHandler)
 	Handlers["/user/pools/"] = makeStatHandler(UserPoolsHandler)

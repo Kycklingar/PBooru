@@ -3,15 +3,33 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	mm "github.com/kycklingar/MinMax"
-	"github.com/kycklingar/PBooru/DataManager/set"
+	"github.com/kycklingar/set"
 )
+
+func join[T any](delim string, values []T) string {
+	if len(values) < 1 {
+		return ""
+	}
+
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprint(values[0]))
+
+	for _, v := range values[1:] {
+		b.WriteString(delim)
+		b.WriteString(fmt.Sprint(v))
+	}
+
+	return b.String()
+}
 
 func SetAlts(posts []int) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
 		var (
-			pids  = make(set.Set[int])
+			pids  = set.NewOrdered[int]()
 			maxID int
 		)
 
@@ -39,7 +57,7 @@ func SetAlts(posts []int) loggingAction {
 			var pid int
 			err := scan(&pid)
 			maxID = mm.Max(maxID, pid)
-			pids.Add(pid)
+			pids.Set(pid)
 			return err
 		})
 		if err != nil {
@@ -52,7 +70,7 @@ func SetAlts(posts []int) loggingAction {
 				SET alt_group = $1
 				WHERE id IN(%s)
 				`,
-				pids,
+				join(",", pids.Slice),
 			),
 			maxID,
 		)
@@ -62,7 +80,7 @@ func SetAlts(posts []int) loggingAction {
 
 		l.addTable(lPostAlts)
 		l.fn = logAlts{
-			pids: pids,
+			pids: pids.Slice,
 		}.log
 
 		return
@@ -77,11 +95,11 @@ func SplitAlts(posts []int) loggingAction {
 		var (
 			aMax int
 			bMax int
-			a    = make(set.Set[int])
-			b    = make(set.Set[int])
+			a    = set.NewOrdered[int]()
+			b    = set.NewOrdered[int]()
 		)
 
-		b.Add(posts...)
+		b.Set(posts...)
 
 		err = query(
 			tx,
@@ -95,32 +113,32 @@ func SplitAlts(posts []int) loggingAction {
 				)
 				AND id NOT IN(%s)
 				`,
-				b,
+				join(",", b.Slice),
 			),
 			posts[0],
 		)(func(scan scanner) error {
 			var id int
 			err := scan(&id)
 			aMax = mm.Max(aMax, id)
-			a.Add(id)
+			a.Set(id)
 			return err
 		})
 		if err != nil {
 			return
 		}
 
-		for p, _ := range b {
+		for p, _ := range b.Slice {
 			bMax = mm.Max(bMax, p)
 		}
 
-		update := func(newAltGroup int, pids set.Set[int]) error {
+		update := func(newAltGroup int, pids set.Sorted[int]) error {
 			_, err := tx.Exec(
 				fmt.Sprintf(`
 					UPDATE posts
 					SET alt_group = $1
 					WHERE id IN(%s)
 					`,
-					pids,
+					join(",", pids.Slice),
 				),
 				newAltGroup,
 			)
@@ -138,10 +156,10 @@ func SplitAlts(posts []int) loggingAction {
 		l.addTable(lPostAlts)
 		l.fn = logAltsSplit{
 			a: logAlts{
-				pids: a,
+				pids: a.Slice,
 			},
 			b: logAlts{
-				pids: b,
+				pids: b.Slice,
 			},
 		}.log
 

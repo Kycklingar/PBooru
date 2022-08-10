@@ -138,32 +138,6 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 			}
 		}
 
-		for _, a := range log.Aliases {
-			for _, t := range append(a.From, a.To) {
-				err := t.QueryAll(DM.DB)
-				if internalError(w, err) {
-					return
-				}
-			}
-		}
-
-		for _, t := range append(log.Parents.Parents, log.Parents.Children...) {
-			err := t.QueryAll(DM.DB)
-			if err != nil {
-				internalError(w, err)
-				return
-			}
-		}
-
-		for _, mls := range log.MultiTags {
-			for _, ml := range mls {
-				err := ml.Tag.QueryAll(DM.DB)
-				if internalError(w, err) {
-					return
-				}
-			}
-		}
-
 		for _, page := range log.ComicPages {
 			err = page.Post.QMul(
 				DM.DB,
