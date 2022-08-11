@@ -211,27 +211,30 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 		return err
 	}
 
-	if len(pids.Slice) > 1 {
+	switch length := len(pids.Slice); {
+	case length > 1:
 		ua.addLogger(logger{
 			tables: []logtable{lPostAlts},
 			fn: logAlts{
 				pids: pids.Slice,
 			}.log,
 		})
-	}
-
-	_, err = tx.Exec(
-		fmt.Sprintf(`
+		fallthrough
+	case length > 0:
+		_, err = tx.Exec(
+			fmt.Sprintf(`
 			UPDATE posts
 			SET alt_group = $1
 			WHERE id IN (%s)
 			`,
-			join(",", pids.Slice),
-		),
-		max,
-	)
-	if err != nil {
-		return err
+				join(",", pids.Slice),
+			),
+			max,
+		)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	// Reset the altgroup of inferior
