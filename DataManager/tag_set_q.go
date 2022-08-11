@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -14,14 +15,20 @@ type tagSetChain struct {
 	err error
 }
 
-func tagChain(set set.Sorted[Tag]) tagSetChain {
-	return tagSetChain{set: set}
-}
+func tagChain(from any) tagSetChain {
+	var chain tagSetChain
+	switch t := from.(type) {
+	case Tag:
+		chain.set = set.New[Tag](lessfnTagID, t)
+	case []Tag:
+		chain.set = set.New[Tag](lessfnTagID, t...)
+	case set.Sorted[Tag]:
+		chain.set = t
+	default:
+		panic(errors.New("non tag type"))
+	}
 
-func tagChainFromTag(t Tag) tagSetChain {
-	s := set.New[Tag](lessfnTagID)
-	s.Set(t)
-	return tagChain(s)
+	return chain
 }
 
 func (chain tagSetChain) less(f func(Tag, Tag) bool) tagSetChain {
@@ -227,15 +234,17 @@ func (chain tagSetChain) recount(q querier) tagSetChain {
 	_, chain.err = q.Exec(
 		fmt.Sprintf(`
 			WITH tag_counts AS (
-				SELECT tag_id, count(*)
-				FROM post_tag_mappings
-				WHERE tag_id IN(%s)
-				GROUP BY tag_id
+				SELECT id, count(tag_id)
+				FROM tags
+				LEFT JOIN post_tag_mappings
+				ON id = tag_id
+				WHERE id IN(%s)
+				GROUP BY id
 			)
 			UPDATE tags
 			SET count = c.count
 			FROM tag_counts c
-			WHERE c.tag_id = id
+			WHERE c.id = tags.id
 			`,
 			tSetStr(chain.set),
 		),

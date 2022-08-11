@@ -31,7 +31,7 @@ func AliasTags(fromStr, toStr string) loggingAction {
 			return
 		}
 
-		from, err = tagChain(from).save(tx).unwrap()
+		from, err = tagChain(from).save(tx).less(lessfnTagID).unwrap()
 		if err != nil {
 			return
 		}
@@ -280,7 +280,7 @@ func (l logAlias) log(logID int, tx *sql.Tx) error {
 }
 
 func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error) {
-	tos, err := tagChainFromTag(to).upgrade(tx).unwrap()
+	tos, err := tagChain(to).upgrade(tx).unwrap()
 	if err != nil {
 		return nil, err
 	}
@@ -358,10 +358,10 @@ func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error)
 		return nil, err
 	}
 
-	if err = tagChain(tos).recount(tx).err; err != nil {
+	if err = tagChain(tos).recount(tx).purgeCountCache(tx).err; err != nil {
 		return nil, err
 	}
-	if err = tagChain(from).recount(tx).err; err != nil {
+	if err = tagChain(from).recount(tx).purgeCountCache(tx).err; err != nil {
 		return nil, err
 	}
 
