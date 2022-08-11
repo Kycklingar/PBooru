@@ -13,9 +13,9 @@
 			{{$l := len .From}}
 			{{range .From}}
 			<tr>
-				<td class="namespace-{{.Namespace}}">{{.}}</td>
+				<td class="tag namespace-{{.Namespace}}">{{.}}</td>
 				{{with $to}}
-				<td rowspan="{{$l}}" class="namespace-{{$to.Namespace}}">{{$to}}</td>
+				<td rowspan="{{$l}}" class="tag namespace-{{$to.Namespace}}">{{$to}}</td>
 				{{$to = 0}}
 				{{end}}
 			</tr>
