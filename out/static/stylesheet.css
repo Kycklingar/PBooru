@@ -593,6 +593,11 @@ li
 	max-width: 100%;
 }
 
+.comic-page .description
+{
+	padding: 0.5em;
+}
+
 .comic-thumb
 {
 	padding:3px;
