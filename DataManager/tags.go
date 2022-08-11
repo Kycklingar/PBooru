@@ -8,6 +8,7 @@ import (
 
 	"github.com/kycklingar/PBooru/DataManager/namespace"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
+	"github.com/kycklingar/set"
 	"github.com/kycklingar/sqhell/cond"
 )
 
@@ -170,6 +171,10 @@ func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err
 	}
 
 	//TODO grandparents, grandchildren
+	pchain := tagChain(parents)
+	gchain := pchain.parents(DB)
+	grandParents = set.Diff(gchain.set, pchain.set).Slice
+	err = gchain.err
 
 	return
 }

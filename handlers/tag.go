@@ -34,16 +34,17 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 			tagStr = r.FormValue("tag")
 			uri    = uriSplitter(r)
 			p      struct {
-				Query        string
-				Tags         []DM.Tag
-				Tag          *DM.Tag
-				To           *DM.Tag
-				From         []DM.Tag
-				Parents      []DM.Tag
-				GrandParents []DM.Tag
-				Children     []DM.Tag
-				Paginator    paginate.Paginator
-				CurrentPage  int
+				Query         string
+				Tags          []DM.Tag
+				Tag           *DM.Tag
+				To            *DM.Tag
+				From          []DM.Tag
+				Parents       []DM.Tag
+				GrandParents  []DM.Tag
+				Children      []DM.Tag
+				GrandChildren []DM.Tag
+				Paginator     paginate.Paginator
+				CurrentPage   int
 			}
 		)
 
@@ -74,7 +75,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			p.Children, p.Parents, _, _, err = tag.Family()
+			p.Children, p.Parents, p.GrandChildren, p.GrandParents, err = tag.Family()
 			if internalError(w, err) {
 				return
 			}

@@ -43,7 +43,16 @@
 			{{end}}
 
 			{{with .Parents}}
-			Parents:
+			<div>Parents</div>
+			<ul>
+				{{range .}}
+				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+				{{end}}
+			</ul>
+			{{end}}
+
+			{{with .GrandParents}}
+			<div>Grand parents</div>
 			<ul>
 				{{range .}}
 				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
@@ -57,6 +66,13 @@
 				{{ range .}}
 				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
 				{{ end }}
+			</ul>
+			{{end}}
+			{{with .GrandChildren}}
+			<ul>
+				{{range .}}
+				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+				{{end}}
 			</ul>
 			{{end}}
 
