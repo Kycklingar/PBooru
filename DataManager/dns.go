@@ -124,12 +124,10 @@ func ListDnsCreators(limit, offset int) ([]DnsCreator, error) {
 
 func (c *DnsCreator) getLocalTags() error {
 	rows, err := DB.Query(`
-		SELECT t.id, t.tag, n.nspace
+		SELECT t.id, t.tag, t.namespace
 		FROM dns_tag_mapping
-		JOIN tags t
+		JOIN tag t
 		on tag_id = t.id
-		JOIN namespaces n
-		ON namespace_id = n.id
 		WHERE creator_id = $1
 		`,
 		c.Id,

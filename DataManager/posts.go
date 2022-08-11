@@ -1279,12 +1279,10 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 					%s
 				)
 
-				SELECT p.id, ptm.tag_id, t.tag, t.count, n.nspace
+				SELECT p.id, ptm.tag_id, t.tag, t.count, t.namespace
 				FROM posts p
 				LEFT JOIN post_tag_mappings ptm
-				JOIN tags t
-				JOIN namespaces n
-				ON n.id = t.namespace_id
+				JOIN tag t
 				ON t.id = ptm.tag_id
 				ON p.id = ptm.post_id
 				JOIN res

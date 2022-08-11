@@ -85,14 +85,12 @@ func getLogPostTags(log *Log, q querier) error {
 
 	err := query(
 		q,
-		`SELECT post_id, action, t.id, t.tag, n.nspace
+		`SELECT post_id, action, t.id, t.tag, t.namespace
 		FROM log_post_tags pt
 		JOIN log_post_tags_map ptm
 		ON pt.id = ptm.ptid
-		JOIN tags t
+		JOIN tag t
 		ON ptm.tag_id = t.id
-		JOIN namespaces n
-		ON t.namespace_id = n.id
 		WHERE log_id = $1`,
 		log.ID,
 	)(func(scan scanner) error {
