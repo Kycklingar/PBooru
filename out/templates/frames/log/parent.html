@@ -3,25 +3,27 @@
 	{{if .Parents}}
 	<table>
 		<caption>{{if eq .Action "create"}}Parent{{else}}Unparent{{end}}</caption>
-		<thead>
+			{{$l := len .Parents}}
+			{{range .Parents}}
 			<tr>
-				<th>Parent</th>
-				<th>Child</th>
+				{{if $l}}
+				<th rowspan="{{$l}}">Parents</th>
+				{{$l = 0}}
+				{{end}}
+				<td class="namespace-{{.Namespace}}">{{.}}</td>
 			</tr>
-		</thead>
-		<tbody>
+			{{end}}
+
+			{{$l = len .Children}}
+			{{range .Children}}
 			<tr>
-				<td>
-				{{range .Parents}}
-					<div class="namespace-{{.Namespace}}">{{.}}</div>
+				{{if $l}}
+				<th rowspan="{{$l}}">Children</th>
+				{{$l = 0}}
 				{{end}}
-				</td>
-				<td>
-				{{range .Children}}
-					<div class="namespace-{{.Namespace}}">{{.}}</div>
-				{{end}}
-				</td>
+				<td class="namespace-{{.Namespace}}">{{.}}</td>
 			</tr>
+			{{end}}
 		</tbody>
 	</table>
 	{{end}}
