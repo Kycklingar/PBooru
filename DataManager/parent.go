@@ -114,6 +114,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			}
 		}
 
+		err = tagChain(grandParents).recount(tx).purgeCountCache(tx).err
+
 		l.addTable(lParent)
 		l.fn = logParent{
 			Children:  children.Slice,
@@ -133,8 +135,8 @@ func getLogParents(log *Log, q querier) error {
 	err := query(
 		q,
 		`SELECT action,
-			tp.tag, tp.namespace,
-			tc.tag, tc.namespace
+			tp.id, tp.tag, tp.namespace,
+			tc.id, tc.tag, tc.namespace
 		FROM log_tag_parent
 		JOIN tag tp
 		ON parent = tp.id
@@ -147,8 +149,8 @@ func getLogParents(log *Log, q querier) error {
 		var parent, child Tag
 		err := scan(
 			&log.Parents.Action,
-			&parent.Tag, &parent.Namespace,
-			&child.Tag, &child.Namespace,
+			&parent.ID, &parent.Tag, &parent.Namespace,
+			&child.ID, &child.Tag, &child.Namespace,
 		)
 		parents.Set(parent)
 		children.Set(child)
