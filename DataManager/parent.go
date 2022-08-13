@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/kycklingar/set"
@@ -17,7 +18,7 @@ func init() {
 
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		children, err := tagChain(parseTags(childStr, ',')).
+		children, err := tagChain(parseTags(childStr)).
 			save(tx).
 			aliases(tx).
 			unwrap()
@@ -26,15 +27,16 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			return
 		}
 
-		parents, err := tagChain(parseTags(parentStr, ',')).
+		parents, err := tagChain(parseTags(parentStr)).
 			save(tx).
+			less(lessfnTagID).
 			aliases(tx).
 			unwrap()
 		if err != nil {
 			return
 		}
 
-		grandParents, err := tagChain(parents).upgrade(tx).unwrap()
+		grandParents, err := tagChain(parents).copy().upgrade(tx).unwrap()
 		if err != nil {
 			return
 		}
@@ -124,6 +126,23 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			multiLogs: multiLogs,
 		}.log
 
+		return
+	}
+}
+
+func UnparentTags(parentStr, childStr string) loggingAction {
+	return func(tx *sql.Tx) (l logger, err error) {
+		_, err = tagChain(parseTags(parentStr)).qids(tx).unwrap()
+		if err != nil {
+			return
+		}
+
+		_, err = tagChain(parseTags(parentStr)).qids(tx).unwrap()
+		if err != nil {
+			return
+		}
+
+		err = errors.New("not implemented")
 		return
 	}
 }

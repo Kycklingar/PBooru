@@ -1,4 +1,7 @@
 {{template "base"}}
+<script src="/static/scripts/taglib.js"></script>
+<script src="/static/scripts/tagtoggle.js"></script>
+<script src="/static/scripts/taghints.js"></script>
 <div class="row">
 	<form action="/post/edit/description/" method="POST">
 		<div id="post-editor" class="resizable-horizontal">
@@ -6,13 +9,15 @@
 			<div class="box row resizable-vertical">
 				<div class="column overflow">
 					{{range .Tags}}
-					<div><span class="tag namespace-{{.Namespace}}">{{.}}</span></div>
+					<div>
+						<span class="tag-toggle" data-tag="{{.Escaped}}">-</span>
+						<span class="tag namespace-{{.Namespace}}">{{.}}</span>
+					</div>
 					{{end}}
 				</div>
 				<input type="hidden" name="post-tags-diff" value="{{template "printTags" .Tags}}">
 				<div class="column">
-					<textarea class="stinput no-resize" name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
-					<script src="/static/suggestions.js"></script>
+					<textarea class="tag-input no-resize" name="post-tags" wrap="off">{{template "printTags" .Tags}}</textarea>
 				</div>
 			</div>
 			<div class="box">

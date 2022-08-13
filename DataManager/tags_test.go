@@ -43,6 +43,6 @@ import (
 
 func BenchmarkParseTags(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		parseTags("test, tag\\, tag, tag \\, tag \\, tag, tag tag tag, tag\\,", ',')
+		parseTags("test, tag\\, tag, tag \\, tag \\, tag, tag tag tag, tag\\,")
 	}
 }

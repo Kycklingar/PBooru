@@ -20,11 +20,11 @@ func lessfnTag(a, b Tag) bool {
 	return a.String() < b.String()
 }
 
-func parseTagsWithID(q querier, tagstr string, delim rune) (set.Sorted[Tag], error) {
-	return tagChain(parseTags(tagstr, delim)).qids(q).unwrap()
+func parseTagsWithID(q querier, tagstr string) (set.Sorted[Tag], error) {
+	return tagChain(parseTags(tagstr)).qids(q).unwrap()
 }
 
-func parseTags(tagStr string, delim rune) set.Sorted[Tag] {
+func parseTags(tagStr string) set.Sorted[Tag] {
 	var (
 		tagSpitter = make(chan string)
 		set        = set.New[Tag](lessfnTag)
@@ -51,14 +51,18 @@ func parseTags(tagStr string, delim rune) set.Sorted[Tag] {
 				switch c {
 				case '\\':
 					state = unescape
-				case delim:
+				case ',', '\n':
 					spit()
 					tag.Reset()
 				default:
 					tag.WriteRune(c)
 				}
 			case unescape:
-				tag.WriteRune(c)
+				switch c {
+				case '\n': //ignore newlines
+				default:
+					tag.WriteRune(c)
+				}
 				state = next
 			}
 		}

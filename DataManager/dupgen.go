@@ -69,7 +69,7 @@ type AppleTree struct {
 }
 
 func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTree, error) {
-	set, err := tagChain(parseTags(tagStr, ',')).qids(DB).aliases(DB).unwrap()
+	set, err := tagChain(parseTags(tagStr)).qids(DB).aliases(DB).unwrap()
 
 	var (
 		base     = "apple"

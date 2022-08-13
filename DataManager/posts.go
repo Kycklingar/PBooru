@@ -1017,19 +1017,19 @@ func (e ErrorTag) Error() string {
 
 func (pc *PostCollector) Get(opts SearchOptions) error {
 	var err error
-	pc.and, err = tagChain(parseTags(opts.And, ',')).qids(DB).aliases(DB).unwrap()
+	pc.and, err = tagChain(parseTags(opts.And)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.or, err = tagChain(parseTags(opts.Or, ',')).qids(DB).aliases(DB).unwrap()
+	pc.or, err = tagChain(parseTags(opts.Or)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.filter, err = tagChain(parseTags(opts.Filter, ',')).qids(DB).aliases(DB).unwrap()
+	pc.filter, err = tagChain(parseTags(opts.Filter)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.unless, err = tagChain(parseTags(opts.Unless, ',')).qids(DB).aliases(DB).unwrap()
+	pc.unless, err = tagChain(parseTags(opts.Unless)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}

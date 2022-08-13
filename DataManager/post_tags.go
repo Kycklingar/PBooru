@@ -18,7 +18,7 @@ func (p Post) Tags() ([]Tag, error) {
 // and producing a log
 func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		tags, err := tagChain(parseTags(tagstr, '\n')).
+		tags, err := tagChain(parseTags(tagstr)).
 			save(tx).
 			upgrade(tx).
 			less(lessfnTag).
@@ -27,7 +27,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 			return
 		}
 
-		diff := parseTags(tagdiff, '\n')
+		diff := parseTags(tagdiff)
 
 		// Get tags postTags db
 		postTags, err := postTags(tx, postID).
@@ -85,7 +85,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		add, err := tagChain(parseTags(addStr, '\n')).
+		add, err := tagChain(parseTags(addStr)).
 			save(tx).
 			upgrade(tx).
 			unwrap()
@@ -93,7 +93,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 			return
 		}
 
-		remove, err := tagChain(parseTags(remStr, '\n')).
+		remove, err := tagChain(parseTags(remStr)).
 			save(tx).
 			unwrap()
 		if err != nil {

@@ -598,6 +598,11 @@ li
 	padding: 0.5em;
 }
 
+.comic-page .container
+{
+	width: fit-content;
+}
+
 .comic-thumb
 {
 	padding:3px;

@@ -1,8 +1,11 @@
 {{ template "base" }}
+<script src="/static/scripts/taglib.js"></script>
+<script src="/static/scripts/tagtoggle.js"></script>
+<script src="/static/scripts/taghints.js"></script>
 <div>
 	<form>
 		<label for="tagsearch">Search</label>
-		<input id="tagsearch" class="stinput" name="tag" type="text">
+		<input id="tagsearch" class="tag-input" name="tag" type="text">
 		<input value="Search" type="submit">
 	</form>
 </div>
@@ -11,115 +14,158 @@
 	<div class="box">
 		<ul>
 			{{ range .Tags }}
-			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			<li class="tag namespace-{{.Namespace}}">
+				<span class="tag-toggle" data-tag="{{.Escaped}}">+</span>
+				<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
+			</li>
 			{{ end }}
 		</ul>
 	</div>
 	<div class="box">
 		{{if .Tag}}
-			<h2>
-				<span class="tag namespace-{{.Tag.Namespace}}">
-					<a href="/tags/{{$.CurrentPage}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a>
-				</span>
-			</h2>
-			{{with .From}}
-			Aliased from:
-			<ul>
-				{{range .}}
-				<li class="tag namespace-{{.Namespace}}">
-					<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
-				</li>
-				{{end}}
-			</ul>
+		<h2>
+			<span class="tag namespace-{{.Tag.Namespace}}">
+				<a href="/tags/{{$.CurrentPage}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a>
+			</span>
+		</h2>
+		{{with .From}}
+		Aliased from:
+		<ul>
+			{{range .}}
+			<li class="tag namespace-{{.Namespace}}">
+				<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
+			</li>
 			{{end}}
-
-			{{with .To}}
-			Aliased to:
-			<ul>
-				<li class="tag namespace-{{.Namespace}}">
-					<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
-				</li>
-			</ul>
-			{{end}}
-
-			{{with .Parents}}
-			<div>Parents</div>
-			<ul>
-				{{range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
-				{{end}}
-			</ul>
-			{{end}}
-
-			{{with .GrandParents}}
-			<div>Grand parents</div>
-			<ul>
-				{{range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
-				{{end}}
-			</ul>
-			{{end}}
-
-			{{ with .Children}}
-			Children:
-			<ul>
-				{{ range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
-				{{ end }}
-			</ul>
-			{{end}}
-			{{with .GrandChildren}}
-			<ul>
-				{{range .}}
-				<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
-				{{end}}
-			</ul>
-			{{end}}
-
+		</ul>
 		{{end}}
 
-		<hr>
+		{{with .To}}
+		Aliased to:
+		<ul>
+			<li class="tag namespace-{{.Namespace}}">
+				<a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a>
+			</li>
+		</ul>
+		{{end}}
 
+		{{with .Parents}}
+		<div>Parents</div>
+		<ul>
+			{{range .}}
+			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+		{{end}}
+
+		{{with .GrandParents}}
+		<div>Grand parents</div>
+		<ul>
+			{{range .}}
+			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+		{{end}}
+
+		{{ with .Children}}
+		Children:
+		<ul>
+			{{ range .}}
+			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			{{ end }}
+		</ul>
+		{{end}}
+		{{with .GrandChildren}}
+		<ul>
+			{{range .}}
+			<li class="tag namespace-{{.Namespace}}"><a href="/tags/{{$.CurrentPage}}/{{.ID}}{{$.Query}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+		{{end}}
+
+		{{end}}
+		<hr>
 		<div>
+			{{with .Tag}}
+			<fieldset>
+				<legend>Alias</legend>
+				<form method="POST">
+					<fieldset>
+						<legend>To</legend>
+						<input type="hidden" name="action" value="alias">
+						<input type="hidden" name="from" value="{{.Escaped}}">
+						<input type="text" name="to" class="tag-input">
+						<input type="submit">
+					</fieldset>
+				</form>
+				<form method="POST">
+					<fieldset>
+						<legend>From</legend>
+						<input type="hidden" name="action" value="alias">
+						<input type="hidden" name="to" value="{{.Escaped}}">
+						<textarea name="from" class="tag-input"></textarea>
+						<input type="submit" value="Alias From">
+					</fieldset>
+				</form>
+			</fieldset>
+			<fieldset>
+				<legend>Parent / Child</legend>
+				<form method="POST">
+					<fieldset>
+						<legend>Parents</legend>
+						<input type="hidden" name="action" value="parent">
+						<input type="hidden" name="child" value="{{.Escaped}}">
+						<textarea name="parent" class="tag-input"></textarea>
+						<input type="submit" value="Parents">
+					</fieldset>
+				</form>
+				<form method="POST">
+					<fieldset>
+						<legend>Children</legend>
+						<input type="hidden" name="action" value="parent">
+						<input type="hidden" name="parent" value="{{.Escaped}}">
+						<textarea name="child" class="tag-input"></textarea>
+						<input type="submit" value="Children">
+					</fieldset>
+				</form>
+			</fieldset>
+			{{else}}
 			<form method="POST">
-				<input type="hidden" name="action" value="alias">
-				{{with .Tag}}
-				<input type="hidden" name="from" value="{{.Namespace}}:{{.Tag}}">
-				{{else}}
-				<p>Alias from</p>
-				<input type="text" class="stinput" name="from">
-				{{end}}
-				<p>Alias to</p>
-				<input type="text" class="stinput" name="to">
-				<input type="submit">
+				<fieldset>
+					<legend>Alias</legend>
+					<input name="action" type="hidden" value="alias">
+					<label>From
+						<textarea name="from" class="tag-input"></textarea>
+					</label>
+					<label>To
+						<input name="to" type="text" class="tag-input">
+					</label>
+					<input type="submit">
+				</fieldset>
 			</form>
-			<div class="divider"></div>
 			<form method="POST">
-				<input type="hidden" name="action" value="parent">
-				{{with .Tag}}
-				<input type="hidden" name="child" value="{{.Namespace}}:{{.Tag}}">
-				{{else}}
-				<p>Child</p>
-				<input type="text" class="stinput" name="child">
-				{{end}}
-				<p>Parent</p>
-				<input type="text" class="stinput" name="parent">
-				<input type="submit">
-			</form>
-			{{if and .Tag .To}}
-			<form method="POST">
-				<p>Unalias</p>
-				<input type="hidden" name="action" value="unalias">
-				{{with .Tag}}
-				<input type="hidden" name="from" value="{{.}}">
-				{{else}}
-				<input type="text" name="from">
-				{{end}}
-				<input type="submit">
+				<fieldset>
+					<legend>Parent / Child</legend>
+					<input name="action" type="hidden" value="parent">
+					<label>Parent</label>
+					<textarea name="parent" class="tag-input"></textarea>
+					</label>
+					<label>Child
+						<textarea name="child" class="tag-input"></textarea>
+					</label>
+					<input type="submit">
+				</fieldset>
 			</form>
 			{{end}}
-
-			<script type="text/javascript" src="/static/suggestions.js"></script>
+			{{if and .Tag .To}}
+			<form method="POST">
+				<fieldset>
+					<legend>Unalias</legend>
+					<input type="hidden" name="action" value="unalias">
+					<input type="hidden" name="from" value="{{.Tag.Escaped}}">
+					<input type="submit">
+				</fieldset>
+			</form>
+			{{end}}
 		</div>
 	</div>
 </div>

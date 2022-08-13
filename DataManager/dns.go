@@ -346,7 +346,7 @@ func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {
 }
 
 func DnsMapTag(creatorID int, tagstr string) error {
-	set, err := tagChain(parseTags(tagstr, ',')).qids(DB).unwrap()
+	set, err := tagChain(parseTags(tagstr)).qids(DB).unwrap()
 	if err != nil {
 		return err
 	}

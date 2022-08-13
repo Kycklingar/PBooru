@@ -31,6 +31,15 @@ func tagChain(from any) tagSetChain {
 	return chain
 }
 
+// make a copy of the underlying set
+func (chain tagSetChain) copy() tagSetChain {
+	var newSet = set.New[Tag](lessfnTagID)
+	newSet.Slice = make([]Tag, len(chain.set.Slice))
+	copy(newSet.Slice, chain.set.Slice)
+	chain.set = newSet
+	return chain
+}
+
 func (chain tagSetChain) less(f func(Tag, Tag) bool) tagSetChain {
 	var newSet = set.New[Tag](f)
 	newSet.Set(chain.set.Slice...)

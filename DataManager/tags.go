@@ -172,7 +172,7 @@ func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err
 
 	//TODO grandparents, grandchildren
 	pchain := tagChain(parents)
-	gchain := pchain.parents(DB)
+	gchain := pchain.copy().parents(DB)
 	grandParents = set.Diff(gchain.set, pchain.set).Slice
 	err = gchain.err
 
@@ -270,7 +270,7 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 		cursor      = 1
 	)
 
-	set := parseTags(tagstr, ',')
+	set := parseTags(tagstr)
 	if len(set.Slice) > 0 {
 		where.Add("", cond.N("WHERE "))
 		t := set.Slice[0]
@@ -309,7 +309,7 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 
 func TagHints(str string) ([]Tag, error) {
 	var res []Tag
-	tags := parseTags(str, ',').Slice
+	tags := parseTags(str).Slice
 
 	for _, tag := range tags {
 		var (

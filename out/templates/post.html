@@ -1,8 +1,6 @@
-{{ template "base" .Base}}
-
 {{define "printTags" -}}
 {{range . -}}
-{{.EditString}}
+{{.Escaped}}
 {{end -}}
 {{end}}
 
@@ -11,6 +9,7 @@
 {{.Reason}}
 {{end}}
 
+{{ template "base" .Base}}
 <div id="content">
 	<div id="sidebar">
 		{{ template "search field" .Sidebar}}

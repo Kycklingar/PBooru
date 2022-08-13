@@ -18,8 +18,8 @@ func init() {
 
 func AliasTags(fromStr, toStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		from := parseTags(fromStr, ',')
-		to := parseTags(toStr, ',')
+		from := parseTags(fromStr)
+		to := parseTags(toStr)
 
 		if len(to.Slice) != 1 {
 			err = fmt.Errorf("cannot create an alias to multiple tags: %s", toStr)
@@ -111,7 +111,7 @@ func (l logAliasMap) log(logID int, tx *sql.Tx) error {
 
 func UnaliasTags(fromStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		from, err := parseTagsWithID(tx, fromStr, ',')
+		from, err := parseTagsWithID(tx, fromStr)
 		if err != nil {
 			return
 		}
@@ -285,8 +285,16 @@ func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error)
 		return nil, err
 	}
 
+	ufrom, err := tagChain(from).upgrade(tx).unwrap()
+	if err != nil {
+		return nil, err
+	}
+	ufrom = set.Diff(ufrom, from)
+	tos = set.Union(ufrom, tos)
+
 	var multiLogs []logMultiTags
 
+	// to-be removed from posts
 	ml, err := multiLogStmtFromSet(`
 		SELECT post_id
 		FROM post_tag_mappings
@@ -302,6 +310,7 @@ func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error)
 
 	multiLogs = append(multiLogs, ml...)
 
+	// to-be inserted
 	ml, err = multiLogStmtFromSet(
 		fmt.Sprintf(`
 			SELECT DISTINCT hf.post_id
@@ -358,14 +367,9 @@ func updatePtm(tx *sql.Tx, from set.Sorted[Tag], to Tag) ([]logMultiTags, error)
 		return nil, err
 	}
 
-	if err = tagChain(tos).recount(tx).purgeCountCache(tx).err; err != nil {
-		return nil, err
-	}
-	if err = tagChain(from).recount(tx).purgeCountCache(tx).err; err != nil {
-		return nil, err
-	}
+	all := set.Union(tos, from)
 
-	return multiLogs, nil
+	return multiLogs, tagChain(all).recount(tx).purgeCountCache(tx).err
 }
 
 func updateDns(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
