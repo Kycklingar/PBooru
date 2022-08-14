@@ -130,19 +130,53 @@ func ParentTags(childStr, parentStr string) loggingAction {
 	}
 }
 
-func UnparentTags(parentStr, childStr string) loggingAction {
+func UnparentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		_, err = tagChain(parseTags(parentStr)).qids(tx).unwrap()
+		parents, err := tagChain(parseTags(parentStr)).qids(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		_, err = tagChain(parseTags(parentStr)).qids(tx).unwrap()
+		children, err := tagChain(parseTags(childStr)).qids(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		err = errors.New("not implemented")
+		childParents, err := tagChain(children).copy().parents(tx).unwrap()
+		if err != nil {
+			return
+		}
+
+		childParents = set.Diff(childParents, children)
+		parents = set.Intersection(parents, childParents)
+
+		if len(parents.Slice) <= 0 || len(children.Slice) <= 0 {
+			err = errors.New("not childs parents")
+			return
+		}
+
+		_, err = tx.Exec(
+			fmt.Sprintf(`
+				DELETE FROM
+				parent_tags
+				WHERE parent_id IN(%s)
+				AND child_id IN(%s)
+				`,
+				tSetStr(parents),
+				tSetStr(children),
+			),
+		)
+		if err != nil {
+			return
+		}
+
+		l.addTable(lParent)
+		l.fn = logParent{
+			Children: children.Slice,
+			Parents:  parents.Slice,
+			Action:   aDelete,
+		}.log
+
 		return
 	}
 }

@@ -111,7 +111,7 @@
 				<legend>Parent / Child</legend>
 				<form method="POST">
 					<fieldset>
-						<legend>Parents</legend>
+						<legend>Add Parents</legend>
 						<input type="hidden" name="action" value="parent">
 						<input type="hidden" name="child" value="{{.Escaped}}">
 						<textarea name="parent" class="tag-input"></textarea>
@@ -120,13 +120,35 @@
 				</form>
 				<form method="POST">
 					<fieldset>
-						<legend>Children</legend>
+						<legend>Add Children</legend>
 						<input type="hidden" name="action" value="parent">
 						<input type="hidden" name="parent" value="{{.Escaped}}">
 						<textarea name="child" class="tag-input"></textarea>
 						<input type="submit" value="Children">
 					</fieldset>
 				</form>
+				{{if $.Parents}}
+				<form method="POST">
+					<fieldset>
+						<legend>Remove Parents</legend>
+						<input name="action" type="hidden" value="unparent">
+						<input name="child" type="hidden" value="{{.Escaped}}">
+						<textarea name="parent" class="tag-input"></textarea>
+						<input type="submit">
+					</fieldset>
+				</form>
+				{{end}}
+				{{if $.Children}}
+				<form method="POST">
+					<fieldset>
+						<legend>Remove Children</legend>
+						<input name="action" type="hidden" value="unparent">
+						<input name="parent" type="hidden" value="{{.Escaped}}">
+						<textarea name="child" class="tag-input"></textarea>
+						<input type="submit">
+					</fieldset>
+				</form>
+				{{end}}
 			</fieldset>
 			{{else}}
 			<form method="POST">

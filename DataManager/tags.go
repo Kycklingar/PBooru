@@ -139,7 +139,8 @@ func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err
 		FROM tag
 		LEFT JOIN parent_tags
 		ON id = child_id
-		WHERE parent_id = $1`,
+		WHERE parent_id = $1
+		ORDER BY count DESC`,
 		t.ID,
 	)(func(scan scanner) error {
 		var child Tag
@@ -158,7 +159,8 @@ func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err
 		FROM tag
 		RIGHT JOIN parent_tags
 		ON id = parent_id
-		WHERE child_id = $1`,
+		WHERE child_id = $1
+		ORDER BY count DESC`,
 		t.ID,
 	)(func(scan scanner) error {
 		var parent Tag
