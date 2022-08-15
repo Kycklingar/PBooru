@@ -19,9 +19,9 @@ func tagChain(from any) tagSetChain {
 	var chain tagSetChain
 	switch t := from.(type) {
 	case Tag:
-		chain.set = set.New[Tag](lessfnTagID, t)
+		chain.set = set.New[Tag](t)
 	case []Tag:
-		chain.set = set.New[Tag](lessfnTagID, t...)
+		chain.set = set.New[Tag](t...)
 	case set.Sorted[Tag]:
 		chain.set = t
 	default:
@@ -33,16 +33,8 @@ func tagChain(from any) tagSetChain {
 
 // make a copy of the underlying set
 func (chain tagSetChain) copy() tagSetChain {
-	var newSet = set.New[Tag](lessfnTagID)
-	newSet.Slice = make([]Tag, len(chain.set.Slice))
-	copy(newSet.Slice, chain.set.Slice)
-	chain.set = newSet
-	return chain
-}
-
-func (chain tagSetChain) less(f func(Tag, Tag) bool) tagSetChain {
-	var newSet = set.New[Tag](f)
-	newSet.Set(chain.set.Slice...)
+	var newSet = make([]Tag, len(chain.set))
+	copy(newSet, chain.set)
 	chain.set = newSet
 	return chain
 }
@@ -51,41 +43,8 @@ func (chain tagSetChain) unwrap() (set.Sorted[Tag], error) {
 	return chain.set, chain.err
 }
 
-func (chain tagSetChain) qids(q querier) tagSetChain {
-	if chain.err != nil {
-		return chain
-	}
-
-	var stmt *sql.Stmt
-
-	stmt, chain.err = q.Prepare(`
-		SELECT id
-		FROM tag t
-		WHERE tag = $1
-		AND namespace = $2
-		`,
-	)
-	if chain.err != nil {
-		return chain
-	}
-	defer stmt.Close()
-
-	var newSet = set.New[Tag](lessfnTagID)
-
-	for _, t := range chain.set.Slice {
-		chain.err = stmt.QueryRow(t.Tag, t.Namespace).Scan(&t.ID)
-		if chain.err != nil {
-			return chain
-		}
-		newSet.Set(t)
-	}
-
-	chain.set = newSet
-	return chain
-}
-
 func (chain tagSetChain) query(q querier) tagSetChain {
-	if chain.err != nil || len(chain.set.Slice) <= 0 {
+	if chain.err != nil || len(chain.set) <= 0 {
 		return chain
 	}
 
@@ -108,9 +67,7 @@ func (chain tagSetChain) query(q querier) tagSetChain {
 }
 
 func postTags(q querier, postID int) tagSetChain {
-	var chain = tagSetChain{
-		set: set.New[Tag](lessfnTag),
-	}
+	var chain tagSetChain
 
 	chain.err = query(
 		q,
@@ -142,15 +99,29 @@ func (chain tagSetChain) upgrade(q querier) tagSetChain {
 	return chain.aliases(q).parents(q)
 }
 
+func (chain tagSetChain) ts() tsSetChain {
+	var ts = tsSetChain{
+		err: chain.err,
+	}
+	if ts.err != nil {
+		return ts
+	}
+
+	for _, t := range chain.set {
+		ts.set.Set(tsTag(t))
+	}
+	return ts
+}
+
 // add the parents and grand parents to the set
 func (chain tagSetChain) parents(q querier) tagSetChain {
 	var (
 		// only query a tag once
-		queriedTags = set.New[Tag](lessfnTagID)
+		queriedTags set.Sorted[Tag]
 		toBeQueried = chain.set
 	)
 
-	for len(toBeQueried.Slice) > 0 {
+	for len(toBeQueried) > 0 {
 		queriedTags = set.Union(queriedTags, toBeQueried)
 
 		var queryStr = fmt.Sprintf(
@@ -162,7 +133,7 @@ func (chain tagSetChain) parents(q querier) tagSetChain {
 			tSetStr(toBeQueried),
 		)
 
-		toBeQueried = set.New[Tag](lessfnTagID)
+		toBeQueried = set.New[Tag]()
 
 		chain.err = query(q, queryStr)(func(scan scanner) error {
 			var t Tag
@@ -191,9 +162,9 @@ func (chain tagSetChain) aliases(q querier) tagSetChain {
 		return chain
 	}
 
-	var aliased = set.New[Tag](lessfnTagID)
+	var aliased = set.New[Tag]()
 
-	for _, tag := range chain.set.Slice {
+	for _, tag := range chain.set {
 		var a Tag
 		a, chain.err = aliasedTo(q, tag)
 		if chain.err != nil {
@@ -225,7 +196,7 @@ func (chain tagSetChain) addCount(q querier, n int) tagSetChain {
 
 	defer stmt.Close()
 
-	for _, tag := range chain.set.Slice {
+	for _, tag := range chain.set {
 		_, chain.err = stmt.Exec(n, tag.ID)
 		if chain.err != nil {
 			return chain
@@ -236,7 +207,7 @@ func (chain tagSetChain) addCount(q querier, n int) tagSetChain {
 }
 
 func (chain tagSetChain) recount(q querier) tagSetChain {
-	if chain.err != nil || len(chain.set.Slice) <= 0 {
+	if chain.err != nil || len(chain.set) <= 0 {
 		return chain
 	}
 
@@ -263,7 +234,7 @@ func (chain tagSetChain) recount(q querier) tagSetChain {
 }
 
 func (chain tagSetChain) purgeCountCache(q querier) tagSetChain {
-	if chain.err != nil || len(chain.set.Slice) <= 0 {
+	if chain.err != nil || len(chain.set) <= 0 {
 		return chain
 	}
 
@@ -281,24 +252,10 @@ func (chain tagSetChain) purgeCountCache(q querier) tagSetChain {
 	)
 
 	// Legacy
-	for _, t := range chain.set.Slice {
+	for _, t := range chain.set {
 		C.Cache.Purge("PC", strconv.Itoa(t.ID))
 	}
 	C.Cache.Purge("PC", "0")
-
-	return chain
-}
-
-func (chain tagSetChain) save(q querier) tagSetChain {
-	if chain.err != nil {
-		return chain
-	}
-
-	for i := range chain.set.Slice {
-		if chain.err = chain.set.Slice[i].save(q); chain.err != nil {
-			return chain
-		}
-	}
 
 	return chain
 }

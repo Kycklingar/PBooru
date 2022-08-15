@@ -10,7 +10,7 @@ import (
 
 func (p Post) Tags() ([]Tag, error) {
 	set, err := postTags(DB, p.ID).unwrap()
-	return set.Slice, err
+	return set, err
 }
 
 // Add and remove tags from a post
@@ -18,10 +18,10 @@ func (p Post) Tags() ([]Tag, error) {
 // and producing a log
 func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		tags, err := tagChain(parseTags(tagstr)).
+		tags, err := tsChain(parseTags(tagstr)).
 			save(tx).
 			upgrade(tx).
-			less(lessfnTag).
+			ts().
 			unwrap()
 		if err != nil {
 			return
@@ -30,20 +30,18 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		diff := parseTags(tagdiff)
 
 		// Get tags postTags db
-		postTags, err := postTags(tx, postID).
-			less(lessfnTag).
-			unwrap()
+		postTags, err := postTags(tx, postID).ts().unwrap()
 		if err != nil {
 			return
 		}
 
 		var (
-			add    = set.Diff(set.Diff(tags, diff), postTags)
-			remove = set.Intersection(postTags, set.Diff(diff, tags))
+			add    = tsTags(set.Diff(set.Diff(tags, diff), postTags))
+			remove = tsTags(set.Intersection(postTags, set.Diff(diff, tags)))
 		)
 
 		// Nothing to do, return nil
-		if len(add.Slice)+len(remove.Slice) <= 0 {
+		if len(add)+len(remove) <= 0 {
 			return
 		}
 
@@ -75,8 +73,8 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 		l.addTable(lPostTags)
 		l.fn = logPostTags{
 			PostID:  postID,
-			Added:   add.Slice,
-			Removed: remove.Slice,
+			Added:   add,
+			Removed: remove,
 		}.log
 		return
 
@@ -85,7 +83,7 @@ func AlterPostTags(postID int, tagstr, tagdiff string) loggingAction {
 
 func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		add, err := tagChain(parseTags(addStr)).
+		add, err := tsChain(parseTags(addStr)).
 			save(tx).
 			upgrade(tx).
 			unwrap()
@@ -93,7 +91,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 			return
 		}
 
-		remove, err := tagChain(parseTags(remStr)).
+		remove, err := tsChain(parseTags(remStr)).
 			save(tx).
 			unwrap()
 		if err != nil {
@@ -103,7 +101,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 		// only remove what we are not adding
 		remove = set.Diff(remove, add)
 
-		if len(pids) <= 0 || (len(add.Slice) <= 0 && len(remove.Slice) <= 0) {
+		if len(pids) <= 0 || (len(add) <= 0 && len(remove) <= 0) {
 			err = errors.New("nothing to do")
 			return
 		}
@@ -113,7 +111,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 			mls       logMultipleTags
 		)
 
-		if len(add.Slice) > 0 {
+		if len(add) > 0 {
 			mls, err = multiLogStmtFromSet(
 				fmt.Sprintf(`
 				SELECT DISTINCT p1.post_id
@@ -157,7 +155,7 @@ func AlterManyPostTags(pids []int, addStr, remStr string, delim rune) loggingAct
 
 		}
 
-		if len(remove.Slice) > 0 {
+		if len(remove) > 0 {
 			mls, err = multiLogStmtFromSet(
 				fmt.Sprintf(`
 				SELECT post_id
@@ -220,7 +218,7 @@ const (
 )
 
 func prepPTExec(tx querier, query string, postID int, set set.Sorted[Tag]) error {
-	if len(set.Slice) <= 0 {
+	if len(set) <= 0 {
 		return nil
 	}
 	stmt, err := tx.Prepare(query)
@@ -229,7 +227,7 @@ func prepPTExec(tx querier, query string, postID int, set set.Sorted[Tag]) error
 	}
 	defer stmt.Close()
 
-	for _, tag := range set.Slice {
+	for _, tag := range set {
 		_, err = stmt.Exec(postID, tag.ID)
 		if err != nil {
 			return err

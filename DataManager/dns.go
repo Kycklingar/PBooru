@@ -346,13 +346,13 @@ func DnsGetCreatorFromTag(tagId int) (DnsCreator, error) {
 }
 
 func DnsMapTag(creatorID int, tagstr string) error {
-	set, err := tagChain(parseTags(tagstr)).qids(DB).unwrap()
+	set, err := tsChain(parseTags(tagstr)).qids(DB).unwrap()
 	if err != nil {
 		return err
 	}
-	if len(set.Slice) <= 0 {
+	if len(set) <= 0 {
 		return errors.New("no tags")
 	}
 
-	return dns.MapTag(DB, creatorID, set.Slice[0].ID)
+	return dns.MapTag(DB, creatorID, set[0].ID)
 }

@@ -18,7 +18,7 @@ func init() {
 
 func ParentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		children, err := tagChain(parseTags(childStr)).
+		children, err := tsChain(parseTags(childStr)).
 			save(tx).
 			aliases(tx).
 			unwrap()
@@ -27,9 +27,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			return
 		}
 
-		parents, err := tagChain(parseTags(parentStr)).
+		parents, err := tsChain(parseTags(parentStr)).
 			save(tx).
-			less(lessfnTagID).
 			aliases(tx).
 			unwrap()
 		if err != nil {
@@ -41,7 +40,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 			return
 		}
 
-		if len(children.Slice) <= 0 || len(parents.Slice) <= 0 {
+		if len(children) <= 0 || len(parents) <= 0 {
 			err = fmt.Errorf(
 				"parent tags: no children or parents present: [%s] [%s]",
 				childStr,
@@ -84,8 +83,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 		}
 		defer stmt.Close()
 
-		for _, c := range children.Slice {
-			for _, p := range parents.Slice {
+		for _, c := range children {
+			for _, p := range parents {
 				_, err = stmt.Exec(p.ID, c.ID)
 				if err != nil {
 					return
@@ -110,7 +109,7 @@ func ParentTags(childStr, parentStr string) loggingAction {
 		}
 		defer ins.Close()
 
-		for _, parent := range grandParents.Slice {
+		for _, parent := range grandParents {
 			if _, err = ins.Exec(parent.ID); err != nil {
 				return
 			}
@@ -120,8 +119,8 @@ func ParentTags(childStr, parentStr string) loggingAction {
 
 		l.addTable(lParent)
 		l.fn = logParent{
-			Children:  children.Slice,
-			Parents:   parents.Slice,
+			Children:  children,
+			Parents:   parents,
 			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
@@ -132,12 +131,12 @@ func ParentTags(childStr, parentStr string) loggingAction {
 
 func UnparentTags(childStr, parentStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		parents, err := tagChain(parseTags(parentStr)).qids(tx).unwrap()
+		parents, err := tsChain(parseTags(parentStr)).qids(tx).unwrap()
 		if err != nil {
 			return
 		}
 
-		children, err := tagChain(parseTags(childStr)).qids(tx).unwrap()
+		children, err := tsChain(parseTags(childStr)).qids(tx).unwrap()
 		if err != nil {
 			return
 		}
@@ -150,7 +149,7 @@ func UnparentTags(childStr, parentStr string) loggingAction {
 		childParents = set.Diff(childParents, children)
 		parents = set.Intersection(parents, childParents)
 
-		if len(parents.Slice) <= 0 || len(children.Slice) <= 0 {
+		if len(parents) <= 0 || len(children) <= 0 {
 			err = errors.New("not childs parents")
 			return
 		}
@@ -172,8 +171,8 @@ func UnparentTags(childStr, parentStr string) loggingAction {
 
 		l.addTable(lParent)
 		l.fn = logParent{
-			Children: children.Slice,
-			Parents:  parents.Slice,
+			Children: children,
+			Parents:  parents,
 			Action:   aDelete,
 		}.log
 
@@ -182,8 +181,8 @@ func UnparentTags(childStr, parentStr string) loggingAction {
 }
 
 func getLogParents(log *Log, q querier) error {
-	parents := set.New[Tag](lessfnTagID)
-	children := set.New[Tag](lessfnTagID)
+	parents := set.New[Tag]()
+	children := set.New[Tag]()
 
 	err := query(
 		q,
@@ -213,8 +212,8 @@ func getLogParents(log *Log, q querier) error {
 		return err
 	}
 
-	log.Parents.Parents = parents.Slice
-	log.Parents.Children = children.Slice
+	log.Parents.Parents = parents
+	log.Parents.Children = children
 
 	return getMultiLogs(log, q)
 }

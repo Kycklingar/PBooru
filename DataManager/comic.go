@@ -25,7 +25,7 @@ type Comic struct {
 }
 
 func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error) {
-	tags, err := tagChain(parseTags(tagStr)).qids(DB).aliases(DB).unwrap()
+	tags, err := tsChain(parseTags(tagStr)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		return
 	}
@@ -39,7 +39,7 @@ func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error)
 		pi     = 1
 	)
 
-	for i, tag := range tags.Slice {
+	for i, tag := range tags {
 		where = "WHERE "
 		tjoin.Add("\n", cond.N(fmt.Sprintf("JOIN post_tag_mappings ptm%d", i))).
 			Add("\n", cond.N(fmt.Sprintf("ON cm.post_id = ptm%d.post_id\n", i)))

@@ -69,7 +69,7 @@ type AppleTree struct {
 }
 
 func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTree, error) {
-	set, err := tagChain(parseTags(tagStr)).qids(DB).aliases(DB).unwrap()
+	set, err := tsChain(parseTags(tagStr)).qids(DB).aliases(DB).unwrap()
 
 	var (
 		base     = "apple"
@@ -87,15 +87,15 @@ func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTr
 		orderDir = "DESC"
 	}
 
-	if len(set.Slice) > 0 {
+	if len(set) > 0 {
 		join = fmt.Sprintf(`
 			JOIN post_tag_mappings ptm0
 			ON %s = ptm0.post_id
-			`+ptmJoinQuery(set.Slice),
+			`+ptmJoinQuery(set),
 			base,
 		)
 
-		where = " AND " + ptmWhereQuery(set.Slice)
+		where = " AND " + ptmWhereQuery(set)
 	}
 
 	query := fmt.Sprintf(`

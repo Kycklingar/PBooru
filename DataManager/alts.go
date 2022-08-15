@@ -70,7 +70,7 @@ func SetAlts(posts []int) loggingAction {
 				SET alt_group = $1
 				WHERE id IN(%s)
 				`,
-				join(",", pids.Slice),
+				join(",", pids.Slice()),
 			),
 			maxID,
 		)
@@ -80,7 +80,7 @@ func SetAlts(posts []int) loggingAction {
 
 		l.addTable(lPostAlts)
 		l.fn = logAlts{
-			pids: pids.Slice,
+			pids: pids.Slice(),
 		}.log
 
 		return
@@ -113,7 +113,7 @@ func SplitAlts(posts []int) loggingAction {
 				)
 				AND id NOT IN(%s)
 				`,
-				join(",", b.Slice),
+				join(",", b.Slice()),
 			),
 			posts[0],
 		)(func(scan scanner) error {
@@ -127,18 +127,18 @@ func SplitAlts(posts []int) loggingAction {
 			return
 		}
 
-		for p, _ := range b.Slice {
+		for p, _ := range b.Slice() {
 			bMax = mm.Max(bMax, p)
 		}
 
-		update := func(newAltGroup int, pids set.Sorted[int]) error {
+		update := func(newAltGroup int, pids set.Ordered[int]) error {
 			_, err := tx.Exec(
 				fmt.Sprintf(`
 					UPDATE posts
 					SET alt_group = $1
 					WHERE id IN(%s)
 					`,
-					join(",", pids.Slice),
+					join(",", pids.Slice()),
 				),
 				newAltGroup,
 			)
@@ -156,10 +156,10 @@ func SplitAlts(posts []int) loggingAction {
 		l.addTable(lPostAlts)
 		l.fn = logAltsSplit{
 			a: logAlts{
-				pids: a.Slice,
+				pids: a.Slice(),
 			},
 			b: logAlts{
-				pids: b.Slice,
+				pids: b.Slice(),
 			},
 		}.log
 

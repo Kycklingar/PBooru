@@ -18,35 +18,35 @@ func init() {
 
 func AliasTags(fromStr, toStr string) loggingAction {
 	return func(tx *sql.Tx) (l logger, err error) {
-		from := parseTags(fromStr)
-		to := parseTags(toStr)
+		fromts := parseTags(fromStr)
+		tots := parseTags(toStr)
 
-		if len(to.Slice) != 1 {
+		if len(tots) != 1 {
 			err = fmt.Errorf("cannot create an alias to multiple tags: %s", toStr)
 			return
 		}
 
-		if len(from.Slice) < 1 {
+		if len(fromts) < 1 {
 			err = errors.New("nothing to alias from")
 			return
 		}
 
-		from, err = tagChain(from).save(tx).less(lessfnTagID).unwrap()
+		from, err := tsChain(fromts).save(tx).unwrap()
 		if err != nil {
 			return
 		}
-		to, err = tagChain(to).save(tx).aliases(tx).unwrap()
+		to, err := tsChain(tots).save(tx).aliases(tx).unwrap()
 		if err != nil {
 			return
 		}
 
 		from = set.Diff(from, to)
-		if len(from.Slice) < 1 {
+		if len(from) < 1 {
 			err = errors.New("nothing to alias from")
 			return
 		}
 
-		multiLogs, err := updatePtm(tx, from, to.Slice[0])
+		multiLogs, err := updatePtm(tx, from, to[0])
 		if err != nil {
 			return
 		}
@@ -58,7 +58,7 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		}
 
 		for _, f := range updates {
-			err = f(tx, from, to.Slice[0])
+			err = f(tx, from, to[0])
 			if err != nil {
 				return
 			}
@@ -77,8 +77,8 @@ func AliasTags(fromStr, toStr string) loggingAction {
 		}
 		defer stmt.Close()
 
-		for _, t := range from.Slice {
-			_, err = stmt.Exec(t.ID, to.Slice[0].ID)
+		for _, t := range from {
+			_, err = stmt.Exec(t.ID, to[0].ID)
 			if err != nil {
 				return
 			}
@@ -86,8 +86,8 @@ func AliasTags(fromStr, toStr string) loggingAction {
 
 		l.addTable(lAlias)
 		l.fn = logAlias{
-			From:      from.Slice,
-			To:        to.Slice[0],
+			From:      from,
+			To:        to[0],
 			Action:    aCreate,
 			multiLogs: multiLogs,
 		}.log
@@ -141,7 +141,7 @@ func UnaliasTags(fromStr string) loggingAction {
 
 		var lun = make(logAliasMap)
 
-		for _, f := range from.Slice {
+		for _, f := range from {
 			var to Tag
 			err = stmt.QueryRow(f.ID).Scan(&to.ID)
 			if err != nil {
@@ -384,7 +384,7 @@ func updateDns(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
 	}
 	defer stmt.Close()
 
-	for _, fromT := range from.Slice {
+	for _, fromT := range from {
 		_, err = stmt.Exec(to.ID, fromT.ID)
 		if err != nil {
 			return err
@@ -407,7 +407,7 @@ func updateAliases(tx *sql.Tx, from set.Sorted[Tag], to Tag) error {
 	}
 	defer stmt.Close()
 
-	for _, fromT := range from.Slice {
+	for _, fromT := range from {
 		_, err = stmt.Exec(to.ID, fromT.ID)
 		if err != nil {
 			return err

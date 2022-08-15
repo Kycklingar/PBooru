@@ -132,7 +132,7 @@ func multiLogStmtFromSet(query string, tx *sql.Tx, action lAction, set set.Sorte
 	}
 	defer stmt.Close()
 
-	for _, t := range set.Slice {
+	for _, t := range set {
 		var ml = logMultiTags{
 			Tag:    t,
 			Action: action,

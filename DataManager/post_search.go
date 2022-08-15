@@ -40,11 +40,11 @@ func (g group) sel(where *cond.Group) string {
 	//	trail = "AND"
 	//}
 
-	if !g.tombstone && !(len(g.or.Slice) > 0 || len(g.and.Slice) > 0 || len(g.filter.Slice) > 0) {
+	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
 		return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
 	}
 
-	if len(g.or.Slice) > 0 {
+	if len(g.or) > 0 {
 		joins.Add(
 			"\nJOIN",
 			cond.N(
@@ -66,9 +66,9 @@ func (g group) sel(where *cond.Group) string {
 		//trail = "AND"
 	}
 
-	if len(g.and.Slice) > 0 {
+	if len(g.and) > 0 {
 		var join, w string
-		for i := 1; i < len(g.and.Slice); i++ {
+		for i := 1; i < len(g.and); i++ {
 			join += fmt.Sprintf(`
 				JOIN post_tag_mappings a%d
 				ON p.id = a%d.post_id
@@ -76,7 +76,7 @@ func (g group) sel(where *cond.Group) string {
 				i+1,
 				i+1,
 			)
-			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and.Slice[i].ID)
+			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and[i].ID)
 		}
 
 		joins.Add(
@@ -99,7 +99,7 @@ func (g group) sel(where *cond.Group) string {
 				a1.tag_id = %d
 				%s
 				`,
-					g.and.Slice[0].ID,
+					g.and[0].ID,
 					w,
 				),
 			))
@@ -107,11 +107,11 @@ func (g group) sel(where *cond.Group) string {
 		//trail = "AND"
 	}
 
-	if len(g.filter.Slice) > 0 {
+	if len(g.filter) > 0 {
 
 		var unlessJ, unlessW string
 
-		if len(g.unless.Slice) > 0 {
+		if len(g.unless) > 0 {
 			unlessJ = fmt.Sprintf(`
 				LEFT JOIN post_tag_mappings u
 				ON f.post_id = u.post_id

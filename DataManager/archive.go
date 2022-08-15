@@ -357,7 +357,7 @@ type archiveIdentity struct {
 func (a *archive) searchIdentity() archiveIdentity {
 	//TODO cleanup
 	tags := func(tags set.Sorted[Tag]) []Tag {
-		return tagChain(tags).query(DB).set.Slice
+		return tagChain(tags).query(DB).set
 	}
 
 	ai := archiveIdentity{

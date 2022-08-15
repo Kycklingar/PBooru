@@ -211,12 +211,12 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 		return err
 	}
 
-	switch length := len(pids.Slice); {
+	switch length := len(pids.Slice()); {
 	case length > 1:
 		ua.addLogger(logger{
 			tables: []logtable{lPostAlts},
 			fn: logAlts{
-				pids: pids.Slice,
+				pids: pids.Slice(),
 			}.log,
 		})
 		fallthrough
@@ -227,7 +227,7 @@ func (dupe Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 			SET alt_group = $1
 			WHERE id IN (%s)
 			`,
-				join(",", pids.Slice),
+				join(",", pids.Slice()),
 			),
 			max,
 		)
@@ -536,7 +536,7 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 		return err
 	}
 
-	var newSet = set.New[Tag](lessfnTag)
+	var newSet = set.New[Tag]()
 
 	stmt, err := tx.Prepare(`
 		DELETE FROM post_tag_mappings
@@ -563,7 +563,7 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 			tables: []logtable{lPostTags},
 			fn: logPostTags{
 				PostID:  inf.ID,
-				Removed: infset.Slice,
+				Removed: infset,
 			}.log,
 		})
 
@@ -581,7 +581,7 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 		tables: []logtable{lPostTags},
 		fn: logPostTags{
 			PostID: dupe.Post.ID,
-			Added:  newSet.Slice,
+			Added:  newSet,
 		}.log,
 	})
 

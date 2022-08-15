@@ -25,7 +25,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/ipfs/go-ipfs-files v0.1.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.13 // indirect
-	github.com/kycklingar/set v0.1.2 // indirect
+	github.com/kycklingar/set v0.1.3-0.20220814221918-6336c9c42073 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
 	github.com/libp2p/go-flow-metrics v0.0.3 // indirect
 	github.com/libp2p/go-libp2p-core v0.17.0 // indirect

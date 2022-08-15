@@ -1,33 +1,115 @@
 package DataManager
 
 import (
+	"database/sql"
 	"strconv"
 	"strings"
 
 	"github.com/kycklingar/set"
 )
 
+type tsTag Tag
+
+func (a tsTag) Less(b tsTag) bool {
+	return Tag(a).String() < Tag(b).String()
+}
+
+func (a Tag) Less(b Tag) bool {
+	return a.ID < b.ID
+}
+
 func tSetStr(s set.Sorted[Tag]) string {
-	return sep(",", len(s.Slice), func(i int) string {
-		return strconv.Itoa(s.Slice[i].ID)
+	return sep(",", len(s), func(i int) string {
+		return strconv.Itoa(s[i].ID)
 	})
 }
 
-func lessfnTagID(a, b Tag) bool {
-	return a.ID < b.ID
+func tsTags(set set.Sorted[tsTag]) []Tag {
+	var tags = make([]Tag, len(set))
+	for i, tag := range set {
+		tags[i] = Tag(tag)
+	}
+
+	return tags
 }
-func lessfnTag(a, b Tag) bool {
-	return a.String() < b.String()
+
+type tsSetChain struct {
+	set set.Sorted[tsTag]
+	err error
+}
+
+func (chain tsSetChain) unwrap() (set.Sorted[tsTag], error) {
+	return chain.set, chain.err
+}
+
+func tsChain(set set.Sorted[tsTag]) tsSetChain {
+	return tsSetChain{
+		set: set,
+	}
+}
+
+func (old tsSetChain) qids(q querier) tagSetChain {
+	var chain = tagSetChain{
+		err: old.err,
+	}
+
+	if chain.err != nil {
+		return chain
+	}
+
+	var stmt *sql.Stmt
+
+	stmt, chain.err = q.Prepare(`
+		SELECT id
+		FROM tag t
+		WHERE tag = $1
+		AND namespace = $2
+		`,
+	)
+	if chain.err != nil {
+		return chain
+	}
+	defer stmt.Close()
+
+	for _, t := range old.set {
+		chain.err = stmt.QueryRow(t.Tag, t.Namespace).Scan(&t.ID)
+		if chain.err != nil {
+			return chain
+		}
+		chain.set.Set(Tag(t))
+	}
+
+	return chain
+}
+
+func (old tsSetChain) save(q querier) tagSetChain {
+	var chain = tagSetChain{
+		err: old.err,
+	}
+	if chain.err != nil {
+		return chain
+	}
+
+	for _, t := range old.set {
+		var tag = Tag(t)
+		if chain.err = tag.save(q); chain.err != nil {
+			return chain
+		}
+
+		chain.set.Set(tag)
+	}
+
+	return chain
 }
 
 func parseTagsWithID(q querier, tagstr string) (set.Sorted[Tag], error) {
-	return tagChain(parseTags(tagstr)).qids(q).unwrap()
+	return tsChain(parseTags(tagstr)).qids(q).unwrap()
 }
 
-func parseTags(tagStr string) set.Sorted[Tag] {
+func parseTags(tagStr string) set.Sorted[tsTag] {
 	var (
 		tagSpitter = make(chan string)
-		set        = set.New[Tag](lessfnTag)
+		set        = set.New[tsTag]()
 	)
 
 	go func(spitter chan string) {
@@ -83,7 +165,7 @@ func parseTags(tagStr string) set.Sorted[Tag] {
 			continue
 		}
 
-		set.Set(t)
+		set.Set(tsTag(t))
 	}
 
 	return set

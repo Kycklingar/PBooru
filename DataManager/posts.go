@@ -757,7 +757,7 @@ func (p *Post) Remove(q querier) error {
 		return err
 	}
 
-	for _, t := range tags.Slice {
+	for _, t := range tags {
 		resetCacheTag(q, t.ID)
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
@@ -781,7 +781,7 @@ func (p *Post) Reinstate(q querier) error {
 		return err
 	}
 
-	for _, t := range tags.Slice {
+	for _, t := range tags {
 		resetCacheTag(q, t.ID)
 	}
 	C.Cache.Purge("PST", strconv.Itoa(p.ID))
@@ -1017,19 +1017,19 @@ func (e ErrorTag) Error() string {
 
 func (pc *PostCollector) Get(opts SearchOptions) error {
 	var err error
-	pc.and, err = tagChain(parseTags(opts.And)).qids(DB).aliases(DB).unwrap()
+	pc.and, err = tsChain(parseTags(opts.And)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.or, err = tagChain(parseTags(opts.Or)).qids(DB).aliases(DB).unwrap()
+	pc.or, err = tsChain(parseTags(opts.Or)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.filter, err = tagChain(parseTags(opts.Filter)).qids(DB).aliases(DB).unwrap()
+	pc.filter, err = tsChain(parseTags(opts.Filter)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
-	pc.unless, err = tagChain(parseTags(opts.Unless)).qids(DB).aliases(DB).unwrap()
+	pc.unless, err = tsChain(parseTags(opts.Unless)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
 		pc.emptySet = true
 	}
@@ -1089,9 +1089,9 @@ func (pc *PostCollector) countIDStr() string {
 	}
 
 	if !pc.tombstone &&
-		len(pc.and.Slice) <= 0 &&
-		len(pc.or.Slice) <= 0 &&
-		len(pc.filter.Slice) <= 0 &&
+		len(pc.and) <= 0 &&
+		len(pc.or) <= 0 &&
+		len(pc.filter) <= 0 &&
 		len(pc.mimeIDs) <= 0 &&
 		!pc.collectAlts &&
 		pc.altGroup <= 0 {
@@ -1562,7 +1562,7 @@ func (pc *PostCollector) ccSet(c int) {
 	union = set.Union(union, pc.filter)
 	union = set.Union(union, pc.unless)
 
-	for _, t := range union.Slice {
+	for _, t := range union {
 		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, t.ID)
 		if err != nil {
 			log.Println(err)
