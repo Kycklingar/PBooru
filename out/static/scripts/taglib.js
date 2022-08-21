@@ -120,7 +120,7 @@ function toggleInputTag(inputElement, newTag)
 
 function getTagAtCursor(inputElement)
 {
-	let tag, parser = new TagParser(inputElement.value)
+	let tag = "", parser = new TagParser(inputElement.value)
 
 	for(tag of parser.parse()) {
 		if(parser.index > inputElement.selectionEnd)

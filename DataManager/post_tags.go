@@ -9,8 +9,8 @@ import (
 )
 
 func (p Post) Tags() ([]Tag, error) {
-	set, err := postTags(DB, p.ID).unwrap()
-	return set, err
+	set, err := postTags(DB, p.ID).ts().unwrap()
+	return tsTags(set), err
 }
 
 // Add and remove tags from a post

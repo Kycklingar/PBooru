@@ -266,7 +266,7 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 		count       = "SELECT count(*)\n"
 		sel         = "SELECT id, tag, namespace, count\n"
 		from        = "FROM tag\n"
-		where       cond.Group
+		where       = cond.NewGroup().Add("", cond.N("WHERE count > 0"))
 		order       = "ORDER BY id ASC\n"
 		limitoffset cond.Group
 		cursor      = 1
@@ -274,9 +274,8 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 
 	set := parseTags(tagstr)
 	if len(set) > 0 {
-		where.Add("", cond.N("WHERE "))
 		t := set[0]
-		where.Add("", cond.P("tag LIKE('%%'||$%d||'%%')\n"))
+		where.Add("AND", cond.P("tag LIKE('%%'||$%d||'%%')\n"))
 		values = append(values, t.Tag)
 
 		if t.Namespace != "none" {

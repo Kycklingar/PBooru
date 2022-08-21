@@ -23,9 +23,10 @@
 	</div>
 	<div class="box">
 		{{if .Tag}}
+		<div><a href="/tags/{{.CurrentPage}}/{{.Query}}">Close</a></div>
 		<h2>
 			<span class="tag namespace-{{.Tag.Namespace}}">
-				<a href="/tags/{{$.CurrentPage}}/{{.Tag.ID}}{{$.Query}}">{{.Tag}}</a>
+				<a href="/posts/?tags={{.Tag.Escaped}}">{{.Tag}}</a>
 			</span>
 		</h2>
 		{{with .From}}
@@ -83,7 +84,6 @@
 		{{end}}
 
 		{{end}}
-		<hr>
 		<div>
 			{{with .Tag}}
 			<fieldset>
