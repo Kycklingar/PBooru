@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
 	mm "github.com/kycklingar/MinMax"
@@ -106,7 +107,7 @@ type PostsPage struct {
 	ErrorMessage  string
 	Result        []postAndTags
 	Sidebar       Sidebar
-	SuggestedTags []*DM.Tag
+	SuggestedTags []DM.Tag
 	//ArgString     string
 	Pageinator Pageination
 	User       UserInfo
@@ -777,18 +778,20 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("After posts")
 
-	// FIXME
-	//var tc DM.TagCollector
-	//tc.Parse(tagString, ",")
-	//tc.Parse(p.Sidebar.Or, ",")
-	//tc.Parse(p.Sidebar.Filter, ",")
-	//tc.Parse(p.Sidebar.Unless, ",")
-
-	//for _, t := range tc.SuggestedTags(DM.DB).Tags {
-	//	t.QTag(DM.DB)
-	//	t.QNamespace(DM.DB).QNamespace(DM.DB)
-	//	p.SuggestedTags = append(p.SuggestedTags, t)
-	//}
+	p.SuggestedTags, err = DM.TagHints(
+		strings.Join(
+			[]string{
+				tagString,
+				p.Sidebar.Or,
+				p.Sidebar.Filter,
+				p.Sidebar.Unless,
+			},
+			"\n",
+		),
+	)
+	if internalError(w, err) {
+		return
+	}
 
 	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
 
