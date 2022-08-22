@@ -16,9 +16,9 @@
 		<span id="suggestedtags-button" style="cursor:pointer; display:none;" onclick="toggleVisibility(this)">[+]</span>
 		<div class="box" id="suggestedtags">
 			<ul>
-				{{ range .SuggestedTags }}
-				<li>{{ template "tag-s" .}}</li>
-				{{ end }}
+				{{ range .SuggestedTags -}}
+				<li class="tag namespace-{{.Namespace}}"><a href="/posts?tags={{.Escaped}}">{{.}}</a></li>
+				{{- end }}
 			</ul>
 		</div>
 		<script>
