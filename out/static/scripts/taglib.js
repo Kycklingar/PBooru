@@ -146,14 +146,20 @@ function writeToInput(e, tags, tagIndex)
 
 	let cursorPosition = 0
 	let res = tags[0]
+	if(tagIndex == 0) cursorPosition = res.length
+
 	for(let i = 1; i < tags.length; i++) {
 		res += sep + tags[i]
 		if(i == tagIndex) cursorPosition = res.length
 	}
 
-	if(!cursorPosition)
+	if(!cursorPosition && tagIndex != undefined) {
+		// insert a sep
+		res += sep
 		cursorPosition = res.length
+	}
 
 	e.value = res
 	e.selectionEnd = cursorPosition
+	e.selectionStart = cursorPosition
 }
