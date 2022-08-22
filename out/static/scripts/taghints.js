@@ -1,3 +1,5 @@
+document.addEventListener("click", removeSTBox)
+
 document.addEventListener("DOMContentLoaded", function(){
 	document.querySelectorAll(".tag-input").forEach((inputElement)=>{
 		inputElement.addEventListener("input", setSTBoxTimeout)
@@ -11,7 +13,6 @@ function setSTBoxTimeout(ev) {
 	clearTimeout(timeout)
 	timeout = setTimeout(suggestionBox, 200, ev.target)
 }
-
 
 function removeSTBox() {
 	clearTimeout(timeout)
