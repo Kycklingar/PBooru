@@ -23,6 +23,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
     {{if eq .ID 0}}
     <h3>You must login in order to upload</h3>
     {{else if .Flag.Upload}}
+    <script src="/static/scripts/taglib.js"></script>
+    <script src="/static/scripts/taghints.js"></script>
     <script src="/static/scripts/input-preview.js"></script>
     <div class="row">
 	    <div class="column">
@@ -35,7 +37,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 					    </label>
 				    </label>
 				    <label>Tags
-					    <textarea class="stinput" id="tagsform" name="tags" rows="10" cols="40"></textarea>
+					    <textarea class="tag-input" id="tagsform" name="tags" rows="10" cols="40"></textarea>
 				    </label>
 				    <label>Metadata
 					    <textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
@@ -60,7 +62,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 			    <input type="submit" value="Submit">
 		    </form>
 		    <div>
-			    <script type="text/javascript" src="/static/suggestions.js"></script>
 			    <h3>Tagging Guide</h3>
 			    <p>Tag what you know.</p>
 			    <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>s-nina"</span>.</p>
