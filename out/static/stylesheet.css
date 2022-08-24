@@ -535,6 +535,7 @@ li
 #toggle-even:checked ~ #comic-container
 {
 	display: grid;
+	grid-auto-columns: 50%;
 }
 
 #toggle-even:checked ~ #comic-container .comic-page:nth-child(even)
@@ -558,6 +559,7 @@ li
 #toggle-odds:checked ~ #comic-container
 {
 	display: grid;
+	grid-auto-columns: 50%;
 }
 
 #toggle-odds:checked ~ #comic-container .comic-page:nth-child(odd)
