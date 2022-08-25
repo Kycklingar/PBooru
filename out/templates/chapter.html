@@ -79,20 +79,19 @@
 		</span>
 	</form>
 	{{end}}
-	<label for="toggle-capwidth">Cap width</label>
-	<input name="cap" type="radio" id="toggle-capwidth" checked>
-	<br>
-	<label for="toggle-capheight">Cap height</label>
-	<input name="cap" type="radio" id="toggle-capheight">
-	<br>
-	<label for="toggle-center">Center</label>
-	<input name="mode" type="radio" id="toggle-center" checked>
-	<br>
-	<label for="toggle-odds">Odds</label>
-	<input name="mode" type="radio" id="toggle-odds">
-	<br>
-	<label for="toggle-even">Even</label>
-	<input name="mode" type="radio" id="toggle-even">
+	<input type="checkbox" id="toggle-capheight" class="hide">
+	<input type="radio" name="center-mode" id="toggle-center" class="hide" checked>
+	<input type="radio" name="center-mode" id="toggle-odds" class="hide">
+	<input type="radio" name="center-mode" id="toggle-even" class="hide">
+
+	<details class="control-panel">
+		<summary>Options</summary>
+		<label for="toggle-capheight" id="button-capheight">Cap Height</label>
+		<label for="toggle-center" id="button-center">Center</label>
+		<label for="toggle-odds" id="button-odds">Odds</label>
+		<label for="toggle-even" id="button-even">Even</label>
+	</details>
+
 	<div id="comic-container">
 		{{range .Chapter.Pages}}
 		<div class="comic-page" page="{{.Page}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">

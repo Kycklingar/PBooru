@@ -513,14 +513,42 @@ li
 	border: 1px solid black;
 }
 
-#toggle-capwidth:checked ~ #comic-container .comic-page
+.control-panel
 {
-	max-width: 100%;
+	display: block;
+	position: fixed;
+	left: 0px;
+	bottom: 0px;
+	margin: 1em;
+	z-index: 1;
+	cursor: pointer;
+}
+
+.control-panel label
+{
+	background-color: grey;
+	display: block;
+	border: 2px outset black;
+	color: black;
+	user-select: none;
+}
+
+.hide
+{
+	display: none;
 }
 
 #toggle-capheight:checked ~ #comic-container .comic-page img
 {
 	max-height: 95vh;
+}
+
+#toggle-capheight:checked ~ .control-panel #button-capheight,
+#toggle-center:checked ~ .control-panel #button-center,
+#toggle-odds:checked ~ .control-panel #button-odds,
+#toggle-even:checked ~ .control-panel #button-even
+{
+	border: 2px inset black;
 }
 
 #toggle-center:checked ~ #comic-container .comic-page
