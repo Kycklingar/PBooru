@@ -388,6 +388,11 @@ li
 	vertical-align: top;
 }
 
+.log .tags-table td
+{
+	padding: initial;
+}
+
 /*---------- COMICS ---------*/
 
 .comics
