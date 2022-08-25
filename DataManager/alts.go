@@ -127,7 +127,7 @@ func SplitAlts(posts []int) loggingAction {
 			return
 		}
 
-		for p, _ := range b.Slice() {
+		for _, p := range b.Slice() {
 			bMax = mm.Max(bMax, p)
 		}
 
