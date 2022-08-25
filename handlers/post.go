@@ -85,10 +85,11 @@ type Postpage struct {
 
 var catMap = map[DM.Namespace]int{
 	"creator":   0,
-	"gender":    1,
-	"character": 2,
-	"species":   3,
-	"series":    4,
+	"rating":    1,
+	"gender":    2,
+	"character": 3,
+	"species":   4,
+	"series":    5,
 }
 
 type postAndTags struct {
