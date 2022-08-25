@@ -569,12 +569,9 @@ li
 #toggle-even:checked ~ #comic-container .comic-page:nth-child(even)
 {
 	grid-column: 1/2;
-	padding-right:0;
-	margin-right:0;
-}
-#toggle-even:checked ~ #comic-container .comic-page:nth-child(even)>.container
-{
-	float:right;
+	padding-right: 0;
+	margin-right: 0;
+	justify-self: end;
 }
 
 #toggle-even:checked ~ #comic-container .comic-page:nth-child(odd)
@@ -593,13 +590,9 @@ li
 #toggle-odds:checked ~ #comic-container .comic-page:nth-child(odd)
 {
 	grid-column: 1/2;
-	padding-right:0;
-	margin-right:0;
-}
-
-#toggle-odds:checked ~ #comic-container .comic-page:nth-child(odd)>.container
-{
-	float:right;
+	padding-right: 0;
+	margin-right: 0;
+	justify-self: end;
 }
 
 #toggle-odds:checked ~ #comic-container .comic-page:nth-child(even)
@@ -616,6 +609,7 @@ li
     margin-bottom:1em;
     background-color: var(--box-background-color);
     color: var(--box-color);
+    width: fit-content;
 }
 
 .comic-page img
@@ -626,11 +620,6 @@ li
 .comic-page .description
 {
 	padding: 0.5em;
-}
-
-.comic-page .container
-{
-	width: fit-content;
 }
 
 .comic-thumb

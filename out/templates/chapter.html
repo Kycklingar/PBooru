@@ -2,19 +2,19 @@
 
 {{if .User.Flag.Comics}}
 <details {{if .AddPostMode}}open{{end}}>
-<summary>Add a post</summary>
+	<summary>Add a post</summary>
 	<div class="box">
 		<form method="post" action="/comic/chapter/page/add/">
-		    <input placeholder="Post ID" type="number" name="post-id">
-		    <br>
-		    <br>
-		    <input placeholder="Page" type="number" name="page">
-		    <br>
-		    <br>
-		    {{range .Comic.Chapters}}
-		    <input type="radio" name="chapter-id" value="{{.ID}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}</br>
-		    {{end}}
-		    <input type="submit">
+			<input placeholder="Post ID" type="number" name="post-id">
+			<br>
+			<br>
+			<input placeholder="Page" type="number" name="page">
+			<br>
+			<br>
+			{{range .Comic.Chapters}}
+			<input type="radio" name="chapter-id" value="{{.ID}}" {{if $.Chapter}} {{if eq .ID $.Chapter.ID}}checked{{end}}{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}</br>
+			{{end}}
+			<input type="submit">
 		</form>
 	</div>
 </details>
@@ -84,7 +84,7 @@
 	<input type="radio" name="center-mode" id="toggle-odds" class="hide">
 	<input type="radio" name="center-mode" id="toggle-even" class="hide">
 
-	<details class="control-panel">
+	<details class="control-panel" open>
 		<summary>Options</summary>
 		<label for="toggle-capheight" id="button-capheight">Cap Height</label>
 		<label for="toggle-center" id="button-center">Center</label>
@@ -95,47 +95,45 @@
 	<div id="comic-container">
 		{{range .Chapter.Pages}}
 		<div class="comic-page" page="{{.Page}}" cpid="{{.ID}}" chapter="{{if $.Chapter.ID}}{{$.Chapter.Order}}{{end}}">
-			<div class="container">
-				<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
-					<img src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Cid}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Cid}}">
-				</a>
-				<br>
-				<div>Page:{{.Page}}</div>
-				{{with .Post.Description}}
-				<div class="constrainer">
-					{{template "post-description" .}}
-				</div>
-				{{end}}
-				{{if and $.EditMode $.User.Flag.Comics}}
-				<details>
-					<summary>Edit</summary>
-					<form method="post" action="/comic/chapter/page/edit/">
-						<input type="hidden" name="page-id" value="{{.ID}}">
-						<br>
-						<label>Post ID</label>
-						<br>
-						<input type="number" value="{{.Post.ID}}" name="post-id">
-						<br>
-						<label>Page</label>
-						<br>
-						<input type="number" value="{{.Page}}" name="page">
-						<br>
-						<br>
-						<label>Chapter</label>
-						<br>
-						{{range $.Comic.Chapters}}
-						<input type="radio" name="chapter-id" value="{{.ID}}" {{if eq .ID $.Chapter.ID}}checked{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}
-						<br>
-						{{end}}
-						<input type="submit">
-					</form>
-					<form method="post" action="/comic/chapter/page/delete/">
-						<input type="hidden" name="page-id" value="{{.ID}}">
-						<input type="submit" value="Delete">
-					</form>
-				</details>
-				{{end}}
+			<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
+				<img src="{{$.UserInfo.Gateway}}/ipfs/{{if $.Full}}{{.Post.Cid}}{{else}}{{.Post.ClosestThumbnail 10000}}{{end}}" alt="{{.Post.Cid}}" loading="lazy">
+			</a>
+			<br>
+			<div>Page:{{.Page}}</div>
+			{{with .Post.Description}}
+			<div class="constrainer">
+				{{template "post-description" .}}
 			</div>
+			{{end}}
+			{{if and $.EditMode $.User.Flag.Comics}}
+			<details>
+				<summary>Edit</summary>
+				<form method="post" action="/comic/chapter/page/edit/">
+					<input type="hidden" name="page-id" value="{{.ID}}">
+					<br>
+					<label>Post ID</label>
+					<br>
+					<input type="number" value="{{.Post.ID}}" name="post-id">
+					<br>
+					<label>Page</label>
+					<br>
+					<input type="number" value="{{.Page}}" name="page">
+					<br>
+					<br>
+					<label>Chapter</label>
+					<br>
+					{{range $.Comic.Chapters}}
+					<input type="radio" name="chapter-id" value="{{.ID}}" {{if eq .ID $.Chapter.ID}}checked{{end}}>{{.Order}}{{with .Title}} -- {{.}}{{end}}
+					<br>
+					{{end}}
+					<input type="submit">
+				</form>
+				<form method="post" action="/comic/chapter/page/delete/">
+					<input type="hidden" name="page-id" value="{{.ID}}">
+					<input type="submit" value="Delete">
+				</form>
+			</details>
+			{{end}}
 		</div>
 		{{end}}
 	</div>
@@ -144,7 +142,7 @@
 		<ul>
 			{{range .}}
 			<li>
-				<a href="/comic/{{$.Comic.ID}}/{{.Order}}/">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
+				<a href="/comic/{{$.Comic.ID}}/{{.Order}}/{{if $.Full}}?full={{end}}">Chapter {{.Order}}{{if .Title}} - {{.Title}}{{end}}</a>
 			</li>
 			{{end}}
 		</ul>
