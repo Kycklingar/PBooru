@@ -236,3 +236,23 @@ func prepPTExec(tx querier, query string, postID int, set set.Sorted[Tag]) error
 
 	return nil
 }
+
+func postsTags(tx querier, pids []int) tagSetChain {
+	var chain tagSetChain
+	chain.err = query(
+		tx,
+		fmt.Sprintf(
+			`SELECT DISTINCT tag_id
+			FROM post_tag_mappings
+			WHERE post_id IN(%s)`,
+			join(",", pids),
+		),
+	)(func(scan scanner) error {
+		var t Tag
+		err := scan(&t.ID)
+		chain.set.Set(t)
+		return err
+	})
+
+	return chain
+}

@@ -78,6 +78,17 @@ func SetAlts(posts []int) loggingAction {
 			return
 		}
 
+		// reset count cache of the tags on all posts
+		err = postsTags(tx, pids.Slice()).purgeCountCache(tx).err
+		if err != nil {
+			return
+		}
+
+		err = clearEmptySearchCountCache(tx)
+		if err != nil {
+			return
+		}
+
 		l.addTable(lPostAlts)
 		l.fn = logAlts{
 			pids: pids.Slice(),
@@ -150,6 +161,22 @@ func SplitAlts(posts []int) loggingAction {
 		}
 
 		if err = update(bMax, b); err != nil {
+			return
+		}
+
+		// reset count cache of the tags on all posts
+		err = postsTags(tx, a.Slice()).purgeCountCache(tx).err
+		if err != nil {
+			return
+		}
+
+		err = postsTags(tx, b.Slice()).purgeCountCache(tx).err
+		if err != nil {
+			return
+		}
+
+		err = clearEmptySearchCountCache(tx)
+		if err != nil {
 			return
 		}
 
