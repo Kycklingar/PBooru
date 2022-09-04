@@ -115,6 +115,10 @@ func (chain tagSetChain) ts() tsSetChain {
 
 // add the parents and grand parents to the set
 func (chain tagSetChain) parents(q querier) tagSetChain {
+	if chain.err != nil {
+		return chain
+	}
+
 	var (
 		// only query a tag once
 		queriedTags set.Sorted[Tag]
