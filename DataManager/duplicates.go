@@ -606,7 +606,7 @@ func (dupe Dupe) moveMetadata(tx *sql.Tx, ua *UserActions) error {
 	var metaMap = make(metaDataMap)
 
 	for _, inf := range dupe.Inferior {
-		err := inf.QMul(tx, PFMetaData)
+		err := inf.qMetaData(tx, PFMetaData)
 		if err != nil {
 			return err
 		}
