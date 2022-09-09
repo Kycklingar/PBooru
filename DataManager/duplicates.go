@@ -585,13 +585,21 @@ func (dupe Dupe) moveTags(tx *sql.Tx, ua *UserActions) error {
 		}.log,
 	})
 
+	var changed set.Sorted[Tag]
+
 	// Recount common tags
 	for k, v := range cmnTags {
-		var tag = &Tag{ID: k}
+		var tag = Tag{ID: k}
+		changed.Set(tag)
 		tag.updateCount(tx, -v)
 	}
 
-	return nil
+	err = tagChain(changed).purgeCountCache(tx).err
+	if err != nil {
+		return err
+	}
+
+	return clearEmptySearchCountCache(tx)
 }
 
 func (dupe Dupe) moveMetadata(tx *sql.Tx, ua *UserActions) error {
