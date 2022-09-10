@@ -4,13 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/kycklingar/set"
 )
 
 func (p Post) Tags() ([]Tag, error) {
-	set, err := postTags(DB, p.ID).ts().unwrap()
-	return tsTags(set), err
+	set, err := postTags(DB, p.ID).unwrap()
+	sort.Sort(stringSortedTags(set))
+	return set, err
 }
 
 // Add and remove tags from a post
