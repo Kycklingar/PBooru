@@ -1,4 +1,6 @@
 {{template "base"}}
+<script src="/static/scripts/taglib.js"></script>
+<script src="/static/scripts/taghints.js"></script>
 
 <style>
 #image img {
@@ -16,20 +18,19 @@
 	<span style="cursor: pointer;" onclick="toggleController(this)">Hide</span>
 	<div id="controller" >
 		<form onsubmit="slider.search(this); return false">
-			<input class="stinput" type="text" name="tags" id="searchinput" placeholder="Search (AND)">
+			<input class="tag-input" type="text" name="tags" id="searchinput" placeholder="Search (AND)">
 			<br>
-			<input class="stinput" type="text" name="or" id="orinput" placeholder="Search (OR)">
+			<input class="tag-input" type="text" name="or" id="orinput" placeholder="Search (OR)">
 			<br>
-			<input class="stinput" type="text" name="filter" id="filterinput" placeholder="Filter">
+			<input class="tag-input" type="text" name="filter" id="filterinput" placeholder="Filter">
 			<br>
-			<input class="stinput" type="text" name="unless" id="unlessinput" placeholder="Unless">
+			<input class="tag-input" type="text" name="unless" id="unlessinput" placeholder="Unless">
 			<br>
 			<input type="radio" name="order" value="desc" checked><label>Descending</label><br>
 			<input type="radio" name="order" value="asc"><label>Ascending</label><br>
 			<input type="radio" name="order" value="random"><label>Random</label><br>
 			<input type="submit">
 		</form>
-		<script type="text/javascript" src="/static/suggestions.js"></script>
 		<button onclick="slider.stopSlideshow()">Stop</button>
 		<br>
 		<label>Tickrate</label>

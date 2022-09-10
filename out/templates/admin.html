@@ -1,5 +1,8 @@
 {{template "base"}}
 {{if .User.Flag.Special}}
+<script src="/static/scripts/taglib.js"></script>
+<script src="/static/scripts/taghints.js"></script>
+
 <style>
 h4{
 	margin:4px;
@@ -32,10 +35,10 @@ h4{
 
 <div class="separator">
 	<form id="searchinput" onsubmit="newSearch(this);return false">
-		<input id="inputtags" class="stinput" type="text" name="tags" placeholder="Search (AND)">
-		<input id="inputtags" class="stinput" type="text" name="or" placeholder="Search (OR)">
-		<input id="inputbltags" class="stinput" type="text" name="filter" placeholder="Filter">
-		<input id="inputunless" class="stinput" type="text" name="unless" placeholder="Unless"><br>
+		<input id="inputtags" class="tag-input" type="text" name="tags" placeholder="Search (AND)">
+		<input id="inputtags" class="tag-input" type="text" name="or" placeholder="Search (OR)">
+		<input id="inputbltags" class="tag-input" type="text" name="filter" placeholder="Filter">
+		<input id="inputunless" class="tag-input" type="text" name="unless" placeholder="Unless"><br>
 		<details>
 			<summary>Advanced</summary>
 			<input type="checkbox" id="inp-alts" name="alts"><label for="inp-alts">Alts</label><br>
@@ -68,8 +71,8 @@ h4{
 	<div>
 		<h4>Tags</h4>
 		<form id="newtagsform" action="/edit/many/post/tags/" onsubmit="editTags(this); return false">
-			<textarea class="stinput" name="tags-add"></textarea>
-			<textarea class="stinput" name="tags-remove"></textarea>
+			<textarea class="tag-input" name="tags-add"></textarea>
+			<textarea class="tag-input" name="tags-remove"></textarea>
 			<input type="submit" value="Alter tags">
 		</form>
 	</div>
@@ -116,7 +119,6 @@ h4{
 <menu type="context" id="postmenu">
 	<menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)"></menuitem>
 </menu>
-<script type="text/javascript" src="/static/suggestions.js"></script>
 
 <script>
 	var UserInfo = {

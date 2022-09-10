@@ -1,5 +1,7 @@
 {{template "base"}}
 {{if .CanEdit}}
+<script src="/static/scripts/taglib.js"></script>
+<script src="/static/scripts/taghints.js"></script>
 <details>
 	<summary>Edit</summary>
 	<fieldset>
@@ -57,10 +59,9 @@
 		<legend>Tag Mapping</legend>
 		<form action="/dns/creator/tagmap/add" method="POST">
 			<input type="hidden" name="creator-id" value="{{.Creator.Id}}">
-			<input type="text" name="tag" class="stinput">
+			<input type="text" name="tag" class="tag-input">
 			<input type="submit">
 		</form>
-		<script type="text/javascript" src="/static/suggestions.js"></script>
 	</fieldset>
 	<fieldset>
 		<legend>Add Banner</legend>
