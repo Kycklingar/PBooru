@@ -2,6 +2,7 @@ package DataManager
 
 import (
 	"database/sql"
+	"sort"
 
 	"github.com/kycklingar/PBooru/DataManager/namespace"
 )
@@ -82,7 +83,6 @@ func logAffectedPosts(logID int, tx *sql.Tx, pids []int) error {
 }
 
 func getLogPostTags(log *Log, q querier) error {
-
 	err := query(
 		q,
 		`SELECT post_id, action, t.id, t.tag, t.namespace
@@ -124,11 +124,13 @@ func getLogPostTags(log *Log, q querier) error {
 
 		return nil
 	})
-	if err != nil {
-		return err
+
+	for _, ph := range log.Posts {
+		sort.Sort(stringSortedTags(ph.Tags.Added))
+		sort.Sort(stringSortedTags(ph.Tags.Removed))
 	}
 
-	return nil
+	return err
 }
 
 type logPostTags struct {

@@ -8,6 +8,12 @@ import (
 	"github.com/kycklingar/set"
 )
 
+type stringSortedTags []Tag
+
+func (s stringSortedTags) Len() int           { return len(s) }
+func (s stringSortedTags) Less(i, j int) bool { return s[i].String() < s[j].String() }
+func (s stringSortedTags) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
 type tsTag Tag
 
 func (a tsTag) Less(b tsTag) bool {
