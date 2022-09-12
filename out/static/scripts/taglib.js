@@ -44,6 +44,8 @@ class TagParser
 	}
 
 	*stateEscape() {
+		this.state = this.stateNext
+
 		let c = this.getc()
 		if(!c) return
 
@@ -51,8 +53,6 @@ class TagParser
 			case "\n": break
 			default: this.tag += c
 		}
-
-		this.state = this.stateNext
 	}
 
 	*parse() {
