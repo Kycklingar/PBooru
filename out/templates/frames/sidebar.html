@@ -73,7 +73,7 @@
 	{{ range .Tags }}
 	<tr>
 		<td class="tag namespace-{{.Namespace}}">
-			<span class="tag-toggle" data-tag="{{.Escaped}}">+</span>
+			<span class="tag-toggle" data-tag="{{.}}">+</span>
 			<a href="/posts/?tags={{.Escaped}}"><span>{{.}}</span></a>
 		</td>
 		<td class="counter">{{.Count}}</td>

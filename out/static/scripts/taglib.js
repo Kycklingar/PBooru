@@ -30,7 +30,7 @@ class TagParser
 					yield *this.yieldTag()
 					break
 				case "\\":
-					this.tag += c
+					//this.tag += c
 					this.state = this.stateEscape
 					return
 				default:
@@ -61,6 +61,11 @@ class TagParser
 		while(this.state != null)
 			yield *this.state()
 	}
+}
+
+function escapeTag(tag)
+{
+	return tag.replaceAll("\\", "\\\\").replaceAll(",", "\\,")
 }
 
 // replace the tag at the cursor
@@ -145,11 +150,11 @@ function writeToInput(e, tags, tagIndex)
 	}
 
 	let cursorPosition = 0
-	let res = tags[0]
+	let res = escapeTag(tags[0])
 	if(tagIndex == 0) cursorPosition = res.length
 
 	for(let i = 1; i < tags.length; i++) {
-		res += sep + tags[i]
+		res += sep + escapeTag(tags[i])
 		if(i == tagIndex) cursorPosition = res.length
 	}
 

@@ -68,7 +68,15 @@ func (t Tag) EditString() string {
 }
 
 func (t Tag) Escaped() string {
-	return strings.Replace(t.EditString(), ",", "\\,", -1)
+	return strings.ReplaceAll(
+		strings.ReplaceAll(
+			t.EditString(),
+			"\\",
+			"\\\\",
+		),
+		",",
+		"\\,",
+	)
 }
 
 func (t *Tag) parse(str string) {
@@ -276,7 +284,7 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 	if len(set) > 0 {
 		t := set[0]
 		where.Add("AND", cond.P("tag LIKE('%%'||$%d||'%%')\n"))
-		values = append(values, t.Tag)
+		values = append(values, strings.ReplaceAll(t.Tag, "\\", "\\\\"))
 
 		if t.Namespace != "none" {
 			where.Add("AND", cond.P("namespace = $%d\n"))
@@ -311,11 +319,10 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 func TagHints(str string) ([]Tag, error) {
 	var res []Tag
 	tags := parseTags(str)
-
 	for _, tag := range tags {
 		var (
 			nwhere, njoin string
-			values        = []any{tag.Tag}
+			values        = []any{strings.ReplaceAll(tag.Tag, "\\", "\\\\")}
 		)
 		if tag.Namespace != "none" {
 			njoin = `

@@ -44,7 +44,7 @@ function suggestionBox(inputElement)
 	let requestTimestamp = Date.now()
 
 	let params = new URLSearchParams()
-	params.append("tags", tag)
+	params.append("tags", escapeTag(tag))
 	let req = new Request(`/api/v1/suggesttags?${params.toString()}`)
 	fetch(req).then((response) => {
 		if(response.status != 200)
