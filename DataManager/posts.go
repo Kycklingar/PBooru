@@ -1047,14 +1047,7 @@ func (pc *PostCollector) Get(opts SearchOptions) error {
 	pc.altGroup = opts.Altgroup
 	pc.tombstone = opts.Tombstone
 
-	// TODO cleanup
-	// Check if the mime id exist in the db
-	//for _, mime := range Mimes {
-	//	if in(mime.ID, opts.MimeIDs) {
-	//		pc.mimeIDs = append(pc.mimeIDs, mime.ID)
-	//	}
-	//}
-	sort.Ints(pc.mimeIDs)
+	pc.mimeIDs = set.NewOrdered(opts.MimeIDs...).Slice()
 
 	return nil
 }
