@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/set"
 )
 
@@ -241,7 +242,7 @@ func prepPTExec(tx querier, query string, postID int, set set.Sorted[Tag]) error
 
 func postsTags(tx querier, pids []int) tagSetChain {
 	var chain tagSetChain
-	chain.err = query(
+	chain.err = query.Rows(
 		tx,
 		fmt.Sprintf(
 			`SELECT DISTINCT tag_id

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/set"
 )
 
@@ -205,7 +206,7 @@ type logAlias struct {
 func getLogAlias(log *Log, q querier) error {
 	log.Aliases = make(logAliasMap)
 
-	err := query(
+	err := query.Rows(
 		q,
 		`SELECT action,
 			tf.tag, tf.namespace,

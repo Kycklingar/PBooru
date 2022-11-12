@@ -60,13 +60,13 @@ type User struct {
 type flag int
 
 const (
-	flagTagging = 0x1
-	flagUpload  = 0x2
-	flagComics  = 0x4
-	flagBanning = 0x8
-	flagDelete  = 0x10
-	flagTags    = 0x20
-	flagSpecial = 0x40
+	flagTagging flag = 0x1
+	flagUpload       = 0x2
+	flagComics       = 0x4
+	flagBanning      = 0x8
+	flagDelete       = 0x10
+	flagTags         = 0x20
+	flagSpecial      = 0x40
 
 	flagAll = 0xff
 )

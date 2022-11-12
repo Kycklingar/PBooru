@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS counter(
+    count INT NOT NULL
+);

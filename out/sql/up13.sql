@@ -1,5 +1,0 @@
-DROP FUNCTION IF EXISTS alias_insert CASCADE;
-
-DROP FUNCTION IF EXISTS update_tag_count CASCADE;
-DROP FUNCTION IF EXISTS update_tag_count_del CASCADE;
-

@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/kycklingar/PBooru/DataManager/namespace"
+	"github.com/kycklingar/PBooru/DataManager/query"
 )
 
 const (
@@ -83,7 +84,7 @@ func logAffectedPosts(logID int, tx *sql.Tx, pids []int) error {
 }
 
 func getLogPostTags(log *Log, q querier) error {
-	err := query(
+	err := query.Rows(
 		q,
 		`SELECT post_id, action, t.id, t.tag, t.namespace
 		FROM log_post_tags pt

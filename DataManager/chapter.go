@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	mm "github.com/kycklingar/MinMax"
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 )
 
@@ -30,7 +31,7 @@ func (c *Chapter) getPages(q querier, limit int) error {
 		limitS = fmt.Sprintf("LIMIT %d", limit)
 	}
 
-	return query(
+	return query.Rows(
 		q,
 		fmt.Sprintf(`
 			SELECT id, post_id, page

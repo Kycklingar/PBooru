@@ -2,6 +2,8 @@ package DataManager
 
 import (
 	"database/sql"
+
+	"github.com/kycklingar/PBooru/DataManager/query"
 )
 
 const (
@@ -79,7 +81,7 @@ func getLogDuplicates(log *Log, q querier) error {
 
 	ph := log.initPostHistory(pid)
 
-	err = query(
+	err = query.Rows(
 		q,
 		`SELECT dup_id
 		FROM log_duplicate_posts

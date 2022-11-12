@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kycklingar/PBooru/DataManager/namespace"
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 	"github.com/kycklingar/set"
 	"github.com/kycklingar/sqhell/cond"
@@ -119,7 +120,7 @@ func (t Tag) Aliasing() (to *Tag, from []Tag, err error) {
 	}
 
 	// aliased from
-	err = query(
+	err = query.Rows(
 		DB,
 		`SELECT id, tag, namespace
 		FROM tag
@@ -141,7 +142,7 @@ func (t Tag) Aliasing() (to *Tag, from []Tag, err error) {
 // returns children, parents, grandchildren, grandparents, error
 func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err error) {
 	// children
-	err = query(
+	err = query.Rows(
 		DB,
 		`SELECT id, tag, namespace
 		FROM tag
@@ -161,7 +162,7 @@ func (t Tag) Family() (children, parents, grandChildren, grandParents []Tag, err
 	}
 
 	// parents
-	err = query(
+	err = query.Rows(
 		DB,
 		`SELECT id, tag, namespace
 		FROM tag
@@ -304,7 +305,7 @@ func SearchTags(tagstr string, limit, offset int) (TagsResult, error) {
 	limitoffset.Add("", cond.P("LIMIT $%d")).Add("", cond.P("OFFSET $%d"))
 	values = append(values, limit, offset)
 
-	return result, query(
+	return result, query.Rows(
 		DB,
 		fmt.Sprint(sel, from, where.Eval(&cursor), order, limitoffset.Eval(&cursor)),
 		values...,
@@ -333,7 +334,7 @@ func TagHints(str string) ([]Tag, error) {
 			values = append(values, string(tag.Namespace))
 		}
 
-		err := query(
+		err := query.Rows(
 			DB,
 			fmt.Sprintf(`
 				SELECT tag, namespace, count

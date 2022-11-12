@@ -1,0 +1,10 @@
+#posts
+
+CREATE TABLE IF NOT EXISTS post_views(
+	id BIGSERIAL PRIMARY KEY,
+	post_id INTEGER REFERENCES posts(id) NOT NULL,
+	views INTEGER NOT NULL,
+	timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS post_views_post_id_index ON post_views(post_id);

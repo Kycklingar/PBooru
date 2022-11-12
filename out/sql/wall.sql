@@ -1,0 +1,8 @@
+#users
+
+CREATE TABLE IF NOT EXISTS comment_wall(
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    text TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,5 @@
+
+CREATE TABLE IF NOT EXISTS namespaces(
+    id SERIAL PRIMARY KEY,
+    nspace VARCHAR(128) UNIQUE NOT NULL
+);

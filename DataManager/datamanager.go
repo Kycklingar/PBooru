@@ -3,14 +3,12 @@ package DataManager
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
-	"strings"
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
-	migrate "github.com/kycklingar/PBooru/DataManager/migration"
+	migrate "github.com/kycklingar/PBooru/DataManager/migrator"
 	st "github.com/kycklingar/PBooru/DataManager/storage"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -113,139 +111,104 @@ func Close() error {
 	return err
 }
 
-func update(db *sql.DB, folder string) error {
-	files, _ := ioutil.ReadDir(fmt.Sprintf("%s/", folder))
-	num := len(files)
-
-	dbVer := getDbVersion(db)
-
-	for i := dbVer + 1; i < num+1; i++ {
-		fmt.Println("Updating to version ", i)
-		dat, err := ioutil.ReadFile(fmt.Sprintf("%s/up%d.sql", folder, i))
-		if err != nil {
-			return err
-		}
-
-		sqlString := string(dat)
-		//	sqlStrings := strings.Split(sqlString, ";")
-
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-
-		//	for _, str := range sqlStrings {
-		//		if len(strings.TrimSpace(str)) <= 0 {
-		//			continue
-		//		}
-		//		fmt.Println("Executing: ", str)
-		//		_, err = tx.Exec(str)
-		//		if err != nil {
-		//			tx.Rollback()
-		//		return err
-		//	}
-		//}
-
-		if len(strings.TrimSpace(sqlString)) <= 0 {
-			continue
-		}
-		fmt.Println("Executing: ", sqlString)
-		_, err = tx.Exec(sqlString)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		err = updateCode(i, tx)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		err = setDbVersion(i, tx)
-		if err != nil {
-			return err
-		}
-		err = tx.Commit()
-		if err != nil {
-			return err
-		}
-		fmt.Println("Success")
-	}
-	return nil
-}
-
-func updateCode(ver int, tx *sql.Tx) error {
-	switch ver {
-	case 1:
-		{
-			var password string
-			for {
-				fmt.Print("Choose a password for the admin account:")
-				var pass, pass2 string
-
-				fmt.Scanln(&pass)
-				fmt.Print("Confirm password:")
-				fmt.Scanln(&pass2)
-
-				if pass == pass2 {
-					password = pass
-					break
-				}
-				fmt.Println("Passwords do not match.")
-			}
-
-			u := NewUser()
-			u.flag = new(flag)
-			*u.flag = flag(flag(flagAll))
-			u.Name = "admin"
-			var err error
-			u.salt, err = createSalt()
-			if err != nil {
-				return err
-			}
-
-			hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
-			if err != nil {
-				return err
-			}
-			u.passwordHash = string(hash)
-
-			_, err = tx.Exec("INSERT INTO users(username, passwordhash, salt, datejoined, adminflag) VALUES($1, $2, $3, CURRENT_TIMESTAMP, $4)", u.Name, u.passwordHash, u.salt, u.Flag())
-			if err != nil {
-				return err
-			}
-		}
-	case 25:
-		{
-			err := migrate.TagHistoryToUserActions(tx)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func getDbVersion(db *sql.DB) int {
-	var ver int
-	err := db.QueryRow("SELECT ver FROM dbinfo").Scan(&ver)
+// Run database migrations
+func update(db *sql.DB, dir string) error {
+	migrator, err := migrate.FromDir(dir)
 	if err != nil {
-		ver = 0
+		return err
 	}
 
-	return ver
+	err = migrator.Initialize(db)
+	if err != nil {
+		return err
+	}
+
+	err = migrator.FetchApplied(db)
+	if err != nil {
+		return err
+	}
+
+	migrator.InstallProgram("users", createAdminAccount)
+
+	err = migrator.EnqueueMigrations()
+	if err != nil {
+		return err
+	}
+
+	for migrator.Next() {
+		tx, err := db.Begin()
+		if err = migrator.Execute(tx); err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err = tx.Commit(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func setDbVersion(ver int, tx *sql.Tx) error {
-	_, err := tx.Exec("UPDATE dbinfo SET ver=$1", ver)
+// Fix this mess
+func createAdminAccount(q migrate.ExecQuery) error {
+	var password string
+	for {
+		fmt.Print("Choose a password for the admin account:")
+		var pass, pass2 string
+
+		fmt.Scanln(&pass)
+		fmt.Print("Confirm password:")
+		fmt.Scanln(&pass2)
+
+		if pass == pass2 {
+			password = pass
+			break
+		}
+		fmt.Println("Passwords do not match.")
+	}
+
+	u := NewUser()
+	u.flag = new(flag)
+	*u.flag = flag(flag(flagAll)) // ????
+	u.Name = "admin"
+	var err error
+	u.salt, err = createSalt()
+	if err != nil {
+		return err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
+	if err != nil {
+		return err
+	}
+	u.passwordHash = string(hash)
+
+	err = q.QueryRow(
+		`INSERT INTO users(username, adminflag)
+		VALUES($1, $2)
+		RETURNING id`,
+		u.Name,
+		u.Flag(),
+	).Scan(&u.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.Exec(
+		`INSERT INTO passwords(user_id, hash, salt)
+		VALUES($1, $2, $3)`,
+		u.ID,
+		u.passwordHash,
+		u.salt,
+	)
+
 	return err
 }
 
 type Config struct {
 	//Database string
 	ConnectionString string
-	StdUserFlag      int
+	StdUserFlag      flag
 	Store            string
 	MFSRootDir       string
 	ThumbnailFormat  string

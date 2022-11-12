@@ -19,6 +19,7 @@ import (
 	mm "github.com/kycklingar/MinMax"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
 	"github.com/kycklingar/set"
@@ -273,7 +274,7 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 		id     int
 	)
 
-	err := query(
+	err := query.Rows(
 		q,
 		`SELECT id
 		FROM posts
@@ -322,7 +323,7 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	var t thumbnails
 	selector := sqlbinder.BindFieldAddresses(t, fields...)
 
-	err := query(
+	err := query.Rows(
 		q,
 		fmt.Sprintf(`
 			SELECT %s
@@ -354,7 +355,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 	}
 	var metaMap = make(metaDataMap)
 
-	err := query(
+	err := query.Rows(
 		q,
 		`SELECT nspace, metadata
 		FROM post_metadata
@@ -372,7 +373,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 		return err
 	}
 
-	err = query(
+	err = query.Rows(
 		q,
 		`SELECT created
 		FROM post_creation_dates
@@ -866,7 +867,7 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 
 	var phashes []phs
 
-	err = query(
+	err = query.Rows(
 		q,
 		fmt.Sprintf(
 			`
@@ -929,7 +930,7 @@ func (p *Post) Comments(q querier) ([]*PostComment, error) {
 
 	var pcs []*PostComment
 
-	return pcs, query(
+	return pcs, query.Rows(
 		q,
 		`SELECT id, user_id, text, timestamp
 		FROM post_comments

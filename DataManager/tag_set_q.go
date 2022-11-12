@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/set"
 )
 
@@ -48,7 +49,7 @@ func (chain tagSetChain) query(q querier) tagSetChain {
 		return chain
 	}
 
-	chain.err = query(
+	chain.err = query.Rows(
 		q,
 		fmt.Sprintf(
 			`SELECT id, tag, namespace
@@ -69,7 +70,7 @@ func (chain tagSetChain) query(q querier) tagSetChain {
 func postTags(q querier, postID int) tagSetChain {
 	var chain tagSetChain
 
-	chain.err = query(
+	chain.err = query.Rows(
 		q,
 		`SELECT id, tag, namespace, count
 		FROM post_tag_mappings
@@ -139,7 +140,7 @@ func (chain tagSetChain) parents(q querier) tagSetChain {
 
 		toBeQueried = set.New[Tag]()
 
-		chain.err = query(q, queryStr)(func(scan scanner) error {
+		chain.err = query.Rows(q, queryStr)(func(scan scanner) error {
 			var t Tag
 			err := scan(&t.ID, &t.Tag, &t.Namespace)
 			if err != nil {
