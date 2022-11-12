@@ -1,7 +1,9 @@
 package migrate
 
 import (
+	"errors"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -54,6 +56,40 @@ func FromDir(dir string) (Migrator, error) {
 	})
 }
 
+var migratorCheckpoint = []string{
+	"counter",
+	"mimes",
+	"roots",
+	"users",
+	"namespaces",
+	"posts",
+	"tombstone",
+	"apple_tree",
+	"tags",
+	"post_tag_mappings",
+	"duplicates",
+	"reports",
+	"spine",
+	"messages",
+	"parents",
+	"comics",
+	"log_comics",
+	"log_post_tags",
+	"wall",
+	"log_duplicates",
+	"score",
+	"search_count_cache",
+	"dns",
+	"log_tags",
+	"log_post",
+	"phash",
+	"duplicate_reports",
+	"thumbnails",
+	"views",
+	"alias",
+	"pools",
+}
+
 // Initialize the migration table in the database
 func (mig Migrator) Initialize(q ExecQuery) error {
 	var exists bool
@@ -74,9 +110,57 @@ func (mig Migrator) Initialize(q ExecQuery) error {
 				timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)`,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	// Check if this is an upgrade from the old system
+	err = q.QueryRow(
+		`SELECT EXISTS (
+			SELECT FROM pg_tables
+			WHERE tablename = 'dbinfo'
+		)`,
+	).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		// Check which db version
+		var ver int
+		err = q.QueryRow(
+			`SELECT ver
+			FROM dbinfo`,
+		).Scan(&ver)
+		if err != nil {
+			return err
+		}
+
+		if ver != 25 {
+			return errors.New("old database version: please check out git tag 'old-migration' and apply its migrations first")
+		}
+
+		// Apply the new migrations
+		for _, table := range migratorCheckpoint {
+			_, err = q.Exec(
+				`INSERT INTO schema_migrations(applied)
+				VALUES($1)`,
+				table,
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Remove dbinfo
+		_, err = q.Exec("DROP TABLE dbinfo")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (mig *Migrator) InstallProgram(fid fileIdentifier, program Program) {
@@ -115,6 +199,7 @@ func (mig *Migrator) Next() bool {
 // Executes the migration
 func (mig *Migrator) Execute(q ExecQuery) error {
 	fid := mig.queue.dequeue()
+	log.Printf("applying migration '%s.sql'\n", fid)
 	return mig.executeFile(q, fid)
 }
 
