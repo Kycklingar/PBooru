@@ -26,12 +26,14 @@ func (s *mfsStore) Store(cid, dest string) error {
 
 	dir, _ := path.Split(finalDestination)
 
-	if _, err := s.ipfs.FilesLs(ctx, dir); err != nil {
-		opts := []shell.FilesOpt{
-			shell.FilesMkdir.CidVersion(1),
-			shell.FilesMkdir.Parents(true),
-		}
-		s.ipfs.FilesMkdir(ctx, dir, opts...)
+	opts := []shell.FilesOpt{
+		shell.FilesMkdir.CidVersion(1),
+		shell.FilesMkdir.Parents(true),
+	}
+
+	err := s.ipfs.FilesMkdir(ctx, dir, opts...)
+	if err != nil {
+		return err
 	}
 
 	if _, err := s.ipfs.FilesLs(ctx, finalDestination); err == nil {
