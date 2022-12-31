@@ -7,12 +7,13 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	dns "github.com/kycklingar/PBooru/DataManager/dns"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 func specialMM(handle func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, _ := getUser(w, r)
-		if !user.QFlag(DM.DB).Special() {
+		if !user.Flag.Special() {
 			permErr(w, "Special")
 			return
 		}
@@ -59,11 +60,11 @@ func dnsCreatorHandler(w http.ResponseWriter, r *http.Request) {
 		CanEdit  bool
 	}
 
-	var user *DM.User
+	var user user.User
 
 	user, p.UserInfo = getUser(w, r)
 
-	p.CanEdit = user.QFlag(DM.DB).Special()
+	p.CanEdit = user.Flag.Special()
 
 	uri := uriSplitter(r)
 	id, err := uri.getIntAtIndex(1)
@@ -158,7 +159,7 @@ func dnsEditHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Special() {
+	if !user.Flag.Special() {
 		permErr(w, "Special")
 		return
 	}

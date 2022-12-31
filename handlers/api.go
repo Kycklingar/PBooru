@@ -158,7 +158,7 @@ func APIv1PostHandler(w http.ResponseWriter, r *http.Request) {
 //	} else if postHash := r.FormValue("hash"); postHash != "" {
 //		p.Hash = postHash
 //
-//		if p.QID(DM.DB) == 0 {
+//		if p.ID == 0 {
 //			//fmt.Fprint(w, "{}")
 //			APIError(w, "Post Not Found", http.StatusNotFound)
 //			return

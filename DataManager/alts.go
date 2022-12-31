@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	mm "github.com/kycklingar/MinMax"
-	"github.com/kycklingar/PBooru/DataManager/query"
+	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/set"
 )
 
@@ -34,7 +34,7 @@ func SetAlts(posts []int) loggingAction {
 			maxID int
 		)
 
-		err = query.Rows(
+		err = db.QueryRows(
 			tx,
 			fmt.Sprintf(`
 				SELECT id
@@ -113,7 +113,7 @@ func SplitAlts(posts []int) loggingAction {
 
 		b.Set(posts...)
 
-		err = query.Rows(
+		err = db.QueryRows(
 			tx,
 			fmt.Sprintf(`
 				SELECT id

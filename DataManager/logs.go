@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
+	"github.com/kycklingar/PBooru/DataManager/user"
 	"github.com/kycklingar/sqhell/cond"
 )
 
@@ -14,7 +15,7 @@ type logTableGetFunc func(*Log, querier) error
 
 type Log struct {
 	ID        int
-	User      *User
+	User      user.User
 	Timestamp timestamp.Timestamp
 
 	// Post logs
@@ -212,11 +213,10 @@ func logs(q querier, query string, values ...interface{}) ([]Log, error) {
 
 		for rows.Next() {
 			var l = Log{
-				User:  NewUser(),
 				Posts: make(postHistoryMap),
 			}
 
-			if err = rows.Scan(&l.ID, &l.User.ID, &l.Timestamp); err != nil {
+			if err = rows.Scan(&l.ID, &l.User, &l.Timestamp); err != nil {
 				return err
 			}
 

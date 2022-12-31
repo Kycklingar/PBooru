@@ -10,7 +10,7 @@ import (
 
 func reportsHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
-	if !u.QFlag(DM.DB).Special() {
+	if !u.Flag.Special() {
 		http.Error(w, "insufficent privileges. Want 'Special'", http.StatusBadRequest)
 		return
 	}
@@ -27,18 +27,13 @@ func reportsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, report := range p.Reports {
-		report.Reporter = DM.CachedUser(report.Reporter)
-		report.Reporter.QName(DM.DB)
-	}
-
 	renderTemplate(w, "reports", p)
 }
 
 func reportDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	if !u.QFlag(DM.DB).Special() {
+	if !u.Flag.Special() {
 		http.Error(w, "insufficent privileges. Want 'Special'", http.StatusBadRequest)
 		return
 	}
@@ -62,7 +57,7 @@ func reportDeleteHandler(w http.ResponseWriter, r *http.Request) {
 func reportPostHandler(w http.ResponseWriter, r *http.Request) {
 	u, _ := getUser(w, r)
 
-	if u.QID(DM.DB) <= 0 {
+	if u.ID <= 0 {
 		http.Error(w, "user not logged in", http.StatusBadRequest)
 		return
 	}

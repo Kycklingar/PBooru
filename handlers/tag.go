@@ -96,7 +96,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Tags() {
+	if !user.Flag.Tags() {
 		http.Error(w, "Insufficient privileges. Want \"Tags\"", http.StatusForbidden)
 		return
 	}
@@ -130,7 +130,7 @@ func TagsHandler(w http.ResponseWriter, r *http.Request) {
 func multiTagsHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Special() {
+	if !user.Flag.Special() {
 		permErr(w, "Special")
 		return
 	}

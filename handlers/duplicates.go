@@ -7,18 +7,18 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	var page = struct {
 		UserInfo UserInfo
-		User     *DM.User
+		User     user.User
 		Reports  []*DM.DupReport
 		Form     url.Values
 	}{}
 
 	page.User, page.UserInfo = getUser(w, r)
-	page.User.QFlag(DM.DB)
 
 	offset, _ := strconv.Atoi(r.FormValue("offset"))
 	limit, err := strconv.Atoi(r.FormValue("limit"))
@@ -40,7 +40,6 @@ func dupReportsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, report := range page.Reports {
-		report.Reporter.QName(DM.DB)
 		report.Dupe.Post = DM.CachedPost(report.Dupe.Post)
 		report.Dupe.Post.QMul(
 			DM.DB,
@@ -121,7 +120,7 @@ func dupReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Assign duplicates if having sufficient privileges
 	// otherwise submit a report
-	if user.QFlag(DM.DB).Delete() {
+	if user.Flag.Delete() {
 		if internalError(w, DM.AssignDuplicates(dupes, user)) {
 			return
 		}
@@ -159,7 +158,7 @@ func processReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Delete() {
+	if !user.Flag.Delete() {
 		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
 		return
 	}
@@ -180,7 +179,7 @@ func processPluckReportHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Delete() {
+	if !user.Flag.Delete() {
 		http.Error(w, lackingPermissions("Delete"), http.StatusBadRequest)
 		return
 	}
@@ -244,7 +243,7 @@ func dupReportCleanupHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Special() {
+	if !user.Flag.Special() {
 		permErr(w, "Special")
 		return
 	}

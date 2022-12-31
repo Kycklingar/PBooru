@@ -1,6 +1,8 @@
 package DataManager
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"regexp"
@@ -8,41 +10,38 @@ import (
 	"strings"
 
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 // CommentModel is used to retriev and save comments
 type CommentCollector struct {
-	Comments []*Comment
+	Comments []Comment
 }
 
 type Comment struct {
 	ID           int
-	User         *User
+	User         user.User
 	Text         string
 	CompiledText string
 	Time         timestamp.Timestamp
 }
 
-// Initialize a new comment
-func NewComment() *Comment {
-	return &Comment{User: NewUser()}
-}
+func CommentByID(id int) (Comment, error) {
+	var c = Comment{
+		ID: id,
+	}
 
-func CommentByID(id int) (*Comment, error) {
-	var c = NewComment()
-	c.ID = id
-
-	var uID *int
+	var userID sql.NullInt32
 
 	err := DB.QueryRow(`
 		SELECT user_id, text, timestamp
 		FROM comment_wall
 		WHERE id = $1`,
 		id,
-	).Scan(&uID, &c.Text, &c.Time)
+	).Scan(&userID, &c.Text, &c.Time)
 
-	if uID != nil {
-		c.User.ID = *uID
+	if err == nil && userID.Valid {
+		c.User, err = user.FromID(context.Background(), user.ID(userID.Int32))
 	}
 
 	return c, err
@@ -57,15 +56,17 @@ func (cm *CommentCollector) Get(q querier, count int, daemon string) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		c := NewComment()
-		var userID *int
+		var (
+			c      Comment
+			userID sql.NullInt32
+		)
+
 		err = rows.Scan(&c.ID, &userID, &c.Text, &c.Time)
 		if err != nil {
 			return err
 		}
-		if userID != nil {
-			c.User.ID = *userID
-			c.User = CachedUser(c.User)
+		if userID.Valid {
+			c.User, err = user.FromID(context.Background(), user.ID(userID.Int32))
 		}
 		cm.Comments = append(cm.Comments, c)
 	}
@@ -132,7 +133,7 @@ func DeleteComment(id int) error {
 	return err
 }
 
-//Save a new comment to the wall
+// Save a new comment to the wall
 func (cm *Comment) Save(userID int, text string) error {
 
 	if err := verifyCommentPosts(text); err != nil {
@@ -158,21 +159,17 @@ func (cm *Comment) Edit(text string) error {
 	return err
 }
 
-func newPostComment() *PostComment {
-	return &PostComment{User: NewUser(), Post: NewPost()}
-}
-
 type PostComment struct {
 	ID   int
 	Post *Post
-	User *User
+	User user.User
 	Text string
 	Time timestamp.Timestamp
 }
 
 // Save a new comment on a post
 func (pc *PostComment) Save(q querier) error {
-	if pc.Text == "" || pc.Post.ID == 0 || pc.User.QID(q) == 0 {
+	if pc.Text == "" || pc.Post.ID == 0 || pc.User.ID == 0 {
 		return fmt.Errorf("expected: Text, PostID, UserID. Got: %s, %d, %d", pc.Text, pc.Post.ID, pc.User.ID)
 	}
 

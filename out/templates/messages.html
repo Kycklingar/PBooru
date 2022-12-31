@@ -2,9 +2,11 @@
 
 <div class="box">
 	<div>
-		<h3><a href="/user/messages/">All messages</a>{{.AllMessagesCount}}</h3>
-		<h3><a href="/user/messages/new">New messages</a>{{.NewMessagesCount}}</h3>
-		<h3><a href="/user/messages/sent/">Sent Messages</a>{{.SentMessagesCount}}</h3>
+		{{with .Inbox}}
+		<h3><a href="/user/messages/">All messages</a>{{.AllCount}}</h3>
+		<h3><a href="/user/messages/new">New messages</a>{{.UnreadCount}}</h3>
+		<h3><a href="/user/messages/sent/">Sent Messages</a>{{.SentCount}}</h3>
+		{{end}}
 	</div>
 
 	{{define "messages"}}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kycklingar/PBooru/DataManager/query"
+	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/set"
 )
 
@@ -168,11 +168,11 @@ func (mig *Migrator) InstallProgram(fid fileIdentifier, program Program) {
 }
 
 func (mig *Migrator) FetchApplied(q ExecQuery) error {
-	return query.Rows(
+	return db.QueryRows(
 		q,
 		`SELECT applied
 		FROM schema_migrations`,
-	)(func(scan query.Scanner) error {
+	)(func(scan db.Scanner) error {
 		var fileID fileIdentifier
 		err := scan(&fileID)
 		mig.applied.Set(fileID)

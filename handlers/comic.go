@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
 	"github.com/kycklingar/PBooru/benchmark"
 	paginate "github.com/kycklingar/PBooru/handlers/paginator"
 )
 
 type comicsPage struct {
 	Comics    []*DM.Comic
-	User      *DM.User
+	User      user.User
 	UserInfo  UserInfo
 	Paginator paginate.Paginator
 	Time      string
@@ -73,7 +74,7 @@ func createComicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 		return
 	}
@@ -139,7 +140,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //	//if r.Method == http.MethodPost {
 //	//	user, _ := getUser(w, r)
-//	//	if !user.QFlag(DM.DB).Comics() {
+//	//	if !user.Flag.Comics() {
 //	//		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //	//		return
 //	//	}
@@ -158,7 +159,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //	//		http.Error(w, "Oops", http.StatusInternalServerError)
 //	//		return
 //	//	}
-//	//	http.Redirect(w, r, fmt.Sprintf("/comic/%d", c.QID(DM.DB)), http.StatusSeeOther)
+//	//	http.Redirect(w, r, fmt.Sprintf("/comic/%d", c.ID), http.StatusSeeOther)
 //	//	return
 //	//}
 //	var err error
@@ -214,7 +215,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //		if len(c.Chapters) <= 0 {
 //			continue
 //		}
-//		c.Chapters[0].QID(DM.DB)
+//		c.Chapters[0].ID
 //		c.Chapters[0].QOrder(DM.DB)
 //		c.Chapters[0].QTitle(DM.DB)
 //		c.Chapters[0].QPageCount(DM.DB)
@@ -223,7 +224,7 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //				break
 //			}
 //			p.QOrder(DM.DB)
-//			p.QID(DM.DB)
+//			p.ID
 //			p.Post.QMul(
 //				DM.DB,
 //				DM.PFHash,
@@ -234,9 +235,9 @@ func ComicsHandler(w http.ResponseWriter, r *http.Request) {
 //
 //	p.Pageinator = pageinate(cc.Total, comicsPerPage, offset, 10)
 //
-//	var u *DM.User
+//	var u user.User
 //	u, p.UserInfo = getUser(w, r)
-//	u.QFlag(DM.DB)
+//	u.Flag
 //	p.User = u
 //	p.Time = bm.EndStr(performBenchmarks)
 //
@@ -276,7 +277,7 @@ func renderComic(comic *DM.Comic, w http.ResponseWriter, r *http.Request) {
 	var page struct {
 		Base     base
 		Comic    *DM.Comic
-		User     *DM.User
+		User     user.User
 		UserInfo UserInfo
 		EditMode bool
 	}
@@ -284,14 +285,13 @@ func renderComic(comic *DM.Comic, w http.ResponseWriter, r *http.Request) {
 	page.EditMode = len(r.Form["edit-mode"]) > 0
 	page.Comic = comic
 	page.User, page.UserInfo = getUser(w, r)
-	page.User.QFlag(DM.DB)
 
 	renderTemplate(w, "comic", page)
 }
 
 func editComicHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -317,7 +317,7 @@ func editComicHandler(w http.ResponseWriter, r *http.Request) {
 
 func deleteComicHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -344,7 +344,7 @@ func addChapterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -408,7 +408,7 @@ func addChapterHandler(w http.ResponseWriter, r *http.Request) {
 //		Base        base
 //		Chapter     *DM.Chapter
 //		UserInfo    UserInfo
-//		User        *DM.User
+//		User        user.User
 //		Full        bool
 //		EditMode    bool
 //		AddPostMode bool
@@ -425,7 +425,7 @@ func addChapterHandler(w http.ResponseWriter, r *http.Request) {
 //	page.AddPostMode = len(r.Form["add-mode"]) > 0
 //
 //	page.User, page.UserInfo = getUser(w, r)
-//	page.User.QFlag(DM.DB)
+//	page.User.Flag
 //
 //	page.Chapter = comic.Chapter(DM.DB, chapterIndex)
 //	if page.Chapter == nil {
@@ -479,7 +479,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -517,7 +517,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -555,7 +555,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -598,7 +598,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -632,7 +632,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -683,7 +683,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -728,7 +728,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}
@@ -772,7 +772,7 @@ func verifyInteger(r *http.Request, formKey ...string) (m map[string]int, err er
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Comics() {
+//	if !user.Flag.Comics() {
 //		http.Error(w, lackingPermissions("Comics"), http.StatusBadRequest)
 //		return
 //	}

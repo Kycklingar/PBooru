@@ -3,16 +3,18 @@ package DataManager
 import (
 	"errors"
 	"log"
+
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 func NewReport() Report {
-	return Report{Post: NewPost(), Reporter: NewUser()}
+	return Report{Post: NewPost()}
 }
 
 type Report struct {
 	ID          int
 	Post        *Post
-	Reporter    *User
+	Reporter    user.User
 	Reason      int
 	Description string
 }

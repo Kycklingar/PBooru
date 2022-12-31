@@ -69,7 +69,7 @@ func (pv *postViews) collect() {
 		}
 		defer stmt.Close()
 
-		for postID, _ := range views {
+		for postID := range views {
 			stmt.Exec(postID)
 		}
 	}()

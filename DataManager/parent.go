@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kycklingar/PBooru/DataManager/query"
+	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/set"
 )
 
@@ -185,7 +185,7 @@ func getLogParents(log *Log, q querier) error {
 	parents := set.New[Tag]()
 	children := set.New[Tag]()
 
-	err := query.Rows(
+	err := db.QueryRows(
 		q,
 		`SELECT action,
 			tp.id, tp.tag, tp.namespace,

@@ -8,7 +8,8 @@ import (
 	"strings"
 
 	mm "github.com/kycklingar/MinMax"
-	"github.com/kycklingar/PBooru/DataManager/query"
+	"github.com/kycklingar/PBooru/DataManager/db"
+	"github.com/kycklingar/PBooru/DataManager/user"
 	"github.com/kycklingar/set"
 )
 
@@ -24,7 +25,7 @@ func (d Dupe) strindex(i int) string {
 func getDupeFromPost(q querier, p *Post) (Dupe, error) {
 	var dup Dupe
 	dup.Post = p
-	return dup, query.Rows(
+	return dup, db.QueryRows(
 		q,
 		`SELECT post_id, dup_id
 		FROM duplicates
@@ -64,7 +65,7 @@ func (dupe Dupe) dprocUAWrap(f func(*sql.Tx, *UserActions) error, ua *UserAction
 	}
 }
 
-func AssignDuplicates(dupe Dupe, user *User) error {
+func AssignDuplicates(dupe Dupe, user user.User) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err
@@ -106,7 +107,7 @@ func AssignDuplicates(dupe Dupe, user *User) error {
 func (dupe *Dupe) updateAndInsert(tx *sql.Tx, ua *UserActions) error {
 	var dedups []Post
 
-	if err := query.Rows(
+	if err := db.QueryRows(
 		tx,
 		fmt.Sprintf(`
 			UPDATE duplicates
@@ -184,7 +185,7 @@ func (dupe *Dupe) updateAlts(tx *sql.Tx, ua *UserActions) error {
 	)
 
 	// Alts of inferior to be applied to superior
-	err := query.Rows(
+	err := db.QueryRows(
 		tx,
 		fmt.Sprintf(`
 			SELECT id
@@ -498,7 +499,7 @@ func (dupe Dupe) commonTags(tx querier) (map[int]int, error) {
 	pids := fmt.Sprint(sep(",", len(dupe.Inferior), dupe.strindex), ",", dupe.Post.ID)
 
 	var tids = make(map[int]int)
-	err := query.Rows(
+	err := db.QueryRows(
 		tx,
 		fmt.Sprintf(`
 			SELECT tag_id, count(*) - 1
@@ -685,7 +686,7 @@ func (dupe *Dupe) moveDescription(tx *sql.Tx, ua *UserActions) error {
 }
 
 func (dupe *Dupe) replaceComicPages(tx *sql.Tx, ua *UserActions) error {
-	return query.Rows(
+	return db.QueryRows(
 		tx,
 		fmt.Sprintf(`
 			UPDATE comic_page
@@ -735,7 +736,7 @@ func (dupe *Dupe) conflicts(tx *sql.Tx) error {
 	// there is a conflict if an inferior already is an inferior of another dupe
 	// the superior of the other dupe needs to be check against the superior of
 	// this dupe
-	err := query.Rows(
+	err := db.QueryRows(
 		tx,
 		fmt.Sprintf(`
 			SELECT post_id, dup_id

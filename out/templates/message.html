@@ -4,7 +4,7 @@
 	<div>From: <a href="/user/{{.Sender.ID}}/">{{.Sender.Name}}</a></div>
 	<div>To: <a href="/user/{{.Recipient.ID}}/">{{.Recipient.Name}}</a></div>
 	<h3>{{.Title}}</h3>
-	<p class="message-text">{{.Text}}</p>
+	<p class="message-text">{{.Body}}</p>
 	<div><a href="/user/message/new/?reply-to={{.ID}}">Reply</a></div>
 </div>
 

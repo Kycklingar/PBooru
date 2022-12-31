@@ -12,6 +12,8 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
+	"github.com/kycklingar/PBooru/DataManager/user/pool"
 	"github.com/kycklingar/PBooru/benchmark"
 	postform "github.com/kycklingar/PBooru/handlers/forms/post"
 )
@@ -69,18 +71,19 @@ func postError(w http.ResponseWriter, err error) {
 }
 
 type Postpage struct {
-	Base     base
-	Post     *DM.Post
-	Voted    bool
-	Dns      []DM.DnsCreator
-	Comments []*DM.PostComment
-	Dupe     DM.Dupe
-	Alts     []*DM.Post
-	Chapters []*DM.Chapter
-	Sidebar  Sidebar
-	User     *DM.User
-	UserInfo UserInfo
-	Time     string
+	Base      base
+	Post      *DM.Post
+	Voted     bool
+	Dns       []DM.DnsCreator
+	Comments  []*DM.PostComment
+	Dupe      DM.Dupe
+	Alts      []*DM.Post
+	Chapters  []*DM.Chapter
+	Sidebar   Sidebar
+	User      user.User
+	UserPools pool.Pools
+	UserInfo  UserInfo
+	Time      string
 }
 
 var catMap = map[DM.Namespace]int{
@@ -119,7 +122,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		user, _ := getUser(w, r)
 
-		if user.QID(DM.DB) == 0 {
+		if user.ID == 0 {
 			http.Error(w, "You must login to do that", http.StatusBadRequest)
 			return
 		}
@@ -160,7 +163,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 			return
 		}
-		//if !user.QFlag(DM.DB).Tagging() {
+		//if !user.Flag.Tagging() {
 		//	http.Error(w, "Insufficent privileges. Want 'Tagging'", http.StatusBadRequest)
 		//	return
 		//}
@@ -189,11 +192,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pp.User, pp.UserInfo = getUser(w, r)
-
-	pp.User.QID(DM.DB)
-	pp.User.QName(DM.DB)
-	pp.User.QFlag(DM.DB)
-	pp.User.QPools(DM.DB)
 
 	// Valid Uris: 	post/1
 	//		post/hash/Qm...
@@ -285,7 +283,12 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		pp.Alts = append(pp.Alts, pp.Dupe.Post.Alts[i])
 	}
 
-	pp.Voted = pp.User.Voted(DM.DB, pp.Dupe.Post)
+	pp.Voted, err = DM.HasVoted(pp.User.ID, pp.Dupe.Post.ID)
+
+	pp.UserPools, err = pool.OfUser(r.Context(), pp.User.ID)
+	if internalError(w, err) {
+		return
+	}
 
 	bm.Split("Queriying tags")
 	tags, err := pp.Dupe.Post.Tags()
@@ -309,14 +312,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Sidebar.Tags = tags
 
-	pp.Comments, err = p.Comments(DM.DB)
+	//pp.Comments, err = p.Comments(DM.DB)
 	if internalError(w, err) {
 		return
-	}
-
-	for _, c := range pp.Comments {
-		c.User.QFlag(DM.DB)
-		c.User.QName(DM.DB)
 	}
 
 	pp.Chapters, err = DM.GetPostChapters(pp.Dupe.Post.ID)
@@ -337,7 +335,7 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Upload() {
+	if !user.Flag.Upload() {
 		permErr(w, "Upload")
 		return
 	}
@@ -372,7 +370,7 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Upload() {
+	if !user.Flag.Upload() {
 		permErr(w, "Upload")
 		return
 	}
@@ -408,7 +406,7 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Upload() {
+//	if !user.Flag.Upload() {
 //		permErr(w, "Upload")
 //		return
 //	}
@@ -450,7 +448,7 @@ func splitAltsHandler(w http.ResponseWriter, r *http.Request) {
 //	}
 //
 //	user, _ := getUser(w, r)
-//	if !user.QFlag(DM.DB).Upload() {
+//	if !user.Flag.Upload() {
 //		permErr(w, "Upload")
 //		return
 //	}
@@ -483,7 +481,7 @@ func generateThumbnailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Delete() {
+	if !user.Flag.Delete() {
 		permErr(w, "Delete")
 		return
 	}
@@ -510,7 +508,7 @@ func postAddTagsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Tagging() {
+	if !user.Flag.Tagging() {
 		permErr(w, "Tagging")
 		return
 	}
@@ -546,7 +544,7 @@ func postRemoveTagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Tagging() {
+	if !user.Flag.Tagging() {
 		permErr(w, "Tagging")
 		return
 	}
@@ -680,7 +678,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cleanup empty keys
-	for k, _ := range r.Form {
+	for k := range r.Form {
 		if r.FormValue(k) == "" {
 			r.Form.Del(k)
 		}
@@ -813,17 +811,15 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		user, _ := getUser(w, r)
-		user.QFlag(DM.DB)
 		renderTemplate(w, "upload", user)
 	} else if r.Method == http.MethodPost {
 		user, _ := getUser(w, r)
-		if user.QID(DM.DB) == 0 {
+		if user.ID == 0 {
 			http.Error(w, "You must login in order to upload", http.StatusForbidden)
 			return
 		}
-		user.QFlag(DM.DB)
 
-		if !user.Flag().Upload() {
+		if !user.Flag.Upload() {
 			http.Error(w, "Insufficient priviliges, Upload needed", http.StatusForbidden)
 			return
 		}
@@ -890,7 +886,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		user, _ := getUser(w, r)
 
-		if !user.QFlag(DM.DB).Delete() {
+		if !user.Flag.Delete() {
 			http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusInternalServerError)
 			return
 		}
@@ -926,7 +922,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 //	u, ui := getUser(w, r)
 //	u = DM.CachedUser(u)
 //
-//	u.QFlag(DM.DB)
+//	u.Flag
 //
 //	spl := splitURI(r.URL.Path)
 //	if len(spl) < 3 {
@@ -976,7 +972,7 @@ func RemovePostHandler(w http.ResponseWriter, r *http.Request) {
 //	}
 //
 //	u, _ := getUser(w, r)
-//	if !u.QFlag(DM.DB).Delete() {
+//	if !u.Flag.Delete() {
 //		http.Error(w, "Insufficient privileges. Want \"Delete\"", http.StatusBadRequest)
 //		return
 //	}
@@ -1083,7 +1079,7 @@ func findSimilarHandler(w http.ResponseWriter, r *http.Request) {
 		//return
 	}
 
-	for i, _ := range p.Posts {
+	for i := range p.Posts {
 		p.Posts[i] = DM.CachedPost(p.Posts[i])
 
 		p.Posts[i].QMul(

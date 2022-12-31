@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 func renderChapter(comic *DM.Comic, chapterIndex int, w http.ResponseWriter, r *http.Request) {
@@ -16,7 +17,7 @@ func renderChapter(comic *DM.Comic, chapterIndex int, w http.ResponseWriter, r *
 		Comic       *DM.Comic
 		Chapter     *DM.Chapter
 		UserInfo    UserInfo
-		User        *DM.User
+		User        user.User
 		Full        bool
 		EditMode    bool
 		AddPostMode bool
@@ -24,7 +25,6 @@ func renderChapter(comic *DM.Comic, chapterIndex int, w http.ResponseWriter, r *
 	}
 
 	page.User, page.UserInfo = getUser(w, r)
-	page.User.QFlag(DM.DB)
 
 	page.EditMode = len(r.Form["edit-mode"]) > 0
 	page.Full = len(r.Form["full"]) > 0
@@ -46,7 +46,7 @@ func editChapterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -79,7 +79,7 @@ func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := getUser(w, r)
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -116,7 +116,7 @@ func chapterShiftHandler(w http.ResponseWriter, r *http.Request) {
 func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Special() {
+	if !user.Flag.Special() {
 		permError(w, "Special")
 		return
 	}
@@ -140,7 +140,7 @@ func deleteChapterHandler(w http.ResponseWriter, r *http.Request) {
 func addComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -169,7 +169,7 @@ func addComicPageHandler(w http.ResponseWriter, r *http.Request) {
 func editComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}
@@ -199,7 +199,7 @@ func editComicPageHandler(w http.ResponseWriter, r *http.Request) {
 func deleteComicPageHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUser(w, r)
 
-	if !user.QFlag(DM.DB).Comics() {
+	if !user.Flag.Comics() {
 		permError(w, "Comics")
 		return
 	}

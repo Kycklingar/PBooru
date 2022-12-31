@@ -6,12 +6,13 @@ import (
 	"log"
 
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 type DupReport struct {
 	ID         int
 	ReportType reportType
-	Reporter   *User
+	Reporter   user.User
 	Note       string
 	Approved   timestamp.Timestamp
 	Timestamp  timestamp.Timestamp
@@ -65,7 +66,6 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 
 		for rows.Next() {
 			var dr = new(DupReport)
-			dr.Reporter = NewUser()
 			dr.Dupe.Post = NewPost()
 			err = rows.Scan(&dr.ID, &dr.ReportType, &dr.Dupe.Post.ID, &dr.Reporter.ID, &dr.Note, &dr.Approved, &dr.Timestamp)
 			if err != nil {
@@ -94,7 +94,6 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 func FetchDupReport(id int, q querier) (*DupReport, error) {
 	var r DupReport
 	r.ID = id
-	r.Reporter = NewUser()
 	r.Dupe.Post = NewPost()
 
 	err := q.QueryRow(`
@@ -154,7 +153,7 @@ const (
 	RNonDupe
 )
 
-func ReportDuplicates(dupe Dupe, reporter *User, note string, repT reportType) error {
+func ReportDuplicates(dupe Dupe, reporter user.User, note string, repT reportType) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		return err

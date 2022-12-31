@@ -94,9 +94,7 @@ func renderSpine(w http.ResponseWriter, r *http.Request, opts DM.LogSearchOption
 
 	_, ui := getUser(w, r)
 
-	for i, log := range logs {
-		logs[i].User = DM.CachedUser(log.User)
-		logs[i].User.QName(DM.DB)
+	for _, log := range logs {
 		for _, ph := range log.Posts {
 			err := ph.Post.QMul(
 				DM.DB,

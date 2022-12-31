@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +17,7 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var page struct {
 		UserInfo UserInfo
-		User     *DM.User
+		User     user.User
 		Trees    []DM.AppleTree
 		Report   DM.DupeReportStats
 		Form     url.Values
@@ -27,12 +28,10 @@ func appleTreeHandler(w http.ResponseWriter, r *http.Request) {
 
 	page.User, page.UserInfo = getUser(w, r)
 
-	if page.User.QID(DM.DB) <= 0 {
+	if page.User.ID <= 0 {
 		http.Error(w, "Registered users only", http.StatusForbidden)
 		return
 	}
-
-	page.User.QFlag(DM.DB)
 
 	var err error
 
@@ -108,7 +107,7 @@ func pluckApple(w http.ResponseWriter, r *http.Request) {
 		dupes.Inferior = append(dupes.Inferior, p)
 	}
 
-	if user.QFlag(DM.DB).Delete() {
+	if user.Flag.Delete() {
 		err = DM.PluckApple(dupes)
 		if internalError(w, err) {
 			return

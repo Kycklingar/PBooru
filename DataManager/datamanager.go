@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -8,10 +9,12 @@ import (
 	"time"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/kycklingar/PBooru/DataManager/db"
 	migrate "github.com/kycklingar/PBooru/DataManager/migrator"
 	st "github.com/kycklingar/PBooru/DataManager/storage"
+	"github.com/kycklingar/PBooru/DataManager/user"
+	"github.com/kycklingar/PBooru/DataManager/user/flag"
 	_ "github.com/lib/pq"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -43,13 +46,13 @@ func Setup(iApi string) {
 	if err != nil {
 		panic(err)
 	}
-	if DB == nil {
-		panic(err)
-	}
+
 	err = DB.Ping()
 	if err != nil {
 		panic(err)
 	}
+
+	db.Context = DB
 
 	// _, err = DB.Exec("PRAGMA journal_mode=WAL")
 	// if err != nil {
@@ -76,7 +79,9 @@ func Setup(iApi string) {
 		panic(err)
 	}
 
-	go sessionGC()
+	// Setup session keeper
+	user.InitSession(DB)
+
 	go updateCounter()
 	if err = cacheAllMimes(); err != nil {
 		log.Println(err)
@@ -149,7 +154,6 @@ func update(db *sql.DB, dir string) error {
 	return nil
 }
 
-// Fix this mess
 func createAdminAccount(q migrate.ExecQuery) error {
 	var password string
 	for {
@@ -167,48 +171,13 @@ func createAdminAccount(q migrate.ExecQuery) error {
 		fmt.Println("Passwords do not match.")
 	}
 
-	u := NewUser()
-	u.flag = new(flag)
-	*u.flag = flag(flag(flagAll)) // ????
-	u.Name = "admin"
-	var err error
-	u.salt, err = createSalt()
-	if err != nil {
-		return err
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password+u.salt), 0)
-	if err != nil {
-		return err
-	}
-	u.passwordHash = string(hash)
-
-	err = q.QueryRow(
-		`INSERT INTO users(username, adminflag)
-		VALUES($1, $2)
-		RETURNING id`,
-		u.Name,
-		u.Flag(),
-	).Scan(&u.ID)
-	if err != nil {
-		return err
-	}
-
-	_, err = q.Exec(
-		`INSERT INTO passwords(user_id, hash, salt)
-		VALUES($1, $2, $3)`,
-		u.ID,
-		u.passwordHash,
-		u.salt,
-	)
-
-	return err
+	return user.Register(context.Background(), "admin", password, flag.All)
 }
 
 type Config struct {
 	//Database string
 	ConnectionString string
-	StdUserFlag      flag
+	StdUserFlag      flag.Flag
 	Store            string
 	MFSRootDir       string
 	ThumbnailFormat  string
@@ -223,7 +192,7 @@ func (c *Config) Default() {
 	c.ThumbnailFormat = "JPEG"
 	c.ThumbnailSizes = []uint{1024, 512, 256}
 	c.ThumbnailQuality = 90
-	c.StdUserFlag = flagTagging | flagUpload
+	c.StdUserFlag = flag.Tagging | flag.Upload
 }
 
 var CFG *Config

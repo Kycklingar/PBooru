@@ -16,6 +16,7 @@ import (
 	"github.com/dchest/captcha"
 	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 type Config struct {
@@ -355,13 +356,12 @@ func init() {
 
 	//Handlers["/dups/add/"] = makeStatHandler(NewDuplicateHandler)
 	Handlers["/admin"] = makeStatHandler(func(w http.ResponseWriter, r *http.Request) {
-		user, info := getUser(w, r)
-		user.QFlag(DM.DB)
+		u, info := getUser(w, r)
 		p := struct {
 			UserInfo UserInfo
-			User     *DM.User
+			User     user.User
 			Mimes    map[string][]*DM.Mime
-		}{info, user, make(map[string][]*DM.Mime)}
+		}{info, u, make(map[string][]*DM.Mime)}
 
 		for _, mime := range DM.Mimes {
 			p.Mimes[mime.Type] = append(p.Mimes[mime.Type], mime)

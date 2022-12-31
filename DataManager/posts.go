@@ -18,10 +18,11 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 	mm "github.com/kycklingar/MinMax"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/PBooru/DataManager/image"
-	"github.com/kycklingar/PBooru/DataManager/query"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
+	"github.com/kycklingar/PBooru/DataManager/user"
 	"github.com/kycklingar/set"
 	"github.com/kycklingar/sqhell/cond"
 )
@@ -274,7 +275,7 @@ func (p *Post) QAlts(q querier, fields ...sqlbinder.Field) error {
 		id     int
 	)
 
-	err := query.Rows(
+	err := db.QueryRows(
 		q,
 		`SELECT id
 		FROM posts
@@ -323,7 +324,7 @@ func (p *Post) QThumbs(q querier, fields ...sqlbinder.Field) error {
 	var t thumbnails
 	selector := sqlbinder.BindFieldAddresses(t, fields...)
 
-	err := query.Rows(
+	err := db.QueryRows(
 		q,
 		fmt.Sprintf(`
 			SELECT %s
@@ -355,7 +356,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 	}
 	var metaMap = make(metaDataMap)
 
-	err := query.Rows(
+	err := db.QueryRows(
 		q,
 		`SELECT nspace, metadata
 		FROM post_metadata
@@ -373,7 +374,7 @@ func (p *Post) qMetaData(q querier, fields ...sqlbinder.Field) error {
 		return err
 	}
 
-	err = query.Rows(
+	err = db.QueryRows(
 		q,
 		`SELECT created
 		FROM post_creation_dates
@@ -440,12 +441,12 @@ func (p Post) ClosestThumbnail(size int) (ret string) {
 	return
 }
 
-func (p *Post) Vote(q querier, u *User) error {
+func (p *Post) Vote(q querier, u user.User) error {
 	if p.ID <= 0 {
 		return errors.New("no post-id")
 	}
 
-	if u.QID(q) <= 0 {
+	if u.ID <= 0 {
 		return errors.New("no user-id")
 	}
 
@@ -516,7 +517,7 @@ type UploadData struct {
 	Description string
 }
 
-func CreatePost(file io.ReadSeeker, user *User, ud UploadData) (*Post, error) {
+func CreatePost(file io.ReadSeeker, user user.User, ud UploadData) (*Post, error) {
 	uploadQueue.Lock()
 	defer uploadQueue.Unlock()
 	// Hash file
@@ -638,7 +639,7 @@ func CreatePost(file io.ReadSeeker, user *User, ud UploadData) (*Post, error) {
 // Insert file dimensions if available
 // Create a new mime if needed
 // Generate appletrees
-func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user *User) (int, error) {
+func insertNewPost(file io.ReadSeeker, fsize int64, cid, mstr string, user user.User) (int, error) {
 	var (
 		postID        int
 		mime          Mime
@@ -867,7 +868,7 @@ func (p *Post) FindSimilar(q querier, dist int, removed bool) ([]*Post, error) {
 
 	var phashes []phs
 
-	err = query.Rows(
+	err = db.QueryRows(
 		q,
 		fmt.Sprintf(
 			`
@@ -917,20 +918,20 @@ func (p *Post) Duplicates(q querier) (Dupe, error) {
 	return getDupeFromPost(q, p)
 }
 
-func (p *Post) NewComment() *PostComment {
-	pc := newPostComment()
+func (p *Post) NewComment() PostComment {
+	var pc PostComment
 	pc.Post = p
 	return pc
 }
 
-func (p *Post) Comments(q querier) ([]*PostComment, error) {
+func (p *Post) Comments(q querier) ([]PostComment, error) {
 	if p.ID <= 0 {
 		return nil, nil
 	}
 
-	var pcs []*PostComment
+	var pcs []PostComment
 
-	return pcs, query.Rows(
+	return pcs, db.QueryRows(
 		q,
 		`SELECT id, user_id, text, timestamp
 		FROM post_comments

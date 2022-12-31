@@ -3,6 +3,8 @@ package DataManager
 import (
 	"database/sql"
 	"time"
+
+	"github.com/kycklingar/PBooru/DataManager/user"
 )
 
 const (
@@ -31,7 +33,7 @@ func (l logger) valid() bool {
 
 type spine struct {
 	Id        int
-	User      *User
+	User      user.User
 	Timestamp time.Time
 }
 
@@ -41,11 +43,11 @@ type UserActions struct {
 	actions []loggingAction
 }
 
-func newLog(user *User) spine {
+func newLog(user user.User) spine {
 	return spine{User: user}
 }
 
-func UserAction(user *User) *UserActions {
+func UserAction(user user.User) *UserActions {
 	return &UserActions{
 		log: newLog(user),
 	}

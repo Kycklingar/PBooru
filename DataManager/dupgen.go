@@ -182,7 +182,7 @@ func GetAppleTrees(tagStr string, baseonPear bool, limit, offset int) ([]AppleTr
 	var trees []AppleTree
 
 	putOnTree := func(apple, pear *Post) {
-		for i, _ := range trees {
+		for i := range trees {
 			if trees[i].Apple.ID == apple.ID {
 				trees[i].Pears = append(trees[i].Pears, pear)
 				return

@@ -1,12 +1,20 @@
 package handlers
 
 import (
+	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/db"
+	"github.com/kycklingar/PBooru/DataManager/session"
+	"github.com/kycklingar/PBooru/DataManager/user"
+	"github.com/kycklingar/PBooru/DataManager/user/flag"
+	"github.com/kycklingar/PBooru/DataManager/user/inbox"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/dchest/captcha"
 )
@@ -33,47 +41,65 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		profile = DM.NewUser()
-		profile.SetID(DM.DB, uid)
-		profile = DM.CachedUser(profile)
+		profile, err = user.FromID(r.Context(), uid)
+		if internalError(w, err) {
+			return
+		}
 	}
 
-	type page struct {
-		User        *DM.User
+	var p = struct {
+		User        user.User
 		UserInfo    UserInfo
-		Profile     *DM.User
-		RecentPosts []*DM.Post
-		RecentVotes []*DM.Post
-		NewMessages int
+		Profile     user.User
+		RecentPosts []DM.Post
+		RecentVotes []DM.Post
+		Inbox       inbox.Inbox
+	}{
+		User:     u,
+		UserInfo: ui,
+		Profile:  profile,
 	}
-	var p = page{User: u, UserInfo: ui, Profile: profile}
-	u.QName(DM.DB)
-	u.QFlag(DM.DB)
-	profile.QName(DM.DB)
-	profile.QFlag(DM.DB)
 
-	p.RecentPosts = profile.RecentPosts(DM.DB, 5)
-	for _, post := range p.RecentPosts {
-		post.QMul(
+	var err error
+
+	p.RecentPosts, err = DM.RecentUploads(profile.ID)
+	if internalError(w, err) {
+		return
+	}
+
+	p.RecentVotes, err = DM.RecentVotes(profile.ID)
+	if internalError(w, err) {
+		return
+	}
+
+	for i := range p.RecentPosts {
+		if internalError(w, p.RecentPosts[i].QMul(
 			DM.DB,
 			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
-		)
+		)) {
+			return
+		}
 	}
 
-	p.RecentVotes = profile.RecentVotes(DM.DB, 5)
-	for _, post := range p.RecentVotes {
-		post.QMul(
+	for i := range p.RecentVotes {
+		if internalError(w, p.RecentVotes[i].QMul(
 			DM.DB,
 			DM.PFCid,
 			DM.PFThumbnails,
 			DM.PFRemoved,
-		)
+		)) {
+			return
+		}
 	}
 
-	p.User.QUnreadMessages(DM.DB)
-	p.NewMessages = len(p.User.Messages.Unread)
+	if u.ID == profile.ID {
+		p.Inbox, err = inbox.Of(db.Context, p.User.ID)
+		if internalError(w, err) {
+			return
+		}
+	}
 
 	renderTemplate(w, "user", p)
 }
@@ -88,50 +114,39 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		user := DM.NewUser()
-
-		err := user.Login(DM.DB, username, password)
+		key, _, err := user.Login(r.Context(), username, password)
 		if err != nil {
-			//log.Println(err)
-			//http.Error(w, "Login failed", http.StatusInternalServerError)
-			http.Redirect(w, r, "./#err-username", http.StatusSeeOther)
+			if err == bcrypt.ErrMismatchedHashAndPassword || err == sql.ErrNoRows {
+				http.Redirect(w, r, "./#err-username", http.StatusSeeOther)
+			} else {
+				internalError(w, err)
+			}
 			return
 		}
-		//s := user.Session()
-		if user.Session.Key(DM.DB) != "" {
-			setCookie(w, "session", user.Session.Key(DM.DB), true)
+
+		if key != "" {
+			setCookie(w, "session", string(key), true)
 		}
 
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
 		return
 
 	} else {
-		user, _ := getUser(w, r)
-		type s struct {
-			Key    string
-			Expire time.Time
-		}
-		p := struct {
-			User     *DM.User
+		var p struct {
+			User     user.User
 			Key      string
-			Sessions []s
-		}{}
-		//p.Username = user.QName(DM.DB)
-		p.User = user
+			Sessions []user.UserSession
+		}
 
-		user.QID(DM.DB)
-		user.QName(DM.DB)
-		user.QFlag(DM.DB)
+		p.User, _ = getUser(w, r)
 
-		if user.QID(DM.DB) <= 0 {
+		if p.User.ID <= 0 {
 			p.Key = captcha.New()
 		} else {
-			sessions := user.Sessions(DM.DB)
-			for _, sess := range sessions {
-				var ss s
-				ss.Key = sess.Key(DM.DB)
-				ss.Expire = sess.Expire()
-				p.Sessions = append(p.Sessions, ss)
+			var err error
+			p.Sessions, err = user.ActiveSessions(p.User.ID)
+			if internalError(w, err) {
+				return
 			}
 		}
 
@@ -141,21 +156,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		sessKey := r.FormValue("session-key")
-		if len(sessKey) <= 0 {
+		key := r.FormValue("session-key")
+		if len(key) <= 0 {
 			http.Error(w, "no session key", http.StatusBadRequest)
 			return
 		}
 
-		u := DM.NewUser()
-		u.Session.Get(DM.DB, sessKey)
-
-		u.Logout(DM.DB)
+		user.Logout(session.Key(key))
 	} else {
-		user, _ := getUser(w, r)
-		if user.QID(DM.DB) > 0 {
-			user.Logout(DM.DB)
-		}
+		ui := userCookies(w, r)
+		user.Logout(session.Key(ui.SessionToken))
 		removeCookie(w, "session")
 	}
 
@@ -170,7 +180,7 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	u, _ := getUser(w, r)
 
-	if !u.QFlag(DM.DB).Special() {
+	if !u.Flag.Special() {
 		http.Error(w, ErrPriv("Special"), http.StatusBadRequest)
 		return
 	}
@@ -185,26 +195,25 @@ func upgradeUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := DM.NewUser()
-	user.ID = id
-	user = DM.CachedUser(user)
-
-	if internalError(w, user.SetFlag(DM.DB, newFlag)) {
+	if internalError(w, user.SetPrivileges(DM.DB, id, flag.Flag(newFlag))) {
 		return
 	}
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
-func getUser(w http.ResponseWriter, r *http.Request) (*DM.User, UserInfo) {
+func getUser(w http.ResponseWriter, r *http.Request) (user.User, UserInfo) {
 	ui := userCookies(w, r)
-	user := DM.NewUser()
-	user.Session.Get(DM.DB, ui.SessionToken)
-	if user.QID(DM.DB) == 0 {
-		removeCookie(w, "session")
-	} else {
-		user = DM.CachedUser(user)
+
+	user, err := user.FromSession(r.Context(), session.Key(ui.SessionToken))
+	if err != nil {
+		if err == session.NotFound {
+			removeCookie(w, "session")
+		} else {
+			log.Println(err)
+		}
 	}
+
 	return user, ui
 }
 
@@ -225,19 +234,18 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var user = DM.NewUser()
-
-		err := user.Register(username, password)
+		err := user.Register(r.Context(), username, password, DM.CFG.StdUserFlag)
 		if internalError(w, err) {
 			return
 		}
 
-		err = user.Login(DM.DB, username, password)
-		if err == nil {
-			if user.Session.Key(DM.DB) != "" {
-				setCookie(w, "session", user.Session.Key(DM.DB), true)
-			}
+		key, _, err := user.Login(r.Context(), username, password)
+		if internalError(w, err) {
+			return
 		}
+
+		setCookie(w, "session", string(key), true)
+
 		http.Redirect(w, r, "/login/", http.StatusSeeOther)
 		return
 	}

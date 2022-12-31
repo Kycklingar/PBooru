@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/DataManager/user"
+	"github.com/kycklingar/PBooru/DataManager/user/pool"
 )
 
 func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,25 +21,34 @@ func UserPoolsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		profile = DM.NewUser()
-		profile.SetID(DM.DB, uid)
+		profile, err = user.FromID(r.Context(), uid)
+		if internalError(w, err) {
+			return
+		}
+	}
+	var (
+		err error
+		p   = struct {
+			User     user.User
+			UserInfo UserInfo
+			Profile  user.User
+			Pools    []DM.Pool
+		}{
+			User:     u,
+			UserInfo: ui,
+			Profile:  profile,
+		}
+	)
+
+	p.Pools, err = DM.PoolsOfUser(r.Context(), profile.ID)
+	if internalError(w, err) {
+		return
 	}
 
-	type page struct {
-		User     *DM.User
-		UserInfo UserInfo
-		Profile  *DM.User
-		Pools    []*DM.Pool
-	}
-
-	var p = page{User: u, UserInfo: ui, Profile: profile, Pools: profile.QPools(DM.DB)}
-	u.QName(DM.DB)
-	profile.QName(DM.DB)
-
-	for _, pool := range p.Pools {
-		pool.QPosts(DM.DB)
-		for _, post := range pool.Posts {
-			post.Post.QMul(
+	for i := range p.Pools {
+		p.Pools[i].QPosts(DM.DB)
+		for _, mapping := range p.Pools[i].Posts {
+			mapping.Post.QMul(
 				DM.DB,
 				DM.PFThumbnails,
 				DM.PFCid,
@@ -61,16 +72,20 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pool = DM.NewPool()
+	var p struct {
+		Pool     DM.Pool
+		User     user.User
+		UserInfo UserInfo
+		Edit     bool
+	}
 
-	pool.ID = poolID
+	p.Pool, err = DM.PoolFromID(r.Context(), pool.ID(poolID))
+	if internalError(w, err) {
+		return
+	}
 
-	pool.QTitle(DM.DB)
-	pool.QUser(DM.DB)
-	pool.User.QName(DM.DB)
-	pool.QDescription(DM.DB)
-	pool.QPosts(DM.DB)
-	for _, pm := range pool.Posts {
+	p.Pool.QPosts(DM.DB)
+	for _, pm := range p.Pool.Posts {
 		pm.Post.QMul(
 			DM.DB,
 			DM.PFThumbnails,
@@ -79,21 +94,12 @@ func UserPoolHandler(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	type page struct {
-		Pool     *DM.Pool
-		User     *DM.User
-		UserInfo UserInfo
-		Edit     bool
-		//Paginator Paginator
-	}
-
-	var p page
-	p.Pool = pool
+	//p.Pool = pool
 	p.User, p.UserInfo = getUser(w, r)
 
 	// Only allow the creator of the pool to edit it
 	r.ParseForm()
-	p.Edit = len(r.Form["edit"]) > 0 && pool.User.QID(DM.DB) == p.User.QID(DM.DB)
+	p.Edit = len(r.Form["edit"]) > 0 && p.Pool.User.ID == p.User.ID
 
 	//p.Paginator = pageinate(p.Pool.TotalPosts(DM.DB), limit, page, pageCount)
 
@@ -109,9 +115,12 @@ func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 
 		u, _ := getUser(w, r)
 
-		var pool = DM.NewPool()
-		pool.ID = poolID
-		if u.QID(DM.DB) != pool.QUser(DM.DB).QID(DM.DB) {
+		Pool, err := pool.FromID(r.Context(), pool.ID(poolID))
+		if internalError(w, err) {
+			return
+		}
+
+		if u.ID != Pool.User.ID {
 			http.Error(w, "Invalid pool, is it really yours?", http.StatusBadRequest)
 			return
 		}
@@ -123,7 +132,7 @@ func editUserPoolHandler(w http.ResponseWriter, r *http.Request) {
 			if badRequest(w, err) {
 				return
 			}
-			err = pool.RemovePost(postID)
+			err = Pool.RemovePost(r.Context(), postID)
 			if internalError(w, err) {
 				return
 			}
@@ -148,15 +157,11 @@ func UserPoolAddHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 
-	var pool DM.Pool
-	pool.Title = title
-	pool.Description = description
-
-	pool.User = u
-	err := pool.Save(DM.DB)
+	err := pool.Create(r.Context(), u.ID, title, description)
 	if internalError(w, err) {
 		return
 	}
+
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }
 
@@ -179,23 +184,19 @@ func UserPoolAppendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pool *DM.Pool
-
 	u, _ := getUser(w, r)
 
-	for _, p := range u.QPools(DM.DB) {
-		if p.ID == poolID {
-			pool = p
-			break
-		}
-	}
-
-	if pool == nil {
-		http.Error(w, "You don't own a pool with that name", http.StatusBadRequest)
+	pool, err := pool.FromID(r.Context(), pool.ID(poolID))
+	if internalError(w, err) {
 		return
 	}
 
-	err = pool.Add(postID)
+	if pool.User.ID != u.ID {
+		http.Error(w, "Not your pool", http.StatusBadRequest)
+		return
+	}
+
+	err = pool.AddPost(r.Context(), postID)
 	if badRequest(w, err) {
 		return
 	}

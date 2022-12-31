@@ -7,7 +7,7 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 )
 
-//var ipfsAPI = "http://localhost:5001/api/v0/"
+// var ipfsAPI = "http://localhost:5001/api/v0/"
 var ipfs *shell.Shell
 
 // func GetIpfsPageFromSearch(tagString string) (string, error) {

@@ -7,7 +7,7 @@
 			{{.Profile.Name}} <span class="profile-subtitle">{{.Profile.Title}}</span>
 		</span>
 		<div class="privileges">
-			{{range .Profile.Flags}}
+			{{range .Profile.Flag.Flags}}
 			<span class="flag-{{.}}">{{.}}</span>
 			{{end}}
 
@@ -28,7 +28,7 @@
 			</div>
 			{{else}}
 			<div>
-				<a href="/user/messages/new/">Messages ({{.NewMessages}})</a>
+				<a href="/user/messages/new/">Messages ({{.Inbox.UnreadCount}})</a>
 			</div>
 			{{end}}
 			{{end}}
