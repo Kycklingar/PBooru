@@ -4,12 +4,14 @@ go 1.18
 
 require (
 	github.com/Nr90/imgsim v0.0.0-20180202144352-5caa057144b0
+	github.com/bahlo/generic-list-go v0.2.0
 	github.com/dchest/captcha v0.0.0-20200903113550-03f5f0333e1f
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/ipfs/go-cid v0.2.0
 	github.com/ipfs/go-ipfs-api v0.3.0
 	github.com/kycklingar/MinMax v1.0.0
+	github.com/kycklingar/set v0.1.3-0.20220814221918-6336c9c42073
 	github.com/kycklingar/sqhell v0.0.0-20210704215556-4c2388bc0795
 	github.com/lib/pq v1.10.6
 	github.com/sergi/go-diff v1.2.0
@@ -17,8 +19,7 @@ require (
 )
 
 require (
-	github.com/bahlo/generic-list-go v0.2.0 // indirect
-	github.com/btcsuite/btcd v0.23.1 // indirect
+	github.com/btcsuite/btcd v0.23.2 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
 	github.com/crackcomm/go-gitignore v0.0.0-20170627025303-887ab5e44cc3 // indirect
@@ -26,7 +27,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/ipfs/go-ipfs-files v0.1.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.13 // indirect
-	github.com/kycklingar/set v0.1.3-0.20220814221918-6336c9c42073 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
 	github.com/libp2p/go-flow-metrics v0.0.3 // indirect
 	github.com/libp2p/go-libp2p-core v0.17.0 // indirect
