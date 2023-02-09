@@ -12,6 +12,7 @@ import (
 
 	DM "github.com/kycklingar/PBooru/DataManager"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	apiv1 "github.com/kycklingar/PBooru/api/rest"
 	h "github.com/kycklingar/PBooru/handlers"
 )
 
@@ -195,6 +196,8 @@ func main() {
 	for hk, hv := range h.Handlers {
 		http.HandleFunc(hk, hv)
 	}
+
+	http.Handle("/api/v1/", http.StripPrefix("/api/v1", apiv1.Mux))
 
 	if gConf.HTTPRedirect == "true" && gConf.HTTPSAddress != "" {
 		if gConf.HTTPAddress == "" {

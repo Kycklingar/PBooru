@@ -397,12 +397,6 @@ func init() {
 	Handlers["/similar/"] = makeStatHandler(findSimilarHandler)
 
 	Handlers["/api/"] = makeStatHandler(APIHandler)
-	Handlers["/api/v1/"] = makeStatHandler(APIv1Handler)
-	Handlers["/api/v1/post"] = makeStatHandler(APIv1PostHandler)
-	Handlers["/api/v1/posts"] = makeStatHandler(APIv1PostsHandler)
-	//Handlers["/api/v1/duplicate"] = makeStatHandler(APIv1DuplicateHandler)
-	Handlers["/api/v1/suggesttags"] = makeStatHandler(APIv1SuggestTagsHandler)
-	Handlers["/api/v1/similar"] = makeStatHandler(APIv1SimilarPostsHandler)
 
 	Handlers["/captcha/"] = makeStatHandler(captcha.Server(150, 64).ServeHTTP)
 	//Handlers["/verify/"] = verifyCaptcha
