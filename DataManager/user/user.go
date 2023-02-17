@@ -150,7 +150,7 @@ func fetchUser(ctx context.Context, id ID) (User, error) {
 		ctx,
 		`SELECT username, adminflag, datejoined, count(log_id)
 		FROM users
-		JOIN logs
+		LEFT JOIN logs
 		ON id = user_id
 		WHERE id = $1
 		GROUP BY id`,
