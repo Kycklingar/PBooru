@@ -46,7 +46,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
 	golang.org/x/exp v0.0.0-20230127193734-31bee513bff7 // indirect
-	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
