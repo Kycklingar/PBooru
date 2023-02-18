@@ -16,7 +16,7 @@ func init() {
 	m("/post", postHandler)
 	m("/posts", postsHandler)
 	m("/similar", similarPostsHandler)
-	m("/suggestions", suggestTagsHandler)
+	m("/suggesttags", suggestTagsHandler)
 
 	Mux = middleware.Cors(mux)
 }
