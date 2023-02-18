@@ -21,8 +21,6 @@ type User struct {
 	Name   string
 	Joined timestamp.Timestamp
 	Flag   flag.Flag
-
-	Title string
 }
 
 func (u *User) Scan(value any) (err error) {
@@ -144,21 +142,16 @@ func fetchUser(ctx context.Context, id ID) (User, error) {
 		return user, nil
 	}
 
-	var logCount int
-
 	err := db.Context.QueryRowContext(
 		ctx,
-		`SELECT username, adminflag, datejoined, count(log_id)
+		`SELECT username, adminflag, datejoined
 		FROM users
-		LEFT JOIN logs
-		ON id = user_id
 		WHERE id = $1
 		GROUP BY id`,
 		id,
-	).Scan(&user.Name, &user.Flag, &user.Joined, &logCount)
+	).Scan(&user.Name, &user.Flag, &user.Joined)
 
 	user.ID = id
-	user.Title = title(logCount)
 
 	cache.Set(id, user)
 

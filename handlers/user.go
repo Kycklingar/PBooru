@@ -31,17 +31,31 @@ type UserInfo struct {
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
-	u, ui := getUser(w, r)
-	profile := u
+	var (
+		err     error
+		profile user.Profile
 
-	paths := splitURI(r.URL.Path)
+		u, ui = getUser(w, r)
+		paths = splitURI(r.URL.Path)
+	)
+
 	if len(paths) >= 2 {
+		var uid int
 		uid, err := strconv.Atoi(paths[1])
 		if badRequest(w, err) {
 			return
 		}
 
-		profile, err = user.FromID(r.Context(), uid)
+		user, err := user.FromID(r.Context(), uid)
+		if internalError(w, err) {
+			return
+		}
+		profile, err = user.Profile(r.Context())
+		if internalError(w, err) {
+			return
+		}
+	} else {
+		profile, err = u.Profile(r.Context())
 		if internalError(w, err) {
 			return
 		}
@@ -50,7 +64,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	var p = struct {
 		User        user.User
 		UserInfo    UserInfo
-		Profile     user.User
+		Profile     user.Profile
 		RecentPosts []DM.Post
 		RecentVotes []DM.Post
 		Inbox       inbox.Inbox
@@ -59,8 +73,6 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		UserInfo: ui,
 		Profile:  profile,
 	}
-
-	var err error
 
 	p.RecentPosts, err = DM.RecentUploads(profile.ID)
 	if internalError(w, err) {
