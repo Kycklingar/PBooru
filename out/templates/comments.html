@@ -1,80 +1,81 @@
 {{ template "base" }}
 <script>
-function appendComment(e)
-{
-	document.getElementById("comment-input").value += e.innerText + " "
-}
+	function appendComment(e)
+	{
+		document.getElementById("comment-input").value += e.innerText + " "
+	}
 </script>
 
 <div class="postcomment">
-    <div class="box">
-        <h2>{{.Username}}</h2>
-        <form method="POST">
-            <textarea id="comment-input" maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
-            <br>
-	    {{with .Captcha}}
-	    <img style="background-color:white;" src="/captcha/{{.}}.png">
-	    <br>
-	    <input type="hidden" name="key" value="{{.}}">
-	    <input type="text" name="code">
-	    {{end}}
-	    <br>
-            <input type="submit" value="Post Comment">    
-        </form>
-    </div>
-    <div class="box" style="padding-right: 1em;">
-        <h4>Bbcodes:</h4>
-        <p><b>[b]</b> text <b>[/b]</b> == <b>text</b></p>
-        <p><b>[url]</b> https://ipfs.io <b>[/url]</b> == <a href="https://ipfs.io">https://ipfs.io</a></p>
-        <p><b>[url=https://ipfs.io]</b> ipfs <b>[/url]</b> == <a href="https://ipfs.io">ipfs</a></p>
-        <p><b>[color=red]</b> te <b>[/color][color=#05F]</b> xt <b>[/color]</b> == <span style="color:red">te</span><span style="color:#05F">xt</span></p>
-        <p><b>[code]</b> code {block} <b>[/code]</b> == 
-<pre>code {
-    block
-}</pre></p>
-    </div>
-    
+	<div class="box">
+		<h2>{{.Username}}</h2>
+		<form method="POST">
+			<textarea id="comment-input" maxlength="7500" placeholder="Min 3 / Max 7500" cols="60" rows="10" name="text"></textarea>
+			<br>
+			{{with .Captcha}}
+			<img style="background-color:white;" src="/captcha/{{.}}.png">
+			<br>
+			<input type="hidden" name="key" value="{{.}}">
+			<input type="text" name="code">
+			{{end}}
+			<br>
+			<input type="submit" value="Post Comment">	  
+		</form>
+	</div>
+	<div class="box" style="padding-right: 1em;">
+		<h4>Bbcodes:</h4>
+		<p><b>[b]</b> text <b>[/b]</b> == <b>text</b></p>
+		<p><b>[url]</b> https://ipfs.io <b>[/url]</b> == <a href="https://ipfs.io">https://ipfs.io</a></p>
+		<p><b>[url=https://ipfs.io]</b> ipfs <b>[/url]</b> == <a href="https://ipfs.io">ipfs</a></p>
+		<p><b>[color=red]</b> te <b>[/color][color=#05F]</b> xt <b>[/color]</b> == <span style="color:red">te</span><span style="color:#05F">xt</span></p>
+		<p><b>[code]</b> code {block} <b>[/code]</b> == 
+		<pre>code {
+	block
+}</pre>
+		</p>
+	</div>
+
 </div>
 <p><b>Server Time: {{ .ServerTime }}</b></p>
 
 <ul id="commentlist">
-{{ range .Comments }}
-    <li>
-        <div id="c{{.ID}}" class="comment box">
-            <b>
-            <span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
-            <span class="comment-id" onclick="appendComment(this)">#{{.ID}}</span>
-            <span class="comment-time">{{.Time}}</span>
-	    {{if index $.Editable .ID}}
-	    	<details>
-		<summary>Edit</summary>
-			<form action="/wall/edit/" method="POST">
-				<input type="hidden" name="id" value="{{.ID}}">
-				<textarea name="text">{{.Text}}</textarea>
-				<input type="submit">
-			</form>
-			{{if $.User.Flag.Special}}
-			<form action="/wall/delete/" method="POST">
-			    <input type="hidden" name="id" value="{{.ID}}">
-			    <input type="checkbox" name="confirm">
-			    <input type="submit" value="Delete">
-			</form>
-			{{end}}
-		</details>
-	    {{end}}
-            </b>
-            <p>{{noescape .CompiledText}}</p>
-        </div>
-    </li>
-{{ end}}
+	{{ range .Comments }}
+	<li>
+		<div id="c{{.ID}}" class="comment box">
+			<b>
+				<span class="comment-username">{{if .User.ID}}<a href="/user/{{.User.ID}}">{{.User.Name}}</a>{{else}}Anonymous{{end}}</span>
+				<span class="comment-id" onclick="appendComment(this)">#{{.ID}}</span>
+				<span class="comment-time">{{.Time}}</span>
+				{{if index $.Editable .ID}}
+				<details>
+					<summary>Edit</summary>
+					<form action="/wall/edit/" method="POST">
+						<input type="hidden" name="id" value="{{.ID}}">
+						<textarea name="text">{{.Text}}</textarea>
+						<input type="submit">
+					</form>
+					{{if $.User.Flag.Special}}
+					<form action="/wall/delete/" method="POST">
+						<input type="hidden" name="id" value="{{.ID}}">
+						<input type="checkbox" name="confirm">
+						<input type="submit" value="Delete">
+					</form>
+					{{end}}
+				</details>
+				{{end}}
+			</b>
+			<p>{{noescape .CompiledText}}</p>
+		</div>
+	</li>
+	{{ end}}
 </ul>
 
 <script>
-let comments = document.getElementsByClassName("comment-id")
-for(let i = 0; i < comments.length; i++)
-{
-	comments[i].style.cursor = "pointer"
-}
+	let comments = document.getElementsByClassName("comment-id")
+	for(let i = 0; i < comments.length; i++)
+	{
+		comments[i].style.cursor = "pointer"
+	}
 </script>
 
 {{ template "benchmark" .Time}}

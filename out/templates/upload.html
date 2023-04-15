@@ -20,75 +20,74 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 
 {{ template "base" }}
 <div class="box">
-    {{if eq .ID 0}}
-    <h3>You must login in order to upload</h3>
-    {{else if .Flag.Upload}}
-    <script src="/static/scripts/taglib.js"></script>
-    <script src="/static/scripts/taghints.js"></script>
-    <script src="/static/scripts/input-preview.js"></script>
-    <div class="row">
-	    <div class="column">
-		    <form enctype="multipart/form-data" method="POST">
-			    <div>
-				    <label>File
-					    <input id="file" type="file" name="file" onInput="renderInput(event)">
-					    <label>Save filename:
-						    <input type="checkbox" name="store-filename" checked>
-					    </label>
-				    </label>
-				    <label>Tags
-					    <textarea class="tag-input" id="tagsform" name="tags" rows="10" cols="40"></textarea>
-				    </label>
-				    <label>Metadata
-					    <textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
-				    </label>
-				    <label>Description
-					    <textarea name="description" rows="10" cols="40" placeholder="{{template "description-placeholder"}}"></textarea>
-				    </label>
-			    </div>
-			    {{if .Flag.Comics}}
-			    <details>
-				    <summary>Add to comic</summary>
-				    <div style="border-left: 1px solid grey;padding-left:1em;">
-					    <label>Chapter ID
-						    <input type="number" name="chapter-id">
-					    </label>
-					    <label>Page
-						    <input type="number" name="page">
-					    </label>
-				    </div>
-			    </details>
-			    {{end}}
-			    <input type="submit" value="Submit">
-		    </form>
-		    <div>
-			    <h3>Tagging Guide</h3>
-			    <p>Tag what you know.</p>
-			    <p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>s-nina"</span>.</p>
-			    <p>The default supported namespaces are:
-			    <ul style="width:100px;">
-				    <li class="namespace-creator">creator</li>
-				    <li class="namespace-character">character</li>
-				    <li class="namespace-species">species</li>
-				    <li class="namespace-series">series</li>
-				    <li class="namespace-gender">gender</li>
-				    <li class="namespace-medium">medium</li>
-				    <li class="namespace-meta">meta</li>
-				    <li class="namespace-rating">rating</li>
-			    </ul>
-			    </p>
-			    <p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
-			    <p>Use newlines as delimiter</p>
-			    <p>Tags may have spaces</p>
-			    <p>Example tag string:<pre>{{template "ts-example"}}</pre></p>
-		    </div>
-	    </div>
-	    <div class="column expander" id="preview-box">
-	    </div>
-    </div>
-    {{else}}
-    <h3>Insufficient priviliges. Want "Upload"<h3>
-    <p>Ask <a href="/user/2/">kycklingar</a> for upload permissions.</p>
-    {{end}}
+	{{if eq .ID 0}}
+	<h3>You must login in order to upload</h3>
+	{{else if .Flag.Upload}}
+	<script src="/static/scripts/taglib.js"></script>
+	<script src="/static/scripts/taghints.js"></script>
+	<script src="/static/scripts/input-preview.js"></script>
+	<div class="row">
+		<div class="column">
+			<form enctype="multipart/form-data" method="POST">
+				<div>
+					<label>File
+						<input id="file" type="file" name="file" onInput="renderInput(event)">
+						<label>Save filename:
+							<input type="checkbox" name="store-filename" checked>
+						</label>
+					</label>
+					<label>Tags
+						<textarea class="tag-input" id="tagsform" name="tags" rows="10" cols="40"></textarea>
+					</label>
+					<label>Metadata
+						<textarea name="metadata" rows="10" cols="40" placeholder="{{template "metadata-placeholder"}}"></textarea>
+					</label>
+					<label>Description
+						<textarea name="description" rows="10" cols="40" placeholder="{{template "description-placeholder"}}"></textarea>
+					</label>
+				</div>
+				{{if .Flag.Comics}}
+				<details>
+					<summary>Add to comic</summary>
+					<div style="border-left: 1px solid grey;padding-left:1em;">
+						<label>Chapter ID
+							<input type="number" name="chapter-id">
+						</label>
+						<label>Page
+							<input type="number" name="page">
+						</label>
+					</div>
+				</details>
+				{{end}}
+				<input type="submit" value="Submit">
+			</form>
+			<div>
+				<h3>Tagging Guide</h3>
+				<p>Tag what you know.</p>
+				<p>Tags may have a namespace for example "<span class="namespace-gender"><b>gender:</b>female</span>" or "<span class="namespace-creator"><b>creator:</b>s-nina"</span>.</p>
+				<p>The default supported namespaces are:
+				<ul style="width:100px;">
+					<li class="namespace-creator">creator</li>
+					<li class="namespace-character">character</li>
+					<li class="namespace-species">species</li>
+					<li class="namespace-series">series</li>
+					<li class="namespace-gender">gender</li>
+					<li class="namespace-medium">medium</li>
+					<li class="namespace-meta">meta</li>
+					<li class="namespace-rating">rating</li>
+				</ul>
+				</p>
+				<p>If you want to use a tag with ":" example ":3" enter: "::3" or "none::3"</p>
+				<p>Use newlines as delimiter</p>
+				<p>Tags may have spaces</p>
+				<p>Example tag string:<pre>{{template "ts-example"}}</pre></p>
+			</div>
+		</div>
+		<div class="column expander" id="preview-box"></div>
+	</div>
+	{{else}}
+	<h3>Insufficient priviliges. Want "Upload"</h3>
+	<p>Ask <a href="/user/2/">kycklingar</a> for upload permissions.</p>
+	{{end}}
 </div>
 {{ template "baseEnd" }}

@@ -144,18 +144,18 @@ form.inline
 
 #pageinator a:hover
 {
-    text-decoration-line: underline;
+	text-decoration-line: underline;
 }
 
 ul#commentlist
 {
-    padding:10px;
-    margin:0px;
+	padding:10px;
+	margin:0px;
 }
 
 li
 {
-    list-style-type:none;
+	list-style-type:none;
 }
 
 .row
@@ -237,8 +237,8 @@ li
 
 .separator
 {
-    padding: 1em;
-    border-bottom:solid grey;
+	padding: 1em;
+	border-bottom:solid grey;
 }
 
 .links a:link
@@ -256,16 +256,16 @@ li
 
 .nolink a:visited, .nolink a:link
 {
-    text-decoration: none;
-    color: inherit;
+	text-decoration: none;
+	color: inherit;
 }
 
 #sidebar
 {
-    /* background-color:yellowgreen; */
-    /* color:#AAA; */
-    font-size: 18px;
-    margin-right:0.5em;
+	/* background-color:yellowgreen; */
+	/* color:#AAA; */
+	font-size: 18px;
+	margin-right:0.5em;
 }
 
 #sidebar input
@@ -288,10 +288,10 @@ li
 
 #advanced-search
 {
-    background-color: var(--box-background-color);
-    color: var(--box-color);
-    font-size:14px;
-    box-shadow: var(--box-shadow);
+	background-color: var(--box-background-color);
+	color: var(--box-color);
+	font-size:14px;
+	box-shadow: var(--box-shadow);
 }
 
 #advanced-search input
@@ -454,7 +454,7 @@ li
 
 #comic-container h1, #comic-container h2
 {
-    text-shadow: 3px 3px #213;
+	text-shadow: 3px 3px #213;
 }
 
 .comic-strip
@@ -496,20 +496,20 @@ li
 
 .comics-container
 {
-    background-color: var(--box-background-color);
-    box-shadow: var(--box-shadow);
-    color: var(--box-color);
-    margin:1em;
+	background-color: var(--box-background-color);
+	box-shadow: var(--box-shadow);
+	color: var(--box-color);
+	margin:1em;
 }
 
 .cpage-container
 {
-    /* background-color: #556; */
-    display: flex;
-    margin:1em;
-    position:relative;
-    padding;1em;
-    overflow: auto;
+	/* background-color: #556; */
+	display: flex;
+	margin:1em;
+	position:relative;
+	padding;1em;
+	overflow: auto;
 }
 
 .cpage-container img
@@ -609,12 +609,12 @@ li
 
 .comic-page
 {
-    position:relative;
-    padding:1em;
-    margin-bottom:1em;
-    background-color: var(--box-background-color);
-    color: var(--box-color);
-    width: fit-content;
+	position:relative;
+	padding:1em;
+	margin-bottom:1em;
+	background-color: var(--box-background-color);
+	color: var(--box-color);
+	width: fit-content;
 }
 
 .comic-page img
@@ -702,19 +702,19 @@ li
 
 #tags
 {
-    width: 100%;
-    background-color: var(--box-background-color);
-    color: var(--box-color);
-    border-spacing: 5px 0px;
-    box-shadow: var(--box-shadow);
+	width: 100%;
+	background-color: var(--box-background-color);
+	color: var(--box-color);
+	border-spacing: 5px 0px;
+	box-shadow: var(--box-shadow);
 }
 
 #tags .tag
 {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	max-width: 150px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 #tags .tag span
@@ -729,18 +729,18 @@ li
 
 #tags:hover .tag
 {
-    max-width: 100%;
+	max-width: 100%;
 }
 
 #tags .counter
 {
-    float: right;
+	float: right;
 }
 
 .tag a:any-link
 {
-    color: inherit;
-    text-decoration: none;
+	color: inherit;
+	text-decoration: none;
 }
 
 /* Undefined namespaces here */
@@ -811,31 +811,31 @@ li
 
 #suggestedtags li
 {
-    display:inline;
-    margin:5px;
+	display:inline;
+	margin:5px;
 }
 
 #stbox
 {
-    position: absolute;
-    background-color:white;
-    border:2px solid;
-    z-index: 10;
-    box-shadow: 4px 4px #213;
-    padding: 3px;
-    color: black;
+	position: absolute;
+	background-color:white;
+	border:2px solid;
+	z-index: 10;
+	box-shadow: 4px 4px #213;
+	padding: 3px;
+	color: black;
 }
 
 /*------------THUMBNAILS------------------*/
 
 .thumbnail
 {
-    position: relative;
-    /*margin:3px;*/
-    width:256px;
-    height:256px;
-    word-wrap: break-word;
-    /*border: 1px solid red;*/
+	position: relative;
+	/*margin:3px;*/
+	width:256px;
+	height:256px;
+	word-wrap: break-word;
+	/*border: 1px solid red;*/
 }
 
 .thumbnail .overlay-bl:hover
@@ -889,13 +889,13 @@ li
 
 .thumbnail img
 {
-    position: absolute;
-    max-width:256px;
-    max-height:256px;
+	position: absolute;
+	max-width:256px;
+	max-height:256px;
 
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .thumbnail .preview
@@ -947,47 +947,47 @@ li
 .dead-center,
 .centered
 {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .center,
 .centHorizont
 {
-    position: relative;
-    display: inline-block;
-    left:50%;
-    transform: translate(-50%);
+	position: relative;
+	display: inline-block;
+	left:50%;
+	transform: translate(-50%);
 }
 
 .thumbnail .full
 {
-    display:none;
+	display:none;
 }
 
 .thumbnail .mimetype
 {
-    background-image: linear-gradient(to top left, #AAA, #666);
-    width: 100%;
-    height: 100%;
+	background-image: linear-gradient(to top left, #AAA, #666);
+	width: 100%;
+	height: 100%;
 }
 
 #content
 {
-    position: relative;
-    /* background-color:red; */
-    /* background-color:#33343E; */
-    display:flex;
+	position: relative;
+	/* background-color:red; */
+	/* background-color:#33343E; */
+	display:flex;
 }
 
 #posts
 {
-    position: relative;
-    display:flex;
-    flex-flow: wrap;
-    margin: 0px;
+	position: relative;
+	display:flex;
+	flex-flow: wrap;
+	margin: 0px;
 }
 
 #post #fullsize
@@ -1078,8 +1078,8 @@ li
 
 #pageinator, #pageinator a:link, #pageinator a:visited
 {
-    color:#AAA;
-    font-size:18px;
+	color:#AAA;
+	font-size:18px;
 }
 
 .user-frame
@@ -1165,82 +1165,82 @@ li
 
 .postcomment
 {
-    display: flex;
+	display: flex;
 }
 
 .postcomment pre, .comment pre
 {
-    border: solid 1px;
-    background-color:#778;
-    color: #000;
-    overflow: auto;
+	border: solid 1px;
+	background-color:#778;
+	color: #000;
+	overflow: auto;
 }
 
 .comment
 {
-    background-color: var(--box-background-color);
-    color: var(--box-color);
-    box-shadow: var(--box-shadow);
-    word-wrap: break-word;
-    padding-left: 3px;
-    padding-right: 3px;
-    padding-top: 3px;
-    padding-bottom: 0.2em;
-    margin: 0.7em 0;
+	background-color: var(--box-background-color);
+	color: var(--box-color);
+	box-shadow: var(--box-shadow);
+	word-wrap: break-word;
+	padding-left: 3px;
+	padding-right: 3px;
+	padding-top: 3px;
+	padding-bottom: 0.2em;
+	margin: 0.7em 0;
 }
 
 .comment p
 {
-    padding: 3px;
-    margin: 0.2em 0;
+	padding: 3px;
+	margin: 0.2em 0;
 }
 
 .comment-username a:visited, .comment-username a:link
 {
-    color: var(--box-color);
+	color: var(--box-color);
 }
 
 .comment:target
 {
-    box-shadow: 0px 0px 5px 5px #7C43D0;
+	box-shadow: 0px 0px 5px 5px #7C43D0;
 }
 
 
 .removed,
 .comic-thumb .removed
 {
-    border: 2px solid red;
+	border: 2px solid red;
 }
 .current
 {
-    border: 2px solid yellow;
+	border: 2px solid yellow;
 }
 
 .current.removed
 {
-    border: 2px solid;
-    border-image: linear-gradient(to bottom right, yellow, red) 1;
+	border: 2px solid;
+	border-image: linear-gradient(to bottom right, yellow, red) 1;
 }
 
 .cpage
 {
-    position: relative;
-    /*background-color: purple;*/
-    width: 200px;
-    height: 250px;
-    margin:1em;
-    display: inline-flex;
+	position: relative;
+	/*background-color: purple;*/
+	width: 200px;
+	height: 250px;
+	margin:1em;
+	display: inline-flex;
 }
 
 .cpage img
 {
-    position: absolute;
-    max-width:200px;
-    max-height:250px;
+	position: absolute;
+	max-width:200px;
+	max-height:250px;
 
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .dupe-reports
@@ -1268,22 +1268,22 @@ li
 
 @keyframes struggle
 {
-    0%
-    {
-        transform:rotate(1deg);
-    }
-    100%
-    {    
-        transform:rotate(-1deg);
-    }
+	0%
+	{
+		transform:rotate(1deg);
+	}
+	100%
+	{	 
+		transform:rotate(-1deg);
+	}
 }
 
 @keyframes fade
 {
-    100%
-    {
-        opacity: 0.9;
-    };
+	100%
+	{
+		opacity: 0.9;
+	};
 }
 
 

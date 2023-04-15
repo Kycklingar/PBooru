@@ -45,310 +45,310 @@
 <div id="image"></div>
 
 <script>
-    var im = document.getElementById("image")
+	var im = document.getElementById("image")
 
-    var slider = new Slider()
+	var slider = new Slider()
 
-    window.addEventListener("resize", slider.resize)
+	window.addEventListener("resize", slider.resize)
 
-    function toggleController(caller)
-    {
-        let ctrl = document.getElementById("controller")
-        if(ctrl.style.display != "none")
-        {
-            ctrl.style.display = "none"
-            caller.innerText = "Show"
-        }
-        else
-        {
-            caller.innerText = "Hide"
-            ctrl.style.display = "inherit"
-        }
-    }
-
-    function Slider()
-    {
-        this.images = []
-        this.data = null
-        this.index = 0
-        this.offset = 0
-
-        this.div = document.getElementById("image")
-
-        this.tags = ""
-	this.or = ""
-        this.filter = ""
-        this.unless = ""
-
-
-        this.loading = false
-        this.loadData = function()
-        {
-            this.loading = true
-            console.log(this.tags, this.or, this.filter, this.unless, this.offset)
-            this.GET("/api/v1/posts?tags=" + this.tags + "&or=" + this.or + "&filter=" + this.filter + "&unless=" + this.unless + "&order=" + this.order + "&offset=" + this.offset++, function(res){
-                //console.log(this.index)
-                this.data = JSON.parse(res)
-                document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
-                this.lock = false
-                this.index = 0
-                this.loading = false
-                this.nextImage()
-            }.bind(this))
-            this.lock = true
-        }
-
-        this.nextImage = function()
-        {
-
-            if(this.data == null || this.data.Posts == null ||  this.index >= this.data.Posts.length)
-            {
-                if(this.data != null && this.data.Posts == null)
-                {
-                    console.log("No more posts")
-                    return
-                }
-                if(!this.loading)
-                {
-                    this.loadData()
-                }
-                return
-            }
-            if(this.lock)
-            {
-                setTimeout(this.nextImage, 100)
-                return
-            }
-            
-            if(this.data.Posts == null)
-            {
-                console.log("No posts available")
-                return
-            }
-
-            let post = this.data.Posts[this.index++]
-
-            if(post.Thumbnails == null)
-            {
-                this.nextImage()
-                return
-            }
-
-	    let thumbnail = null
-	    for(let i = 0; i < post.Thumbnails.length; i++)
-	    {
-	    	if(thumbnail == null || post.Thumbnails[i].Size > thumbnail.Size)
+	function toggleController(caller)
+	{
+		let ctrl = document.getElementById("controller")
+		if(ctrl.style.display != "none")
 		{
-			thumbnail = post.Thumbnails[i]
+			ctrl.style.display = "none"
+			caller.innerText = "Show"
 		}
-	    }
+		else
+		{
+			caller.innerText = "Hide"
+			ctrl.style.display = "inherit"
+		}
+	}
 
-            
-            this.lock = true
+	function Slider()
+	{
+		this.images = []
+		this.data = null
+		this.index = 0
+		this.offset = 0
 
-            let image = new Image()
+		this.div = document.getElementById("image")
 
-            image.src = "{{.Gateway}}/ipfs/" + thumbnail.Cid
-            image.onclick = function(){
-                window.open("/post/" + post.ID + "/" + post.Cid, "_blank")
-            }
-            image.style.cursor = "pointer"
-            
-	    let timeout = setTimeout(function(){
-		console.log("image timed out")
-		image = null
-	    	this.pause = false
+		this.tags = ""
+		this.or = ""
+		this.filter = ""
+		this.unless = ""
+
+
+		this.loading = false
+		this.loadData = function()
+		{
+			this.loading = true
+			console.log(this.tags, this.or, this.filter, this.unless, this.offset)
+			this.GET("/api/v1/posts?tags=" + this.tags + "&or=" + this.or + "&filter=" + this.filter + "&unless=" + this.unless + "&order=" + this.order + "&offset=" + this.offset++, function(res){
+				//console.log(this.index)
+				this.data = JSON.parse(res)
+				document.title = this.offset + "/" + Math.round((this.data.TotalPosts / 30) + 0.5) + " [" + this.data.TotalPosts + "] - " + this.tags
+				this.lock = false
+				this.index = 0
+				this.loading = false
+				this.nextImage()
+			}.bind(this))
+			this.lock = true
+		}
+
+		this.nextImage = function()
+		{
+
+			if(this.data == null || this.data.Posts == null ||	this.index >= this.data.Posts.length)
+			{
+				if(this.data != null && this.data.Posts == null)
+				{
+					console.log("No more posts")
+					return
+				}
+				if(!this.loading)
+				{
+					this.loadData()
+				}
+				return
+			}
+			if(this.lock)
+			{
+				setTimeout(this.nextImage, 100)
+				return
+			}
+
+			if(this.data.Posts == null)
+			{
+				console.log("No posts available")
+				return
+			}
+
+			let post = this.data.Posts[this.index++]
+
+			if(post.Thumbnails == null)
+			{
+				this.nextImage()
+				return
+			}
+
+			let thumbnail = null
+			for(let i = 0; i < post.Thumbnails.length; i++)
+			{
+				if(thumbnail == null || post.Thumbnails[i].Size > thumbnail.Size)
+				{
+					thumbnail = post.Thumbnails[i]
+				}
+			}
+
+
+			this.lock = true
+
+			let image = new Image()
+
+			image.src = "{{.Gateway}}/ipfs/" + thumbnail.Cid
+			image.onclick = function(){
+				window.open("/post/" + post.ID + "/" + post.Cid, "_blank")
+			}
+			image.style.cursor = "pointer"
+
+			let timeout = setTimeout(function(){
+				console.log("image timed out")
+				image = null
+				this.pause = false
+				this.lock = false
+				this.nextImage()
+			}.bind(this), 15000)
+
+			image.onload = function(){
+				clearTimeout(timeout)
+
+				//console.log("Unpause")
+				this.pause = false
+
+				let last = this.images[this.images.length - 1]
+				if(last != undefined)
+				{
+					let left = Number(last.style.left.replace("px", ""))
+					console.log(document.body.clientWidth, image.width)
+					image.style.left = (last.width + left) + "px"
+				}
+				else
+				{
+					image.style.left = document.body.clientWidth + "px"
+				}
+				image.left = Number(image.style.left.replace("px", ""))
+
+				this.div.appendChild(image)
+				this.images.push(image)
+				this.lock = false
+			}.bind(this)
+		}.bind(this)
+
+		this.pause = false
 		this.lock = false
-		this.nextImage()
-	    }.bind(this), 15000)
+		this.stop = false
+		this.running = false
 
-            image.onload = function(){
-		clearTimeout(timeout)
+		this.tickrate = 32
+		this.pixelsPerTick = 5
 
-                //console.log("Unpause")
-                this.pause = false
+		this.search = function(caller)
+		{
+			let form = new FormData(caller)
+			let tags = form.get("tags")
+			let or = form.get("or")
+			let filter = form.get("filter")
+			let unless = form.get("unless")
+			let order = form.get("order")
+			this.stopSlideshow(function(){
+				this.tags = tags
+				this.or = or
+				this.filter = filter
+				this.unless = unless
+				this.order = order
 
-                let last = this.images[this.images.length - 1]
-                if(last != undefined)
-                {
-                    let left = Number(last.style.left.replace("px", ""))
-                    console.log(document.body.clientWidth, image.width)
-                    image.style.left = (last.width + left) + "px"
-                }
-                else
-                {
-                    image.style.left = document.body.clientWidth + "px"
-                }
-                image.left = Number(image.style.left.replace("px", ""))
+				this.loadData()
+				this.tick()
+				this.running = true
+			}.bind(this))
+		}
 
-                this.div.appendChild(image)
-                this.images.push(image)
-                this.lock = false
-            }.bind(this)
-        }.bind(this)
+		this.tick = function()
+		{
+			if(this.stop)
+			{
+				this.running = false
+				return
+			}
 
-        this.pause = false
-        this.lock = false
-        this.stop = false
-        this.running = false
+			if(this.lock)
+			{
+				setTimeout(this.tick, this.tickrate)
+				return
+			}
+			this.lock = true
 
-        this.tickrate = 32
-        this.pixelsPerTick = 5
+			if(this.images.length > 0)
+			{
+				let lastImage = this.images[this.images.length - 1]
 
-        this.search = function(caller)
-        {
-            let form = new FormData(caller)
-            let tags = form.get("tags")
-	    let or = form.get("or")
-            let filter = form.get("filter")
-            let unless = form.get("unless")
-            let order = form.get("order")
-            this.stopSlideshow(function(){
-                this.tags = tags
-		this.or = or
-                this.filter = filter
-                this.unless = unless
-                this.order = order
+				if(lastImage.left + lastImage.width > document.body.clientWidth)
+				{
+					for(let i = 0; i < this.images.length; i++)
+					{
+						this.images[i].left -= this.pixelsPerTick
+						this.images[i].style.left = this.images[i].left + "px";
+					}
+				}
 
-                this.loadData()
-                this.tick()
-                this.running = true
-            }.bind(this))
-        }
+				for(let i = 0; i < this.images.length; i++)
+				{
+					let left = this.images[i].left
+					//console.log(left, this.images[i].width)
+					if(this.images[i].width + left < 0)
+					{
+						console.log("Popping: ", this.images[i])
+						this.div.removeChild(this.images[i])
+						this.images.splice(i, 1)
+					}
+					else{
+						break
+					}
+				}
 
-        this.tick = function()
-        {
-            if(this.stop)
-            {
-                this.running = false
-                return
-            }
+				if(!this.pause && lastImage.left < document.body.clientWidth)
+				{
+					this.pause = true
+					this.nextImage()
+				}
+			}
+			this.lock = false
 
-            if(this.lock)
-            {
-                setTimeout(this.tick, this.tickrate)
-                return
-            }
-            this.lock = true
+			setTimeout(this.tick, this.tickrate)
+		}.bind(this)
 
-            if(this.images.length > 0)
-            {
-                let lastImage = this.images[this.images.length - 1]
+		this.resize = function()
+		{
+			console.log("resizing window")
+			if(this.lock)
+			{
+				setTimeout(this.resize, 100)
+			}
+			if(this.images.length >= 2)
+			{
+				this.lock = true
+				for(let i = 1; i < this.images.length; i++)
+				{
+					this.images[i].left = this.images[i-1].left + this.images[i-1].width
+					this.images[i].style.left = this.images[i].left + "px"
+				}
+				this.lock = false
+			}
+		}.bind(this)
 
-                if(lastImage.left + lastImage.width > document.body.clientWidth)
-                {
-                    for(let i = 0; i < this.images.length; i++)
-                    {
-                        this.images[i].left -= this.pixelsPerTick
-                        this.images[i].style.left = this.images[i].left + "px";
-                    }
-                }
+		this.GET = function(path, callback)
+		{
+			let req = new XMLHttpRequest()
+			req.onreadystatechange = function(){
+				if(this.readyState == 4 && this.status == 200)
+				{
+					callback(this.response)
+				}
+			}
+			req.open("GET", path, true)
+			req.send()
+		}.bind(this)
 
-                for(let i = 0; i < this.images.length; i++)
-                {
-                    let left = this.images[i].left
-                    //console.log(left, this.images[i].width)
-                    if(this.images[i].width + left < 0)
-                    {
-                        console.log("Popping: ", this.images[i])
-                        this.div.removeChild(this.images[i])
-                        this.images.splice(i, 1)
-                    }
-                    else{
-                        break
-                    }
-                }
+		this.stopSlideshow = function(callback)
+		{
+			this.stop = true
+			if(this.running || this.lock)
+			{
+				setTimeout(this.stopSlideshow, 100, callback)
+				return
+			}
+			for(let i = 0; i < this.images.length; i++)
+			{
+				this.div.removeChild(this.images[i])
+			}
 
-                if(!this.pause && lastImage.left < document.body.clientWidth)
-                {
-                    this.pause = true
-                    this.nextImage()
-                }
-            }
-            this.lock = false
-            
-            setTimeout(this.tick, this.tickrate)
-        }.bind(this)
+			this.images = []
+			this.offset = 0
+			this.index = 0
+			this.stop = false
 
-        this.resize = function()
-        {
-            console.log("resizing window")
-            if(this.lock)
-            {
-                setTimeout(this.resize, 100)
-            }
-            if(this.images.length >= 2)
-            {
-                this.lock = true
-                for(let i = 1; i < this.images.length; i++)
-                {
-                    this.images[i].left = this.images[i-1].left + this.images[i-1].width
-                    this.images[i].style.left = this.images[i].left + "px"
-                }
-                this.lock = false
-            }
-        }.bind(this)
+			if(callback != null)
+			{
+				callback()
+			}
+		}.bind(this)
+	}
 
-        this.GET = function(path, callback)
-        {
-            let req = new XMLHttpRequest()
-            req.onreadystatechange = function(){
-                if(this.readyState == 4 && this.status == 200)
-                {
-                    callback(this.response)
-                }
-            }
-            req.open("GET", path, true)
-            req.send()
-        }.bind(this)
+	if(getParam("tags") || getParam("or") || getParam("filter"))
+	{
+		document.getElementById("searchinput").value = getParam("tags")
+		document.getElementById("orinput").value = getParam("or")
+		document.getElementById("filterinput").value = getParam("filter")
+		document.getElementById("unlessinput").value = getParam("unless")
+		slider.search(getParam("tags"), getParam("or"), getParam("filter"), getParam("unless"))
+	}
 
-        this.stopSlideshow = function(callback)
-        {
-            this.stop = true
-            if(this.running || this.lock)
-            {
-                setTimeout(this.stopSlideshow, 100, callback)
-                return
-            }
-            for(let i = 0; i < this.images.length; i++)
-            {
-                this.div.removeChild(this.images[i])
-            }
-
-            this.images = []
-            this.offset = 0
-            this.index = 0
-            this.stop = false
-            
-            if(callback != null)
-            {
-                callback()
-            }
-        }.bind(this)
-    }
-
-    if(getParam("tags") || getParam("or") || getParam("filter"))
-    {
-        document.getElementById("searchinput").value = getParam("tags")
-        document.getElementById("orinput").value = getParam("or")
-        document.getElementById("filterinput").value = getParam("filter")
-        document.getElementById("unlessinput").value = getParam("unless")
-        slider.search(getParam("tags"), getParam("or"), getParam("filter"), getParam("unless"))
-    }
-
-    function getParam(parameter)
-    {
-        let items = location.search.substr(1).split("&")
-        for(let i = 0; i < items.length; i++)
-        {
-            tmp = items[i].split("=")
-            if(tmp[0] == parameter)
-            {
-                return decodeURIComponent(tmp[1])
-            }
-        }
-        return ""
-    }
+	function getParam(parameter)
+	{
+		let items = location.search.substr(1).split("&")
+		for(let i = 0; i < items.length; i++)
+		{
+			tmp = items[i].split("=")
+			if(tmp[0] == parameter)
+			{
+				return decodeURIComponent(tmp[1])
+			}
+		}
+		return ""
+	}
 
 </script>
 

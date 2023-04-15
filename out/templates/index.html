@@ -8,63 +8,63 @@
 	<h1>The Permanent Booru</h1>
 	<h5 class="nolink" style="margin:0.2em;">
 		<a href="http://kycklingar.i2p/">kycklingar.i2p</a>
-            <span style="font-size:12px;font-weight:normal;">
-                <a href="http://kycklingar.i2p?i2paddresshelper=PKCCiiEU7vT5Q8vWm7sI5-B~mWbsBTCIo06y-WVqIE4uDsz9w1kLVRKYa0Y9XwuhZ95AsgT81nXE2ugCN9fjeG0-IiMbPgQaUdmh2TXbxAvuwkHfA6Fcc7SIs9qAo1wxC43pWdPpRJLV0h1-Z2RmeYYpOr~9ra47a-z8zT-BSuQWbb~R0tcGddlG~dIUKQAA-gW8aX8xOQSltsZxPAveb1QiydCjA8pE7z3SLOeo3PU7YAUIkP7Ehunmej~Sqf0-vB15k9c9T3IE7-ngkwUEVaYsXnfiYFHceu2hIQOorU6cfXB~a1FfwdgCmFBh0ITG13x5OWvtKExVkeGop5pRoapJRV-wEYJeuCbz7SbFNVkTtUMR~KRz9x-evG48B--ENKBTdka0dO5F3iuNCzSznBfeIKv4OTbdWu1xQ5OthPdl0DAOG3TuVdfEJA3yq8w62Hd3KArMfRQ8UJ9CGYFchqice9TPLj3RYFbWdwCUlc8XsE-IE2YyRVH7BbR3VP7dBQAEAAcAAA==">
-                    [a]
-                </a>
-                <a href="http://gctswdhp4447yibxfbqg3uq2bvx63qjeqnaoaux75zw73leakyva.b32.i2p">
-                    [b]
-                </a>
-            </span>
+			<span style="font-size:12px;font-weight:normal;">
+				<a href="http://kycklingar.i2p?i2paddresshelper=PKCCiiEU7vT5Q8vWm7sI5-B~mWbsBTCIo06y-WVqIE4uDsz9w1kLVRKYa0Y9XwuhZ95AsgT81nXE2ugCN9fjeG0-IiMbPgQaUdmh2TXbxAvuwkHfA6Fcc7SIs9qAo1wxC43pWdPpRJLV0h1-Z2RmeYYpOr~9ra47a-z8zT-BSuQWbb~R0tcGddlG~dIUKQAA-gW8aX8xOQSltsZxPAveb1QiydCjA8pE7z3SLOeo3PU7YAUIkP7Ehunmej~Sqf0-vB15k9c9T3IE7-ngkwUEVaYsXnfiYFHceu2hIQOorU6cfXB~a1FfwdgCmFBh0ITG13x5OWvtKExVkeGop5pRoapJRV-wEYJeuCbz7SbFNVkTtUMR~KRz9x-evG48B--ENKBTdka0dO5F3iuNCzSznBfeIKv4OTbdWu1xQ5OthPdl0DAOG3TuVdfEJA3yq8w62Hd3KArMfRQ8UJ9CGYFchqice9TPLj3RYFbWdwCUlc8XsE-IE2YyRVH7BbR3VP7dBQAEAAcAAA==">
+					[a]
+				</a>
+				<a href="http://gctswdhp4447yibxfbqg3uq2bvx63qjeqnaoaux75zw73leakyva.b32.i2p">
+					[b]
+				</a>
+			</span>
 	</h5>
 	<h5 class="nolink" style="margin:0.2em;"><a href="http://owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion/">owmvhpxyisu6fgd7r2fcswgavs7jly4znldaey33utadwmgbbp4pysad.onion</a></h5>
 	<h5 class="nolink" style="margin:0.2em;"><a href="http://r936h3ipzim741p7huxkabro1kma943et41k3owtwbw894rbhcko.loki/">r936h3ipzim741p7huxkabro1kma943et41k3owtwbw894rbhcko.loki</a></h5>
-    <h3>Here there be furry content</h3>
-    <br>
-    {{if .Spotlight.Dns}}
-    <div class="box">
-	    <h3>Artist Spotlight</h3>
-	    <p>Support them if you like their work!</p>
-	    {{template "dns-card" .Spotlight}}
-    </div>
-    {{end}}
-    <br>
-    <h3>Hits: {{.Hits}}</h3>
-    <h3>Total Posts: {{.TotalPosts}}</h3>
+	<h3>Here there be furry content</h3>
+	<br>
+	{{if .Spotlight.Dns}}
+	<div class="box">
+		<h3>Artist Spotlight</h3>
+		<p>Support them if you like their work!</p>
+		{{template "dns-card" .Spotlight}}
+	</div>
+	{{end}}
+	<br>
+	<h3>Hits: {{.Hits}}</h3>
+	<h3>Total Posts: {{.TotalPosts}}</h3>
 </div>
 <div class="box">
-    <h3>FAQ</h3>
-    <!-- Litterally no one has asked about this :D -->
-    <h4>Why 'The Permanent Booru'?</h4>
-    <p>The 'Permanent' part is taken from two factors.</p>
-    <p>One being this site was developed as an alternative to the deterioating booru <a href="https://e621.net">e621.net</a>. With the <a href="https://e621.net">e621.net</a> staff being trigger happy on the nuke button, this site is an actual attempt at archiving everything furry. Permanently.</p>
-    <p>The other factor is with the use of IPFS and it's data location permanency. Once a files url is known, it will never not be there!</p>
-    <br>
-    <h4>What is allowed on here?</h4>
-    <p>Art with relations to furry culture.</p>
-    <p>This means <b>all</b> art from artists who has done some furry art.</p>
-    <p>Art from universes where furry characters exists.</p>
-    <br>
-    <h4>How do I use IPFS?</h4>
-    <p>Download, install and run an IPFS daemon.</p>
-    <p>Install the IPFS Companion addon on your browser</p>
-    <p>Alternatively set the 'Gateway' on <a href="/options/">/options/</a> to your nodes gateway</p>
-    <p>Note: IPFS does not work with tor browser</p>
-    <br>
-    <h4>Why doesn't my IPFS node work?</h4>
-    <p>IPFS is still in heavy development.</p>
-    <p>You can try to couple with the storage node by issuing:<br>
-    <code>
-    	ipfs config Peering.Peers --json '[{"ID": "QmajRPiE14o8nrf4aQyuCDUQEuNjgWA5TkJPCZn25Rxyag","Addrs": []}]'
-    </code>
-    <br>
-    <h4>Backups</h4>
-    <p>You can find ~monthly dumps at /ipns/k51qzi5uqu5dk77q3or43pdczynmc25ui1uith1cim83vkw4tm3m4tacqcyi5z and live root of all files at <a href="/root/">/root/</a></p>
-    <h4>Where is the source code?</h4>
-    <p>The source code is available at <a href="https://github.com/kycklingar/PBooru">https://github.com/kycklingar/PBooru</a></p>
-    <h4>Donations</h4>
-    <p>Donations are appreciated but not expected. Most proceeds will go to infrastructure improvements.</p>
-    <p>You can find various cryptocurrency addresses on <a href="https://github.com/kycklingar/PBooru/blob/master/support.md">github</a>.</p>
+	<h3>FAQ</h3>
+	<!-- Litterally no one has asked about this :D -->
+	<h4>Why 'The Permanent Booru'?</h4>
+	<p>The 'Permanent' part is taken from two factors.</p>
+	<p>One being this site was developed as an alternative to the deterioating booru <a href="https://e621.net">e621.net</a>. With the <a href="https://e621.net">e621.net</a> staff being trigger happy on the nuke button, this site is an actual attempt at archiving everything furry. Permanently.</p>
+	<p>The other factor is with the use of IPFS and it's data location permanency. Once a files url is known, it will never not be there!</p>
+	<br>
+	<h4>What is allowed on here?</h4>
+	<p>Art with relations to furry culture.</p>
+	<p>This means <b>all</b> art from artists who has done some furry art.</p>
+	<p>Art from universes where furry characters exists.</p>
+	<br>
+	<h4>How do I use IPFS?</h4>
+	<p>Download, install and run an IPFS daemon.</p>
+	<p>Install the IPFS Companion addon on your browser</p>
+	<p>Alternatively set the 'Gateway' on <a href="/options/">/options/</a> to your nodes gateway</p>
+	<p>Note: IPFS does not work with tor browser</p>
+	<br>
+	<h4>Why doesn't my IPFS node work?</h4>
+	<p>IPFS is still in heavy development.</p>
+	<p>You can try to couple with the storage node by issuing:<br>
+	<code>
+		ipfs config Peering.Peers --json '[{"ID": "QmajRPiE14o8nrf4aQyuCDUQEuNjgWA5TkJPCZn25Rxyag","Addrs": []}]'
+	</code>
+	<br>
+	<h4>Backups</h4>
+	<p>You can find ~monthly dumps at /ipns/k51qzi5uqu5dk77q3or43pdczynmc25ui1uith1cim83vkw4tm3m4tacqcyi5z and live root of all files at <a href="/root/">/root/</a></p>
+	<h4>Where is the source code?</h4>
+	<p>The source code is available at <a href="https://github.com/kycklingar/PBooru">https://github.com/kycklingar/PBooru</a></p>
+	<h4>Donations</h4>
+	<p>Donations are appreciated but not expected. Most proceeds will go to infrastructure improvements.</p>
+	<p>You can find various cryptocurrency addresses on <a href="https://github.com/kycklingar/PBooru/blob/master/support.md">github</a>.</p>
 	<a style="display:block;width:60px; height:104px; background-image:url(/static/skeleton.gif);background-repeat:no-repeat;background-color:var(--box-background-color);background-blend-mode:screen;" href="/tombstone"></a>
 </div>
 <div class="box compact inline">
