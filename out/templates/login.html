@@ -31,7 +31,7 @@
 	        <label for="captcha">Captcha</label>
 	        <img style="background-color:white;" src="/captcha/{{ .Key }}.png">
 	        <input type="hidden" name="key" value="{{ .Key }}"><br>
-	        <input id="captcha" type="text" name="code">
+	        <input id="captcha" type="text" autocomplete="off" name="code">
 	        <input type="submit" value="Login">
 	</form>
 	<style>
