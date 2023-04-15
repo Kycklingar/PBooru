@@ -31,7 +31,7 @@ func GetReports(q querier) ([]*Report, error) {
 
 	for rows.Next() {
 		var r = NewReport()
-		err = rows.Scan(&r.ID, &r.Post.ID, &r.Reporter.ID, &r.Reason, &r.Description)
+		err = rows.Scan(&r.ID, &r.Post.ID, &r.Reporter, &r.Reason, &r.Description)
 		if err != nil {
 			log.Println(err)
 			return nil, err

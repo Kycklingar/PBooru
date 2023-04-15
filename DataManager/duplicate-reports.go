@@ -67,7 +67,7 @@ func FetchDupReports(limit, offset int, asc, approved, pluckedReports bool) ([]*
 		for rows.Next() {
 			var dr = new(DupReport)
 			dr.Dupe.Post = NewPost()
-			err = rows.Scan(&dr.ID, &dr.ReportType, &dr.Dupe.Post.ID, &dr.Reporter.ID, &dr.Note, &dr.Approved, &dr.Timestamp)
+			err = rows.Scan(&dr.ID, &dr.ReportType, &dr.Dupe.Post.ID, &dr.Reporter, &dr.Note, &dr.Approved, &dr.Timestamp)
 			if err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func FetchDupReport(id int, q querier) (*DupReport, error) {
 		SELECT post_id, report_type, reporter, note, approved, timestamp
 		FROM duplicate_report
 		WHERE id = $1
-		`, id).Scan(&r.Dupe.Post.ID, &r.ReportType, &r.Reporter.ID, &r.Note, &r.Approved, &r.Timestamp)
+		`, id).Scan(&r.Dupe.Post.ID, &r.ReportType, &r.Reporter, &r.Note, &r.Approved, &r.Timestamp)
 	if err != nil {
 		log.Println(err)
 		return nil, err
