@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	DM "github.com/kycklingar/PBooru/DataManager"
+	"github.com/kycklingar/PBooru/version"
 )
 
 const (
@@ -45,6 +46,9 @@ type indexPage struct {
 		Dns      *DM.DnsCreator
 		UserInfo UserInfo
 	}
+	Commit    string
+	Tag       string
+	BuildTime string
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +59,12 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		return
 	}
-	var p indexPage
+	var p = indexPage{
+		Commit:    version.Commit,
+		Tag:       version.Tag,
+		BuildTime: version.BuildTime,
+	}
+
 	p.Hits = DM.Counter()
 	p.TotalPosts = DM.GetTotalPosts()
 
