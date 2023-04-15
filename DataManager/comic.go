@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/sqhell/cond"
 )
+
+var comicTagSummaryCache = cache.NewGeneric[int, []Tag](nil, time.Minute*30, time.Hour*2)
 
 type Comics struct {
 	Comics []*Comic
@@ -221,6 +225,12 @@ func (comic *Comic) getChapters() error {
 }
 
 func (comic *Comic) tagSummary(q querier) error {
+	summary, ok := comicTagSummaryCache.Get(comic.ID)
+	if ok {
+		comic.TagSummary = summary
+		return nil
+	}
+
 	rows, err := q.Query(`
 		SELECT t.tag, n.nspace
 		FROM post_tag_mappings ptm
@@ -255,6 +265,7 @@ func (comic *Comic) tagSummary(q querier) error {
 		comic.TagSummary = append(comic.TagSummary, t)
 	}
 
+	comicTagSummaryCache.Set(comic.ID, comic.TagSummary)
 	return rows.Err()
 }
 
