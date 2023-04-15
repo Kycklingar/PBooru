@@ -7,7 +7,7 @@ import (
 )
 
 func TestGenericCacheSet(t *testing.T) {
-	cache := NewGenericCache[int, string]("", time.Millisecond)
+	cache := NewGeneric[int, string]("", time.Millisecond, 0)
 
 	cache.Set(1, "Hello")
 	cache.Set(2, "world")
@@ -26,7 +26,7 @@ func TestGenericCacheSet(t *testing.T) {
 }
 
 func TestGenericCacheDel(t *testing.T) {
-	cache := NewGenericCache[int, string]("", time.Millisecond)
+	cache := NewGeneric[int, string]("", time.Millisecond, 0)
 
 	cache.Set(1, "Hello")
 	cache.Set(2, "World")
@@ -45,12 +45,12 @@ func TestGenericGC(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cache := NewGenericCache[int, string]("", time.Millisecond*100)
+	cache := NewGeneric[int, string]("", time.Millisecond*10, time.Millisecond*20)
 	go cache.GC(ctx)
 
 	cache.Set(1, "Hello")
 	cache.Set(2, "World")
-	time.Sleep(time.Millisecond * 50)
+	time.Sleep(time.Millisecond * 5)
 	cache.Set(3, "!!!")
 	cache.Get(2)
 
@@ -63,7 +63,7 @@ func TestGenericGC(t *testing.T) {
 		t.Fatal("expected data 2")
 	}
 
-	time.Sleep(time.Millisecond * 55)
+	time.Sleep(time.Millisecond * 10)
 
 	_, ok = cache.data[1]
 	if ok {
@@ -73,5 +73,15 @@ func TestGenericGC(t *testing.T) {
 	_, ok = cache.data[2]
 	if !ok {
 		t.Fatal("expected data 2")
+	}
+
+	cache.Get(2)
+	time.Sleep(time.Millisecond * 5)
+	cache.Get(2)
+	time.Sleep(time.Millisecond * 5)
+
+	_, ok = cache.data[2]
+	if ok {
+		t.Fatal("unexpected data 2")
 	}
 }
