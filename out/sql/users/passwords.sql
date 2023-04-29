@@ -1,0 +1,4 @@
+#users
+
+ALTER TABLE passwords
+ALTER COLUMN salt TYPE VARCHAR(128);

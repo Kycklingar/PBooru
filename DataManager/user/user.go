@@ -76,12 +76,7 @@ func Logout(key session.Key) error {
 }
 
 func Register(ctx context.Context, username, password string, privileges flag.Flag) error {
-	salt, err := createSalt()
-	if err != nil {
-		return err
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password+salt), 0)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -111,7 +106,7 @@ func Register(ctx context.Context, username, password string, privileges flag.Fl
 		VALUES($1, $2, $3)`,
 		id,
 		string(hash),
-		salt,
+		"",
 	)
 	if err != nil {
 		tx.Rollback()
