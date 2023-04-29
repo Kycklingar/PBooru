@@ -10,7 +10,6 @@ var context = canvas.getContext("2d")
 var boardSizeX = canvas.width / 28
 var boardSizeY = canvas.height / 28
 
-
 livingTiles = []
 
 function initTiles()
@@ -152,17 +151,37 @@ function drawBoard(ctx, tiles)
 	ctx.beginPath()
 	ctx.fillStyle = "rgba(0, 0, 0, 0)"
 	ctx.clearRect(0, 0, canvas.width, canvas.height)
-	//ctx.rect(0, 0, canvas.width, canvas.width)
-	//ctx.fill()
 
 	let sw = canvas.width / boardSizeX
 	let sh = canvas.height / boardSizeY
-	//console.log(s)
+
+	const hbw = boardSizeX / 2
+	const hbh = boardSizeY / 2
+
+	// dropshadow
 	for(let i = 0; i < tiles.length; i++)
 	{
+		const [x, y] = [tiles[i].x, tiles[i].y]
+		const ofx = ((x - hbw) / hbw) * sw / 3
+		const ofy = ((y - hbh) / hbh) * sh / 3
+
+		const r = x / boardSizeX * 222
+		const b = y / boardSizeY * 222
+
 		ctx.beginPath()
-		ctx.fillStyle="black"
-		ctx.rect(tiles[i].x*sw, tiles[i].y*sh, sw, sh)
+		ctx.fillStyle = `rgb(${r}, 100, ${b})`
+		ctx.rect(x * sw + ofx - 1, y * sh + ofy - 1, sw + 2, sh + 2)
+		ctx.fill()
+	}
+
+	// cell
+	for(let i = 0; i < tiles.length; i++)
+	{
+		const [x, y] = [tiles[i].x*sw, tiles[i].y*sh]
+
+		ctx.beginPath()
+		ctx.fillStyle = "black"
+		ctx.rect(x, y, sw, sh)
 		ctx.fill()
 	}
 }
