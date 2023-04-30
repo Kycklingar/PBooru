@@ -5,32 +5,47 @@ type Condition interface {
 }
 
 // And condition wrapper
-type AndCondition struct {
+func And(condition Condition) Condition {
+	return andCondition{c: condition}
+}
+
+// Or condition wrapper
+func Or(condition Condition) Condition {
+	return orCondition{c: condition}
+}
+
+func JoinCondition(left, right TableField) Condition {
+	return joinCondition{
+		left:  left,
+		right: right,
+	}
+}
+
+type andCondition struct {
 	c Condition
 }
 
-func (ac AndCondition) Condition(w Writer) {
+func (ac andCondition) Condition(w Writer) {
 	w.WriteString("AND ")
 	ac.c.Condition(w)
 }
 
-// Or condition wrapper
-type OrCondition struct {
+type orCondition struct {
 	c Condition
 }
 
-func (oc OrCondition) Condition(w Writer) {
+func (oc orCondition) Condition(w Writer) {
 	w.WriteString("OR ")
 	oc.c.Condition(w)
 }
 
-type JoinCondition struct {
-	left  string
-	right string
+type joinCondition struct {
+	left  TableField
+	right TableField
 }
 
-func (jc JoinCondition) Condition(w Writer) {
-	w.WriteString(jc.left)
+func (jc joinCondition) Condition(w Writer) {
+	w.WriteString(string(jc.left))
 	w.WriteString(" = ")
-	w.WriteString(jc.right)
+	w.WriteString(string(jc.right))
 }

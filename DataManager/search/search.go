@@ -1,13 +1,29 @@
 package search
 
-type Search interface {
-	Join(On) On
-	LeftJoin(On) On
-	RightJoin(On) On
+type Eval interface {
 	Eval(b Writer)
 }
 
-type On interface {
-	Search
-	On(Condition) Join
-}
+//func NewJoinWrapper(table Table) *JoinWrapper {
+//	return &JoinWrapper{
+//		table: table,
+//	}
+//}
+//
+//type JoinWrapper struct {
+//	table      Table
+//	conditions Conditions
+//}
+//
+//func (w *JoinWrapper) On(cond Condition) Logic {
+//	w.conditions = append(w.conditions, cond)
+//	return w
+//}
+//
+//func (w *JoinWrapper) And(cond Condition) Logic {
+//	return w.On(And(cond))
+//}
+//
+//func (w *JoinWrapper) Or(cond Condition) Logic {
+//	return w.On(Or(cond))
+//}

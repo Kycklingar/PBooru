@@ -14,12 +14,12 @@ func (g group) Condition(w Writer) {
 	w.WriteString(")")
 }
 
-func (g *group) And(cond Condition) Where {
-	g.Conditions = append(g.Conditions, AndCondition{cond})
+func (g *group) And(cond Condition) Logic {
+	g.Conditions = append(g.Conditions, andCondition{cond})
 	return g
 }
 
-func (g *group) Or(cond Condition) Where {
-	g.Conditions = append(g.Conditions, OrCondition{cond})
+func (g *group) Or(cond Condition) Logic {
+	g.Conditions = append(g.Conditions, orCondition{cond})
 	return g
 }
