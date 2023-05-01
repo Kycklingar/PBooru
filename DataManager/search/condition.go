@@ -1,5 +1,7 @@
 package search
 
+import "strconv"
+
 type Condition interface {
 	Condition(b Writer)
 }
@@ -18,6 +20,13 @@ func JoinCondition(left, right TableField) Condition {
 	return joinCondition{
 		left:  left,
 		right: right,
+	}
+}
+
+func Boolean(field TableField, boolean bool) Condition {
+	return boolCondition{
+		field:   field,
+		boolean: boolean,
 	}
 }
 
@@ -48,4 +57,15 @@ func (jc joinCondition) Condition(w Writer) {
 	w.WriteString(string(jc.left))
 	w.WriteString(" = ")
 	w.WriteString(string(jc.right))
+}
+
+type boolCondition struct {
+	field   TableField
+	boolean bool
+}
+
+func (b boolCondition) Condition(w Writer) {
+	w.WriteString(string(b.field))
+	w.WriteString(" = ")
+	w.WriteString(strconv.FormatBool(b.boolean))
 }
