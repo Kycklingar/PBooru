@@ -18,8 +18,8 @@ import (
 	"github.com/kycklingar/set"
 )
 
-func NewPostCollector() *PostCollector {
-	return &PostCollector{TotalPosts: -1}
+func NewPostCollector() *PostSearch {
+	return &PostSearch{TotalPosts: -1}
 }
 
 type SearchResult []resultSet
@@ -48,7 +48,7 @@ type SearchOptions struct {
 	Order      string
 }
 
-type PostCollector struct {
+type PostSearch struct {
 	emptySet bool
 
 	posts     map[int][]*Post
@@ -71,17 +71,17 @@ type PostCollector struct {
 	pl      sync.RWMutex
 }
 
-func CachedPostCollector(pc *PostCollector) *PostCollector {
+func CachedPostCollector(pc *PostSearch) *PostSearch {
 	c := C.Cache.Get("PC", pc.idStr())
 	if c != nil {
-		return c.(*PostCollector)
+		return c.(*PostSearch)
 	}
 
 	C.Cache.Set("PC", pc.idStr(), pc)
 	return pc
 }
 
-func (pc *PostCollector) Get(opts SearchOptions) error {
+func (pc *PostSearch) SetOptions(opts SearchOptions) error {
 	var err error
 	pc.and, err = tsChain(parseTags(opts.And)).qids(DB).aliases(DB).unwrap()
 	if err != nil {
@@ -110,7 +110,7 @@ func (pc *PostCollector) Get(opts SearchOptions) error {
 	return nil
 }
 
-func (pc *PostCollector) countIDStr() string {
+func (pc *PostSearch) countIDStr() string {
 	if pc.emptySet {
 		return "NIL"
 	}
@@ -144,7 +144,7 @@ func (pc *PostCollector) countIDStr() string {
 	)
 }
 
-func (pc *PostCollector) idStr() string {
+func (pc *PostSearch) idStr() string {
 	if pc.emptySet {
 		return "NIL"
 	}
@@ -155,7 +155,7 @@ func (pc *PostCollector) idStr() string {
 		pc.order,
 	)
 }
-func (pc *PostCollector) Search3(ctx context.Context, limit, offset int) (SearchResult, error) {
+func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResult, error) {
 	if pc.emptySet {
 		pc.TotalPosts = 0
 		return nil, nil
@@ -436,7 +436,7 @@ func (pc *PostCollector) Search3(ctx context.Context, limit, offset int) (Search
 	return result, err
 }
 
-func (pc *PostCollector) Tags(ctx context.Context, maxTags int) []Tag {
+func (pc *PostSearch) Tags(ctx context.Context, maxTags int) []Tag {
 	pc.tagLock.Lock()
 	defer pc.tagLock.Unlock()
 	if len(pc.tags) > 0 {
@@ -450,7 +450,7 @@ func (pc *PostCollector) Tags(ctx context.Context, maxTags int) []Tag {
 	}
 
 	// Get the first batch
-	result, err := pc.Search3(ctx, 500, 0)
+	result, err := pc.Search(ctx, 500, 0)
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -548,14 +548,14 @@ func ccPurge(q querier, tagID int) {
 	}
 }
 
-func (pc *PostCollector) ccGet() (c int) {
+func (pc *PostSearch) ccGet() (c int) {
 	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.countIDStr()).Scan(&c); err != nil {
 		return -1
 	}
 	return
 }
 
-func (pc *PostCollector) ccSet(c int) {
+func (pc *PostSearch) ccSet(c int) {
 	if c < 0 {
 		return
 	}
@@ -598,7 +598,7 @@ func (pc *PostCollector) ccSet(c int) {
 	return
 }
 
-func (p *PostCollector) set(offset int, posts []*Post) {
+func (p *PostSearch) set(offset int, posts []*Post) {
 	p.pl.Lock()
 	defer p.pl.Unlock()
 	if p.posts == nil {

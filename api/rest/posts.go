@@ -63,7 +63,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 	bm := BM.Begin()
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(
+	err = pc.SetOptions(
 		DM.SearchOptions{
 			And:        tagStr,
 			Or:         orStr,
@@ -93,7 +93,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Minute*5)
 	defer cancel()
-	result, err := pc.Search3(ctx, limit, limit*offset)
+	result, err := pc.Search(ctx, limit, limit*offset)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "FIXME", http.StatusInternalServerError)

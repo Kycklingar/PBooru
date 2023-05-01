@@ -705,7 +705,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	bm.Split("Before posts")
 
 	pc := DM.NewPostCollector()
-	err = pc.Get(
+	err = pc.SetOptions(
 		DM.SearchOptions{
 			And:        tagString,
 			Or:         p.Sidebar.Or,
@@ -731,7 +731,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	//fmt.Println(pc.TotalPosts)
-	result, err := pc.Search3(ctx, pageLimit, offset)
+	result, err := pc.Search(ctx, pageLimit, offset)
 	if internalError(w, err) {
 		return
 	}
