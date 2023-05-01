@@ -7,8 +7,8 @@ import (
 
 type (
 	Scanner    func(...any) error
-	rowScanner func(Scanner) error
-	rows       func(rowScanner) error
+	RowScanner func(Scanner) error
+	rows       func(RowScanner) error
 	RowsQuery  interface {
 		Query(string, ...any) (*sql.Rows, error)
 	}
@@ -18,7 +18,7 @@ type (
 )
 
 func QueryRows(q RowsQuery, query string, values ...any) rows {
-	return func(scan rowScanner) error {
+	return func(scan RowScanner) error {
 		rows, err := q.Query(query, values...)
 		if err != nil {
 			return err
@@ -37,7 +37,7 @@ func QueryRows(q RowsQuery, query string, values ...any) rows {
 }
 
 func QueryRowsContext(ctx context.Context, q RowsQueryContext, query string, values ...any) rows {
-	return func(scan rowScanner) error {
+	return func(scan RowScanner) error {
 		rows, err := q.QueryContext(ctx, query, values...)
 		if err != nil {
 			return err
