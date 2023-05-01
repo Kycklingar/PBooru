@@ -1,255 +1,609 @@
 package DataManager
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
 
+	mm "github.com/kycklingar/MinMax"
+	C "github.com/kycklingar/PBooru/DataManager/cache"
+	"github.com/kycklingar/PBooru/DataManager/db"
+	"github.com/kycklingar/PBooru/DataManager/postSearch"
+	"github.com/kycklingar/PBooru/DataManager/search"
 	"github.com/kycklingar/set"
-	"github.com/kycklingar/sqhell/cond"
 )
 
-type group struct {
-	//nested []group
+func NewPostCollector() *PostCollector {
+	return &PostCollector{TotalPosts: -1}
+}
 
+type SearchResult []resultSet
+
+type resultSet struct {
+	Post *Post
+	Tags []Tag
+}
+
+type ErrorTag string
+
+func (e ErrorTag) Error() string {
+	return "tag does not exist: " + string(e)
+}
+
+type SearchOptions struct {
+	And    string
+	Or     string
+	Filter string
+	Unless string
+
+	MimeIDs    []int
+	Altgroup   int
+	AltCollect bool
+	Tombstone  bool
+	Order      string
+}
+
+type PostCollector struct {
+	emptySet bool
+
+	posts     map[int][]*Post
 	and       set.Sorted[Tag]
 	or        set.Sorted[Tag]
 	filter    set.Sorted[Tag]
 	unless    set.Sorted[Tag]
 	tombstone bool
+
+	tags       []Tag //Sidebar
+	TotalPosts int
+
+	mimeIDs []int
+	order   string
+
+	altGroup    int
+	collectAlts bool
+
+	tagLock sync.Mutex
+	pl      sync.RWMutex
 }
 
-func searchGroup(and, or, filter, unless set.Sorted[Tag], tombstone bool) group {
-	return group{
-		and,
-		or,
-		filter,
-		unless,
-		tombstone,
+func CachedPostCollector(pc *PostCollector) *PostCollector {
+	c := C.Cache.Get("PC", pc.idStr())
+	if c != nil {
+		return c.(*PostCollector)
 	}
+
+	C.Cache.Set("PC", pc.idStr(), pc)
+	return pc
 }
 
-func (g group) sel(where *cond.Group) string {
-	//var q, where, trail string
+func (pc *PostCollector) Get(opts SearchOptions) error {
+	var err error
+	pc.and, err = tsChain(parseTags(opts.And)).qids(DB).aliases(DB).unwrap()
+	if err != nil {
+		pc.emptySet = true
+	}
+	pc.or, err = tsChain(parseTags(opts.Or)).qids(DB).aliases(DB).unwrap()
+	if err != nil {
+		pc.emptySet = true
+	}
+	pc.filter, err = tsChain(parseTags(opts.Filter)).qids(DB).aliases(DB).unwrap()
+	if err != nil {
+		pc.emptySet = true
+	}
+	pc.unless, err = tsChain(parseTags(opts.Unless)).qids(DB).aliases(DB).unwrap()
+	if err != nil {
+		pc.emptySet = true
+	}
 
+	pc.order = strings.ToLower(opts.Order)
+	pc.collectAlts = opts.AltCollect
+	pc.altGroup = opts.Altgroup
+	pc.tombstone = opts.Tombstone
+
+	pc.mimeIDs = set.NewOrdered(opts.MimeIDs...).Slice()
+
+	return nil
+}
+
+func (pc *PostCollector) countIDStr() string {
+	if pc.emptySet {
+		return "NIL"
+	}
+
+	if !pc.tombstone &&
+		len(pc.and) <= 0 &&
+		len(pc.or) <= 0 &&
+		len(pc.filter) <= 0 &&
+		len(pc.mimeIDs) <= 0 &&
+		!pc.collectAlts &&
+		pc.altGroup <= 0 {
+		return "0"
+	}
+
+	return fmt.Sprint(
+		tSetStr(pc.and),
+		" - ",
+		tSetStr(pc.or),
+		" - ",
+		tSetStr(pc.filter),
+		" - ",
+		tSetStr(pc.unless),
+		" - ",
+		strSep(pc.mimeIDs, " "),
+		" - ",
+		pc.altGroup,
+		" - ",
+		pc.collectAlts,
+		" - ",
+		pc.tombstone,
+	)
+}
+
+func (pc *PostCollector) idStr() string {
+	if pc.emptySet {
+		return "NIL"
+	}
+
+	return fmt.Sprint(
+		pc.countIDStr(),
+		" - ",
+		pc.order,
+	)
+}
+func (pc *PostCollector) Search3(ctx context.Context, limit, offset int) (SearchResult, error) {
+	if pc.emptySet {
+		pc.TotalPosts = 0
+		return nil, nil
+	}
+
+	var p = postSearch.NewPostsSearch("p")
+
+	convertToIds := func(tags set.Sorted[Tag]) []int {
+		var ret = make([]int, len(tags))
+		for i := 0; i < len(tags); i++ {
+			ret[i] = tags[i].ID
+		}
+		return ret
+	}
+
+	if len(pc.and) > 0 {
+		for i, tag := range pc.and {
+			var and = postSearch.NewPtm(fmt.Sprint("a", i), tag.ID)
+			p.Join(&and).On(
+				search.JoinCondition(
+					p.Field("id"),
+					and.Field("post_id"),
+				),
+			)
+			p.Where(&and)
+		}
+	}
+
+	if len(pc.or) > 0 {
+		var or = postSearch.NewPtm("o", convertToIds(pc.or)...)
+		p.Join(&or).On(
+			search.JoinCondition(
+				p.Field("id"),
+				or.Field("post_id"),
+			),
+		)
+		p.Where(&or)
+	}
+
+	if len(pc.filter) > 0 {
+		var filter = postSearch.NewPtm("f", convertToIds(pc.filter)...)
+		p.LeftJoin(&filter).On(
+			search.JoinCondition(
+				p.Field("id"),
+				filter.Field("post_id"),
+			),
+		).And(&filter)
+
+		var cond = search.IsNull(filter.Field("post_id"))
+
+		if len(pc.unless) > 0 {
+			var unless = postSearch.NewPtm("u", convertToIds(pc.unless)...)
+			p.LeftJoin(&unless).On(
+				search.JoinCondition(
+					filter.Field("post_id"),
+					unless.Field("post_id"),
+				),
+			).And(&unless)
+			var group = search.Group(cond)
+			group.Or(search.IsNotNull(unless.Field("post_id")))
+
+			p.Where(group)
+		} else {
+			p.Where(cond)
+		}
+	}
+
+	if pc.tombstone {
+		var tombstone = search.NewTable("tombstone", "tombstone")
+		p.LeftJoin(tombstone).On(
+			search.JoinCondition(
+				p.Field("id"),
+				tombstone.Field("post_id"),
+			),
+		)
+
+		p.Where(search.IsNotNull(tombstone.Field("post_id")))
+	}
+
+	if pc.altGroup > 0 {
+		p.Where(postSearch.AltGroup(p.Field("alt_group"), pc.altGroup))
+	}
+
+	if len(pc.mimeIDs) > 0 {
+		p.Where(postSearch.Mimes(p.Field("mime_id"), pc.mimeIDs))
+	}
+
+	p.Where(search.Boolean(p.Field("removed"), false))
+
+	var order = search.NewOrder()
+	var selection string
+	var groupby string
+	switch pc.order {
+	case "asc":
+		selection = "DISTINCT ON(p.id) p.id"
+		order.By(p.Field("id"), search.Ascending)
+	case "random":
+		selection = "p.id"
+		groupby = "\nGROUP BY p.id"
+		order.By(p.Field("id"), search.Random)
+		offset = 0
+	case "score":
+		selection = "DISTINCT ON(p.id, p.score) p.id"
+		order.By(p.Field("score"), search.Descending).
+			By(p.Field("id"), search.Descending)
+	default:
+		selection = "DISTINCT ON(p.id) p.id"
+		order.By(p.Field("id"), search.Descending)
+	}
+
+	var query strings.Builder
+
+	// Count
+	if pc.TotalPosts < 0 {
+		if pc.countIDStr() != "0" {
+			c := pc.ccGet()
+			if c < 0 {
+				query.WriteString("SELECT count(DISTINCT ")
+				if pc.collectAlts {
+					query.WriteString(string(p.Field("alt_group")))
+				} else {
+					query.WriteString(string(p.Field("id")))
+				}
+				query.WriteString(")\n FROM ")
+				p.Eval(&query)
+				err := db.Context.QueryRow(query.String()).Scan(&pc.TotalPosts)
+				if err != nil {
+					return nil, err
+				}
+				pc.ccSet(pc.TotalPosts)
+			} else {
+				pc.TotalPosts = c
+			}
+		} else {
+			pc.TotalPosts = GetTotalPosts()
+		}
+		query.Reset()
+	}
+
+	// No more posts beyond this point
+	if pc.TotalPosts <= 0 || offset > pc.TotalPosts {
+		return nil, nil
+	}
+
+	// Query
+	query.WriteString("WITH a AS(")
+	query.WriteString("\nSELECT ")
+	query.WriteString(string(p.Field("*")))
+	query.WriteString("\nFROM ")
+	p.Eval(&query)
+	query.WriteString("), b AS(")
+	query.WriteString("\nSELECT ")
+	query.WriteString(selection)
+	query.WriteString("\nFROM ")
+	if pc.collectAlts {
+		query.WriteString("(")
+		query.WriteString("\nSELECT DISTINCT ON(a.alt_group) a.*")
+		query.WriteString("\nFROM a")
+		query.WriteString("\nORDER BY a.alt_group, a.score DESC, a.id DESC")
+		query.WriteString("\n) p")
+	} else {
+		query.WriteString("a p")
+	}
+	query.WriteString(groupby)
+	order.Eval(&query)
+	query.WriteString("\nLIMIT $1 OFFSET $2\n)")
+	query.WriteString(`
+		SELECT p.id, ptm.tag_id, t.tag, t.count, t.namespace
+		FROM posts p
+		LEFT JOIN post_tag_mappings ptm
+		JOIN tag t
+		ON t.id = ptm.tag_id
+		ON p.id = ptm.post_id
+		JOIN b
+		ON b.id = p.id`)
+	order.Eval(&query)
+
+	// Collecting
 	var (
-		joins = cond.NewGroup().Add("", cond.N("posts p"))
+		result    SearchResult
+		prev      int
+		resultMap = make(map[int]resultSet)
 	)
 
-	//where = fmt.Sprintf("WHERE %s\n", wh)
+	seqScan := func(scan db.Scanner) error {
+		var (
+			tagID     sql.NullInt64
+			tagCount  sql.NullInt64
+			tagName   sql.NullString
+			namespace sql.NullString
+			postID    int
+		)
 
-	//if wh != "" {
-	//	trail = "AND"
+		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
+		if err != nil {
+			return err
+		}
+
+		if prev != postID {
+			p := NewPost()
+			p.ID = postID
+			result = append(result, resultSet{Post: p})
+			prev = postID
+		}
+
+		if tagID.Valid {
+			var t = Tag{
+				ID:        int(tagID.Int64),
+				Tag:       tagName.String,
+				Namespace: Namespace(namespace.String),
+				Count:     int(tagCount.Int64),
+			}
+			result[len(result)-1].Tags = append(result[len(result)-1].Tags, t)
+		}
+
+		return nil
+	}
+
+	randScan := func(scan db.Scanner) error {
+		var (
+			tagID     sql.NullInt64
+			tagCount  sql.NullInt64
+			tagName   sql.NullString
+			namespace sql.NullString
+			postID    int
+		)
+
+		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
+		if err != nil {
+			return err
+		}
+
+		set, ok := resultMap[postID]
+		if !ok {
+			post := NewPost()
+			post.ID = postID
+			set = resultSet{Post: post}
+		}
+
+		if tagID.Valid {
+			var t = Tag{
+				ID:        int(tagID.Int64),
+				Tag:       tagName.String,
+				Namespace: Namespace(namespace.String),
+				Count:     int(tagCount.Int64),
+			}
+			set.Tags = append(set.Tags, t)
+		}
+
+		resultMap[postID] = set
+
+		return nil
+	}
+
+	var scan db.RowScanner = seqScan
+
+	if pc.order == "random" {
+		scan = randScan
+	}
+
+	err := db.QueryRowsContext(
+		ctx,
+		db.Context,
+		query.String(),
+		limit,
+		offset,
+	)(scan)
+
+	if len(resultMap) > 0 {
+		result = make(SearchResult, len(resultMap))
+		var i int
+		for _, set := range resultMap {
+			result[i] = set
+			i++
+		}
+	}
+
+	return result, err
+}
+
+func (pc *PostCollector) Tags(ctx context.Context, maxTags int) []Tag {
+	pc.tagLock.Lock()
+	defer pc.tagLock.Unlock()
+	if len(pc.tags) > 0 {
+		return pc.tags
+	}
+
+	var allTags []Tag
+
+	if pc.countIDStr() == "-1" {
+		return nil
+	}
+
+	// Get the first batch
+	result, err := pc.Search3(ctx, 500, 0)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	// Get tags from all posts
+	pc.pl.RLock()
+	for _, set := range result {
+		allTags = append(allTags, set.Tags...)
+	}
+	pc.pl.RUnlock()
+
+	type tagMap struct {
+		tag   Tag
+		count int
+	}
+
+	tm := make(map[int]tagMap)
+
+	for _, tag := range allTags {
+		m := tm[tag.ID]
+		m.tag = tag
+		m.count++
+		tm[tag.ID] = m
+	}
+
+	var countMap = make([]tagMap, len(tm))
+	var i int
+	for _, v := range tm {
+		countMap[i] = v
+		i++
+	}
+
+	sort.Slice(countMap, func(i, j int) bool {
+		return countMap[i].count > countMap[j].count
+	})
+
+	// Hotfix for when cache is gc'd and there are multiple calls for this search
+	pc.tags = nil
+	// Retrive and append the tags
+	//arrLimit := maxTags
+	//if len(countMap) < arrLimit {
+	//	arrLimit = len(countMap)
 	//}
-
-	if !g.tombstone && !(len(g.or) > 0 || len(g.and) > 0 || len(g.filter) > 0) {
-		return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
+	arrLimit := mm.Min(maxTags, len(countMap))
+	for i := 0; i < arrLimit; i++ {
+		//tag := CachedTag(countMap[i].tag)
+		pc.tags = append(pc.tags, countMap[i].tag)
 	}
 
-	if len(g.or) > 0 {
-		joins.Add(
-			"\nJOIN",
-			cond.N(
-				fmt.Sprintf(`
-					(
-						SELECT DISTINCT post_id
-						FROM post_tag_mappings
-						WHERE tag_id IN(%s)
-					) o
-					ON p.id = o.post_id
-					`,
-					tSetStr(g.or),
-				),
-			),
-		)
-
-		//where += fmt.Sprintf("%s o.tag_id IN(%s)\n", trail, sep(g.or, ","))
-
-		//trail = "AND"
-	}
-
-	if len(g.and) > 0 {
-		var join, w string
-		for i := 1; i < len(g.and); i++ {
-			join += fmt.Sprintf(`
-				JOIN post_tag_mappings a%d
-				ON p.id = a%d.post_id
-				`,
-				i+1,
-				i+1,
-			)
-			w += fmt.Sprintf("AND a%d.tag_id = %d\n", i+1, g.and[i].ID)
-		}
-
-		joins.Add(
-			"\nJOIN",
-			cond.N(
-				fmt.Sprintf(`
-					post_tag_mappings a1
-					ON p.id = a1.post_id
-					%s
-					`,
-					join,
-				),
-			),
-		)
-
-		where.Add(
-			"\nAND",
-			cond.N(
-				fmt.Sprintf(`
-				a1.tag_id = %d
-				%s
-				`,
-					g.and[0].ID,
-					w,
-				),
-			))
-
-		//trail = "AND"
-	}
-
-	if len(g.filter) > 0 {
-
-		var unlessJ, unlessW string
-
-		if len(g.unless) > 0 {
-			unlessJ = fmt.Sprintf(`
-				LEFT JOIN post_tag_mappings u
-				ON f.post_id = u.post_id
-				AND u.tag_id IN(%s)
-				`,
-				tSetStr(g.unless),
-			)
-
-			unlessW = "AND u.post_id IS NULL"
-		}
-
-		joins.Add(
-			"\nLEFT JOIN",
-			cond.N(
-				fmt.Sprintf(`
-				(
-					SELECT f.post_id
-					FROM post_tag_mappings f
-					%s
-					WHERE
-					f.tag_id IN(%s)
-					%s
-				) f
-				ON p.id = f.post_id
-				`,
-					unlessJ,
-					tSetStr(g.filter),
-					unlessW,
-				),
-			),
-		)
-
-		where.Add("\nAND", cond.N("f.post_id IS NULL"))
-	}
-
-	if g.tombstone {
-		joins.Add(
-			"\nLEFT JOIN",
-			cond.N("tombstone ts ON p.id = ts.post_id"),
-		)
-
-		where.Add("\nAND", cond.N("ts.post_id IS NOT NULL"))
-	}
-
-	return joins.Eval(nil) + "\nWHERE " + where.Eval(nil)
+	return pc.tags
 }
 
-/* Failed grouping attempt
-func (g group) sel() string {
-	if !(
-		len(g.or) > 0
-		|| len(g.and) > 0
-		|| len(g.filter) > 0
-	){
-		return ""
-	}
+var totalPosts int
 
-	q := fmt.Sprintf(`
-		SELECT DISTINCT post_id
-		FROM post_tag_mappings
-		WHERE
-		`
+func GetTotalPosts() int {
+	if totalPosts != 0 {
+		return totalPosts
+	}
+	err := DB.QueryRow("SELECT count(*) FROM posts WHERE removed=false").Scan(&totalPosts)
+	if err != nil {
+		log.Println(err)
+		return totalPosts
+	}
+	return totalPosts
+}
+
+func clearEmptySearchCountCache(q querier) error {
+	_, err := q.Exec(`
+		DELETE FROM search_count_cache
+		WHERE id IN(
+			SELECT id
+			FROM search_count_cache
+			LEFT JOIN search_count_cache_tag_mapping
+			ON id = cache_id
+			WHERE cache_id IS NULL
+		)
+		`,
 	)
 
-	// Trailing operator
-	var firstie string
-
-	if len(g.or) > 0 {
-		var ors string
-		for _, v := range g.or {
-			fmt.Sprint(ors, v, ",")
-		}
-		q += fmt.Sprintf(`
-			post_id IN(
-				SELECT post_id
-				FROM post_tag_mappings
-				WHERE tag_id IN(%s)
-			)
-			`,
-			ors
-		)
-
-		firstie = "OR"
-	}
-
-	if len(g.and) > 0 {
-		var join, where string
-		for i := 1; i < len(g.and); i++){
-			join += fmt.Sprintf(`
-				JOIN post_tag_mappings p%d
-				ON p1.post_id = p%d.post_id
-				`,
-				i,
-				i,
-			)
-			where += fmt.Sprintf("AND %d.tag_id = %d\n", g.and[i])
-		}
-		q += fmt.Sprintf(`
-			%s post_id IN(
-				SELECT post_id
-				FROM post_tag_mappings p1
-				%s
-				WHERE p1.tag_id = %d
-				%s
-			)
-			`,
-			firstie,
-			join,
-			g.and[0],
-			where,
-		)
-
-		firstie = "AND"
-	}
-
-	for _, v := range g.nested {
-		q += fmt.Sprintf(`
-			%s post_id IN(
-				%s
-			)
-			`,
-			firstie,
-			v.sel(),
-		)
-
-	}
-
-	return q
+	return err
 }
-*/
 
-// A search like:
-// (renamon, s-nina), judy hopps, comic, (krystal, sif)
-// Translated:
-// (renamon & s-nina) | (judy hopps | comic) | (krystal & sif)
+func resetCacheTag(q querier, tagID int) {
+	C.Cache.Purge("PC", strconv.Itoa(tagID))
+	C.Cache.Purge("TAG", strconv.Itoa(tagID))
+	C.Cache.Purge("PC", "0")
+	ccPurge(q, tagID)
+}
 
-// (renamon | judy hopps & s-nina)
-// Local Group:
-// (renamon | judy hopps) & s-nina
+func ccPurge(q querier, tagID int) {
+	_, err := q.Exec("DELETE FROM search_count_cache WHERE id IN(SELECT cache_id FROM search_count_cache_tag_mapping WHERE tag_id = $1)", tagID)
+	if err != nil {
+		log.Println(err)
+	}
+}
 
-// (!bunny & (impmon | ass) | (s-nina & renamon)
+func (pc *PostCollector) ccGet() (c int) {
+	if err := DB.QueryRow("SELECT count FROM search_count_cache WHERE str = $1", pc.countIDStr()).Scan(&c); err != nil {
+		return -1
+	}
+	return
+}
+
+func (pc *PostCollector) ccSet(c int) {
+	if c < 0 {
+		return
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var cid int
+	err = tx.QueryRow(`
+		INSERT INTO search_count_cache (str, count)
+		VALUES($1, $2)
+		RETURNING id
+		`,
+		pc.countIDStr(),
+		c,
+	).Scan(&cid)
+	if err != nil {
+		log.Println(err)
+		txError(tx, err)
+		return
+	}
+
+	union := set.Union(pc.and, pc.or)
+	union = set.Union(union, pc.filter)
+	union = set.Union(union, pc.unless)
+
+	for _, t := range union {
+		tx.Exec("INSERT INTO search_count_cache_tag_mapping (cache_id, tag_id) VALUES($1, $2)", cid, t.ID)
+		if err != nil {
+			log.Println(err)
+			txError(tx, err)
+			return
+		}
+	}
+	tx.Commit()
+
+	return
+}
+
+func (p *PostCollector) set(offset int, posts []*Post) {
+	p.pl.Lock()
+	defer p.pl.Unlock()
+	if p.posts == nil {
+		p.posts = make(map[int][]*Post)
+	}
+	//fmt.Println("Setting Offset = ", offset)
+	p.posts[offset] = posts
+}
