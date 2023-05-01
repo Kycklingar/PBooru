@@ -161,7 +161,10 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		return nil, nil
 	}
 
-	var p = postSearch.NewPostsSearch("p")
+	var (
+		p        = postSearch.NewPostsSearch("p")
+		distinct = len(pc.or) > 1 || len(pc.filter) > 1 || len(pc.unless) > 1
+	)
 
 	convertToIds := func(tags set.Sorted[Tag]) []int {
 		var ret = make([]int, len(tags))
@@ -182,6 +185,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 			)
 			p.Where(&and)
 		}
+
 	}
 
 	if len(pc.or) > 0 {
@@ -273,10 +277,14 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		if pc.countIDStr() != "0" {
 			c := pc.ccGet()
 			if c < 0 {
-				query.WriteString("SELECT count(DISTINCT ")
+				query.WriteString("SELECT count(")
 				if pc.collectAlts {
+					query.WriteString("DISTINCT ")
 					query.WriteString(string(p.Field("alt_group")))
 				} else {
+					if distinct {
+						query.WriteString("DISTINCT ")
+					}
 					query.WriteString(string(p.Field("id")))
 				}
 				query.WriteString(")\n FROM ")
