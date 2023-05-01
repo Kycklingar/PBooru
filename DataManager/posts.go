@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -20,11 +21,12 @@ import (
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/PBooru/DataManager/image"
+	"github.com/kycklingar/PBooru/DataManager/postSearch"
+	"github.com/kycklingar/PBooru/DataManager/search"
 	"github.com/kycklingar/PBooru/DataManager/sqlbinder"
 	"github.com/kycklingar/PBooru/DataManager/timestamp"
 	"github.com/kycklingar/PBooru/DataManager/user"
 	"github.com/kycklingar/set"
-	"github.com/kycklingar/sqhell/cond"
 )
 
 func NewPost() *Post {
@@ -1036,15 +1038,7 @@ func (pc *PostCollector) Get(opts SearchOptions) error {
 		pc.emptySet = true
 	}
 
-	switch strings.ToUpper(opts.Order) {
-	case "ASC", "DESC", "SCORE":
-		pc.order = strings.ToUpper(opts.Order)
-	case "RANDOM":
-		pc.order = strings.ToUpper(opts.Order) + "()"
-	default:
-		pc.order = "DESC"
-	}
-
+	pc.order = strings.ToLower(opts.Order)
 	pc.collectAlts = opts.AltCollect
 	pc.altGroup = opts.Altgroup
 	pc.tombstone = opts.Tombstone
@@ -1139,98 +1133,135 @@ type resultSet struct {
 // Where key is post id and val is tags
 //type sRes map[int][]int
 
-func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
-	//var result = SearchResult{Tags:make(map[int][]*Tag)}
-	var result SearchResult
-
+func (pc *PostCollector) Search3(ctx context.Context, limit, offset int) (SearchResult, error) {
 	if pc.emptySet {
 		pc.TotalPosts = 0
-		return result, nil
+		return nil, nil
 	}
 
-	sg := searchGroup(
-		pc.and,
-		pc.or,
-		pc.filter,
-		pc.unless,
-		pc.tombstone,
-	)
+	var p = postSearch.NewPostsSearch("p")
 
-	var (
-		order    string
-		altGroup string
-		mimes    string
-
-		//wgr []string = []string{"p.removed = false"}
-		wgr = cond.NewGroup().Add("", cond.N("p.removed = false"))
-
-		sel string
-	)
-
-	if len(pc.mimeIDs) > 0 {
-		for i, mi := range pc.mimeIDs {
-			mimes += fmt.Sprint(mi)
-			if i < len(pc.mimeIDs)-1 {
-				mimes += ","
-			}
+	convertToIds := func(tags set.Sorted[Tag]) []int {
+		var ret = make([]int, len(tags))
+		for i := 0; i < len(tags); i++ {
+			ret[i] = tags[i].ID
 		}
-		mimes = fmt.Sprintf("p.mime_id IN(%s) ", mimes)
-		//wgr = append(wgr, mimes)
-		wgr.Add("\nAND", cond.N(mimes))
+		return ret
 	}
 
-	switch pc.order {
-	case "RANDOM()":
-		order = "RANDOM()"
-		offset = 0
-	case "SCORE":
-		order = fmt.Sprint("p.score DESC, p.id DESC")
-	default:
-		order = "p.id " + pc.order
+	if len(pc.and) > 0 {
+		for i, tag := range pc.and {
+			var and = postSearch.NewPtm(fmt.Sprint("a", i), tag.ID)
+			p.Join(&and).On(
+				search.JoinCondition(
+					p.Field("id"),
+					and.Field("post_id"),
+				),
+			)
+			p.Where(&and)
+		}
+	}
+
+	if len(pc.or) > 0 {
+		var or = postSearch.NewPtm("o", convertToIds(pc.or)...)
+		p.Join(&or).On(
+			search.JoinCondition(
+				p.Field("id"),
+				or.Field("post_id"),
+			),
+		)
+		p.Where(&or)
+	}
+
+	if len(pc.filter) > 0 {
+		var filter = postSearch.NewPtm("f", convertToIds(pc.filter)...)
+		p.LeftJoin(&filter).On(
+			search.JoinCondition(
+				p.Field("id"),
+				filter.Field("post_id"),
+			),
+		).And(&filter)
+
+		var cond = search.IsNull(filter.Field("post_id"))
+
+		if len(pc.unless) > 0 {
+			var unless = postSearch.NewPtm("u", convertToIds(pc.unless)...)
+			p.LeftJoin(&unless).On(
+				search.JoinCondition(
+					filter.Field("post_id"),
+					unless.Field("post_id"),
+				),
+			).And(&unless)
+			var group = search.Group(cond)
+			group.Or(search.IsNotNull(unless.Field("post_id")))
+
+			p.Where(group)
+		} else {
+			p.Where(cond)
+		}
+	}
+
+	if pc.tombstone {
+		var tombstone = search.NewTable("tombstone", "tombstone")
+		p.LeftJoin(tombstone).On(
+			search.JoinCondition(
+				p.Field("id"),
+				tombstone.Field("post_id"),
+			),
+		)
+
+		p.Where(search.IsNotNull(tombstone.Field("post_id")))
 	}
 
 	if pc.altGroup > 0 {
-		altGroup = fmt.Sprintf(`
-			p.alt_group = (
-				SELECT alt_group
-				FROM posts
-				WHERE id = %d
-			)
-			`, pc.altGroup)
-		//wgr = append(wgr, altGroup)
-		wgr.Add("\nAND", cond.N(altGroup))
+		p.Where(postSearch.AltGroup(p.Field("alt_group"), pc.altGroup))
 	}
 
-	sel = sg.sel(wgr)
+	if len(pc.mimeIDs) > 0 {
+		p.Where(postSearch.Mimes(p.Field("mime_id"), pc.mimeIDs))
+	}
 
-	// TODO: refactor
+	p.Where(search.Boolean(p.Field("removed"), false))
+
+	var order = search.NewOrder()
+	var selection string
+	var groupby string
+	switch pc.order {
+	case "asc":
+		selection = "DISTINCT ON(p.id) p.id"
+		order.By(p.Field("id"), search.Ascending)
+	case "random":
+		selection = "p.id"
+		groupby = "\nGROUP BY p.id"
+		order.By(p.Field("id"), search.Random)
+		offset = 0
+	case "score":
+		selection = "DISTINCT ON(p.id, p.score) p.id"
+		order.By(p.Field("score"), search.Descending).
+			By(p.Field("id"), search.Descending)
+	default:
+		selection = "DISTINCT ON(p.id) p.id"
+		order.By(p.Field("id"), search.Descending)
+	}
+
+	var query strings.Builder
+
+	// Count
 	if pc.TotalPosts < 0 {
 		if pc.countIDStr() != "0" {
-			var query string
-			if pc.collectAlts {
-				query = `
-					SELECT COUNT(DISTINCT p.alt_group)
-					FROM %s
-					`
-			} else {
-				query = `
-					SELECT count(p.id)
-					FROM %s
-					`
-			}
 			c := pc.ccGet()
 			if c < 0 {
-				query := fmt.Sprintf(
-					query,
-					sel,
-				)
-
-				//fmt.Println(query)
-
-				err := DB.QueryRow(query).Scan(&pc.TotalPosts)
+				query.WriteString("SELECT count(DISTINCT ")
+				if pc.collectAlts {
+					query.WriteString(string(p.Field("alt_group")))
+				} else {
+					query.WriteString(string(p.Field("id")))
+				}
+				query.WriteString(")\n FROM ")
+				p.Eval(&query)
+				err := db.Context.QueryRow(query.String()).Scan(&pc.TotalPosts)
 				if err != nil {
-					log.Println(err)
-					return result, err
+					return nil, err
 				}
 				pc.ccSet(pc.TotalPosts)
 			} else {
@@ -1239,176 +1270,151 @@ func (pc *PostCollector) Search2(limit, offset int) (SearchResult, error) {
 		} else {
 			pc.TotalPosts = GetTotalPosts()
 		}
+		query.Reset()
 	}
 
 	// No more posts beyond this point
 	if pc.TotalPosts <= 0 || offset > pc.TotalPosts {
-		return result, nil
+		return nil, nil
 	}
 
-	var query string
+	// Query
+	query.WriteString("WITH a AS(")
+	query.WriteString("\nSELECT ")
+	query.WriteString(string(p.Field("*")))
+	query.WriteString("\nFROM ")
+	p.Eval(&query)
+	query.WriteString("), b AS(")
+	query.WriteString("\nSELECT ")
+	query.WriteString(selection)
+	query.WriteString("\nFROM ")
 	if pc.collectAlts {
-		query = `
-			SELECT id FROM (
-				SELECT DISTINCT ON (p.alt_group) p.*
-				FROM %s
-				ORDER BY p.alt_group, p.score DESC, p.id DESC
-			) AS p
-			ORDER BY %s
-			LIMIT $1
-			OFFSET $2
-			`
+		query.WriteString("(")
+		query.WriteString("\nSELECT DISTINCT ON(a.alt_group) a.*")
+		query.WriteString("\nFROM a")
+		query.WriteString("\nORDER BY a.alt_group, a.score DESC, a.id DESC")
+		query.WriteString("\n) p")
 	} else {
-		query = `
-			SELECT p.id
-			FROM %s
-			ORDER BY %s
-			LIMIT $1
-			OFFSET $2
-			`
+		query.WriteString("a p")
 	}
+	query.WriteString(groupby)
+	order.Eval(&query)
+	query.WriteString("\nLIMIT $1 OFFSET $2\n)")
+	query.WriteString(`
+		SELECT p.id, ptm.tag_id, t.tag, t.count, t.namespace
+		FROM posts p
+		LEFT JOIN post_tag_mappings ptm
+		JOIN tag t
+		ON t.id = ptm.tag_id
+		ON p.id = ptm.post_id
+		JOIN b
+		ON b.id = p.id`)
+	order.Eval(&query)
 
-	query = fmt.Sprintf(
-		fmt.Sprintf(`
-				WITH res AS (
-					%s
-				)
-
-				SELECT p.id, ptm.tag_id, t.tag, t.count, t.namespace
-				FROM posts p
-				LEFT JOIN post_tag_mappings ptm
-				JOIN tag t
-				ON t.id = ptm.tag_id
-				ON p.id = ptm.post_id
-				JOIN res
-				ON res.id = p.id
-				ORDER BY %s
-			`,
-			query,
-			order,
-		),
-		sel,
-		order,
+	// Collecting
+	var (
+		result    SearchResult
+		prev      int
+		resultMap = make(map[int]resultSet)
 	)
 
-	//fmt.Println(query)
+	seqScan := func(scan db.Scanner) error {
+		var (
+			tagID     sql.NullInt64
+			tagCount  sql.NullInt64
+			tagName   sql.NullString
+			namespace sql.NullString
+			postID    int
+		)
 
-	rows, err := DB.Query(query, limit, offset)
-	if err != nil {
-		return result, err
-	}
-	defer rows.Close()
-
-	//var tmpPosts []*Post
-
-	//var result make(sRes)
-
-	var collectorFunc func(rows *sql.Rows) (SearchResult, error)
-
-	if order == "RANDOM()" {
-		collectorFunc = func(rows *sql.Rows) (SearchResult, error) {
-			var pmap = make(map[int]resultSet)
-
-			for rows.Next() {
-				var (
-					tagID     sql.NullInt64
-					tagCount  sql.NullInt64
-					tagName   sql.NullString
-					namespace sql.NullString
-					post      = NewPost()
-				)
-
-				rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
-				if err != nil {
-					return result, err
-				}
-
-				var (
-					set resultSet
-					ok  bool
-				)
-
-				if set, ok = pmap[post.ID]; !ok {
-					set = resultSet{Post: post}
-				}
-
-				if tagID.Valid {
-					var t = Tag{
-						ID:        int(tagID.Int64),
-						Tag:       tagName.String,
-						Namespace: Namespace(namespace.String),
-						Count:     int(tagCount.Int64),
-					}
-					set.Tags = append(set.Tags, t)
-				}
-
-				pmap[post.ID] = set
-			}
-
-			var result = make(SearchResult, len(pmap))
-
-			var i int
-			for _, set := range pmap {
-				result[i] = set
-				i++
-			}
-
-			return result, rows.Err()
+		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
+		if err != nil {
+			return err
 		}
-	} else {
-		collectorFunc = func(rows *sql.Rows) (SearchResult, error) {
-			var (
-				res      SearchResult
-				prev     int
-				resCount int
-			)
 
-			for rows.Next() {
-				var (
-					tagID     sql.NullInt64
-					tagCount  sql.NullInt64
-					tagName   sql.NullString
-					namespace sql.NullString
+		if prev != postID {
+			p := NewPost()
+			p.ID = postID
+			result = append(result, resultSet{Post: p})
+			prev = postID
+		}
 
-					post = NewPost()
-				)
-
-				err := rows.Scan(&post.ID, &tagID, &tagName, &tagCount, &namespace)
-				if err != nil {
-					return result, err
-				}
-
-				if prev != post.ID {
-					res = append(res, resultSet{Post: post})
-					prev = post.ID
-					resCount++
-				}
-
-				if tagID.Valid {
-					var t = Tag{
-						ID:        int(tagID.Int64),
-						Tag:       tagName.String,
-						Namespace: Namespace(namespace.String),
-						Count:     int(tagCount.Int64),
-					}
-					res[resCount-1].Tags = append(res[resCount-1].Tags, t)
-
-				}
+		if tagID.Valid {
+			var t = Tag{
+				ID:        int(tagID.Int64),
+				Tag:       tagName.String,
+				Namespace: Namespace(namespace.String),
+				Count:     int(tagCount.Int64),
 			}
+			result[len(result)-1].Tags = append(result[len(result)-1].Tags, t)
+		}
 
-			return res, rows.Err()
+		return nil
+	}
+
+	randScan := func(scan db.Scanner) error {
+		var (
+			tagID     sql.NullInt64
+			tagCount  sql.NullInt64
+			tagName   sql.NullString
+			namespace sql.NullString
+			postID    int
+		)
+
+		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
+		if err != nil {
+			return err
+		}
+
+		set, ok := resultMap[postID]
+		if !ok {
+			post := NewPost()
+			post.ID = postID
+			set = resultSet{Post: post}
+		}
+
+		if tagID.Valid {
+			var t = Tag{
+				ID:        int(tagID.Int64),
+				Tag:       tagName.String,
+				Namespace: Namespace(namespace.String),
+				Count:     int(tagCount.Int64),
+			}
+			set.Tags = append(set.Tags, t)
+		}
+
+		resultMap[postID] = set
+
+		return nil
+	}
+
+	var scan db.RowScanner = seqScan
+
+	if pc.order == "random" {
+		scan = randScan
+	}
+
+	err := db.QueryRowsContext(
+		ctx,
+		db.Context,
+		query.String(),
+		limit,
+		offset,
+	)(scan)
+
+	if len(resultMap) > 0 {
+		result = make(SearchResult, len(resultMap))
+		var i int
+		for _, set := range resultMap {
+			result[i] = set
+			i++
 		}
 	}
 
-	result, err = collectorFunc(rows)
-	if err != nil {
-		return result, err
-	}
-
-	return result, nil
+	return result, err
 }
 
-func (pc *PostCollector) Tags(maxTags int) []Tag {
+func (pc *PostCollector) Tags(ctx context.Context, maxTags int) []Tag {
 	pc.tagLock.Lock()
 	defer pc.tagLock.Unlock()
 	if len(pc.tags) > 0 {
@@ -1422,7 +1428,7 @@ func (pc *PostCollector) Tags(maxTags int) []Tag {
 	}
 
 	// Get the first batch
-	result, err := pc.Search2(500, 0)
+	result, err := pc.Search3(ctx, 500, 0)
 	if err != nil {
 		log.Println(err)
 		return nil

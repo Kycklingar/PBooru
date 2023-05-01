@@ -33,7 +33,7 @@ func (pc *PostCollector) ArchiveSearch() (*archive, error) {
 	// Check for existing, recent archive
 
 	// Create a new archive
-	_, err := pc.Search2(1, 0)
+	_, err := pc.Search3(context.Background(), 1, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (arch *archive) start() {
 
 	arch.state = stateGather
 	for ; arch.offset < arch.pc.TotalPosts; arch.offset += 100 {
-		results, err := arch.pc.Search2(100, arch.offset)
+		results, err := arch.pc.Search3(context.Background(), 100, arch.offset)
 		if err != nil {
 			arch.error(err)
 			return

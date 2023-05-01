@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gabriel-vasile/mimetype"
 	mm "github.com/kycklingar/MinMax"
@@ -725,10 +727,12 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	pc = DM.CachedPostCollector(pc)
 
+	ctx, cancel := context.WithTimeout(r.Context(), time.Minute*5)
+	defer cancel()
+
 	//fmt.Println(pc.TotalPosts)
-	result, err := pc.Search2(pageLimit, offset)
-	if err != nil {
-		log.Println(err)
+	result, err := pc.Search3(ctx, pageLimit, offset)
+	if internalError(w, err) {
 		return
 	}
 
@@ -792,7 +796,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.Sidebar.Tags = pc.Tags(maxTagsPerPage)
+	p.Sidebar.Tags = pc.Tags(ctx, maxTagsPerPage)
 
 	bm.Split("Retrieved and appended tags")
 

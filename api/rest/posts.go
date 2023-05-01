@@ -1,9 +1,11 @@
 package apiv1
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	mm "github.com/kycklingar/MinMax"
 	DM "github.com/kycklingar/PBooru/DataManager"
@@ -89,7 +91,9 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var AP posts
 
-	result, err := pc.Search2(limit, limit*offset)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Minute*5)
+	defer cancel()
+	result, err := pc.Search3(ctx, limit, limit*offset)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "FIXME", http.StatusInternalServerError)
