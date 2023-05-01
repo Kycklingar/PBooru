@@ -46,6 +46,7 @@ type indexPage struct {
 		Dns      *DM.DnsCreator
 		UserInfo UserInfo
 	}
+	Branch    string
 	Commit    string
 	Tag       string
 	BuildTime string
@@ -60,6 +61,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var p = indexPage{
+		Branch:    version.Branch,
 		Commit:    version.Commit,
 		Tag:       version.Tag,
 		BuildTime: version.BuildTime,
