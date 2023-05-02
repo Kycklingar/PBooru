@@ -9,12 +9,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	mm "github.com/kycklingar/MinMax"
 	C "github.com/kycklingar/PBooru/DataManager/cache"
 	"github.com/kycklingar/PBooru/DataManager/db"
 	"github.com/kycklingar/PBooru/DataManager/postSearch"
 	"github.com/kycklingar/PBooru/DataManager/search"
+	"github.com/kycklingar/PBooru/DataManager/search/condition"
 	"github.com/kycklingar/set"
 )
 
@@ -46,6 +48,7 @@ type SearchOptions struct {
 	AltCollect bool
 	Tombstone  bool
 	Order      string
+	Since      time.Duration
 }
 
 type PostSearch struct {
@@ -57,6 +60,7 @@ type PostSearch struct {
 	filter    set.Sorted[Tag]
 	unless    set.Sorted[Tag]
 	tombstone bool
+	since     time.Duration
 
 	tags       []Tag //Sidebar
 	TotalPosts int
@@ -104,6 +108,7 @@ func (pc *PostSearch) SetOptions(opts SearchOptions) error {
 	pc.collectAlts = opts.AltCollect
 	pc.altGroup = opts.Altgroup
 	pc.tombstone = opts.Tombstone
+	pc.since = opts.Since
 
 	pc.mimeIDs = set.NewOrdered(opts.MimeIDs...).Slice()
 
@@ -121,7 +126,8 @@ func (pc *PostSearch) countIDStr() string {
 		len(pc.filter) <= 0 &&
 		len(pc.mimeIDs) <= 0 &&
 		!pc.collectAlts &&
-		pc.altGroup <= 0 {
+		pc.altGroup <= 0 &&
+		pc.since <= 0 {
 		return "0"
 	}
 
@@ -141,6 +147,8 @@ func (pc *PostSearch) countIDStr() string {
 		pc.collectAlts,
 		" - ",
 		pc.tombstone,
+		" - ",
+		pc.since.String(),
 	)
 }
 
@@ -245,6 +253,10 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 
 	if len(pc.mimeIDs) > 0 {
 		p.Where(postSearch.Mimes(p.Field("mime_id"), pc.mimeIDs))
+	}
+
+	if pc.since > 0 {
+		p.Where(condition.Time(p.Field("timestamp"), condition.GT, time.Now().Add(-pc.since)))
 	}
 
 	p.Where(search.Boolean(p.Field("removed"), false))

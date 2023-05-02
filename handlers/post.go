@@ -633,6 +633,19 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 	p.Sidebar.Unless = r.FormValue("unless")
 	order := r.FormValue("order")
 	tombstone := r.FormValue("tombstone") == "on"
+	p.Sidebar.Since = r.FormValue("since")
+
+	var since time.Duration
+	switch p.Sidebar.Since {
+	case "year":
+		since = time.Hour * 24 * 365
+	case "month":
+		since = time.Hour * 24 * 30
+	case "week":
+		since = time.Hour * 24 * 7
+	case "day":
+		since = time.Hour * 24
+	}
 
 	//p.Sidebar.Alts = r.FormValue("alts") == "on"
 
@@ -716,6 +729,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			AltCollect: p.Sidebar.Alts,
 			Tombstone:  tombstone,
 			Order:      order,
+			Since:      since,
 		},
 	)
 	if err != nil {

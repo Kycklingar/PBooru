@@ -21,6 +21,7 @@ type Sidebar struct {
 	Unless     string
 	Alts       bool
 	AltGroup   int
+	Since      string
 
 	Mimes map[string][]*DM.Mime
 }
