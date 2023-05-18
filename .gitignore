@@ -5,4 +5,5 @@ PBDB.db*
 *.test
 *.db
 out/*.cfg
+out/static/webicons/*
 DataManager/image/test/
