@@ -126,37 +126,6 @@
 	</div>
 </div>
 
-<script>
-	document.getElementById("posts").onmousedown = function(caller)
-	{
-		var t = caller.target
-
-		if(t.getAttribute("postid") == null)
-		{
-			t = t.parentElement
-			if(t.getAttribute("postid") == null)
-			{
-				document.getElementById("postmenu").setAttribute("postid", null)
-				return
-			}
-		}
-		//console.log(t.getAttribute("postid"))
-		document.getElementById("postmenu").setAttribute("postid", t.getAttribute("postid"))
-	}
-
-	function gotoSimilar(caller)
-	{
-		let id = caller.getAttribute("postid")
-		if(id == 0 || id == "null"){
-			return
-		}
-		window.location = "/similar/?id=" + id
-	}
-</script>
-<menu type="context" id="postmenu">
-	<menuitem label="Find Similar" onclick="gotoSimilar(this.parentElement)">
-</menu>
-
 <div class="nolink" id="pageinator">
 	{{$q := ""}}
 	{{with .Sidebar.Form.Encode}}
