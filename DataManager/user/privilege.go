@@ -15,6 +15,7 @@ func SetPrivileges(q db.Q, id ID, privilege flag.Flag) error {
 	)
 
 	cache.Del(id)
+	profileCache.Del(id)
 
 	return err
 }
