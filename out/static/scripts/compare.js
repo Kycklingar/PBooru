@@ -617,118 +617,86 @@ function cont(val)
 	document.getElementById(`button-cont${val}`).classList.add("highlighted")
 }
 
+let keymap = {}
+let tmpKeymap = null
+
+const enableKeymap       = ()              => keymap = tmpKeymap
+const disableKeymap      = ()              => [tmpKeymap, keymap] = [keymap, {}]
+const registerKeyMapping = (key, callback) => keymap[key] = callback
+const processKey         = (e)             => keymap[e.key]?.(e)
+
+const motion        = (x, y)          => rightInterface.scrollBy({top: y, left: x, behavior: "smooth"})
+const motionUp      = (scale)         => motion(0, scale * -1)
+const motionRight   = (scale)         => motion(scale * 1, 0)
+const motionDown    = (scale)         => motion(0, scale * 1)
+const motionLeft    = (scale)         => motion(scale * -1, 0)
+const shiftMotion   = (motion, shift) => (scale) => motion(scale * shift)
+const processMotion = (motion, scale) => (e) => motion(scale)
+
+const motionScale      = 100
+const motionShiftScale = 10
+
 document.onkeydown = processKey
 
-var keymap = [
-]
+// Motions
+registerKeyMapping('h', processMotion(motionLeft, motionScale))
+registerKeyMapping('j', processMotion(motionDown, motionScale))
+registerKeyMapping('k', processMotion(motionUp, motionScale))
+registerKeyMapping('l', processMotion(motionRight, motionScale))
 
-var tmpKeymap = []
-
-function enableKeymap()
-{
-	keymap = tmpKeymap
-}
-
-function disableKeymap()
-{
-	tmpKeymap = keymap
-	keymap = []
-}
-
-function toggleKeymap()
-{
-	if (keymap.length > 0 )
-	{
-		tmpKeymap = keymap
-		keymap = []
-	}
-	else
-	{
-		keymap = tmpKeymap
-	}
-}
-
-function registerKeyMapping(keycode, callback)
-{
-	let obj = {
-		"v":keycode,
-		"f":callback
-	}
-	for(let i = 0; i < keymap.length; i++)
-	{
-		if(keymap[i].v == keycode)
-		{
-			keymap[i] = obj
-			return
-		}
-	}
-	
-	keymap.push(obj)
-}
-
-function processKey(e)
-{
-	for (let i = 0; i < keymap.length; i++)
-	{
-		if (keymap[i].v == e.keyCode)
-		{
-			keymap[i].f()
-		}
-	}
-}
+registerKeyMapping('H', processMotion(shiftMotion(motionLeft, motionShiftScale), motionScale))
+registerKeyMapping('J', processMotion(shiftMotion(motionDown, motionShiftScale), motionScale))
+registerKeyMapping('K', processMotion(shiftMotion(motionUp, motionShiftScale), motionScale))
+registerKeyMapping('L', processMotion(shiftMotion(motionRight, motionShiftScale), motionScale))
 
 // Open report tab
-registerKeyMapping(82, function(){toggleReport()})
+registerKeyMapping('r', function(){toggleReport()})
 
 // Next, previous post
-registerKeyMapping(78, function(){renderNextPost(1)})
-registerKeyMapping(80, function(){renderNextPost(-1)})
+registerKeyMapping('n', function(){renderNextPost(1)})
+registerKeyMapping('p', function(){renderNextPost(-1)})
 
 // Remove post
-registerKeyMapping(89, function(){removeCurrentPost()})
+registerKeyMapping('y', function(){removeCurrentPost()})
 
 // Restore removed
-registerKeyMapping(85, function(){restoreLastRemoved()})
-
-// Anchor
-// Not needed anymore
-//registerKeyMapping(65, function(){anchor()})
+registerKeyMapping('u', function(){restoreLastRemoved()})
 
 // Glue
-registerKeyMapping(81, function(){glue()})
+registerKeyMapping('q', function(){glue()})
 
 // Fit
-registerKeyMapping(70, function(){fit()})
+registerKeyMapping('f', function(){fit()})
 
 // Elimination mode
-registerKeyMapping(84, function(){toggleEliminationMode()})
+registerKeyMapping('t', function(){toggleEliminationMode()})
 
 // Scale
-registerKeyMapping(83, function(){
-	registerKeyMapping(49, function(){
+registerKeyMapping('s', function(){
+	registerKeyMapping('1', function(){
 		scale(1)
 	})
-	registerKeyMapping(50, function(){
+	registerKeyMapping('2', function(){
 		scale(2)
 	})
-	registerKeyMapping(51, function(){
+	registerKeyMapping('3', function(){
 		scale(5)
 	})
-	registerKeyMapping(52, function(){
+	registerKeyMapping('4', function(){
 		scale(10)
 	})
 })
 
 // Contrast
-registerKeyMapping(67, function(){
+registerKeyMapping('c', function(){
 	
-	registerKeyMapping(49, function(){
+	registerKeyMapping('1', function(){
 		cont(1)
 	})
-	registerKeyMapping(50, function(){
+	registerKeyMapping('2', function(){
 		cont(2)
 	})
-	registerKeyMapping(51, function(){
+	registerKeyMapping('3', function(){
 		cont(3)
 	})
 })
