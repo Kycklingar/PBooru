@@ -61,6 +61,25 @@ function cancelPreloads()
 	}
 }
 
+function assignAlts()
+{
+	if(posts.length <= 1) return
+
+	let formdata = new FormData()
+	posts.forEach(p => formdata.append("post-id", p.id))
+
+	fetch("/post/edit/alts/assign/", {
+		method: "POST",
+		body: formdata,
+	})
+	.then(response => {
+		if(!response.ok)
+			throw new Error(`HTTP error! Status: ${response.status}`)
+		alert("Assignment complete!")
+	})
+	.catch(alert)
+}
+
 function submitReport()
 {
 	if (currentPost == null)
@@ -550,6 +569,16 @@ function toggleEliminationMode()
 	renderPost(currentPost)
 }
 
+function toggleAltsTab()
+{
+	let at = document.getElementById("alts-tab")
+	at.open = !at.open
+	at.parentElement.open = at.open
+
+	if(at.open) at.querySelector("button").focus()
+	else rightInterface.focus()
+}
+
 function toggleReport()
 {
 	let rt = document.getElementById("report-tab")
@@ -651,6 +680,9 @@ registerKeyMapping('L', processMotion(shiftMotion(motionRight, motionShiftScale)
 
 // Open report tab
 registerKeyMapping('r', function(){toggleReport()})
+
+// Open alts tab
+registerKeyMapping('a', toggleAltsTab)
 
 // Next, previous post
 registerKeyMapping('n', function(){renderNextPost(1)})

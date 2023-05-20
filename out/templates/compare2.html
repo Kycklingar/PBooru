@@ -26,8 +26,8 @@
 			<details>
 				<summary>Add post</summary>
 				<div>
-				<input onfocus="disableKeymap()" onfocusout="enableKeymap()" type="number" id="add-post-input">
-				<button onclick="getRemotePost(document.getElementById('add-post-input').value)">Add</button>
+					<input onfocus="disableKeymap()" onfocusout="enableKeymap()" type="number" id="add-post-input">
+					<button onclick="getRemotePost(document.getElementById('add-post-input').value)">Add</button>
 				</div>
 			</details>
 			<details id="report-tab">
@@ -37,16 +37,22 @@
 					Make sure you compare the actual images before reporting</p>
 				</div>
 				<div>
-				<h5 style="margin:0px;padding:0px;">Submit the selected post as superior</h5>
-				<br>
-				<label>Submit removed as non dupes of superior:
-				<br>
-				<input type="checkbox" id="non-dupes" checked>
-				</label>
-				<br>
-				<textarea onfocus="disableKeymap()" onfocusout="enableKeymap()" placeholder="Optional note" id="note"></textarea>
-				<br>
-				<button onclick="submitReport()">Submit</button>
+					<h5 style="margin:0px;padding:0px;">Submit the selected post as superior</h5>
+					<br>
+					<label>Submit removed as non dupes of superior:
+						<br>
+						<input type="checkbox" id="non-dupes" checked>
+					</label>
+					<br>
+					<textarea onfocus="disableKeymap()" onfocusout="enableKeymap()" placeholder="Optional note" id="note"></textarea>
+					<br>
+					<button onclick="submitReport()">Submit</button>
+				</div>
+			</details>
+			<details id="alts-tab">
+				<summary>Alts</summary>
+				<div>
+					<button onclick="assignAlts()">Assign Alts</button>
 				</div>
 			</details>
 		</details>

@@ -344,7 +344,7 @@ func assignAltsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var pids []int
 
-	r.ParseForm()
+	r.ParseMultipartForm(1024 * 10)
 	for _, v := range r.Form["post-id"] {
 		id, err := strconv.Atoi(v)
 		if badRequest(w, err) {
