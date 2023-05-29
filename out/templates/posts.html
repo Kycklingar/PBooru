@@ -33,7 +33,7 @@
 		</script>
 		{{ end }}
 
-		<div class="nolink" id="posts" contextmenu="postmenu">
+		<div class="nolink" id="posts">
 			<style>
 				.thumbnail {
 					width: {{.User.ThumbnailSize}}px;
@@ -60,7 +60,7 @@
 			{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
 			<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
-				<div postid="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}} {{with .Post.Alts}}alts{{end}}">
+				<div postid="{{.Post.ID}}" data-context-menu="thumbnail" data-post-id="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}} {{with .Post.Alts}}alts{{end}}">
 					{{if eq $ct ""}}
 					<div class="mimetype centered {{if .Post.Removed}}removed{{end}}">
 						<span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
@@ -172,4 +172,8 @@
 
 <p>Page generated in {{.Time}}s</p>
 
+{{if .User.EnableContextMenus}}
+<script src="/static/scripts/context_menu.js"></script>
+<script src="/static/scripts/posts_context_menu.js"></script>
+{{end}}
 {{ template "baseEnd" }}

@@ -20,14 +20,15 @@ import (
 )
 
 type UserInfo struct {
-	Gateway           string
-	Limit             int
-	ThumbnailSize     int
-	RealThumbnailSize int
-	SessionToken      string
-	ThumbHover        bool
-	ThumbHoverFull    bool
-	CollectAlts       bool
+	Gateway            string
+	Limit              int
+	ThumbnailSize      int
+	RealThumbnailSize  int
+	SessionToken       string
+	ThumbHover         bool
+	ThumbHoverFull     bool
+	CollectAlts        bool
+	EnableContextMenus bool
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -304,6 +305,8 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 			user.ThumbHover = cookie.Value == "on"
 		case "thumb_hover_full":
 			user.ThumbHoverFull = cookie.Value == "on"
+		case "enable_context_menus":
+			user.EnableContextMenus = cookie.Value == "on"
 		}
 
 		refreshCookie(w, cookie, httpOnly)
