@@ -285,6 +285,48 @@ li
 	display: block;
 }
 
+#context-menu
+{
+	background-color: oldlace;
+	color: #111;
+	box-shadow: var(--box-shadow);
+}
+
+#context-menu .group .header
+{
+	cursor: default;
+	margin-left: 1em;
+}
+
+#context-menu .group:hover .item
+{
+	text-decoration: underline;
+}
+
+#context-menu .group .item
+{
+	padding: 0 2em;
+}
+
+#context-menu .item
+{
+	padding: 0 1em;
+	cursor: pointer;
+	background-color: oldlace;
+	border: outset 2px oldlace;
+}
+
+#context-menu .item:hover
+{
+	background-color: skyblue;
+	text-decoration: underline;
+}
+
+#context-menu .item:active
+{
+	border-style: inset;
+}
+
 
 #advanced-search
 {
