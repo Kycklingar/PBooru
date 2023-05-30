@@ -60,7 +60,15 @@
 			{{$ct = .Post.ClosestThumbnail $.User.RealThumbnailSize}}
 			{{end}}
 			<a href="/post/{{.Post.ID}}/{{.Post.Cid}}">
-				<div postid="{{.Post.ID}}" data-context-menu="thumbnail" data-post-id="{{.Post.ID}}" class="thumbnail {{.Post.Mime.Type}} {{with .Post.Alts}}alts{{end}}">
+				<div
+					data-context-menu="thumbnail"
+					data-id="{{.Post.ID}}"
+					data-cid="{{.Post.Cid}}"
+					data-sha256="{{.Post.Checksums.Sha256}}"
+					data-md5="{{.Post.Checksums.Md5}}"
+					class="thumbnail {{.Post.Mime.Type}}
+					{{with .Post.Alts}}alts{{end}}"
+				>
 					{{if eq $ct ""}}
 					<div class="mimetype centered {{if .Post.Removed}}removed{{end}}">
 						<span class="centered">{{.Post.Mime.Type}} / {{.Post.Mime.Name}}</span>
