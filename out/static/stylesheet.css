@@ -290,17 +290,14 @@ li
 	background-color: oldlace;
 	color: #111;
 	box-shadow: var(--box-shadow);
+	font-size: 0.75em;
+	font-family: mono, "Liberation Sans", Arial;
 }
 
 #context-menu .group .header
 {
 	cursor: default;
 	margin-left: 1em;
-}
-
-#context-menu .group:hover .item
-{
-	text-decoration: underline;
 }
 
 #context-menu .group .item
@@ -314,6 +311,7 @@ li
 	cursor: pointer;
 	background-color: oldlace;
 	border: outset 2px oldlace;
+	white-space: pre;
 }
 
 #context-menu .item:hover
