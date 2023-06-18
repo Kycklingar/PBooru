@@ -17,6 +17,8 @@ import (
 	"github.com/kycklingar/PBooru/DataManager/postSearch"
 	"github.com/kycklingar/PBooru/DataManager/search"
 	"github.com/kycklingar/PBooru/DataManager/search/condition"
+	"github.com/kycklingar/PBooru/DataManager/search/order"
+	"github.com/kycklingar/PBooru/DataManager/search/table"
 	"github.com/kycklingar/set"
 )
 
@@ -170,7 +172,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	}
 
 	var (
-		p        = postSearch.NewPostsSearch("p")
+		p        = table.New("posts", "p")
 		distinct = len(pc.or) > 1 || len(pc.filter) > 1 || len(pc.unless) > 1
 	)
 
@@ -185,49 +187,48 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	if len(pc.and) > 0 {
 		for i, tag := range pc.and {
 			var and = postSearch.NewPtm(fmt.Sprint("a", i), tag.ID)
-			p.Join(&and).On(
-				search.JoinCondition(
+			p.Join(and).On(
+				condition.Join(
 					p.Field("id"),
 					and.Field("post_id"),
 				),
 			)
-			p.Where(&and)
+			p.Where(and)
 		}
-
 	}
 
 	if len(pc.or) > 0 {
 		var or = postSearch.NewPtm("o", convertToIds(pc.or)...)
-		p.Join(&or).On(
-			search.JoinCondition(
+		p.Join(or).On(
+			condition.Join(
 				p.Field("id"),
 				or.Field("post_id"),
 			),
 		)
-		p.Where(&or)
+		p.Where(or)
 	}
 
 	if len(pc.filter) > 0 {
 		var filter = postSearch.NewPtm("f", convertToIds(pc.filter)...)
 		p.LeftJoin(&filter).On(
-			search.JoinCondition(
+			condition.Join(
 				p.Field("id"),
 				filter.Field("post_id"),
 			),
 		).And(&filter)
 
-		var cond = search.IsNull(filter.Field("post_id"))
+		var cond = table.IsNull(filter.Field("post_id"))
 
 		if len(pc.unless) > 0 {
 			var unless = postSearch.NewPtm("u", convertToIds(pc.unless)...)
-			p.LeftJoin(&unless).On(
-				search.JoinCondition(
+			p.LeftJoin(unless).On(
+				condition.Join(
 					filter.Field("post_id"),
 					unless.Field("post_id"),
 				),
-			).And(&unless)
-			var group = search.Group(cond)
-			group.Or(search.IsNotNull(unless.Field("post_id")))
+			).And(unless)
+			var group = condition.Group(cond)
+			group.Or(table.IsNotNull(unless.Field("post_id")))
 
 			p.Where(group)
 		} else {
@@ -236,15 +237,15 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	}
 
 	if pc.tombstone {
-		var tombstone = search.NewTable("tombstone", "tombstone")
+		var tombstone = table.New("tombstone", "tombstone")
 		p.LeftJoin(tombstone).On(
-			search.JoinCondition(
+			condition.Join(
 				p.Field("id"),
 				tombstone.Field("post_id"),
 			),
 		)
 
-		p.Where(search.IsNotNull(tombstone.Field("post_id")))
+		p.Where(table.IsNotNull(tombstone.Field("post_id")))
 	}
 
 	if pc.altGroup > 0 {
@@ -252,34 +253,35 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	}
 
 	if len(pc.mimeIDs) > 0 {
-		p.Where(postSearch.Mimes(p.Field("mime_id"), pc.mimeIDs))
+		p.Where(condition.List(p.Field("mime_id"), pc.mimeIDs...))
 	}
 
 	if pc.since > 0 {
 		p.Where(condition.Time(p.Field("timestamp"), condition.GT, time.Now().Add(-pc.since)))
 	}
 
-	p.Where(search.Boolean(p.Field("removed"), false))
+	p.Where(condition.Boolean(p.Field("removed"), false))
 
-	var order = search.NewOrder()
+	var sort search.Order
 	var selection string
 	var groupby string
 	switch pc.order {
 	case "asc":
 		selection = "DISTINCT ON(p.id) p.id"
-		order.By(p.Field("id"), search.Ascending)
+		sort = order.By(p.Field("id"), search.Ascending)
 	case "random":
 		selection = "p.id"
 		groupby = "\nGROUP BY p.id"
-		order.By(p.Field("id"), search.Random)
+		sort = order.By(p.Field("id"), search.Random)
 		offset = 0
 	case "score":
 		selection = "DISTINCT ON(p.id, p.score) p.id"
-		order.By(p.Field("score"), search.Descending).
+		sort = order.
+			By(p.Field("score"), search.Descending).
 			By(p.Field("id"), search.Descending)
 	default:
 		selection = "DISTINCT ON(p.id) p.id"
-		order.By(p.Field("id"), search.Descending)
+		sort = order.By(p.Field("id"), search.Descending)
 	}
 
 	var query strings.Builder
@@ -340,7 +342,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		query.WriteString("a p")
 	}
 	query.WriteString(groupby)
-	order.Eval(&query)
+	sort.Eval(&query)
 	query.WriteString("\nLIMIT $1 OFFSET $2\n)")
 	query.WriteString(`
 		SELECT p.id, ptm.tag_id, t.tag, t.count, t.namespace
@@ -351,7 +353,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		ON p.id = ptm.post_id
 		JOIN b
 		ON b.id = p.id`)
-	order.Eval(&query)
+	sort.Eval(&query)
 
 	// Collecting
 	var (

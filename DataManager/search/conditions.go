@@ -2,6 +2,10 @@ package search
 
 type Conditions []Condition
 
+func (c *Conditions) Add(condition Condition) {
+	*c = append(*c, condition)
+}
+
 func (c Conditions) Condition(w Writer) {
 	for _, cond := range c {
 		cond.Condition(w)
