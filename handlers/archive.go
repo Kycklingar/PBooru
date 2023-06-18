@@ -62,7 +62,7 @@ func createArchiveHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	pc := DM.NewPostCollector()
+	pc := DM.NewPostSearch()
 	err := pc.SetOptions(
 		DM.SearchOptions{
 			And:      tags,

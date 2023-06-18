@@ -73,7 +73,7 @@ func (t *Table) Or(condition search.Condition) search.Logic {
 	return t
 }
 
-func (t *Table) Eval(w search.Writer) {
+func (t Table) Eval(w search.Writer) {
 	w.WriteString(t.name)
 	w.WriteRune(' ')
 	w.WriteString(t.alias)

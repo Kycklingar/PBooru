@@ -62,7 +62,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm := BM.Begin()
 
-	pc := DM.NewPostCollector()
+	pc := DM.NewPostSearch()
 	err = pc.SetOptions(
 		DM.SearchOptions{
 			And:        tagStr,

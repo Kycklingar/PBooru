@@ -717,7 +717,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	bm.Split("Before posts")
 
-	pc := DM.NewPostCollector()
+	pc := DM.NewPostSearch()
 	err = pc.SetOptions(
 		DM.SearchOptions{
 			And:        tagString,

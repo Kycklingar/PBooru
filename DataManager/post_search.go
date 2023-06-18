@@ -22,7 +22,7 @@ import (
 	"github.com/kycklingar/set"
 )
 
-func NewPostCollector() *PostSearch {
+func NewPostSearch() *PostSearch {
 	return &PostSearch{TotalPosts: -1}
 }
 
@@ -165,6 +165,7 @@ func (pc *PostSearch) idStr() string {
 		pc.order,
 	)
 }
+
 func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResult, error) {
 	if pc.emptySet {
 		pc.TotalPosts = 0
@@ -286,39 +287,10 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 
 	var query strings.Builder
 
-	// Count
-	if pc.TotalPosts < 0 {
-		if pc.countIDStr() != "0" {
-			c := pc.ccGet()
-			if c < 0 {
-				query.WriteString("SELECT count(")
-				if pc.collectAlts {
-					query.WriteString("DISTINCT ")
-					query.WriteString(string(p.Field("alt_group")))
-				} else {
-					if distinct {
-						query.WriteString("DISTINCT ")
-					}
-					query.WriteString(string(p.Field("id")))
-				}
-				query.WriteString(")\n FROM ")
-				p.Eval(&query)
-				err := db.Context.QueryRow(query.String()).Scan(&pc.TotalPosts)
-				if err != nil {
-					return nil, err
-				}
-				pc.ccSet(pc.TotalPosts)
-			} else {
-				pc.TotalPosts = c
-			}
-		} else {
-			pc.TotalPosts = GetTotalPosts()
-		}
-		query.Reset()
-	}
+	pc.count(&query, distinct, p)
 
 	// No more posts beyond this point
-	if pc.TotalPosts <= 0 || offset > pc.TotalPosts {
+	if pc.TotalPosts <= 0 || offset > pc.TotalPosts || offset < 0 {
 		return nil, nil
 	}
 
@@ -332,6 +304,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	query.WriteString("\nSELECT ")
 	query.WriteString(selection)
 	query.WriteString("\nFROM ")
+
 	if pc.collectAlts {
 		query.WriteString("(")
 		query.WriteString("\nSELECT DISTINCT ON(a.alt_group) a.*")
@@ -341,6 +314,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	} else {
 		query.WriteString("a p")
 	}
+
 	query.WriteString(groupby)
 	sort.Eval(&query)
 	query.WriteString("\nLIMIT $1 OFFSET $2\n)")
@@ -355,22 +329,35 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		ON b.id = p.id`)
 	sort.Eval(&query)
 
-	// Collecting
-	var (
-		result    SearchResult
-		prev      int
-		resultMap = make(map[int]resultSet)
+	rows := db.QueryRowsContext(
+		ctx,
+		db.Context,
+		query.String(),
+		limit,
+		offset,
 	)
 
-	seqScan := func(scan db.Scanner) error {
-		var (
-			tagID     sql.NullInt64
-			tagCount  sql.NullInt64
-			tagName   sql.NullString
-			namespace sql.NullString
-			postID    int
-		)
+	switch pc.order {
+	case "random":
+		return pc.randomScan(rows)
+	default:
+		return pc.sequentialScan(rows)
+	}
+}
 
+func (pc *PostSearch) sequentialScan(rows db.Rows) (SearchResult, error) {
+	var (
+		tagID     sql.NullInt64
+		tagCount  sql.NullInt64
+		tagName   sql.NullString
+		namespace sql.NullString
+		postID    int
+		prev      int
+
+		result SearchResult
+	)
+
+	err := rows(func(scan db.Scanner) error {
 		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
 		if err != nil {
 			return err
@@ -394,17 +381,23 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		}
 
 		return nil
-	}
+	})
 
-	randScan := func(scan db.Scanner) error {
-		var (
-			tagID     sql.NullInt64
-			tagCount  sql.NullInt64
-			tagName   sql.NullString
-			namespace sql.NullString
-			postID    int
-		)
+	return result, err
+}
 
+func (pc *PostSearch) randomScan(rows db.Rows) (SearchResult, error) {
+	var (
+		tagID     sql.NullInt64
+		tagCount  sql.NullInt64
+		tagName   sql.NullString
+		namespace sql.NullString
+		postID    int
+		resultMap = make(map[int]resultSet)
+		result    SearchResult
+	)
+
+	err := rows(func(scan db.Scanner) error {
 		err := scan(&postID, &tagID, &tagName, &tagCount, &namespace)
 		if err != nil {
 			return err
@@ -430,32 +423,59 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		resultMap[postID] = set
 
 		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	var scan db.RowScanner = seqScan
-
-	if pc.order == "random" {
-		scan = randScan
+	result = make(SearchResult, len(resultMap))
+	var i int
+	for _, set := range resultMap {
+		result[i] = set
+		i++
 	}
 
-	err := db.QueryRowsContext(
-		ctx,
-		db.Context,
-		query.String(),
-		limit,
-		offset,
-	)(scan)
+	return result, nil
+}
 
-	if len(resultMap) > 0 {
-		result = make(SearchResult, len(resultMap))
-		var i int
-		for _, set := range resultMap {
-			result[i] = set
-			i++
+func (pc *PostSearch) count(query *strings.Builder, distinct bool, p search.Table) error {
+	if pc.TotalPosts >= 0 {
+		return nil
+	}
+
+	if pc.countIDStr() == "0" {
+		pc.TotalPosts = GetTotalPosts()
+		return nil
+	}
+
+	c := pc.ccGet()
+	if c >= 0 {
+		pc.TotalPosts = c
+		return nil
+	}
+
+	query.WriteString("SELECT count(")
+	if pc.collectAlts {
+		query.WriteString("DISTINCT ")
+		query.WriteString(string(p.Field("alt_group")))
+	} else {
+		if distinct {
+			query.WriteString("DISTINCT ")
 		}
+		query.WriteString(string(p.Field("id")))
 	}
 
-	return result, err
+	query.WriteString(")\n FROM ")
+	p.Eval(query)
+	err := db.Context.QueryRow(query.String()).Scan(&pc.TotalPosts)
+	if err != nil {
+		return err
+	}
+	pc.ccSet(pc.TotalPosts)
+
+	query.Reset()
+
+	return nil
 }
 
 func (pc *PostSearch) Tags(ctx context.Context, maxTags int) []Tag {
