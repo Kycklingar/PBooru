@@ -188,11 +188,9 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	if len(pc.and) > 0 {
 		for i, tag := range pc.and {
 			var and = postSearch.NewPtm(fmt.Sprint("a", i), tag.ID)
-			p.Join(and).On(
-				condition.Join(
-					p.Field("id"),
-					and.Field("post_id"),
-				),
+			p.Join(and).Fields(
+				p.Field("id"),
+				and.Field("post_id"),
 			)
 			p.Where(and)
 		}
@@ -200,34 +198,28 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 
 	if len(pc.or) > 0 {
 		var or = postSearch.NewPtm("o", convertToIds(pc.or)...)
-		p.Join(or).On(
-			condition.Join(
-				p.Field("id"),
-				or.Field("post_id"),
-			),
+		p.Join(or).Fields(
+			p.Field("id"),
+			or.Field("post_id"),
 		)
 		p.Where(or)
 	}
 
 	if len(pc.filter) > 0 {
 		var filter = postSearch.NewPtm("f", convertToIds(pc.filter)...)
-		p.LeftJoin(&filter).On(
-			condition.Join(
-				p.Field("id"),
-				filter.Field("post_id"),
-			),
-		).And(&filter)
+		p.LeftJoin(&filter).Fields(
+			p.Field("id"),
+			filter.Field("post_id"),
+		).On(&filter)
 
 		var cond = table.IsNull(filter.Field("post_id"))
 
 		if len(pc.unless) > 0 {
 			var unless = postSearch.NewPtm("u", convertToIds(pc.unless)...)
-			p.LeftJoin(unless).On(
-				condition.Join(
-					filter.Field("post_id"),
-					unless.Field("post_id"),
-				),
-			).And(unless)
+			p.LeftJoin(unless).Fields(
+				filter.Field("post_id"),
+				unless.Field("post_id"),
+			).On(unless)
 			var group = condition.Group(cond)
 			group.Or(table.IsNotNull(unless.Field("post_id")))
 
@@ -239,11 +231,9 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 
 	if pc.tombstone {
 		var tombstone = table.New("tombstone", "tombstone")
-		p.LeftJoin(tombstone).On(
-			condition.Join(
-				p.Field("id"),
-				tombstone.Field("post_id"),
-			),
+		p.LeftJoin(tombstone).Fields(
+			p.Field("id"),
+			tombstone.Field("post_id"),
 		)
 
 		p.Where(table.IsNotNull(tombstone.Field("post_id")))

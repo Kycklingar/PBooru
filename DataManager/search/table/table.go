@@ -33,19 +33,19 @@ func (t Table) Field(field string) search.TableField {
 	return search.TableField(fmt.Sprint(t.alias, ".", field))
 }
 
-func (t *Table) Join(table search.Table) search.On {
+func (t *Table) Join(table search.Table) search.Joiner {
 	return t.addJoin(innerJoin, table)
 }
 
-func (t *Table) LeftJoin(table search.Table) search.On {
+func (t *Table) LeftJoin(table search.Table) search.Joiner {
 	return t.addJoin(leftJoin, table)
 }
 
-func (t *Table) RightJoin(table search.Table) search.On {
+func (t *Table) RightJoin(table search.Table) search.Joiner {
 	return t.addJoin(rightJoin, table)
 }
 
-func (t *Table) addJoin(jointype joinType, table search.Table) search.On {
+func (t *Table) addJoin(jointype joinType, table search.Table) search.Joiner {
 	var join = join{
 		jointype: jointype,
 		table:    table,
