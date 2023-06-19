@@ -1,6 +1,9 @@
 package table
 
-import "github.com/kycklingar/PBooru/DataManager/search"
+import (
+	"github.com/kycklingar/PBooru/DataManager/search"
+	"github.com/kycklingar/PBooru/DataManager/search/condition"
+)
 
 type joinType string
 
@@ -36,6 +39,11 @@ func (j join) Eval(w search.Writer) {
 
 func (j *join) On(condition search.Condition) search.Logic {
 	j.conditions = append(j.conditions, condition)
+	return j
+}
+
+func (j *join) Fields(left, right search.TableField) search.On {
+	j.conditions = append(j.conditions, condition.Join(left, right))
 	return j
 }
 
