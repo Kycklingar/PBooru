@@ -5,10 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/kycklingar/PBooru/DataManager/cache"
-	"github.com/kycklingar/sqhell/cond"
+	"github.com/kycklingar/PBooru/DataManager/db"
+	"github.com/kycklingar/PBooru/DataManager/postSearch"
+	"github.com/kycklingar/PBooru/DataManager/search"
+	"github.com/kycklingar/PBooru/DataManager/search/condition"
+	"github.com/kycklingar/PBooru/DataManager/search/order"
+	"github.com/kycklingar/PBooru/DataManager/search/table"
 )
 
 var comicTagSummaryCache = cache.NewGeneric[int, []Tag](nil, time.Minute*30, time.Hour*2)
@@ -35,114 +41,88 @@ func SearchComics(title, tagStr string, limit, offset int) (c Comics, err error)
 	}
 
 	var (
-		tjoin  = new(cond.Group)
-		gwhere = new(cond.Group)
-		where  string
-		glimit = new(cond.Group)
-		params []interface{}
-		pi     = 1
+		comics     = table.New("comics", "c")
+		chapter    = table.New("comic_chapter", "ch")
+		page       = table.New("comic_page", "cp")
+		parameters search.Parameters
+	)
+
+	comics.Join(chapter).Fields(
+		comics.Field("id"),
+		chapter.Field("comic_id"),
+	)
+	comics.Join(page).Fields(
+		chapter.Field("id"),
+		page.Field("chapter_id"),
 	)
 
 	for i, tag := range tags {
-		where = "WHERE "
-		tjoin.Add("\n", cond.N(fmt.Sprintf("JOIN post_tag_mappings ptm%d", i))).
-			Add("\n", cond.N(fmt.Sprintf("ON cm.post_id = ptm%d.post_id\n", i)))
+		var ptm = postSearch.NewPtm(fmt.Sprint("ptm", i), tag.ID)
+		comics.Join(ptm).Fields(
+			page.Field("post_id"),
+			ptm.Field("post_id"),
+		)
 
-		gwhere.Add("\nAND", cond.N(fmt.Sprintf("ptm%d.tag_id = %d\n", i, tag.ID)))
+		comics.Where(ptm)
 	}
 
 	if len(title) > 0 {
-		where = "WHERE "
-		var o = new(int)
-		gwhere.Add(
-			"\nAND",
-			cond.Wrap{
-				Cond: new(cond.Group).Add(
-					"\n",
-					cond.O{
-						S: "lower(c.title) LIKE '%%' || $%d || '%%'",
-						I: o,
-					},
-				).Add(
-					"\nOR",
-					cond.O{
-						S: "lower(cc.title) like '%%' || $%d || '%%'",
-						I: o,
-					},
-				),
-			},
-		)
+		var p = parameters.New(title)
 
-		params = append(params, title)
+		const format = "lower(%s) LIKE '%%' || %s || '%%'"
+		var comicTitleCondition = condition.String(fmt.Sprintf(format, comics.Field("title"), p))
+		var chapterTitleCondition = condition.String(fmt.Sprintf(format, chapter.Field("title"), p))
+
+		var g = condition.Group(comicTitleCondition)
+		g.Or(chapterTitleCondition)
+
+		comics.Where(g)
 	}
 
-	where = fmt.Sprintf(
-		"%s%s",
-		where,
-		gwhere.Eval(&pi),
-	)
+	var b strings.Builder
 
-	query := fmt.Sprintf(`
-		FROM comics c
-		JOIN comic_chapter cc
-		ON c.id = cc.comic_id
-		JOIN comic_page cm
-		ON cc.id = cm.chapter_id
-		%s
-		%s
-		`,
-		tjoin.Eval(nil),
-		where,
-	)
-
-	err = DB.QueryRow(`
-		SELECT count(DISTINCT c.id)
-		`+query,
-		params...,
-	).Scan(&c.Total)
+	b.WriteString(fmt.Sprintf("SELECT count(DISTINCT %s)", comics.Field("id")))
+	b.WriteString("\nFROM ")
+	comics.Eval(&b)
+	err = DB.QueryRow(b.String(), parameters...).Scan(&c.Total)
 	if err != nil {
 		return
 	}
 
-	glimit.Add("", cond.P("LIMIT $%d")).
-		Add("", cond.P("OFFSET $%d"))
+	var o = order.By(comics.Field("modified"), order.Descending)
 
-	rows, err := DB.Query(
-		fmt.Sprintf(`
-			SELECT DISTINCT c.id, c.title, c.modified
-			%s
-			ORDER BY c.modified DESC
-			%s`,
-			query,
-			glimit.Eval(&pi),
-		),
-		append(params, limit, offset)...,
-	)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
+	b.Reset()
+	b.WriteString("SELECT DISTINCT c.id, c.title, c.modified")
+	b.WriteString("\nFROM ")
+	comics.Eval(&b)
+	o.Eval(&b)
+	b.WriteString(fmt.Sprintf("\nLIMIT %s", parameters.New(limit)))
+	b.WriteString(fmt.Sprintf("\nOFFSET %s", parameters.New(offset)))
 
-	for rows.Next() {
+	return c, db.QueryRows(
+		db.Context,
+		b.String(),
+		parameters...,
+	)(func(scan db.Scanner) error {
 		var (
 			comic = new(Comic)
 			trash string
 		)
 
-		err = rows.Scan(&comic.ID, &comic.Title, &trash)
+		err = scan(&comic.ID, &comic.Title, &trash)
 		if err != nil {
-			return
+			return err
 		}
 
 		err = comic.fetch()
 		if err != nil {
-			return
+			return err
 		}
 
 		c.Comics = append(c.Comics, comic)
-	}
 
-	return
+		return nil
+	})
 }
 
 func GetComic(comicID int) (*Comic, error) {
