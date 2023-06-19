@@ -2,6 +2,12 @@ package order
 
 import "github.com/kycklingar/PBooru/DataManager/search"
 
+const (
+	Ascending  search.OrderDirection = "ASC"
+	Descending search.OrderDirection = "DESC"
+	Random     search.OrderDirection = "RANDOM()"
+)
+
 func By(field search.TableField, direction search.OrderDirection) search.Order {
 	return new(ordering).By(field, direction)
 }
@@ -37,8 +43,8 @@ type order struct {
 
 func (o order) Eval(w search.Writer) {
 	switch o.direction {
-	case search.Random:
-		w.WriteString(string(search.Random))
+	case Random:
+		w.WriteString(string(Random))
 	default:
 		w.WriteString(string(o.field))
 		w.WriteRune(' ')

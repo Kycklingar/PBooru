@@ -269,20 +269,20 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 	switch pc.order {
 	case "asc":
 		selection = "DISTINCT ON(p.id) p.id"
-		sort = order.By(p.Field("id"), search.Ascending)
+		sort = order.By(p.Field("id"), order.Ascending)
 	case "random":
 		selection = "p.id"
 		groupby = "\nGROUP BY p.id"
-		sort = order.By(p.Field("id"), search.Random)
+		sort = order.By(p.Field("id"), order.Random)
 		offset = 0
 	case "score":
 		selection = "DISTINCT ON(p.id, p.score) p.id"
 		sort = order.
-			By(p.Field("score"), search.Descending).
-			By(p.Field("id"), search.Descending)
+			By(p.Field("score"), order.Descending).
+			By(p.Field("id"), order.Descending)
 	default:
 		selection = "DISTINCT ON(p.id) p.id"
-		sort = order.By(p.Field("id"), search.Descending)
+		sort = order.By(p.Field("id"), order.Descending)
 	}
 
 	var query strings.Builder

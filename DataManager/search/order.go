@@ -6,9 +6,3 @@ type Order interface {
 }
 
 type OrderDirection string
-
-const (
-	Ascending  OrderDirection = "ASC"
-	Descending OrderDirection = "DESC"
-	Random     OrderDirection = "RANDOM()"
-)
