@@ -1,6 +1,6 @@
 package search
 
 type Joiner interface {
-	Fields(TableField, TableField) Joiner
+	Fields(TableField, TableField) Logic
 	On(Condition) Logic
 }

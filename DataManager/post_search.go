@@ -210,7 +210,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 		p.LeftJoin(&filter).Fields(
 			p.Field("id"),
 			filter.Field("post_id"),
-		).On(&filter)
+		).And(&filter)
 
 		var cond = table.IsNull(filter.Field("post_id"))
 
@@ -219,7 +219,7 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 			p.LeftJoin(unless).Fields(
 				filter.Field("post_id"),
 				unless.Field("post_id"),
-			).On(unless)
+			).And(unless)
 			var group = condition.Group(cond)
 			group.Or(table.IsNotNull(unless.Field("post_id")))
 
@@ -277,7 +277,9 @@ func (pc *PostSearch) Search(ctx context.Context, limit, offset int) (SearchResu
 
 	var query strings.Builder
 
-	pc.count(&query, distinct, p)
+	if err := pc.count(&query, distinct, p); err != nil {
+		return nil, err
+	}
 
 	// No more posts beyond this point
 	if pc.TotalPosts <= 0 || offset > pc.TotalPosts || offset < 0 {

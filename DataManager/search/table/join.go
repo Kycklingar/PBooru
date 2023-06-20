@@ -42,9 +42,8 @@ func (j *join) On(condition search.Condition) search.Logic {
 	return j
 }
 
-func (j *join) Fields(left, right search.TableField) search.Joiner {
-	j.conditions = append(j.conditions, condition.Join(left, right))
-	return j
+func (j *join) Fields(left, right search.TableField) search.Logic {
+	return j.On(condition.Join(left, right))
 }
 
 func (j *join) And(condition search.Condition) search.Logic {
