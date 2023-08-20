@@ -15,6 +15,7 @@ func ImageMagickThumbnailer() ImageMagick {
 	return ImageMagick{
 		Accept: map[string]struct{}{
 			"image/png":  struct{}{},
+			"image/apng": struct{}{},
 			"image/jpeg": struct{}{},
 			"image/gif":  struct{}{},
 			"image/webp": struct{}{},
