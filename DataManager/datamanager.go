@@ -171,7 +171,7 @@ func createAdminAccount(q migrate.ExecQuery) error {
 		fmt.Println("Passwords do not match.")
 	}
 
-	return user.Register(context.Background(), "admin", password, flag.All)
+	return user.RegisterQ(context.Background(), q, "admin", password, flag.All)
 }
 
 type Config struct {

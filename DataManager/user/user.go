@@ -76,18 +76,28 @@ func Logout(key session.Key) error {
 }
 
 func Register(ctx context.Context, username, password string, privileges flag.Flag) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
 	tx, err := db.Context.Begin()
 	if err != nil {
 		return err
 	}
 
+	err = RegisterQ(ctx, tx, username, password, privileges)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func RegisterQ(ctx context.Context, q db.Q, username, password string, privileges flag.Flag) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
 	var id ID
-	err = tx.QueryRowContext(
+	err = q.QueryRowContext(
 		ctx,
 		`INSERT INTO users(username, adminflag)
 		VALUES($1, $2)
@@ -96,11 +106,10 @@ func Register(ctx context.Context, username, password string, privileges flag.Fl
 		privileges,
 	).Scan(&id)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
-	_, err = tx.ExecContext(
+	_, err = q.ExecContext(
 		ctx,
 		`INSERT INTO passwords(user_id, hash, salt)
 		VALUES($1, $2, $3)`,
@@ -108,12 +117,8 @@ func Register(ctx context.Context, username, password string, privileges flag.Fl
 		string(hash),
 		"",
 	)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
 
-	return tx.Commit()
+	return err
 }
 
 func FromSession(ctx context.Context, key session.Key) (user User, err error) {

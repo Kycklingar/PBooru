@@ -1,9 +1,7 @@
 package migrate
 
-import "database/sql"
+import "github.com/kycklingar/PBooru/DataManager/db"
 
 type ExecQuery interface {
-	Exec(string, ...any) (sql.Result, error)
-	Query(string, ...any) (*sql.Rows, error)
-	QueryRow(string, ...any) *sql.Row
+	db.Q
 }
