@@ -766,6 +766,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFThumbnails,
 				DM.PFAlts,
 				DM.PFAltGroup,
+				DM.PFSize,
 			)
 		} else {
 			pt.Post.QMul(
@@ -776,6 +777,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFChecksums,
 				DM.PFTimestamp,
 				DM.PFThumbnails,
+				DM.PFSize,
 			)
 		}
 

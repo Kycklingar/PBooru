@@ -475,9 +475,9 @@ func (p *Post) QTagHistoryCount(q querier) (int, error) {
 }
 
 func (p *Post) SizePretty() string {
-	const unit = 1000
+	const unit = 1024
 	if p.Size < unit {
-		return fmt.Sprintf("%dB", p.Size)
+		return fmt.Sprintf("%d B", p.Size)
 	}
 
 	div, exp := int64(unit), 0
@@ -486,7 +486,7 @@ func (p *Post) SizePretty() string {
 		exp++
 	}
 
-	return fmt.Sprintf("%.2f%cB", float64(p.Size)/float64(div), "KMGTPE"[exp])
+	return fmt.Sprintf("%.2f %ciB", float64(p.Size)/float64(div), "KMGTPE"[exp])
 }
 
 func cidDir(cid string) string {

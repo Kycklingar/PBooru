@@ -89,9 +89,12 @@
 					{{end}}
 					<div class="tagbox hint">
 						<div class="score">
-							<div>{{.Post.Timestamp.Elapsed}}</div>
-							<div>Score: {{.Post.Score}}</div>
-							<div>{{.Post.Mime.Str}}</div>
+							<div><span>{{.Post.Timestamp.Elapsed}}</span></div>
+							<div><span>Score: {{.Post.Score}}</span></div>
+							<div>
+								<span>{{.Post.Mime.Str}}</span>
+								<span>{{.Post.SizePretty }}</span>
+							</div>
 						</div>
 						{{range .Namespace}}
 						<div>
