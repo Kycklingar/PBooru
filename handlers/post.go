@@ -762,6 +762,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 				DM.PFCid,
 				DM.PFMime,
 				DM.PFScore,
+				DM.PFChecksums,
 				DM.PFTimestamp,
 				DM.PFThumbnails,
 				DM.PFAlts,
