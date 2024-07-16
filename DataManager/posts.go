@@ -486,7 +486,7 @@ func (p *Post) SizePretty() string {
 		exp++
 	}
 
-	return fmt.Sprintf("%.2f %ciB", float64(p.Size)/float64(div), "KMGTPE"[exp])
+	return fmt.Sprintf("%.2f %ciB", float64(p.Size)/float64(div), "kMGTPE"[exp])
 }
 
 func cidDir(cid string) string {
