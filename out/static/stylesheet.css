@@ -1132,9 +1132,9 @@ li
 	font-weight: bold;
 }
 
-.user-frame a:any-link
+.user-frame:any-link
 {
-	color: white;
+	color: white !important;
 	text-decoration: none;
 }
 

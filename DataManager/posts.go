@@ -937,7 +937,7 @@ func (p *Post) Comments(q querier) ([]PostComment, error) {
 		var (
 			text string
 			pc   = p.NewComment()
-			err  = scan(&pc.ID, &pc.User.ID, &text, &pc.Time)
+			err  = scan(&pc.ID, &pc.User, &text, &pc.Time)
 		)
 		if err != nil {
 			log.Println(err)

@@ -77,7 +77,7 @@ type Postpage struct {
 	Post      *DM.Post
 	Voted     bool
 	Dns       []DM.DnsCreator
-	Comments  []*DM.PostComment
+	Comments  []DM.PostComment
 	Dupe      DM.Dupe
 	Alts      []*DM.Post
 	Chapters  []*DM.Chapter
@@ -314,7 +314,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	pp.Sidebar.Tags = tags
 
-	//pp.Comments, err = p.Comments(DM.DB)
+	pp.Comments, err = p.Comments(DM.DB)
 	if internalError(w, err) {
 		return
 	}
