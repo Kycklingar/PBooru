@@ -1,6 +1,7 @@
 package DataManager
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,6 +19,10 @@ import (
 )
 
 var comicTagSummaryCache = cache.NewGeneric[int, []Tag](nil, time.Minute*30, time.Hour*2)
+
+func init() {
+	go comicTagSummaryCache.GC(context.Background())
+}
 
 type Comics struct {
 	Comics []*Comic
