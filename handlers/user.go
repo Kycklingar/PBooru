@@ -20,15 +20,16 @@ import (
 )
 
 type UserInfo struct {
-	Gateway            string
-	Limit              int
-	ThumbnailSize      int
-	RealThumbnailSize  int
-	SessionToken       string
-	ThumbHover         bool
-	ThumbHoverFull     bool
-	CollectAlts        bool
-	EnableContextMenus bool
+	Gateway                   string
+	Limit                     int
+	ThumbnailSize             int
+	RealThumbnailSize         int
+	ThumbnailPreviewThreshold int64
+	SessionToken              string
+	ThumbHover                bool
+	ThumbHoverFull            bool
+	CollectAlts               bool
+	EnableContextMenus        bool
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -269,11 +270,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var defaultUserInfo = UserInfo{
-	Limit:             defaultPostsPerPage,
-	ThumbnailSize:     defaultImageSize,
-	RealThumbnailSize: defaultMinThumbnailSize,
-	ThumbHover:        false,
-	ThumbHoverFull:    false,
+	Limit:                     defaultPostsPerPage,
+	ThumbnailSize:             defaultImageSize,
+	RealThumbnailSize:         defaultMinThumbnailSize,
+	ThumbnailPreviewThreshold: 1048576,
+	ThumbHover:                false,
+	ThumbHoverFull:            false,
 }
 
 func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
@@ -307,6 +309,8 @@ func userCookies(w http.ResponseWriter, r *http.Request) UserInfo {
 			user.ThumbHoverFull = cookie.Value == "on"
 		case "enable_context_menus":
 			user.EnableContextMenus = cookie.Value == "on"
+		case "preview_threshold":
+			user.ThumbnailPreviewThreshold, _ = strconv.ParseInt(cookie.Value, 10, 64)
 		}
 
 		refreshCookie(w, cookie, httpOnly)

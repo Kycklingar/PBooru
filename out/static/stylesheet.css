@@ -1030,6 +1030,16 @@ li
 	margin: 0px;
 }
 
+#post .preview::before {
+	text-transform: capitalize;
+	content: "preview image";
+	display: block;
+	text-align: center;
+	background-color: #60407A;
+	color: #EEE;
+	margin-bottom: 0.5em;
+}
+
 #post #fullsize
 {
 	max-width: 100%;

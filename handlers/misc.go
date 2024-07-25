@@ -197,6 +197,7 @@ func OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	setCookie(w, "thumb_hover", r.FormValue("thumb-hover"), false)
 	setCookie(w, "thumb_hover_full", r.FormValue("thumb-hover-full"), false)
 	setCookie(w, "enable_context_menus", r.FormValue("enable-context-menus"), false)
+	setCookie(w, "preview_threshold", r.FormValue("preview_threshold"), false)
 
 	http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 }

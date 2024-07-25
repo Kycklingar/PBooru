@@ -143,18 +143,31 @@
 		<div class="box">
 			<script>
 				function resize(){
-				if(!fullsize) return
-				if (fullsize.style.maxWidth == "unset"){
-					fullsize.style.maxWidth = "100%";
-				}else{
-					fullsize.style.maxWidth = "unset";
+					if(!fullsize) return
+					if (fullsize.style.maxWidth == "unset"){
+						fullsize.style.maxWidth = "100%";
+					}else{
+						fullsize.style.maxWidth = "unset";
+					}
 				}
-			}
+
+				function replaceWithFull(e) {
+					e.onclick = null
+					e.classList.remove("preview")
+					const img = e.querySelector("img")
+					img.src = "{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}"
+				}
 			</script>
 			{{if eq .Post.Mime.Type "image"}}
+			{{if .UseThumbnailPreview}}
+			<div id="image" class="preview" onclick="replaceWithFull(this)">
+				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 2000}}">
+			</div>
+			{{else}}
 			<div id="image">
 				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}">
 			</div>
+			{{ end }}
 			{{else if eq .Post.Mime.Type "video"}}
 			<div>
 				<video id="fullsize" loop controls>

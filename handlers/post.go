@@ -73,19 +73,20 @@ func postError(w http.ResponseWriter, err error) {
 }
 
 type Postpage struct {
-	Base      base
-	Post      *DM.Post
-	Voted     bool
-	Dns       []DM.DnsCreator
-	Comments  []DM.PostComment
-	Dupe      DM.Dupe
-	Alts      []*DM.Post
-	Chapters  []*DM.Chapter
-	Sidebar   Sidebar
-	User      user.User
-	UserPools pool.Pools
-	UserInfo  UserInfo
-	Time      string
+	Base                base
+	Post                *DM.Post
+	UseThumbnailPreview bool
+	Voted               bool
+	Dns                 []DM.DnsCreator
+	Comments            []DM.PostComment
+	Dupe                DM.Dupe
+	Alts                []*DM.Post
+	Chapters            []*DM.Chapter
+	Sidebar             Sidebar
+	User                user.User
+	UserPools           pool.Pools
+	UserInfo            UserInfo
+	Time                string
 }
 
 var catMap = map[DM.Namespace]int{
@@ -251,6 +252,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pp.Post = p
+
+	pp.UseThumbnailPreview = pp.UserInfo.ThumbnailPreviewThreshold > 0 && pp.UserInfo.ThumbnailPreviewThreshold < p.Size
 
 	pp.Dupe, err = p.Duplicates(DM.DB)
 	if internalError(w, err) {

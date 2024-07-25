@@ -13,6 +13,9 @@
 		<label>Thumbnail Image Size</br>
 			<input type="text" name="real-thumbnail-size" title="0 clamps to thumbnail size" value="{{.RealThumbnailSize}}">
 		</label>
+		<label>Preview byte threshold</br>
+			<input type="number" name="preview_threshold" title="0 to disable previews" value="{{.ThumbnailPreviewThreshold}}">
+		</label>
 		<div>
 			<label>Thumbnail preview on hover
 				<input type="checkbox" name="thumb-hover" {{if .ThumbHover}}checked{{end}}>
