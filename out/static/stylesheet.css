@@ -1480,3 +1480,30 @@ li
 {
 	margin:0.2em;
 }
+
+#post #image
+{
+	position: relative;
+}
+
+.spinner::before
+{
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	translate: -50% -50%;
+	border: 16px solid grey;
+	border-top: 16px solid blue;
+	border-radius: 50%;
+	width: 120px;
+	height: 120px;
+	opacity: 0.75;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin
+{
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}

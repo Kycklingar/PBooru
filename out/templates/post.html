@@ -154,14 +154,17 @@
 				function replaceWithFull(e) {
 					e.onclick = null
 					e.classList.remove("preview")
+					e.classList.add("spinner")
 					const img = e.querySelector("img")
+					img.addEventListener("load", () => e.classList.remove("spinner"))
+					img.addEventListener("click", resize)
 					img.src = "{{.UserInfo.Gateway}}/ipfs/{{.Post.Cid}}"
 				}
 			</script>
 			{{if eq .Post.Mime.Type "image"}}
 			{{if .UseThumbnailPreview}}
 			<div id="image" class="preview" onclick="replaceWithFull(this)">
-				<img id="fullsize" onclick="resize()" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 2000}}">
+				<img id="fullsize" src="{{.UserInfo.Gateway}}/ipfs/{{.Post.ClosestThumbnail 2000}}">
 			</div>
 			{{else}}
 			<div id="image">
